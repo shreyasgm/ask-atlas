@@ -5,7 +5,6 @@ logs/
 *.csv
 *.parquet
 .config
-*.json
 test/
 chroma_db/
 archive/
