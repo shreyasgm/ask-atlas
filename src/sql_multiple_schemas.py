@@ -27,6 +27,16 @@ class SQLDatabaseWithSchemas(SQLDatabase):
         self._schemas = schemas
         self._inspector = inspect(self._engine)
 
+        # Check if all specified schemas exist in the database
+        existing_schemas = set(self._inspector.get_schema_names())
+        if schemas:
+            missing_schemas = set(self._schemas) - existing_schemas
+            if missing_schemas:
+                raise ValueError(
+                    f"The following schemas were not found in the database: {missing_schemas}\n"
+                    f"Existing schemas: {', '.join(sorted(existing_schemas))}"
+                )
+
         if include_tables and ignore_tables:
             raise ValueError("Cannot specify both include_tables and ignore_tables")
 
