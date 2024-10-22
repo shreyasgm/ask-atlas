@@ -84,14 +84,16 @@ st.set_page_config(
 )
 
 # Title of the app
-st.title("Ask-Atlas: Talk to Trade Data 🌐")
+st.title("Ask-Atlas 🌍: Your Trade Data Assistant")
 
 # Display some information
 st.info(
     """
     Welcome to Ask-Atlas, a chatbot that provides insights from the Atlas of Economic Complexity using trade data sourced from UN COMTRADE and cleaned and processed by the Growth Lab at Harvard University.
 
-    Created by: Shreyas Gadgin Matha
+    Created by: [Shreyas Gadgin Matha](https://growthlab.hks.harvard.edu/people/shreyas-matha)
+    
+    Learn more about the Growth Lab on our [website](https://growthlab.hks.harvard.edu/).
     """
 )
 
@@ -216,17 +218,11 @@ if "messages" not in st.session_state:
         }
     ]
 
-# Streamlit App layout
-st.title("Ask-Atlas 🌍: Your Trade Data Assistant")
-st.write(
-    "Get insights from the Atlas of Economic Complexity. Ask questions related to trade statistics, economic complexity, and country profiles."
-)
-
 # Sidebar info
 with st.sidebar:
     st.header("About Ask-Atlas")
     st.write("""
-    **Ask-Atlas** allows users to query trade data, country profiles, and economic complexity from the Atlas of Economic Complexity database. 
+    **Ask-Atlas** allows users to query trade data (currently only in HS92) from the Atlas of Economic Complexity database. 
     Powered by OpenAI's GPT-4 and LlamaIndex, it can handle natural language queries and retrieve real-time insights from the underlying data.
     """)
 
