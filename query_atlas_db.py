@@ -2,7 +2,13 @@ import streamlit as st
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from llama_index.core.indices.struct_store.sql_query import SQLTableRetrieverQueryEngine
-from llama_index.core import SQLDatabase, VectorStoreIndex, PromptTemplate, Settings
+from llama_index.core import (
+    SQLDatabase,
+    VectorStoreIndex,
+    PromptTemplate,
+    Settings,
+    set_global_handler,
+)
 from llama_index.core.objects import SQLTableNodeMapping, SQLTableSchema, ObjectIndex
 from llama_index.core.chat_engine import CondenseQuestionChatEngine
 from llama_index.llms.openai import OpenAI
@@ -10,6 +16,17 @@ import openai
 import json
 from pathlib import Path
 from sqlalchemy import inspect
+import logging
+import sys
+
+
+# Set up logging
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
+
+# Set up global callback handler
+set_global_handler("simple")
+
 
 # Define BASE_DIR (assuming it's the directory where the script is located)
 BASE_DIR = Path(__file__).resolve().parent
@@ -89,11 +106,9 @@ st.title("Ask-Atlas 🌍: Your Trade Data Assistant")
 # Display some information
 st.info(
     """
-    Welcome to Ask-Atlas, a chatbot that provides insights from the Atlas of Economic Complexity using trade data sourced from UN COMTRADE and cleaned and processed by the Growth Lab at Harvard University.
+    Welcome to Ask-Atlas, a chatbot that provides insights from the [Atlas of Economic Complexity](https://atlas.cid.harvard.edu/) using trade data sourced from UN COMTRADE and cleaned and processed by the [Growth Lab at Harvard University](https://growthlab.hks.harvard.edu/).
 
     Created by: [Shreyas Gadgin Matha](https://growthlab.hks.harvard.edu/people/shreyas-matha)
-    
-    Learn more about the Growth Lab on our [website](https://growthlab.hks.harvard.edu/).
     """
 )
 
@@ -214,25 +229,16 @@ if "messages" not in st.session_state:
     st.session_state["messages"] = [
         {
             "role": "assistant",
-            "content": "Hello! Ask me anything about trade data from the Atlas of Economic Complexity.",
+            "content": "Hello! Ask me a question about trade data from the Atlas of Economic Complexity.",
         }
     ]
-
-# Sidebar info
-with st.sidebar:
-    st.header("About Ask-Atlas")
-    st.write("""
-    **Ask-Atlas** allows users to query trade data (currently only in HS92) from the Atlas of Economic Complexity database. 
-    Powered by OpenAI's GPT-4 and LlamaIndex, it can handle natural language queries and retrieve real-time insights from the underlying data.
-    """)
-
 
 # Initialize the chat engine
 if "chat_engine" not in st.session_state.keys():
     st.session_state.chat_engine = chat_engine = init_chat_engine(query_engine)
 
 # Get user input for questions
-if prompt := st.chat_input("Ask a question about trade data or country profiles"):
+if prompt := st.chat_input("Ask a question about trade data"):
     # Append user message to the session state
     st.session_state["messages"].append({"role": "user", "content": prompt})
 
@@ -245,6 +251,8 @@ for message in st.session_state.messages:
 if st.session_state.messages[-1]["role"] != "assistant":
     # Process the input through the chat engine
     with st.chat_message("assistant"):
+        # Stream chat engine process
+        st.write("Processing query through the LlamaIndex chat engine...")
         # Streaming response from the chat engine
         response_stream = st.session_state.chat_engine.stream_chat(prompt)
         st.write_stream(response_stream.response_gen)
