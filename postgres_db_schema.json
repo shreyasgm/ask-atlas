@@ -406,7 +406,7 @@
         },
         {
             "table_name": "product_hs92",
-            "context_str": "HS92 product classification data with hierarchical relationships."
+            "context_str": "HS92 product classification data with hierarchical relationships. Includes product codes, names, and descriptions."
         },
         {
             "table_name": "product_hs92_ps_edges",
@@ -422,7 +422,7 @@
         },
         {
             "table_name": "product_hs12",
-            "context_str": "HS12 product classification data with hierarchical relationships."
+            "context_str": "HS12 product classification data with hierarchical relationships. Includes product codes, names, and descriptions."
         },
         {
             "table_name": "location_group",
@@ -430,15 +430,15 @@
         },
         {
             "table_name": "product_sitc",
-            "context_str": "SITC product classification data."
+            "context_str": "SITC product classification data. Includes product codes, names, and descriptions."
         },
         {
             "table_name": "product_services_unilateral",
-            "context_str": "Classification of products in unilateral service trade."
+            "context_str": "Classification of products in unilateral service trade. Includes services-type product codes, names, and descriptions. Use this for unilateral (single country level) service trade data."
         },
         {
             "table_name": "product_services_bilateral",
-            "context_str": "Classification of products in bilateral service trade."
+            "context_str": "Classification of products in bilateral service trade. Includes services-type product codes, names, and descriptions. Use this for bilateral (country to country level) service trade data."
         }
     ]
 }

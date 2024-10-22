@@ -156,11 +156,11 @@ def init_query_engine(test: bool = False):
             "product_year_2",
             "product_year_4",
         ],
-        "classifications": ["location_country", "product_hs92"],
+        "classification": ["location_country", "product_hs92"],
     }
 
     if test:
-        chosen_schemas = ["hs92", "classifications"]
+        chosen_schemas = ["hs92", "classification"]
         # # Call the debug function to check
         # debug_table_names(engine, chosen_schema=chosen_schema)
 
@@ -212,7 +212,7 @@ def init_query_engine(test: bool = False):
         "You can order the results by a relevant column if needed.\n\n "
         "Unless otherwise specified by the user, use the HS 1992 product classification system.\n\n"
         "Note that tables are schema-qualified. For example:\n."
-        "- classifications.location_country and classifications.product_hs92 contain reference data about countries and products respectively.\n"
+        "- classification.location_country and classification.product_hs92 contain reference data about countries and products respectively.\n"
         "- 'hs92.country_product_*' tables contain data about country exports and imports for specific products and years, for the HS92 classification system.\n"
         "- 'hs92.country_year' contains data about countries in specific years, without product-specific information in the table itself, but derived from underlying data based on the HS92 classification system.\n"
         "- 'hs92.country_country_product_*' tables contain data about bilateral trade flows between countries, for specific products and years, for the HS92 classification system.\n"
