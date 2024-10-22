@@ -1,0 +1,444 @@
+{
+    "public": [
+        {
+            "table_name": "data_flags",
+            "context_str": "Metadata flags for countries regarding rankings or inclusion in profiles."
+        },
+        {
+            "table_name": "year",
+            "context_str": "Yearly deflator and inflation-related data."
+        }
+    ],
+    "sitc": [
+        {
+            "table_name": "product_product_4",
+            "context_str": "No context available"
+        },
+        {
+            "table_name": "product_year_2",
+            "context_str": "HS12 product-level trade data at the 2-digit level."
+        },
+        {
+            "table_name": "product_year_4",
+            "context_str": "HS12 product-level trade data at the 4-digit level."
+        },
+        {
+            "table_name": "country_country_product_year_4",
+            "context_str": "Bilateral trade data by country and product (HS12, 4-digit level)."
+        },
+        {
+            "table_name": "country_country_year",
+            "context_str": "No context available"
+        },
+        {
+            "table_name": "country_product_year_1",
+            "context_str": "Country-level trade data aggregated at the 1-digit HS12 product level."
+        },
+        {
+            "table_name": "country_product_year_2",
+            "context_str": "Country-level trade data aggregated at the 2-digit HS12 product level."
+        },
+        {
+            "table_name": "country_country_product_year_1",
+            "context_str": "Bilateral trade data by country and product (HS12, 1-digit level)."
+        },
+        {
+            "table_name": "country_country_product_year_2",
+            "context_str": "Bilateral trade data by country and product (HS12, 2-digit level)."
+        },
+        {
+            "table_name": "country_product_year_4",
+            "context_str": "Country-level trade data aggregated at the 4-digit HS12 product level."
+        },
+        {
+            "table_name": "country_year",
+            "context_str": "Country-level trade data including export/import values, classified by HS12."
+        },
+        {
+            "table_name": "group_group_product_year_1",
+            "context_str": "Trade data between groups of countries at the HS12 1-digit product level."
+        },
+        {
+            "table_name": "group_group_product_year_2",
+            "context_str": "Trade data between groups of countries at the HS12 2-digit product level."
+        },
+        {
+            "table_name": "group_group_product_year_4",
+            "context_str": "Trade data between groups of countries at the HS12 4-digit product level."
+        },
+        {
+            "table_name": "product_year_1",
+            "context_str": "HS12 product-level trade data at the 1-digit level."
+        },
+        {
+            "table_name": "country_year_thresholds",
+            "context_str": "No context available"
+        }
+    ],
+    "services_unilateral": [
+        {
+            "table_name": "country_country_product_year_1",
+            "context_str": "Bilateral trade data by country and product (HS12, 1-digit level)."
+        },
+        {
+            "table_name": "country_country_product_year_2",
+            "context_str": "Bilateral trade data by country and product (HS12, 2-digit level)."
+        },
+        {
+            "table_name": "country_country_product_year_4",
+            "context_str": "Bilateral trade data by country and product (HS12, 4-digit level)."
+        },
+        {
+            "table_name": "country_country_year",
+            "context_str": "No context available"
+        },
+        {
+            "table_name": "country_product_year_1",
+            "context_str": "Country-level trade data aggregated at the 1-digit HS12 product level."
+        },
+        {
+            "table_name": "country_product_year_2",
+            "context_str": "Country-level trade data aggregated at the 2-digit HS12 product level."
+        },
+        {
+            "table_name": "country_product_year_4",
+            "context_str": "Country-level trade data aggregated at the 4-digit HS12 product level."
+        },
+        {
+            "table_name": "country_product_year_6",
+            "context_str": "Country-level trade data aggregated at the 6-digit HS12 product level."
+        },
+        {
+            "table_name": "country_year",
+            "context_str": "Country-level trade data including export/import values, classified by HS12."
+        },
+        {
+            "table_name": "product_year_1",
+            "context_str": "HS12 product-level trade data at the 1-digit level."
+        },
+        {
+            "table_name": "product_year_2",
+            "context_str": "HS12 product-level trade data at the 2-digit level."
+        },
+        {
+            "table_name": "product_year_4",
+            "context_str": "HS12 product-level trade data at the 4-digit level."
+        },
+        {
+            "table_name": "product_year_6",
+            "context_str": "HS12 product-level trade data at the 6-digit level."
+        },
+        {
+            "table_name": "country_country_product_year_6",
+            "context_str": "Bilateral trade data by country and product (HS12, 6-digit level)."
+        },
+        {
+            "table_name": "group_group_product_year_1",
+            "context_str": "Trade data between groups of countries at the HS12 1-digit product level."
+        },
+        {
+            "table_name": "group_group_product_year_2",
+            "context_str": "Trade data between groups of countries at the HS12 2-digit product level."
+        },
+        {
+            "table_name": "group_group_product_year_4",
+            "context_str": "Trade data between groups of countries at the HS12 4-digit product level."
+        },
+        {
+            "table_name": "group_group_product_year_6",
+            "context_str": "Trade data between groups of countries at the HS12 6-digit product level."
+        }
+    ],
+    "services_bilateral": [
+        {
+            "table_name": "country_product_year_4",
+            "context_str": "Country-level trade data aggregated at the 4-digit HS12 product level."
+        },
+        {
+            "table_name": "country_product_year_6",
+            "context_str": "Country-level trade data aggregated at the 6-digit HS12 product level."
+        },
+        {
+            "table_name": "country_year",
+            "context_str": "Country-level trade data including export/import values, classified by HS12."
+        },
+        {
+            "table_name": "product_year_1",
+            "context_str": "HS12 product-level trade data at the 1-digit level."
+        },
+        {
+            "table_name": "product_year_2",
+            "context_str": "HS12 product-level trade data at the 2-digit level."
+        },
+        {
+            "table_name": "product_year_4",
+            "context_str": "HS12 product-level trade data at the 4-digit level."
+        },
+        {
+            "table_name": "product_year_6",
+            "context_str": "HS12 product-level trade data at the 6-digit level."
+        },
+        {
+            "table_name": "country_country_year",
+            "context_str": "No context available"
+        },
+        {
+            "table_name": "country_product_year_1",
+            "context_str": "Country-level trade data aggregated at the 1-digit HS12 product level."
+        },
+        {
+            "table_name": "country_product_year_2",
+            "context_str": "Country-level trade data aggregated at the 2-digit HS12 product level."
+        },
+        {
+            "table_name": "group_group_product_year_1",
+            "context_str": "Trade data between groups of countries at the HS12 1-digit product level."
+        },
+        {
+            "table_name": "group_group_product_year_2",
+            "context_str": "Trade data between groups of countries at the HS12 2-digit product level."
+        },
+        {
+            "table_name": "country_country_product_year_6",
+            "context_str": "Bilateral trade data by country and product (HS12, 6-digit level)."
+        },
+        {
+            "table_name": "group_group_product_year_4",
+            "context_str": "Trade data between groups of countries at the HS12 4-digit product level."
+        },
+        {
+            "table_name": "group_group_product_year_6",
+            "context_str": "Trade data between groups of countries at the HS12 6-digit product level."
+        },
+        {
+            "table_name": "country_country_product_year_1",
+            "context_str": "Bilateral trade data by country and product (HS12, 1-digit level)."
+        },
+        {
+            "table_name": "country_country_product_year_2",
+            "context_str": "Bilateral trade data by country and product (HS12, 2-digit level)."
+        },
+        {
+            "table_name": "country_country_product_year_4",
+            "context_str": "Bilateral trade data by country and product (HS12, 4-digit level)."
+        }
+    ],
+    "hs92": [
+        {
+            "table_name": "group_group_product_year_4",
+            "context_str": "Trade data between groups of countries at the HS12 4-digit product level."
+        },
+        {
+            "table_name": "product_product_4",
+            "context_str": "No context available"
+        },
+        {
+            "table_name": "product_year_1",
+            "context_str": "HS12 product-level trade data at the 1-digit level."
+        },
+        {
+            "table_name": "product_year_2",
+            "context_str": "HS12 product-level trade data at the 2-digit level."
+        },
+        {
+            "table_name": "product_year_4",
+            "context_str": "HS12 product-level trade data at the 4-digit level."
+        },
+        {
+            "table_name": "product_year_6",
+            "context_str": "HS12 product-level trade data at the 6-digit level."
+        },
+        {
+            "table_name": "country_country_year",
+            "context_str": "No context available"
+        },
+        {
+            "table_name": "country_product_year_1",
+            "context_str": "Country-level trade data aggregated at the 1-digit HS12 product level."
+        },
+        {
+            "table_name": "country_product_year_2",
+            "context_str": "Country-level trade data aggregated at the 2-digit HS12 product level."
+        },
+        {
+            "table_name": "country_product_year_4",
+            "context_str": "Country-level trade data aggregated at the 4-digit HS12 product level."
+        },
+        {
+            "table_name": "country_product_year_6",
+            "context_str": "Country-level trade data aggregated at the 6-digit HS12 product level."
+        },
+        {
+            "table_name": "country_year",
+            "context_str": "Country-level trade data including export/import values, classified by HS12."
+        },
+        {
+            "table_name": "country_country_product_year_4",
+            "context_str": "Bilateral trade data by country and product (HS12, 4-digit level)."
+        },
+        {
+            "table_name": "country_country_product_year_6",
+            "context_str": "Bilateral trade data by country and product (HS12, 6-digit level)."
+        },
+        {
+            "table_name": "group_group_product_year_1",
+            "context_str": "Trade data between groups of countries at the HS12 1-digit product level."
+        },
+        {
+            "table_name": "country_product_lookback_1",
+            "context_str": "No context available"
+        },
+        {
+            "table_name": "country_product_lookback_2",
+            "context_str": "No context available"
+        },
+        {
+            "table_name": "country_product_lookback_4",
+            "context_str": "No context available"
+        },
+        {
+            "table_name": "group_group_product_year_2",
+            "context_str": "Trade data between groups of countries at the HS12 2-digit product level."
+        },
+        {
+            "table_name": "country_country_product_year_1",
+            "context_str": "Bilateral trade data by country and product (HS12, 1-digit level)."
+        },
+        {
+            "table_name": "country_country_product_year_2",
+            "context_str": "Bilateral trade data by country and product (HS12, 2-digit level)."
+        },
+        {
+            "table_name": "group_group_product_year_6",
+            "context_str": "Trade data between groups of countries at the HS12 6-digit product level."
+        },
+        {
+            "table_name": "country_year_thresholds",
+            "context_str": "No context available"
+        }
+    ],
+    "hs12": [
+        {
+            "table_name": "country_country_year",
+            "context_str": "No context available"
+        },
+        {
+            "table_name": "product_product_4",
+            "context_str": "No context available"
+        },
+        {
+            "table_name": "country_year",
+            "context_str": "Country-level trade data including export/import values, classified by HS12."
+        },
+        {
+            "table_name": "country_country_product_year_4",
+            "context_str": "Bilateral trade data by country and product (HS12, 4-digit level)."
+        },
+        {
+            "table_name": "country_country_product_year_6",
+            "context_str": "Bilateral trade data by country and product (HS12, 6-digit level)."
+        },
+        {
+            "table_name": "country_product_year_1",
+            "context_str": "Country-level trade data aggregated at the 1-digit HS12 product level."
+        },
+        {
+            "table_name": "country_product_year_2",
+            "context_str": "Country-level trade data aggregated at the 2-digit HS12 product level."
+        },
+        {
+            "table_name": "country_product_year_4",
+            "context_str": "Country-level trade data aggregated at the 4-digit HS12 product level."
+        },
+        {
+            "table_name": "country_product_year_6",
+            "context_str": "Country-level trade data aggregated at the 6-digit HS12 product level."
+        },
+        {
+            "table_name": "group_group_product_year_4",
+            "context_str": "Trade data between groups of countries at the HS12 4-digit product level."
+        },
+        {
+            "table_name": "group_group_product_year_6",
+            "context_str": "Trade data between groups of countries at the HS12 6-digit product level."
+        },
+        {
+            "table_name": "country_country_product_year_1",
+            "context_str": "Bilateral trade data by country and product (HS12, 1-digit level)."
+        },
+        {
+            "table_name": "country_country_product_year_2",
+            "context_str": "Bilateral trade data by country and product (HS12, 2-digit level)."
+        },
+        {
+            "table_name": "country_year_thresholds",
+            "context_str": "No context available"
+        },
+        {
+            "table_name": "group_group_product_year_1",
+            "context_str": "Trade data between groups of countries at the HS12 1-digit product level."
+        },
+        {
+            "table_name": "group_group_product_year_2",
+            "context_str": "Trade data between groups of countries at the HS12 2-digit product level."
+        },
+        {
+            "table_name": "product_year_1",
+            "context_str": "HS12 product-level trade data at the 1-digit level."
+        },
+        {
+            "table_name": "product_year_2",
+            "context_str": "HS12 product-level trade data at the 2-digit level."
+        },
+        {
+            "table_name": "product_year_4",
+            "context_str": "HS12 product-level trade data at the 4-digit level."
+        },
+        {
+            "table_name": "product_year_6",
+            "context_str": "HS12 product-level trade data at the 6-digit level."
+        }
+    ],
+    "classification": [
+        {
+            "table_name": "product_hs92_ps_clusters",
+            "context_str": "No context available"
+        },
+        {
+            "table_name": "product_hs92",
+            "context_str": "HS92 product classification data with hierarchical relationships."
+        },
+        {
+            "table_name": "product_hs92_ps_edges",
+            "context_str": "No context available"
+        },
+        {
+            "table_name": "location_country",
+            "context_str": "Country-level data with names, codes, and hierarchical information."
+        },
+        {
+            "table_name": "location_group_member",
+            "context_str": "Maps countries to groups and defines country memberships."
+        },
+        {
+            "table_name": "product_hs12",
+            "context_str": "HS12 product classification data with hierarchical relationships."
+        },
+        {
+            "table_name": "location_group",
+            "context_str": "Data about groups of countries or regions, with hierarchy."
+        },
+        {
+            "table_name": "product_sitc",
+            "context_str": "SITC product classification data."
+        },
+        {
+            "table_name": "product_services_unilateral",
+            "context_str": "Classification of products in unilateral service trade."
+        },
+        {
+            "table_name": "product_services_bilateral",
+            "context_str": "Classification of products in bilateral service trade."
+        }
+    ]
+}
