@@ -24,7 +24,7 @@
         },
         {
             "table_name": "country_country_product_year_4",
-            "context_str": "Bilateral trade data by country and product (SITC, 4-digit level)."
+            "context_str": "Country to country bilateral trade data by country and product (SITC, 4-digit level)."
         },
         {
             "table_name": "country_country_year",
@@ -32,23 +32,23 @@
         },
         {
             "table_name": "country_product_year_1",
-            "context_str": "Country-level trade data aggregated at the 1-digit SITC product level."
+            "context_str": "Country-level trade data at the 1-digit SITC product level."
         },
         {
             "table_name": "country_product_year_2",
-            "context_str": "Country-level trade data aggregated at the 2-digit SITC product level."
+            "context_str": "Country-level trade data at the 2-digit SITC product level."
         },
         {
             "table_name": "country_country_product_year_1",
-            "context_str": "Bilateral trade data by country and product (SITC, 1-digit level)."
+            "context_str": "Country to country bilateral trade data by country and product (SITC, 1-digit level)."
         },
         {
             "table_name": "country_country_product_year_2",
-            "context_str": "Bilateral trade data by country and product (SITC, 2-digit level)."
+            "context_str": "Country to country bilateral trade data by country and product (SITC, 2-digit level)."
         },
         {
             "table_name": "country_product_year_4",
-            "context_str": "Country-level trade data aggregated at the 4-digit SITC product level."
+            "context_str": "Country-level trade data at the 4-digit SITC product level."
         },
         {
             "table_name": "country_year",
@@ -78,15 +78,15 @@
     "services_unilateral": [
         {
             "table_name": "country_country_product_year_1",
-            "context_str": "Bilateral trade data by country and product (Services, 1-digit level)."
+            "context_str": "Country to country bilateral trade data by country and product (Services, 1-digit level)."
         },
         {
             "table_name": "country_country_product_year_2",
-            "context_str": "Bilateral trade data by country and product (Services, 2-digit level)."
+            "context_str": "Country to country bilateral trade data by country and product (Services, 2-digit level)."
         },
         {
             "table_name": "country_country_product_year_4",
-            "context_str": "Bilateral trade data by country and product (Services, 4-digit level)."
+            "context_str": "Country to country bilateral trade data by country and product (Services, 4-digit level)."
         },
         {
             "table_name": "country_country_year",
@@ -94,19 +94,19 @@
         },
         {
             "table_name": "country_product_year_1",
-            "context_str": "Country-level trade data aggregated at the 1-digit Services product level."
+            "context_str": "Country-level trade data at the 1-digit Services product level."
         },
         {
             "table_name": "country_product_year_2",
-            "context_str": "Country-level trade data aggregated at the 2-digit Services product level."
+            "context_str": "Country-level trade data at the 2-digit Services product level."
         },
         {
             "table_name": "country_product_year_4",
-            "context_str": "Country-level trade data aggregated at the 4-digit Services product level."
+            "context_str": "Country-level trade data at the 4-digit Services product level."
         },
         {
             "table_name": "country_product_year_6",
-            "context_str": "Country-level trade data aggregated at the 6-digit Services product level."
+            "context_str": "Country-level trade data at the 6-digit Services product level."
         },
         {
             "table_name": "country_year",
@@ -130,7 +130,7 @@
         },
         {
             "table_name": "country_country_product_year_6",
-            "context_str": "Bilateral trade data by country and product (Services, 6-digit level)."
+            "context_str": "Country to country bilateral trade data by country and product (Services, 6-digit level)."
         },
         {
             "table_name": "group_group_product_year_1",
@@ -152,11 +152,11 @@
     "services_bilateral": [
         {
             "table_name": "country_product_year_4",
-            "context_str": "Country-level trade data aggregated at the 4-digit Services product level."
+            "context_str": "Country-level trade data at the 4-digit Services product level."
         },
         {
             "table_name": "country_product_year_6",
-            "context_str": "Country-level trade data aggregated at the 6-digit Services product level."
+            "context_str": "Country-level trade data at the 6-digit Services product level."
         },
         {
             "table_name": "country_year",
@@ -184,11 +184,11 @@
         },
         {
             "table_name": "country_product_year_1",
-            "context_str": "Country-level trade data aggregated at the 1-digit Services product level."
+            "context_str": "Country-level trade data at the 1-digit Services product level."
         },
         {
             "table_name": "country_product_year_2",
-            "context_str": "Country-level trade data aggregated at the 2-digit Services product level."
+            "context_str": "Country-level trade data at the 2-digit Services product level."
         },
         {
             "table_name": "group_group_product_year_1",
@@ -200,7 +200,7 @@
         },
         {
             "table_name": "country_country_product_year_6",
-            "context_str": "Bilateral trade data by country and product (Services, 6-digit level)."
+            "context_str": "Country to country bilateral trade data by country and product (Services, 6-digit level)."
         },
         {
             "table_name": "group_group_product_year_4",
@@ -212,21 +212,21 @@
         },
         {
             "table_name": "country_country_product_year_1",
-            "context_str": "Bilateral trade data by country and product (Services, 1-digit level)."
+            "context_str": "Country to country bilateral trade data by country and product (Services, 1-digit level)."
         },
         {
             "table_name": "country_country_product_year_2",
-            "context_str": "Bilateral trade data by country and product (Services, 2-digit level)."
+            "context_str": "Country to country bilateral trade data by country and product (Services, 2-digit level)."
         },
         {
             "table_name": "country_country_product_year_4",
-            "context_str": "Bilateral trade data by country and product (Services, 4-digit level)."
+            "context_str": "Country to country bilateral trade data by country and product (Services, 4-digit level)."
         }
     ],
     "hs92": [
         {
             "table_name": "group_group_product_year_4",
-            "context_str": "Trade data between groups of countries at the HS 1992 4-digit product level."
+            "context_str": "Country group to country group at the HS 1992 4-digit product level."
         },
         {
             "table_name": "product_product_4",
@@ -254,19 +254,19 @@
         },
         {
             "table_name": "country_product_year_1",
-            "context_str": "Country-level trade data aggregated at the 1-digit HS 1992 product level."
+            "context_str": "Country-level trade data at the 1-digit HS 1992 product level."
         },
         {
             "table_name": "country_product_year_2",
-            "context_str": "Country-level trade data aggregated at the 2-digit HS 1992 product level."
+            "context_str": "Country-level trade data at the 2-digit HS 1992 product level."
         },
         {
             "table_name": "country_product_year_4",
-            "context_str": "Country-level trade data aggregated at the 4-digit HS 1992 product level."
+            "context_str": "Country-level trade data at the 4-digit HS 1992 product level."
         },
         {
             "table_name": "country_product_year_6",
-            "context_str": "Country-level trade data aggregated at the 6-digit HS 1992 product level."
+            "context_str": "Country-level trade data at the 6-digit HS 1992 product level."
         },
         {
             "table_name": "country_year",
@@ -274,11 +274,11 @@
         },
         {
             "table_name": "country_country_product_year_4",
-            "context_str": "Bilateral trade data by country and product (HS 1992, 4-digit level)."
+            "context_str": "Country to country bilateral trade data by country and product (HS 1992, 4-digit level)."
         },
         {
             "table_name": "country_country_product_year_6",
-            "context_str": "Bilateral trade data by country and product (HS 1992, 6-digit level)."
+            "context_str": "Country to country bilateral trade data by country and product (HS 1992, 6-digit level)."
         },
         {
             "table_name": "group_group_product_year_1",
@@ -302,11 +302,11 @@
         },
         {
             "table_name": "country_country_product_year_1",
-            "context_str": "Bilateral trade data by country and product (HS 1992, 1-digit level)."
+            "context_str": "Country to country bilateral trade data by country and product (HS 1992, 1-digit level)."
         },
         {
             "table_name": "country_country_product_year_2",
-            "context_str": "Bilateral trade data by country and product (HS 1992, 2-digit level)."
+            "context_str": "Country to country bilateral trade data by country and product (HS 1992, 2-digit level)."
         },
         {
             "table_name": "group_group_product_year_6",
@@ -332,27 +332,27 @@
         },
         {
             "table_name": "country_country_product_year_4",
-            "context_str": "Bilateral trade data by country and product (HS12, 4-digit level)."
+            "context_str": "Country to country bilateral trade data by country and product (HS12, 4-digit level)."
         },
         {
             "table_name": "country_country_product_year_6",
-            "context_str": "Bilateral trade data by country and product (HS12, 6-digit level)."
+            "context_str": "Country to country bilateral trade data by country and product (HS12, 6-digit level)."
         },
         {
             "table_name": "country_product_year_1",
-            "context_str": "Country-level trade data aggregated at the 1-digit HS12 product level."
+            "context_str": "Country-level trade data at the 1-digit HS12 product level."
         },
         {
             "table_name": "country_product_year_2",
-            "context_str": "Country-level trade data aggregated at the 2-digit HS12 product level."
+            "context_str": "Country-level trade data at the 2-digit HS12 product level."
         },
         {
             "table_name": "country_product_year_4",
-            "context_str": "Country-level trade data aggregated at the 4-digit HS12 product level."
+            "context_str": "Country-level trade data at the 4-digit HS12 product level."
         },
         {
             "table_name": "country_product_year_6",
-            "context_str": "Country-level trade data aggregated at the 6-digit HS12 product level."
+            "context_str": "Country-level trade data at the 6-digit HS12 product level."
         },
         {
             "table_name": "group_group_product_year_4",
@@ -364,11 +364,11 @@
         },
         {
             "table_name": "country_country_product_year_1",
-            "context_str": "Bilateral trade data by country and product (HS12, 1-digit level)."
+            "context_str": "Country to country bilateral trade data by country and product (HS12, 1-digit level)."
         },
         {
             "table_name": "country_country_product_year_2",
-            "context_str": "Bilateral trade data by country and product (HS12, 2-digit level)."
+            "context_str": "Country to country bilateral trade data by country and product (HS12, 2-digit level)."
         },
         {
             "table_name": "country_year_thresholds",

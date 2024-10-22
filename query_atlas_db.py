@@ -3,12 +3,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from llama_index.core.indices.struct_store.sql_query import SQLTableRetrieverQueryEngine
 from llama_index.core import (
-    SQLDatabase,
     VectorStoreIndex,
     PromptTemplate,
     Settings,
     set_global_handler,
 )
+from llama_index.core.prompts.prompt_type import PromptType
 from llama_index.core.objects import SQLTableNodeMapping, SQLTableSchema, ObjectIndex
 from llama_index.core.chat_engine import CondenseQuestionChatEngine
 from llama_index.llms.openai import OpenAI
@@ -18,6 +18,9 @@ from pathlib import Path
 from sqlalchemy import inspect
 import logging
 import sys
+from src.sql_multiple_schemas import SQLDatabaseWithSchemas
+import sqlalchemy.exc
+from sqlalchemy import text
 
 
 # Set up logging
@@ -38,18 +41,31 @@ Settings.llm = OpenAI(
 )
 
 
-@st.cache_resource(ttl=3600)
+@st.cache_resource(ttl=3600, show_spinner=False)
 def init_db():
-    # Create the connection using the secrets from Streamlit's secrets.toml
-    db_connection_string = st.secrets["ATLAS_DB_URL"]
-    engine = create_engine(
-        db_connection_string, execution_options={"postgresql_readonly": True}
-    )
+    try:
+        with st.spinner("Connecting to Atlas Database..."):
+            # Create the connection using the secrets from Streamlit's secrets.toml
+            db_connection_string = st.secrets["ATLAS_DB_URL"]
+            engine = create_engine(
+                db_connection_string, 
+                execution_options={"postgresql_readonly": True},
+                connect_args={"connect_timeout": 10}
+            )
 
-    # Create a session factory
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+            # Test the connection
+            with engine.connect() as connection:
+                connection.execute(text("SELECT 1"))
 
-    return engine, SessionLocal
+            # Create a session factory
+            SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+            return engine, SessionLocal
+
+    except sqlalchemy.exc.SQLAlchemyError:
+        st.error("Unable to connect to the Atlas Database. Please try again later.")
+        logging.error("Failed to connect to Atlas Database", exc_info=True)
+        st.stop()
 
 
 def debug_table_names(engine, chosen_schema="hs92"):
@@ -127,48 +143,51 @@ with open(BASE_DIR / "postgres_db_schema.json", "r") as f:
 @st.cache_resource
 def init_query_engine(test: bool = False):
     # Optional tables to include for testing
-    testing_tables_to_use = [
-        # "product_hs92",
-        # "location_country",
-        "country_product_year_1",
-        "country_product_year_2",
-        "country_product_year_4",
-        "country_country_product_year_1",
-        "country_country_product_year_2",
-        "country_country_product_year_4",
-        "country_year",
-        "product_year_1",
-        "product_year_2",
-        "product_year_4",
-    ]
+    testing_tables_to_use = {
+        "hs92": [
+            "country_product_year_1",
+            "country_product_year_2",
+            "country_product_year_4",
+            "country_country_product_year_1",
+            "country_country_product_year_2",
+            "country_country_product_year_4",
+            "country_year",
+            "product_year_1",
+            "product_year_2",
+            "product_year_4",
+        ],
+        "classifications": ["location_country", "product_hs92"],
+    }
 
     if test:
-        chosen_schema = "hs92"
+        chosen_schemas = ["hs92", "classifications"]
         # # Call the debug function to check
         # debug_table_names(engine, chosen_schema=chosen_schema)
 
         # Create the SQLDatabase object with schema information
-        sql_database = SQLDatabase(
+        sql_database = SQLDatabaseWithSchemas(
             engine,
-            schema=chosen_schema,
-            include_tables=testing_tables_to_use,
+            schemas=chosen_schemas,
+            include_tables=[
+                f"{schema}.{table}"
+                for schema, tables in testing_tables_to_use.items()
+                for table in tables
+            ],
         )
-
-        # Define all table schemas you want to use for the LlamaIndex
         table_schema_objs = [
             SQLTableSchema(
-                table_name=table["table_name"],
+                table_name=f"{schema}.{table['table_name']}",
                 context_str=table["context_str"],
             )
             for schema, tables in db_schema_data.items()
             for table in tables
-            if table["table_name"] in testing_tables_to_use and schema == chosen_schema
+            if table["table_name"] in testing_tables_to_use.get(schema, [])
         ]
     else:
         # Create the SQLDatabase object for the full schema
-        sql_database = SQLDatabase(engine)
+        schemas = list(db_schema_data.keys())
+        sql_database = SQLDatabaseWithSchemas(engine, schemas)
 
-        # Define all table schemas you want to use for the LlamaIndex
         table_schema_objs = [
             SQLTableSchema(
                 table_name=f"{schema}.{table['table_name']}",
@@ -186,10 +205,47 @@ def init_query_engine(test: bool = False):
         table_schema_objs, table_node_mapping, VectorStoreIndex
     )
 
+    # Prepare the text to sql prompt
+    TRADE_DATA_TEXT_TO_SQL_TMPL = (
+        "Given an input question, first create a syntactically correct postgresql "
+        "query to run, then look at the results of the query and return the answer. "
+        "You can order the results by a relevant column if needed.\n\n "
+        "Unless otherwise specified by the user, use the HS 1992 product classification system.\n\n"
+        "Note that tables are schema-qualified. For example:\n."
+        "- classifications.location_country and classifications.product_hs92 contain reference data about countries and products respectively.\n"
+        "- 'hs92.country_product_*' tables contain data about country exports and imports for specific products and years, for the HS92 classification system.\n"
+        "- 'hs92.country_year' contains data about countries in specific years, without product-specific information in the table itself, but derived from underlying data based on the HS92 classification system.\n"
+        "- 'hs92.country_country_product_*' tables contain data about bilateral trade flows between countries, for specific products and years, for the HS92 classification system.\n"
+        "Note that country ID and product ID are internal ID's and not the ISO country codes or SITC/HS product codes.\n\n"
+        "Never query for all the columns from a specific table, only ask for a "
+        "few relevant columns based on the user's question.\n\n"
+        "Pay attention to use only the column names that you can see in the schema description. "
+        "Be careful to not query for columns that do not exist. "
+        "Make sure to check which column belongs to which table. "
+        "Also, qualify column names with the table name when needed. \n"
+        "Make sure to only provide your response based on the result of the SQL query. "
+        "Do not answer based on your prior knowledge, and do not make up a generic answer.\n\n"
+        "Use the following format for your output, each line following the structure below:\n\n"
+        "Question: Question here\n"
+        "SQLQuery: SQL Query to run\n"
+        "SQLResult: Result of the SQLQuery\n"
+        "Answer: Final answer here\n\n"
+        "Only use tables listed below.\n"
+        "{schema}\n\n"
+        "Question: {query_str}\n"
+        "SQLQuery: "
+    )
+
+    TRADE_DATA_TEXT_TO_SQL_PROMPT = PromptTemplate(
+        TRADE_DATA_TEXT_TO_SQL_TMPL,
+        prompt_type=PromptType.TEXT_TO_SQL,
+    )
+
     # Initialize the query engine
     query_engine = SQLTableRetrieverQueryEngine(
         sql_database=sql_database,
-        table_retriever=obj_index.as_retriever(similarity_top_k=4),
+        text_to_sql_prompt=TRADE_DATA_TEXT_TO_SQL_PROMPT,
+        table_retriever=obj_index.as_retriever(similarity_top_k=6),
         streaming=True,
     )
 
@@ -251,8 +307,6 @@ for message in st.session_state.messages:
 if st.session_state.messages[-1]["role"] != "assistant":
     # Process the input through the chat engine
     with st.chat_message("assistant"):
-        # Stream chat engine process
-        st.write("Processing query through the LlamaIndex chat engine...")
         # Streaming response from the chat engine
         response_stream = st.session_state.chat_engine.stream_chat(prompt)
         st.write_stream(response_stream.response_gen)
