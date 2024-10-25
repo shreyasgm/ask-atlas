@@ -5,15 +5,39 @@ import sys
 import os
 import json
 
-# Add the root directory to the Python path
 BASE_DIR = Path(__file__).parents[1]
 sys.path.append(BASE_DIR)
-
 load_dotenv(dotenv_path=BASE_DIR / ".env")
 
 
+def simplify_type(udt_name, char_length, numeric_precision, numeric_scale):
+    # Basic types that don't need additional info
+    simple_types = {
+        "int2",
+        "int4",
+        "int8",
+        "float4",
+        "float8",
+        "bool",
+        "json",
+        "jsonb",
+        "text",
+        "date",
+        "timestamptz",
+        "timestamp",
+    }
+
+    if udt_name in simple_types:
+        return udt_name
+
+    # Only show length for varchar/char types
+    if udt_name in ("varchar", "char", "bpchar"):
+        return f"{udt_name}({char_length})" if char_length else udt_name
+
+    return udt_name
+
+
 def get_db_schema(db_url):
-    # Connect to the PostgreSQL database
     conn = psycopg2.connect(db_url)
     cur = conn.cursor()
 
@@ -26,48 +50,73 @@ def get_db_schema(db_url):
     """)
     schemas = cur.fetchall()
 
-    # Get all tables across all schemas
-    cur.execute("""
-        SELECT table_schema, table_name
-        FROM information_schema.tables
-        WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
-    """)
-    tables = cur.fetchall()
-
-    # Create a dictionary to group tables by schema
     schema_tables = {}
     for schema_name in schemas:
-        schema_tables[schema_name[0]] = []
+        schema = schema_name[0]
+        schema_tables[schema] = {}
 
-    for table in tables:
-        schema_name = table[0]
-        table_name = table[1]
-        schema_tables[schema_name].append(table_name)
+        # Modified query to get enum types and basic column info
+        cur.execute(
+            """
+            WITH enum_types AS (
+                SELECT 
+                    t.typname,
+                    ARRAY_AGG(e.enumlabel ORDER BY e.enumsortorder) as enum_values
+                FROM pg_type t 
+                JOIN pg_enum e ON t.oid = e.enumtypid
+                GROUP BY t.typname
+            )
+            SELECT 
+                t.table_name,
+                c.column_name,
+                c.udt_name,
+                c.character_maximum_length,
+                c.numeric_precision,
+                c.numeric_scale,
+                (SELECT enum_values FROM enum_types WHERE typname = c.udt_name) as enum_values
+            FROM information_schema.tables t
+            JOIN information_schema.columns c 
+                ON t.table_name = c.table_name 
+                AND t.table_schema = c.table_schema
+            WHERE t.table_schema = %s
+            AND t.table_type = 'BASE TABLE'
+            ORDER BY t.table_name, c.ordinal_position
+            """,
+            (schema,),
+        )
+
+        for (
+            table_name,
+            col_name,
+            udt_name,
+            char_length,
+            numeric_precision,
+            numeric_scale,
+            enum_values,
+        ) in cur.fetchall():
+            if table_name not in schema_tables[schema]:
+                schema_tables[schema][table_name] = {}
+
+            # Handle enum types
+            if enum_values is not None:
+                data_type = f"ENUM({', '.join(enum_values)})"
+            else:
+                data_type = simplify_type(
+                    udt_name, char_length, numeric_precision, numeric_scale
+                )
+
+            schema_tables[schema][table_name][col_name] = data_type
 
     cur.close()
     conn.close()
-
     return schema_tables
 
 
-def save_to_json(data, file_path):
-    with open(file_path, "w") as json_file:
-        json.dump(data, json_file, indent=4)
-    print(f"Schema saved to {file_path}")
-
-
-# Execute the script
 print("Fetching schema...")
 schema_tables = get_db_schema(os.getenv("ATLAS_DB_URL"))
 
-# Print the schema names and their tables
-for schema, tables in schema_tables.items():
-    print(f"\nSchema: {schema}")
-    print("-" * 40)
-    for table in tables:
-        print(f"  Table: {table}")
-    print("=" * 40)
-
-# Save schema and tables to JSON
-json_file_path = BASE_DIR / "postgres_db_schema.json"
-save_to_json(schema_tables, json_file_path)
+# Save to JSON
+json_file_path = BASE_DIR / "atlas_db_structure.json"
+with open(json_file_path, "w") as json_file:
+    json.dump(schema_tables, json_file, indent=2)
+print(f"Schema saved to {json_file_path}")
