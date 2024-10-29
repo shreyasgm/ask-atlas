@@ -5,10 +5,8 @@ logs/
 *.csv
 *.parquet
 .config
-test/
 chroma_db/
 archive/
-tests/
 test_queries.ipynb
 .streamlit/
 
