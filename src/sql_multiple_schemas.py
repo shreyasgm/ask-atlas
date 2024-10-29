@@ -1,14 +1,13 @@
 """
-Llamaindex's SQLDatabase only supports running queries on a single schema in the db.
-Llamaindex itself mostly inherits SQLDatabase from Langchain.
-Langchain's SQLDatabase also does not support multiple schemas, and this is an open issue: https://github.com/langchain-ai/langchain/issues/3036
+Langchain's SQLDatabase does not support multiple schemas, and this is an open issue: https://github.com/langchain-ai/langchain/issues/3036
 This subclass serves as a temporary workaround to allow for querying multiple schemas.
 """
 
 from typing import Any, List, Optional
 from sqlalchemy import MetaData, create_engine, inspect
 from sqlalchemy.engine import Engine
-from llama_index.core import SQLDatabase
+from sqlalchemy.schema import CreateTable
+from langchain import SQLDatabase
 
 
 class SQLDatabaseWithSchemas(SQLDatabase):
@@ -120,65 +119,10 @@ class SQLDatabaseWithSchemas(SQLDatabase):
                 ],
                 schema=schema,
             )
-
-    def get_single_table_info(self, table_name: str) -> str:
-        """
-        Get table info across multiple schemas.
-        Table name should be schema qualified i.e. 'schema.table'.
-        """
-        # same logic as table_info, but with specific table names
-        template = "Table '{table_name}' has columns: {columns}, "
-
-        # Split the schema and table names from the table_name (e.g., "schema.table")
-        schema, table = table_name.split(".")
-        if schema not in self._schemas:
-            raise ValueError(f"Schema '{schema}' is not recognized.")
         
-        try:
-            # try to retrieve table comment
-            table_comment = self._inspector.get_table_comment(
-                table, schema=schema
-            )["text"]
-            if table_comment:
-                template += f"with comment: ({table_comment}) "
-        except NotImplementedError:
-            # get_table_comment raises NotImplementedError for a dialect that does not support comments.
-            pass
-
-        template += "{foreign_keys}."
-        columns = []
-        for column in self._inspector.get_columns(table, schema=schema):
-            if column.get("comment"):
-                columns.append(
-                    f"{column['name']} ({column['type']!s}): "
-                    f"'{column.get('comment')}'"
-                )
-            else:
-                columns.append(f"{column['name']} ({column['type']!s})")
-
-        column_str = ", ".join(columns)
-        foreign_keys = []
-        for foreign_key in self._inspector.get_foreign_keys(
-            table, schema=schema
-        ):
-            foreign_keys.append(
-                f"{foreign_key['constrained_columns']} -> "
-                f"{foreign_key['referred_table']}.{foreign_key['referred_columns']}"
-            )
-        foreign_key_str = (
-            foreign_keys
-            and " and foreign keys: {}".format(", ".join(foreign_keys))
-            or ""
-        )
-        return template.format(
-            table_name=table_name, columns=column_str, foreign_keys=foreign_key_str
-        )
-
-    def get_usable_table_names(self) -> List[str]:
-        """Get names of tables available across multiple schemas."""
-        if self._include_tables:
-            return sorted(self._include_tables)
-        return sorted(self._all_tables - self._ignore_tables)
+        # Add id to tables metadata
+        for t in self._metadata.sorted_tables:
+            t.id = f"{t.schema}.{t.name}"
 
     @classmethod
     def from_uri(
@@ -191,3 +135,145 @@ class SQLDatabaseWithSchemas(SQLDatabase):
         """Construct a SQLAlchemy engine from URI with support for multiple schemas."""
         engine = create_engine(database_uri, **(engine_args or {}))
         return cls(engine, schemas=schemas, **kwargs)
+    
+    def get_usable_table_names(self) -> List[str]:
+        """Get names of tables available across multiple schemas."""
+        if self._include_tables:
+            return sorted(self._include_tables)
+        return sorted(self._all_tables - self._ignore_tables)
+    
+    def get_table_info(
+    self,
+    table_names: Optional[List[str]] = None,
+    include_comments: bool = False,
+    include_foreign_keys: bool = False,
+    include_indexes: bool = False,
+    include_sample_rows: bool = False,
+) -> str:
+        """Get information about specified tables across multiple schemas.
+
+        Follows best practices as specified in: Rajkumar et al, 2022
+        (https://arxiv.org/abs/2204.00498)
+
+        Args:
+            table_names: Optional list of schema-qualified table names (e.g., ['schema.table']).
+                        If None, returns info for all usable tables.
+            include_comments: If True, includes table and column comments when available.
+            include_foreign_keys: If True, includes foreign key relationships when present.
+            include_indexes: If True, includes index information when present.
+            include_sample_rows: If True, includes sample rows when available.
+
+        Returns:
+            str: Formatted string containing table information including requested optional
+                sections that have content.
+
+        Raises:
+            ValueError: If specified tables are not found or schemas are not recognized.
+        """
+        # Get list of all available tables
+        all_table_names = self.get_usable_table_names()
+        if table_names is not None:
+            missing_tables = set(table_names).difference(all_table_names)
+            if missing_tables:
+                existing_tables = "\n".join(
+                    f"Schema '{schema}': {', '.join(sorted(tables))}"
+                    for schema, tables in self._all_tables_per_schema.items()
+                )
+                raise ValueError(
+                    f"Table(s) {missing_tables} not found in database.\n"
+                    f"Existing tables:\n{existing_tables}"
+                )
+            all_table_names = table_names
+
+        # Get metadata tables
+        meta_tables = [
+            tbl
+            for tbl in self._metadata.sorted_tables
+            if f"{tbl.schema}.{tbl.name}" in set(all_table_names)
+            and not (self.dialect == "sqlite" and tbl.name.startswith("sqlite_"))
+        ]
+
+        tables = []
+        for table in meta_tables:
+            schema_qualified_name = f"{table.schema}.{table.name}"
+            
+            # Check if we have custom info for this table
+            if (
+                self._custom_table_info 
+                and schema_qualified_name in self._custom_table_info
+            ):
+                tables.append(self._custom_table_info[schema_qualified_name])
+                continue
+
+            # Start with the CREATE TABLE statement
+            create_table = str(CreateTable(table).compile(self._engine))
+            table_info = [create_table.rstrip()]
+
+            extra_sections = []
+            
+            # Add comments if requested and available
+            if include_comments:
+                comments_section = []
+                
+                # Try to get table comment
+                try:
+                    table_comment = self._inspector.get_table_comment(
+                        table.name, schema=table.schema
+                    )["text"]
+                    if table_comment:
+                        comments_section.append(f"Table Comment: {table_comment}")
+                except NotImplementedError:
+                    pass
+
+                # Get column comments
+                column_comments = []
+                for column in self._inspector.get_columns(table.name, schema=table.schema):
+                    if column.get("comment"):
+                        column_comments.append(
+                            f"Column {column['name']}: {column.get('comment')}"
+                        )
+                if column_comments:
+                    comments_section.append("Column Comments:")
+                    comments_section.extend(f"  {comment}" for comment in column_comments)
+
+                if comments_section:
+                    extra_sections.append("\n".join(comments_section))
+
+            # Add foreign keys if requested and present
+            if include_foreign_keys:
+                foreign_keys = []
+                for fk in self._inspector.get_foreign_keys(
+                    table.name, schema=table.schema
+                ):
+                    foreign_keys.append(
+                        f"Foreign Key {fk['constrained_columns']} -> "
+                        f"{fk['referred_table']}.{fk['referred_columns']}"
+                    )
+                if foreign_keys:
+                    fk_section = ["Foreign Keys:"]
+                    fk_section.extend(f"  {fk}" for fk in foreign_keys)
+                    extra_sections.append("\n".join(fk_section))
+
+            # Add indexes if requested and present
+            if include_indexes:
+                indexes = self._get_table_indexes(table)
+                if indexes.strip():  # Check if there's actual content
+                    extra_sections.append(f"Indexes:\n{indexes}")
+
+            # Add sample rows if requested
+            if include_sample_rows:
+                sample_rows = self._get_sample_rows(table)
+                if sample_rows.strip():  # Check if there's actual content
+                    extra_sections.append(f"Sample Rows:\n{sample_rows}")
+
+            # Add extra sections if any exist
+            if extra_sections:
+                table_info.append("\n/*")
+                table_info.extend(extra_sections)
+                table_info.append("*/")
+
+            # Join all sections with appropriate spacing
+            tables.append("\n".join(table_info))
+
+        # Join all tables with double line breaks
+        return "\n\n".join(tables)
