@@ -1,14 +1,14 @@
 [
     {
         "question": "What did the US export in 2022?",
-        "file": "example_queries/unilateral_exports.sql"
+        "file": "unilateral_exports.sql"
     },
     {
         "question": "What did the US export in 2022, at the 4-digit HS classification level?",
-        "file": "example_queries/unilateral_exports_4_digit.sql"
+        "file": "unilateral_exports_4_digit.sql"
     },
     {
         "question": "What did Bolivia export to Morocco between 2010-2022 at the 4-digit HS level?",
-        "file": "example_queries/bilateral_exports.sql"
+        "file": "bilateral_exports.sql"
     }
 ]

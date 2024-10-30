@@ -1,5 +1,4 @@
 from typing import List, Dict
-import json
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers.openai_tools import PydanticToolsParser
@@ -83,10 +82,15 @@ def get_tables_in_schemas(schemas: List[str], db_schema: Dict) -> List[Dict]:
         db_schema: Database schema information
 
     Returns:
-        List of dictionaries containing table information
+        List of dictionaries containing table information with schema-qualified table_name and context_str
     """
     tables = []
     for schema in schemas:
         if schema in db_schema:
-            tables.extend(db_schema[schema])
+            for table in db_schema[schema]:
+                # Create a new dict with schema-qualified table name
+                tables.append({
+                    "table_name": f"{schema}.{table['table_name']}",
+                    "context_str": table['context_str']
+                })
     return tables
