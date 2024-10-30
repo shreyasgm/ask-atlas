@@ -74,13 +74,7 @@ def create_schema_selection_chain(llm: BaseLanguageModel):
     return chain | add_classification_schema
 
 
-def load_db_schema(file_path: str) -> Dict:
-    """Loads the database schema information from JSON file."""
-    with open(file_path, "r") as f:
-        return json.load(f)
-
-
-def get_tables_for_schemas(schemas: List[str], db_schema: Dict) -> List[Dict]:
+def get_tables_in_schemas(schemas: List[str], db_schema: Dict) -> List[Dict]:
     """
     Gets all tables and their descriptions for the selected schemas.
 

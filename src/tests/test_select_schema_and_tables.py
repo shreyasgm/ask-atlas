@@ -1,6 +1,14 @@
+import os
 import pytest
-from select_schema_and_tables import create_schema_selection_chain
+from src.select_schema_and_tables import create_schema_selection_chain
 from langchain_openai import ChatOpenAI
+
+
+@pytest.fixture(autouse=True)
+def check_openai_api_key():
+    """Fixture to check if OPENAI_API_KEY is set before running tests."""
+    if not os.getenv("OPENAI_API_KEY"):
+        pytest.xfail("OPENAI_API_KEY environment variable not set")
 
 
 @pytest.fixture

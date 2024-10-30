@@ -4,10 +4,20 @@ This subclass serves as a temporary workaround to allow for querying multiple sc
 """
 
 from typing import Any, List, Optional
-from sqlalchemy import MetaData, create_engine, inspect
+from sqlalchemy import MetaData, create_engine, inspect, Table, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.schema import CreateTable
-from langchain import SQLDatabase
+from sqlalchemy.exc import ProgrammingError
+from langchain_community.utilities import SQLDatabase
+import sqlalchemy
+
+
+def _format_index(index: sqlalchemy.engine.interfaces.ReflectedIndex) -> str:
+    """Format index information with schema awareness."""
+    return (
+        f'Name: {index["name"]}, Unique: {index["unique"]}, '
+        f'Columns: {str(index["column_names"])}'
+    )
 
 
 class SQLDatabaseWithSchemas(SQLDatabase):
@@ -119,7 +129,7 @@ class SQLDatabaseWithSchemas(SQLDatabase):
                 ],
                 schema=schema,
             )
-        
+
         # Add id to tables metadata
         for t in self._metadata.sorted_tables:
             t.id = f"{t.schema}.{t.name}"
@@ -135,21 +145,66 @@ class SQLDatabaseWithSchemas(SQLDatabase):
         """Construct a SQLAlchemy engine from URI with support for multiple schemas."""
         engine = create_engine(database_uri, **(engine_args or {}))
         return cls(engine, schemas=schemas, **kwargs)
-    
+
     def get_usable_table_names(self) -> List[str]:
         """Get names of tables available across multiple schemas."""
         if self._include_tables:
             return sorted(self._include_tables)
         return sorted(self._all_tables - self._ignore_tables)
-    
+
+    def _get_table_indexes(self, table: Table) -> str:
+        """Get table indexes with schema support."""
+        indexes = self._inspector.get_indexes(table.name, schema=table.schema)
+        indexes_formatted = "\n".join(map(_format_index, indexes))
+        return f"Table Indexes for {table.schema}.{table.name}:\n{indexes_formatted}"
+
+    def _get_sample_rows(self, table: Table) -> str:
+        """Get sample rows from a table with schema support."""
+        # build the select command
+        command = select(table).limit(self._sample_rows_in_table_info)
+
+        # save the columns in string format
+        columns_str = "\t".join([col.name for col in table.columns])
+
+        try:
+            # get the sample rows
+            with self._engine.connect() as connection:
+                sample_rows_result = connection.execute(command)  # type: ignore
+                # shorten values in the sample rows
+                sample_rows = list(
+                    map(
+                        lambda ls: [
+                            str(i)[: self._max_string_length]
+                            if i is not None
+                            else "NULL"
+                            for i in ls
+                        ],
+                        sample_rows_result,
+                    )
+                )
+
+            # save the sample rows in string format
+            sample_rows_str = "\n".join(["\t".join(row) for row in sample_rows])
+
+        # in some dialects when there are no rows in the table a
+        # 'ProgrammingError' is returned
+        except ProgrammingError:
+            sample_rows_str = ""
+
+        return (
+            f"{self._sample_rows_in_table_info} rows from {table.schema}.{table.name} table:\n"
+            f"{columns_str}\n"
+            f"{sample_rows_str}"
+        )
+
     def get_table_info(
-    self,
-    table_names: Optional[List[str]] = None,
-    include_comments: bool = False,
-    include_foreign_keys: bool = False,
-    include_indexes: bool = False,
-    include_sample_rows: bool = False,
-) -> str:
+        self,
+        table_names: Optional[List[str]] = None,
+        include_comments: bool = False,
+        include_foreign_keys: bool = False,
+        include_indexes: bool = False,
+        include_sample_rows: bool = False,
+    ) -> str:
         """Get information about specified tables across multiple schemas.
 
         Follows best practices as specified in: Rajkumar et al, 2022
@@ -196,10 +251,10 @@ class SQLDatabaseWithSchemas(SQLDatabase):
         tables = []
         for table in meta_tables:
             schema_qualified_name = f"{table.schema}.{table.name}"
-            
+
             # Check if we have custom info for this table
             if (
-                self._custom_table_info 
+                self._custom_table_info
                 and schema_qualified_name in self._custom_table_info
             ):
                 tables.append(self._custom_table_info[schema_qualified_name])
@@ -210,11 +265,11 @@ class SQLDatabaseWithSchemas(SQLDatabase):
             table_info = [create_table.rstrip()]
 
             extra_sections = []
-            
+
             # Add comments if requested and available
             if include_comments:
                 comments_section = []
-                
+
                 # Try to get table comment
                 try:
                     table_comment = self._inspector.get_table_comment(
@@ -227,14 +282,18 @@ class SQLDatabaseWithSchemas(SQLDatabase):
 
                 # Get column comments
                 column_comments = []
-                for column in self._inspector.get_columns(table.name, schema=table.schema):
+                for column in self._inspector.get_columns(
+                    table.name, schema=table.schema
+                ):
                     if column.get("comment"):
                         column_comments.append(
                             f"Column {column['name']}: {column.get('comment')}"
                         )
                 if column_comments:
                     comments_section.append("Column Comments:")
-                    comments_section.extend(f"  {comment}" for comment in column_comments)
+                    comments_section.extend(
+                        f"  {comment}" for comment in column_comments
+                    )
 
                 if comments_section:
                     extra_sections.append("\n".join(comments_section))
