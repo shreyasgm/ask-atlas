@@ -3,7 +3,7 @@ from langchain_core.language_models import BaseLanguageModel
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers.openai_tools import PydanticToolsParser
 from pydantic import BaseModel, Field
-
+from langchain_core.runnables import Runnable
 
 class SchemaList(BaseModel):
     """List of schemas in SQL database."""
@@ -11,7 +11,7 @@ class SchemaList(BaseModel):
     schemas: List[str] = Field(description="List of schema names.")
 
 
-def create_schema_selection_chain(llm: BaseLanguageModel):
+def create_schema_selection_chain(llm: BaseLanguageModel) -> Runnable:
     """
     Creates a chain that selects relevant schemas based on the user's question.
     Always includes the 'classification' schema and selects additional schema(s) based on the question.

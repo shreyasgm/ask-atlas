@@ -105,7 +105,7 @@ class SQLDatabaseWithSchemas(SQLDatabase):
         if self._custom_table_info:
             if not isinstance(self._custom_table_info, dict):
                 raise TypeError(
-                    "table_info must be a dictionary with table names as keys and the desired table info as values"
+                    "table_info must be a dictionary with schema-qualified table names as keys and the desired table info as values"
                 )
             intersection = set(self._custom_table_info).intersection(self._all_tables)
             self._custom_table_info = {
