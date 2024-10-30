@@ -134,8 +134,8 @@ openai.api_key = st.secrets["OPENAI_API_KEY"]
 # Initialize the database connection
 engine, SessionLocal = init_db()
 
-# Load the JSON schema from BASE_DIR / "postgres_db_schema.json"
-with open(BASE_DIR / "postgres_db_schema.json", "r") as f:
+# Load the JSON schema from BASE_DIR / "db_table_descriptions.json"
+with open(BASE_DIR / "db_table_descriptions.json", "r") as f:
     db_schema_data = json.load(f)
 
 
