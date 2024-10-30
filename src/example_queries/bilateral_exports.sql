@@ -1,4 +1,3 @@
--- This query finds Bolivia's exports to Morocco between 2010-2022 at the 4-digit HS level
 SELECT 
     loc_exp.iso3_code as exporter,
     loc_imp.iso3_code as importer,

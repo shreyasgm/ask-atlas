@@ -1,4 +1,3 @@
--- This query answers the question: "What did the US export in 2022, at the 4-digit HS classification level?"
 SELECT 
     p.code as hs_code,
     p.name_en as product_name,

@@ -1,6 +1,4 @@
--- This query answers the question: "What did the US export in 2022?"
--- Assume that the user is asking about trade in both goods and services. We will assume HS 1992 classification for goods, and services_unilateral for services. We will use 1-digit product codes for both goods and services.
-
+-- This query answers the question: "What did the US export in 2022? Include both goods and services exports."
 -- Goods exports (HS92)
 SELECT 
     'Goods' as category,
