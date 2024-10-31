@@ -6,7 +6,7 @@ from langchain_core.prompts import (
     PromptTemplate,
     FewShotPromptTemplate
 )
-
+from langchain_core.output_parsers import StrOutputParser
 
 def load_example_queries(
     queries_json: Union[str, Path], directory: Union[str, Path]
@@ -32,6 +32,9 @@ def load_example_queries(
 
     return example_queries
 
+
+def _strip(text: str) -> str:
+    return text.strip()
 
 def create_query_generation_chain(
     llm: BaseLanguageModel,
@@ -82,4 +85,4 @@ def create_query_generation_chain(
     #     ]
     # )
 
-    return prompt | llm
+    return prompt | llm | StrOutputParser() | _strip

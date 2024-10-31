@@ -5,8 +5,8 @@ import tempfile
 from unittest.mock import Mock
 from src.generate_query import load_example_queries, create_query_generation_chain
 from langchain_core.language_models import BaseLanguageModel
-from langchain_core.output_parsers import StrOutputParser
 from langchain_openai import ChatOpenAI
+
 
 @pytest.fixture
 def temp_query_files():
@@ -176,7 +176,9 @@ class TestProjectFiles:
             assert len(entry["query"]) > 0, "SQL query should not be empty"
             # Verify basic SQL structure - first non-comment line should be SELECT
             query_lines = [line.strip() for line in entry["query"].split("\n")]
-            non_comment_lines = [line for line in query_lines if line and not line.startswith("--")]
+            non_comment_lines = [
+                line for line in query_lines if line and not line.startswith("--")
+            ]
             assert (
                 non_comment_lines[0].upper().startswith("SELECT")
             ), f"First non-comment line should start with SELECT: {entry['query']}"
@@ -195,10 +197,8 @@ class TestCreateQueryGenerationChain:
         chain = create_query_generation_chain(llm, example_queries)
         assert chain is not None
 
-        chain_with_parser = chain | StrOutputParser()
-
         # Test chain invocation with real LLM
-        result = chain_with_parser.invoke(
+        result = chain.invoke(
             {
                 "question": "What are the top US exports by value?",
                 "top_k": 5,
@@ -216,9 +216,7 @@ class TestCreateQueryGenerationChain:
         chain = create_query_generation_chain(llm, [])
         assert chain is not None
 
-        chain_with_parser = chain | StrOutputParser()
-
-        result = chain_with_parser.invoke(
+        result = chain.invoke(
             {
                 "question": "What are the top exports?",
                 "top_k": 5,
