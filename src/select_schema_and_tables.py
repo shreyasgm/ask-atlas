@@ -61,8 +61,6 @@ def create_schema_selection_chain(llm: BaseLanguageModel) -> Runnable:
 
     def add_classification_schema(schemas: List[SchemaList]) -> List[str]:
         """Adds the classification schema and returns a flattened list of schema names."""
-        print(f"Value contained in schemas: {schemas}")
-
         # Flatten the schemas from each SchemaList object into a single list of schema names
         schema_names = ["classification"]
         for schema_obj in schemas:

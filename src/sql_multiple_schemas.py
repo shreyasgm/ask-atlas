@@ -26,7 +26,7 @@ class SQLDatabaseWithSchemas(SQLDatabase):
     def __init__(
         self,
         engine: Engine,
-        schemas: List[str],
+        schemas: Optional[List[str]] = None,
         metadata: Optional[MetaData] = None,
         ignore_tables: Optional[List[str]] = None,
         include_tables: Optional[List[str]] = None,
@@ -50,6 +50,8 @@ class SQLDatabaseWithSchemas(SQLDatabase):
                     f"The following schemas were not found in the database: {missing_schemas}\n"
                     f"Existing schemas: {', '.join(sorted(existing_schemas))}"
                 )
+        else:
+            self._schemas = existing_schemas
 
         if include_tables and ignore_tables:
             raise ValueError("Cannot specify both include_tables and ignore_tables")
