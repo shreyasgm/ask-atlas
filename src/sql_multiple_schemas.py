@@ -186,10 +186,15 @@ class SQLDatabaseWithSchemas(SQLDatabase):
 
             if cursor.returns_rows:
                 if fetch == "all":
-                    result = [dict(row) for row in cursor.fetchall()]
+                    # Get both keys and rows from the cursor
+                    keys = cursor.keys()
+                    rows = cursor.fetchall()
+                    # Create dictionaries by zipping keys with each row's values
+                    result = [dict(zip(keys, row)) for row in rows]
                 elif fetch == "one":
-                    first_result = cursor.fetchone()
-                    result = [] if first_result is None else [dict(first_result)]
+                    keys = cursor.keys()
+                    first_row = cursor.fetchone()
+                    result = [] if first_row is None else [dict(zip(keys, first_row))]
                 elif fetch == "cursor":
                     return cursor
                 else:
