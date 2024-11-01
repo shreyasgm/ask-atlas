@@ -12,5 +12,11 @@ load_dotenv(BASE_DIR / ".env")
 def base_dir():
     return BASE_DIR
 
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "integration: marks tests that require integration with external services (like LLM)",
+    )
+
 # set_verbose(True)
 # set_debug(True)

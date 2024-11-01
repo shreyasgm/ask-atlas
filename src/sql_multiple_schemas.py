@@ -3,10 +3,11 @@ Langchain's SQLDatabase does not support multiple schemas, and this is an open i
 This subclass serves as a temporary workaround to allow for querying multiple schemas.
 """
 
-from typing import Any, List, Optional
-from sqlalchemy import MetaData, create_engine, inspect, Table, select
-from sqlalchemy.engine import Engine
+from typing import Any, Dict, List, Literal, Optional, Sequence, Union
+from sqlalchemy import MetaData, create_engine, inspect, Table, select, text
+from sqlalchemy.engine import Engine, Result
 from sqlalchemy.schema import CreateTable
+from sqlalchemy.sql.expression import Executable
 from sqlalchemy.exc import ProgrammingError
 from langchain_community.utilities import SQLDatabase
 import sqlalchemy
@@ -38,7 +39,8 @@ class SQLDatabaseWithSchemas(SQLDatabase):
     ):
         """Create engine with support for multiple schemas."""
         self._engine = engine
-        self._schemas = schemas
+        self._schemas = schemas or []
+        self._schema = None  # Add this for compatibility with parent class
         self._inspector = inspect(self._engine)
 
         # Check if all specified schemas exist in the database
@@ -51,22 +53,37 @@ class SQLDatabaseWithSchemas(SQLDatabase):
                     f"Existing schemas: {', '.join(sorted(existing_schemas))}"
                 )
         else:
-            self._schemas = existing_schemas
+            self._schemas = list(existing_schemas)
 
         if include_tables and ignore_tables:
             raise ValueError("Cannot specify both include_tables and ignore_tables")
 
-        # Inspect tables and views across multiple schemas
+        # Initialize rest of the attributes
+        self._view_support = view_support
+        self._initialize_tables(ignore_tables, include_tables)
+        self._initialize_metadata(metadata, view_support)
+        self._initialize_other_settings(
+            sample_rows_in_table_info,
+            indexes_in_table_info,
+            custom_table_info,
+            max_string_length,
+        )
+
+    def _initialize_tables(
+        self, ignore_tables: Optional[List[str]], include_tables: Optional[List[str]]
+    ) -> None:
+        """Initialize table-related attributes."""
         self._all_tables_per_schema = {}
         for schema in self._schemas:
             self._all_tables_per_schema[schema] = set(
                 self._inspector.get_table_names(schema=schema)
                 + (
                     self._inspector.get_view_names(schema=schema)
-                    if view_support
+                    if self._view_support
                     else []
                 )
             )
+
         self._all_tables = set(
             f"{schema}.{table}"
             for schema, tables in self._all_tables_per_schema.items()
@@ -94,32 +111,17 @@ class SQLDatabaseWithSchemas(SQLDatabase):
                     f"ignore_tables {missing_tables} not found in database"
                 )
 
-        usable_tables = self.get_usable_table_names()
-        self._usable_tables = set(usable_tables) if usable_tables else self._all_tables
+        self._usable_tables = (
+            self._include_tables
+            if self._include_tables
+            else self._all_tables - self._ignore_tables
+        )
 
-        if not isinstance(sample_rows_in_table_info, int):
-            raise TypeError("sample_rows_in_table_info must be an integer")
-
-        self._sample_rows_in_table_info = sample_rows_in_table_info
-        self._indexes_in_table_info = indexes_in_table_info
-        self._custom_table_info = custom_table_info
-
-        if self._custom_table_info:
-            if not isinstance(self._custom_table_info, dict):
-                raise TypeError(
-                    "table_info must be a dictionary with schema-qualified table names as keys and the desired table info as values"
-                )
-            intersection = set(self._custom_table_info).intersection(self._all_tables)
-            self._custom_table_info = {
-                table: info
-                for table, info in self._custom_table_info.items()
-                if table in intersection
-            }
-
-        self._max_string_length = max_string_length
+    def _initialize_metadata(
+        self, metadata: Optional[MetaData], view_support: bool
+    ) -> None:
+        """Initialize metadata for all schemas."""
         self._metadata = metadata or MetaData()
-
-        # Reflect metadata across all schemas
         for schema in self._schemas:
             self._metadata.reflect(
                 views=view_support,
@@ -127,14 +129,75 @@ class SQLDatabaseWithSchemas(SQLDatabase):
                 only=[
                     v.split(".")[-1]
                     for v in self._usable_tables
-                    if v.startswith(schema)
+                    if v.startswith(f"{schema}.")
                 ],
                 schema=schema,
             )
 
-        # Add id to tables metadata
-        for t in self._metadata.sorted_tables:
-            t.id = f"{t.schema}.{t.name}"
+    def _initialize_other_settings(
+        self,
+        sample_rows_in_table_info: int,
+        indexes_in_table_info: bool,
+        custom_table_info: Optional[dict],
+        max_string_length: int,
+    ) -> None:
+        """Initialize other settings."""
+        if not isinstance(sample_rows_in_table_info, int):
+            raise TypeError("sample_rows_in_table_info must be an integer")
+
+        self._sample_rows_in_table_info = sample_rows_in_table_info
+        self._indexes_in_table_info = indexes_in_table_info
+        self._max_string_length = max_string_length
+
+        self._custom_table_info = None
+        if custom_table_info:
+            if not isinstance(custom_table_info, dict):
+                raise TypeError(
+                    "table_info must be a dictionary with schema-qualified table names as keys"
+                )
+            intersection = set(custom_table_info).intersection(self._all_tables)
+            self._custom_table_info = {
+                table: info
+                for table, info in custom_table_info.items()
+                if table in intersection
+            }
+
+    def _execute(
+        self,
+        command: Union[str, Executable],
+        fetch: Literal["all", "one", "cursor"] = "all",
+        *,
+        parameters: Optional[Dict[str, Any]] = None,
+        execution_options: Optional[Dict[str, Any]] = None,
+    ) -> Union[Sequence[Dict[str, Any]], Result]:
+        """Execute SQL command with schema support."""
+        parameters = parameters or {}
+        execution_options = execution_options or {}
+
+        with self._engine.begin() as connection:
+            if isinstance(command, str):
+                command = text(command)
+
+            cursor = connection.execute(
+                command,
+                parameters,
+                execution_options=execution_options,
+            )
+
+            if cursor.returns_rows:
+                if fetch == "all":
+                    result = [dict(row) for row in cursor.fetchall()]
+                elif fetch == "one":
+                    first_result = cursor.fetchone()
+                    result = [] if first_result is None else [dict(first_result)]
+                elif fetch == "cursor":
+                    return cursor
+                else:
+                    raise ValueError(
+                        "Fetch parameter must be either 'one', 'all', or 'cursor'"
+                    )
+                return result
+        return []
 
     @classmethod
     def from_uri(
@@ -338,3 +401,14 @@ class SQLDatabaseWithSchemas(SQLDatabase):
 
         # Join all tables with double line breaks
         return "\n\n".join(tables)
+
+    def get_context(self) -> Dict[str, Any]:
+        """Return db context with schema-aware table information."""
+        table_names = list(self.get_usable_table_names())
+        table_info = self.get_table_info_no_throw()
+        schemas_info = ", ".join(self._schemas)
+        return {
+            "table_info": table_info,
+            "table_names": ", ".join(table_names),
+            "schemas": schemas_info,
+        }
