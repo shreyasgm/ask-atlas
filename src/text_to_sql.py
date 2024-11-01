@@ -6,17 +6,18 @@ from dotenv import load_dotenv
 import logging
 import sys
 import json
-from select_schema_and_tables import (
-    create_schema_selection_chain,
-    get_tables_in_schemas,
-)
 from sqlalchemy import create_engine
 from langchain.prompts import PromptTemplate
-from sql_multiple_schemas import SQLDatabaseWithSchemas
-from generate_query import load_example_queries, create_query_generation_chain
 from langchain_core.runnables import RunnablePassthrough
 from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
 from langchain_core.output_parsers import StrOutputParser
+
+from src.select_schema_and_tables import (
+    create_schema_selection_chain,
+    get_tables_in_schemas,
+)
+from src.sql_multiple_schemas import SQLDatabaseWithSchemas
+from src.generate_query import load_example_queries, create_query_generation_chain
 
 # Define BASE_DIR
 BASE_DIR = Path(__file__).resolve().parents[1]
