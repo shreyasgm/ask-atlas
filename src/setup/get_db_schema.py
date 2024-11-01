@@ -5,7 +5,7 @@ import sys
 import os
 import json
 
-BASE_DIR = Path(__file__).parents[1]
+BASE_DIR = Path(__file__).parents[2]
 sys.path.append(BASE_DIR)
 load_dotenv(dotenv_path=BASE_DIR / ".env")
 
