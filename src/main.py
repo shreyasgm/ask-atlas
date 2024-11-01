@@ -16,7 +16,6 @@ from sql_multiple_schemas import SQLDatabaseWithSchemas
 from generate_query import load_example_queries, create_query_generation_chain
 from langchain_core.runnables import RunnablePassthrough
 from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
-from operator import itemgetter
 from langchain_core.output_parsers import StrOutputParser
 
 # Define BASE_DIR
