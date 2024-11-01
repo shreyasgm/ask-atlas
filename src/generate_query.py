@@ -2,11 +2,9 @@ from typing import List, Dict, Union
 import json
 from pathlib import Path
 from langchain_core.language_models import BaseLanguageModel
-from langchain_core.prompts import (
-    PromptTemplate,
-    FewShotPromptTemplate
-)
+from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+
 
 def load_example_queries(
     queries_json: Union[str, Path], directory: Union[str, Path]
@@ -34,11 +32,12 @@ def load_example_queries(
 
 
 def _strip(text: str) -> str:
-    return text.strip()
+    return text.strip().replace("```sql", "").replace("```", "")
+
 
 def create_query_generation_chain(
     llm: BaseLanguageModel,
-    example_queries: List[Dict[str, str]]
+    example_queries: List[Dict[str, str]],
 ):
     """
     Creates a chain that generates SQL queries based on the user's question.
@@ -46,16 +45,17 @@ def create_query_generation_chain(
     Args:
         llm: The language model to use for query generation
         example_queries: List of example SQL queries for reference
-    
+
     Returns:
         A chain that generates SQL queries
     """
     prefix = """You are a SQL expert that writes queries for a postgres database containing trade data.
-    Given an input question, create a syntactically correct SQL query to answer the user's question. Unless otherwise specified, do not return more than {top_k} rows.
-    Only use the tables and columns provided. Here is the relevant table information:
-    {table_info}
+Given an input question, create a syntactically correct SQL query to answer the user's question. Unless otherwise specified, do not return more than {top_k} rows. Note that you should never use the location_level or partner_level columns in your query. Just ignore those columns.
 
-    Below are some examples of user questions and their corresponding SQL queries.
+Only use the tables and columns provided. Here is the relevant table information:
+{table_info}
+
+Below are some examples of user questions and their corresponding SQL queries.
     """
 
     example_prompt = PromptTemplate.from_template(
