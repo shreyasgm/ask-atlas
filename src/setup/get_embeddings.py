@@ -27,7 +27,7 @@ logger.info(f"BASE_DIR: {BASE_DIR}")
 class Config:
     """Application configuration settings."""
 
-    BATCH_SIZE: int = 100
+    BATCH_SIZE: int = 500
     VECTOR_DIMENSION: int = 1536
     EMBEDDING_MODEL: str = "text-embedding-3-small"
     DB_SCHEMA: str = "classification_embeddings"
@@ -277,7 +277,8 @@ def main() -> None:
                 continue
 
             # Generate embeddings in batches
-            for i in range(0, len(products), config.BATCH_SIZE):
+            total_products = len(products)
+            for i in range(0, total_products, config.BATCH_SIZE):
                 batch = products[i : i + config.BATCH_SIZE]
 
                 # Generate embeddings for product names
@@ -287,8 +288,9 @@ def main() -> None:
                 # Insert products with embeddings
                 db.insert_products_batch(classification, batch, embeddings)
 
+                products_processed = min(i + config.BATCH_SIZE, total_products)
                 logger.info(
-                    f"Processed batch of {len(batch)} products for {classification.name}"
+                    f"Processed {products_processed} of {total_products} products for {classification.name}"
                 )
 
 
