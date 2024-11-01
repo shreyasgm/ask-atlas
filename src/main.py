@@ -1,5 +1,4 @@
 import os
-import time
 from typing import Dict, List
 from pathlib import Path
 from langchain_openai import ChatOpenAI
@@ -53,38 +52,26 @@ class AtlasTextToSQL:
             example_queries_dir: Directory containing example SQL queries
             max_results: Maximum number of results to return from SELECT queries on the database
         """
-        start_time = time.time()
-        
         # Initialize engine
-        engine_start = time.time()
         engine = create_engine(
             db_uri,
             execution_options={"postgresql_readonly": True},
             connect_args={"connect_timeout": 10},
         )
-        logging.info(f"Engine creation took: {time.time() - engine_start:.2f} seconds")
 
         # Initialize database connection
-        db_start = time.time()
         self.db = SQLDatabaseWithSchemas(engine=engine)
-        logging.info(f"Database initialization took: {time.time() - db_start:.2f} seconds")
 
         # Load schema and structure information
-        json_start = time.time()
         self.table_descriptions = self._load_json_as_dict(table_descriptions_json)
         self.table_structure = self._load_json_as_dict(table_structure_json)
         self.example_queries = load_example_queries(queries_json, example_queries_dir)
-        logging.info(f"Loading JSON files took: {time.time() - json_start:.2f} seconds")
 
         # Initialize language models
-        llm_start = time.time()
         self.schema_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
         self.query_llm = ChatOpenAI(model="gpt-4o", temperature=0)
-        logging.info(f"LLM initialization took: {time.time() - llm_start:.2f} seconds")
 
         self.max_results = max_results
-        
-        logging.info(f"Total initialization took: {time.time() - start_time:.2f} seconds")
 
     @staticmethod
     def _load_json_as_dict(file_path: str) -> Dict:
@@ -134,12 +121,12 @@ class AtlasTextToSQL:
             if results.strip() == "":
                 return "SQL query returned no results."
             return results
-        
+
         execute_query_chain = execute_query | check_results
 
         # Answer question given the query and results
         answer_prompt = PromptTemplate.from_template(
-            """Given the following user question, corresponding SQL query, and SQL result, answer the user question.
+            """Given the following user question, corresponding SQL query, and SQL result, answer the user question. When interpreting the SQL results, convert large dollar amounts (if any) to easily readable formats. Use millions, billions, etc. as appropriate.
 
         Question: {question}
         SQL Query: {query}
