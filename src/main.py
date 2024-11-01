@@ -82,6 +82,12 @@ class AtlasTextToSQL:
     def get_table_info_for_schemas(self, schemas: List[str]) -> str:
         """Get table information for a list of schemas."""
         table_descriptions = get_tables_in_schemas(schemas, self.table_descriptions)
+        # Temporarily, remove any tables that have the word "group" in the table name
+        table_descriptions = [
+            table
+            for table in table_descriptions
+            if "group" not in table["table_name"].lower()
+        ]
         table_info = ""
         for table in table_descriptions:
             table_info += (
@@ -135,28 +141,27 @@ class AtlasTextToSQL:
         )
         answer_chain = answer_prompt | self.query_llm | StrOutputParser()
 
-        # Execute step-wise for now
-        table_info = table_info_chain.invoke({"question": question})
-        query = query_chain.invoke(
-            {"question": question, "top_k": self.max_results, "table_info": table_info}
-        )
-        results = execute_query_chain.invoke({"query": query})
-        answer = answer_chain.invoke(
-            {"question": question, "query": query, "result": results}
-        )
-
-        # full_chain = (
-        #     RunnablePassthrough.assign(table_info=table_info_chain)
-        #     .assign(query=itemgetter("table_info") | query_chain)
-        #     .assign(result=itemgetter("query") | execute_query)
-        #     | answer_prompt
-        #     | self.query_llm
-        #     | StrOutputParser()
+        # # Execute step-wise for now
+        # table_info = table_info_chain.invoke({"question": question})
+        # query = query_chain.invoke(
+        #     {"question": question, "top_k": self.max_results, "table_info": table_info}
+        # )
+        # results = execute_query_chain.invoke({"query": query})
+        # answer = answer_chain.invoke(
+        #     {"question": question, "query": query, "result": results}
         # )
 
-        # answer = full_chain.invoke({"question": question, "top_k": self.max_results})
+        # Combine all elements into a single chain
+        full_chain = (
+            RunnablePassthrough.assign(table_info=table_info_chain)
+            .assign(query=query_chain)
+            .assign(result=execute_query_chain)
+            | answer_chain
+        )
 
-        return query, results, answer
+        answer = full_chain.invoke({"question": question, "top_k": self.max_results})
+
+        return answer
 
 
 # Usage example:
@@ -173,7 +178,5 @@ if __name__ == "__main__":
         "What were the top 5 products exported from United States to China in 2020?"
     )
     print(f"User question: {question}")
-    query, results, answer = atlas_sql.answer_question(question)
-    print(f"Query: {query}")
-    print(f"Results: {results}")
+    answer = atlas_sql.answer_question(question)
     print(f"Answer: {answer}")
