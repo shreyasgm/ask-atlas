@@ -5,6 +5,7 @@ from langchain_core.output_parsers.openai_tools import PydanticToolsParser
 from pydantic import BaseModel, Field
 from langchain_core.runnables import Runnable
 
+
 class SchemaList(BaseModel):
     """List of schemas in SQL database."""
 
@@ -55,7 +56,7 @@ def create_schema_selection_chain(llm: BaseLanguageModel) -> Runnable:
     )
 
     llm_with_tools = llm.bind_tools([SchemaList], tool_choice=True)
-    output_parser = PydanticToolsParser(tools=[SchemaList])
+    output_parser = PydanticToolsParser(tools=[SchemaList], first_tool_only=True)
 
     chain = prompt | llm_with_tools | output_parser
 
@@ -87,8 +88,10 @@ def get_tables_in_schemas(schemas: List[str], db_schema: Dict) -> List[Dict]:
         if schema in db_schema:
             for table in db_schema[schema]:
                 # Create a new dict with schema-qualified table name
-                tables.append({
-                    "table_name": f"{schema}.{table['table_name']}",
-                    "context_str": table['context_str']
-                })
+                tables.append(
+                    {
+                        "table_name": f"{schema}.{table['table_name']}",
+                        "context_str": table["context_str"],
+                    }
+                )
     return tables
