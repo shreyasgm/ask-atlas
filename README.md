@@ -9,16 +9,18 @@ flowchart TD
     B -->|Non-trade/Harmful| C[Refuse to Answer]
     B -->|Valid Trade Input| D1[Condense question]
     
-    D1 --> D[Get Schema]
+    D1 --> D[Get Product Classification]
+
     D1 --> E{Check for Product Names}
     
     E -->|Products Found| F[Product Lookup Vector Search]
     E -->|No Products| H[Generate SQL Query]
     
-    D -->|Schema| F
+    D --> F
     
     F -->|Product Codes| H
-    D -->|Schema| H
+    D --> D2[Get Schema]
+    D2 -->|Schema| H
     
     H --> I[Execute SQL Query]
     I --> J[Generate Response]

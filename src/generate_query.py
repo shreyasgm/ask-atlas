@@ -69,20 +69,4 @@ Below are some examples of user questions and their corresponding SQL queries.
         input_variables=["question", "top_k", "table_info"],
     )
 
-    # example_prompt = ChatPromptTemplate.from_messages(
-    #     [("human", "{question}"), ("ai", "{query}")]
-    # )
-    # few_shot_prompt = FewShotChatMessagePromptTemplate(
-    #     input_variables=["question", "top_k", "table_info"],
-    #     examples=example_queries,
-    #     example_prompt=example_prompt,
-    # )
-    # final_prompt = ChatPromptTemplate.from_messages(
-    #     [
-    #         ("system", prefix),
-    #         few_shot_prompt,
-    #         ("human", "{input}"),
-    #     ]
-    # )
-
     return prompt | llm | StrOutputParser() | _strip
