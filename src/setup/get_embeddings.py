@@ -127,7 +127,9 @@ class EmbeddingManager:
             embeddings=self.embeddings,
             collection_name=collection_name,
             connection=self.db_url,
-            use_jsonb=True,
+            engine_args={
+                "connect_args": {"connect_timeout": 10},
+            },
         )
 
     def process_products(
