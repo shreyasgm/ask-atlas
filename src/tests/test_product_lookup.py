@@ -41,7 +41,7 @@ def test_extract_product_mentions(product_lookup):
 
     # Test question with product mentions
     question1 = "How much cotton and wheat did Brazil export in 2021?"
-    result1 = product_lookup._extract_product_mentions(question1)
+    result1 = product_lookup._extract_product_mentions().invoke({"question": question1})
     logger.info(f"Question 1: {question1}")
     logger.info(f"Result 1: {result1}")
     assert isinstance(result1, ProductMention)
@@ -56,7 +56,7 @@ def test_extract_product_mentions(product_lookup):
 
     # Test question with HS codes (should be ignored)
     question2 = "What were US exports of cars and vehicles (HS 87) in 2020?"
-    result2 = product_lookup._extract_product_mentions(question2)
+    result2 = product_lookup._extract_product_mentions().invoke({"question": question2})
     logger.info(f"Question 2: {question2}")
     logger.info(f"Result 2: {result2}")
     assert not result2.has_mentions
@@ -64,7 +64,7 @@ def test_extract_product_mentions(product_lookup):
 
     # Test question with no product mentions
     question3 = "What were the top 5 products exported from United States to China?"
-    result3 = product_lookup._extract_product_mentions(question3)
+    result3 = product_lookup._extract_product_mentions().invoke({"question": question3})
     logger.info(f"Question 3: {question3}")
     logger.info(f"Result 3: {result3}")
     assert not result3.has_mentions

@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers.openai_tools import PydanticToolsParser
+from langchain_core.runnables import Runnable
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -79,15 +80,12 @@ class ProductLookupTool:
         # Initialize SQLAlchemy engine for direct text searches
         self.engine = create_engine(connection_string, **engine_args)
 
-    def _extract_product_mentions(self, question: str) -> ProductMention:
+    def _extract_product_mentions(self) -> Runnable:
         """
         Extract product names mentioned in the question and suggest potential HS codes.
 
-        Args:
-            question: User's question about trade data
-
         Returns:
-            ProductMention object
+            Langchain Runnable that takes a question and returns a ProductMention object
         """
         system = """
         Analyze the user's question about trade data and identify any product names that are mentioned 
@@ -135,7 +133,7 @@ class ProductLookupTool:
             | PydanticToolsParser(tools=[ProductMention], first_tool_only=True)
         )
 
-        return chain.invoke({"question": question})
+        return chain
 
     def _verify_product_codes(self, codes: List[str]) -> List[Dict[str, Any]]:
         """
@@ -258,14 +256,14 @@ class ProductLookupTool:
     def _select_final_codes(
         self,
         question: str,
-        search_results: List[ProductSearchResult],
+        product_search_results: List[ProductSearchResult],
     ) -> ProductCodeMapping:
         """
         Select the most appropriate HS codes from both LLM and DB suggestions.
 
         Args:
             question: Original user question for context
-            search_results: Combined search results from LLM and DB
+            product_search_results: Combined search results from LLM and DB
 
         Returns:
             ProductCodeMapping object with final selected codes
@@ -287,7 +285,7 @@ class ProductLookupTool:
             Question: {question}
             
             Search results for each product:
-            {search_results}
+            {product_search_results}
             
             Return the final mapping of product names to HS codes.
             """,
@@ -303,7 +301,7 @@ class ProductLookupTool:
                 f"- {s['product_code']}: {s['product_name']}"
                 for s in (result.llm_suggestions + result.db_suggestions)
             )
-            for result in search_results
+            for result in product_search_results
         )
 
         llm = self.llm.bind_tools([ProductCodeMapping], tool_choice=True)
@@ -316,9 +314,44 @@ class ProductLookupTool:
         return chain.invoke(
             {
                 "question": question,
-                "search_results": results_str,
+                "product_search_results": results_str,
             }
         )
+
+    def get_candidate_codes(
+        self, product_mention: ProductMention
+    ) -> List[ProductSearchResult]:
+        """
+        Get candidate codes for each product name.
+
+        Args:
+            product_mention: ProductMention object containing product names and codes
+
+        Returns:
+            List of ProductSearchResult objects with candidate codes from LLM and DB
+        """
+        if not product_mention.has_mentions:
+            return []
+
+        # Process each product separately
+        search_results: List[ProductSearchResult] = []
+
+        for product in product_mention.product_names_with_codes:
+            # Verify LLM-suggested codes for this product
+            verified_llm_suggestions = self._verify_product_codes(product.codes)
+
+            # Get database suggestions through text search
+            db_suggestions = self._direct_text_search(product.product_name)
+
+            search_results.append(
+                ProductSearchResult(
+                    product_name=product.product_name,
+                    llm_suggestions=verified_llm_suggestions,
+                    db_suggestions=db_suggestions,
+                )
+            )
+
+        return search_results
 
     def lookup_product_codes(self, question: str) -> Optional[ProductCodeMapping]:
         """
@@ -331,31 +364,15 @@ class ProductLookupTool:
             ProductCodeMapping if products were found and mapped, None otherwise
         """
         # First, extract product mentions and LLM's suggested codes
-        mentions = self._extract_product_mentions(question)
+        mentions_chain = self._extract_product_mentions()
+        # mentions = mentions_chain.invoke({"question": question})
 
-        if not mentions.has_mentions:
-            return None
-
-        # Process each product separately
-        search_results: List[ProductSearchResult] = []
-
-        for product_mention in mentions.product_names_with_codes:
-            # Verify LLM-suggested codes for this product
-            verified_llm_suggestions = self._verify_product_codes(product_mention.codes)
-
-            # Get database suggestions through text search
-            db_suggestions = self._direct_text_search(product_mention.product_name)
-
-            search_results.append(
-                ProductSearchResult(
-                    product_name=product_mention.product_name,
-                    llm_suggestions=verified_llm_suggestions,
-                    db_suggestions=db_suggestions,
-                )
-            )
+        # Get candidate codes for each product
+        product_search_chain = mentions_chain | self.get_candidate_codes
+        product_search_results = product_search_chain.invoke({"question": question})
 
         # Select final codes using both LLM and DB suggestions
-        return self._select_final_codes(question, search_results)
+        return self._select_final_codes(question, product_search_results)
 
 
 def format_product_codes_for_prompt(mappings: Optional[ProductCodeMapping]) -> str:
