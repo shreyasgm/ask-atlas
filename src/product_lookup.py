@@ -3,27 +3,52 @@ from pydantic import BaseModel, Field
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers.openai_tools import PydanticToolsParser
-from langchain_postgres import PGVector
-from langchain_core.documents import Document
-from langchain_openai import OpenAIEmbeddings
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
+
+
+class ProductNameWithCodes(BaseModel):
+    product_name: str = Field(description="The name of the product")
+    codes: list[str] = Field(description="The HS codes associated with the product")
 
 
 class ProductMention(BaseModel):
-    """Product mentions found in the user's question."""
+    """Product mentions and candidate codes found in the user's question."""
 
     has_mentions: bool = Field(
-        description="Whether the question contains any product names without codes"
+        description="Whether the question contains any product names"
     )
-    product_names: List[str] = Field(
-        description="List of product names mentioned without HS codes"
+    product_names_with_codes: list[ProductNameWithCodes] = Field(
+        description="List of product names and their potential HS codes",
     )
+
+
+class ProductCodePair(BaseModel):
+    """A single mapping between a product name and its HS codes."""
+
+    product_name: str = Field(description="Name of the product")
+    hs_codes: List[str] = Field(description="Corresponding HS codes for the product")
 
 
 class ProductCodeMapping(BaseModel):
     """Mapping between product names and their corresponding HS codes."""
 
-    mappings: List[Dict[str, str]] = Field(
-        description="List of mappings from product names to HS codes"
+    mappings: List[ProductCodePair] = Field(
+        description="List of product name to HS code mappings"
+    )
+
+
+class ProductSearchResult(BaseModel):
+    """Container for product search results from different sources."""
+
+    product_name: str = Field(
+        description="Original product name mentioned in the user's question"
+    )
+    llm_suggestions: List[Dict[str, Any]] = Field(
+        description="Product codes and names suggested by LLM"
+    )
+    db_suggestions: List[Dict[str, Any]] = Field(
+        description="Product codes and names found through direct text search"
     )
 
 
@@ -34,64 +59,69 @@ class ProductLookupTool:
         self,
         llm: BaseLanguageModel,
         connection_string: str,
-        collection_name: str = "product_embeddings",
-        embeddings: Any = None,
+        engine_args: Dict[str, Any] = None,
+        products_table: str = "classification.product_hs92",
     ):
         """
         Initialize the product lookup tool.
 
         Args:
             llm: Language model for processing text
-            connection_string: PostgreSQL connection string for vector store
-            collection_name: Name of the vector store collection
-            embeddings: Embedding model to use (defaults to OpenAIEmbeddings)
+            connection_string: PostgreSQL connection string
+            engine_args: Additional arguments for the SQLAlchemy engine
+            products_table: Name of the table containing product information
         """
         self.llm = llm
-        self.embeddings = embeddings or OpenAIEmbeddings()
+        self.connection_string = connection_string
+        self.engine_args = engine_args or {}
+        self.products_table = products_table
 
-        # Initialize vector store
-        self.vector_store = PGVector(
-            embeddings=self.embeddings,
-            collection_name=collection_name,
-            connection=connection_string,
-            use_jsonb=True,
-        )
-        # Test to make sure this works
-        check = self.vector_store.similarity_search("cotton", k=5)
-        assert len(check) > 0, "Vector store not returning results"
-
-        self.retriever = self.vector_store.as_retriever(
-            search_type="similarity", search_kwargs={"k": 5}
-        )
+        # Initialize SQLAlchemy engine for direct text searches
+        self.engine = create_engine(connection_string, **engine_args)
 
     def _extract_product_mentions(self, question: str) -> ProductMention:
         """
-        Extract product names mentioned in the question without HS codes.
+        Extract product names mentioned in the question and suggest potential HS codes.
 
         Args:
             question: User's question about trade data
 
         Returns:
-            ProductMention object containing found product names
+            ProductMention object
         """
         system = """
         Analyze the user's question about trade data and identify any product names that are mentioned 
-        without specific HS codes. Ignore any mentions that already have HS codes specified. If any
-        product names are mentioned, return has_mentions as True and the list of product names. If not,
-        return has_mentions as False and an empty list.
-
+        but don't have associated HS codes explicitly specified. Ignore any mentions that already have associated HS codes specified. 
+        If any product names are mentioned without associated HS codes specified, return has_mentions as True and product_names_with_codes as a dict of product names with their associated HS codes.
+        If not, return has_mentions as False and product_names_with_codes as an empty dict.
+        Note that both has_mentions and product_names_with_codes are required fields in the response.
+        Also suggest potential HS codes for each product based on your knowledge of the product classification system.
+        Be specific with the codes - suggest the HS code at the level most specific to the product mentioned.
+        
         Examples:
+        An example of a question that already had HS codes specified, so further lookups are not needed.
         Question: "What were US exports of cars and vehicles (HS 87) in 2020?"
-        Response: has_mentions=False, product_names=[]
+        Response: {{
+            "has_mentions": False,
+            "product_names_with_codes": {{}}
+        }}
 
+        An example of a question that had product names without HS codes, so further lookups are needed.
         Question: "How much cotton and wheat did Brazil export in 2021?"
-        Response: has_mentions=True, product_names=["cotton", "wheat"]
+        Response: {{
+            "has_mentions": True,
+            "product_names_with_codes": {{
+                "cotton": ["5201", "5202", "5203"],
+                "wheat": ["1001"]
+            }}
+        }}
 
+        An example of a question that had no product names without HS codes, so further lookups are not needed.
         Question: "What were the top 5 products exported from United States to China?"
-        Response: has_mentions=False, product_names=[]
-
-        These product names, if any, will later be run through a product code lookup tool to get the 
-        corresponding product codes.
+        Response: {{
+            "has_mentions": False,
+            "product_names_with_codes": {{}}
+        }}
         """
 
         prompt = ChatPromptTemplate.from_messages(
@@ -107,44 +137,145 @@ class ProductLookupTool:
 
         return chain.invoke({"question": question})
 
-    def _search_product_codes(self, product_name: str) -> List[Document]:
+    def _verify_product_codes(self, codes: List[str]) -> List[Dict[str, Any]]:
         """
-        Search for HS codes matching a product name using vector similarity.
-
+        Query the database to verify product codes and get their official names.
 
         Args:
-            product_name: Natural language product name
-
+            codes: List of potential HS codes to verify
 
         Returns:
-            List of similar products with their HS codes
+            List of verified products with their codes and official names
         """
-        return self.retriever.invoke(product_name)
+        if not codes:
+            return []
+
+        query = text(f"""
+            SELECT DISTINCT 
+                code as product_code,
+                name_short_en as product_name,
+                product_id,
+                product_level
+            FROM {self.products_table}
+            WHERE code = ANY(:codes)
+        """)
+
+        try:
+            with self.engine.connect() as conn:
+                results = conn.execute(query, {"codes": codes}).fetchall()
+                return [
+                    {
+                        "product_code": str(r[0]),
+                        "product_name": str(r[1]),
+                        "product_id": str(r[2]),
+                        "product_level": str(r[3]),
+                    }
+                    for r in results
+                ]
+        except SQLAlchemyError as e:
+            print(f"Database error during code verification: {e}")
+            return []
+
+    def _direct_text_search(self, product_to_search: str) -> List[Dict[str, Any]]:
+        """
+        Perform direct text search using PostgreSQL's full-text search capabilities.
+        Uses tsvector/tsquery for primary search with trigram similarity as fallback.
+
+        Args:
+            product_to_search: Product name to search for
+
+        Returns:
+            List of dictionaries containing product information
+        """
+        # Using English text search configuration
+        # First try full text search with ranking
+        ts_query = text(f"""
+            SELECT DISTINCT 
+                name_short_en as product_name,
+                code as product_code,
+                product_id,
+                product_level,
+                ts_rank_cd(to_tsvector('english', name_short_en),
+                        plainto_tsquery('english', :product_to_search)) as rank
+            FROM {self.products_table}
+            WHERE to_tsvector('english', name_short_en) @@ 
+                plainto_tsquery('english', :product_to_search)
+            ORDER BY rank DESC
+            LIMIT 5
+        """)
+
+        # Fallback to trigram similarity for non-matching terms or misspellings
+        fuzzy_query = text(f"""
+            SELECT DISTINCT 
+                name_short_en as product_name,
+                code as product_code,
+                product_id,
+                product_level,
+                similarity(LOWER(name_short_en), LOWER(:product_to_search)) as sim
+            FROM {self.products_table}
+            WHERE similarity(LOWER(name_short_en), LOWER(:product_to_search)) > 0.3
+            ORDER BY sim DESC
+            LIMIT 5
+        """)
+
+        try:
+            with self.engine.connect() as conn:
+                # Try full-text search first
+                ts_results = conn.execute(
+                    ts_query, {"product_to_search": product_to_search}
+                ).fetchall()
+
+                if ts_results:
+                    return [
+                        {
+                            "product_name": str(r[0]),
+                            "product_code": str(r[1]),
+                            "product_id": str(r[2]),
+                            "product_level": str(r[3]),
+                        }
+                        for r in ts_results
+                    ]
+
+                # Fall back to trigram similarity if no full-text matches
+                fuzzy_results = conn.execute(
+                    fuzzy_query, {"product_to_search": product_to_search}
+                ).fetchall()
+
+                return [
+                    {
+                        "product_name": str(r[0]),
+                        "product_code": str(r[1]),
+                        "product_id": str(r[2]),
+                        "product_level": str(r[3]),
+                    }
+                    for r in fuzzy_results
+                ]
+
+        except SQLAlchemyError as e:
+            print(f"Database error during text search: {e}")
+            return []
 
     def _select_final_codes(
         self,
         question: str,
-        product_names: List[str],
-        candidates: Dict[str, List[Document]],
+        search_results: List[ProductSearchResult],
     ) -> ProductCodeMapping:
         """
-        Select the most appropriate HS codes from candidates for each product.
+        Select the most appropriate HS codes from both LLM and DB suggestions.
 
         Args:
             question: Original user question for context
-            product_names: List of product names mentioned
-            candidates: Dictionary mapping product names to candidate HS codes
+            search_results: Combined search results from LLM and DB
 
         Returns:
             ProductCodeMapping object with final selected codes
         """
         system = """
         Select the most appropriate HS code for each product name based on the context of the user's 
-        question and the candidate codes. Return a mapping from each product name to its most 
-        appropriate HS code.
+        question and the candidate codes.
 
-        Include only the products that have clear matches. If a product name is too ambiguous or 
-        has no good matches among the candidates, exclude it from the final mapping.
+        Choose the most accurate match based on the specific context. Include only the products that have clear matches. If a product name is too ambiguous or has no good matches among the candidates, exclude it from the final
+        mapping.
         """
 
         prompt = ChatPromptTemplate.from_messages(
@@ -154,9 +285,9 @@ class ProductLookupTool:
                     "human",
                     """
             Question: {question}
-            Product names: {product_names}
-            Candidate codes for each product:
-            {candidates}
+            
+            Search results for each product:
+            {search_results}
             
             Return the final mapping of product names to HS codes.
             """,
@@ -164,11 +295,17 @@ class ProductLookupTool:
             ]
         )
 
-        # Format candidates for prompt
-        candidates_str = "\n".join(
-            f"{name}:\n" + "\n".join(f"- {doc.page_content}" for doc in docs)
-            for name, docs in candidates.items()
+        # Format search results for prompt
+        results_str = "\n".join(
+            f"Product to search for: {result.product_name}\n"
+            f"Candidate matches:\n"
+            + "\n".join(
+                f"- {s['product_code']}: {s['product_name']}"
+                for s in (result.llm_suggestions + result.db_suggestions)
+            )
+            for result in search_results
         )
+
         llm = self.llm.bind_tools([ProductCodeMapping], tool_choice=True)
         chain = (
             prompt
@@ -179,8 +316,7 @@ class ProductLookupTool:
         return chain.invoke(
             {
                 "question": question,
-                "product_names": product_names,
-                "candidates": candidates_str,
+                "search_results": results_str,
             }
         )
 
@@ -194,20 +330,32 @@ class ProductLookupTool:
         Returns:
             ProductCodeMapping if products were found and mapped, None otherwise
         """
-        # First, check if there are any product mentions needing lookup
+        # First, extract product mentions and LLM's suggested codes
         mentions = self._extract_product_mentions(question)
 
         if not mentions.has_mentions:
             return None
 
-        # Search for candidate codes for each product
-        candidates: Dict[str, List[Document]] = {}
-        for product_name in mentions.product_names:
-            # Search for candidate codes using similarity search
-            candidates[product_name] = self._search_product_codes(product_name)
+        # Process each product separately
+        search_results: List[ProductSearchResult] = []
 
-        # Select final codes
-        return self._select_final_codes(question, mentions.product_names, candidates)
+        for product_mention in mentions.product_names_with_codes:
+            # Verify LLM-suggested codes for this product
+            verified_llm_suggestions = self._verify_product_codes(product_mention.codes)
+
+            # Get database suggestions through text search
+            db_suggestions = self._direct_text_search(product_mention.product_name)
+
+            search_results.append(
+                ProductSearchResult(
+                    product_name=product_mention.product_name,
+                    llm_suggestions=verified_llm_suggestions,
+                    db_suggestions=db_suggestions,
+                )
+            )
+
+        # Select final codes using both LLM and DB suggestions
+        return self._select_final_codes(question, search_results)
 
 
 def format_product_codes_for_prompt(mappings: Optional[ProductCodeMapping]) -> str:
@@ -226,7 +374,7 @@ def format_product_codes_for_prompt(mappings: Optional[ProductCodeMapping]) -> s
     result = "\nProduct name to HS code mappings:\n"
     for mapping in mappings.mappings:
         for name, code in mapping.items():
-            result += f"- {name}: {code}\n"
+            result += f"- {name}: Code {code}\n"
     return result
 
 
