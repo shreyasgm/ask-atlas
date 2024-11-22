@@ -255,18 +255,16 @@ class ProductLookupTool:
 
     def _select_final_codes(
         self,
-        question: str,
         product_search_results: List[ProductSearchResult],
     ) -> ProductCodeMapping:
         """
         Select the most appropriate HS codes from both LLM and DB suggestions.
 
         Args:
-            question: Original user question for context
             product_search_results: Combined search results from LLM and DB
 
         Returns:
-            ProductCodeMapping object with final selected codes
+            Langchain Runnable which when invoked returns a ProductCodeMapping object with final selected codes
         """
         system = """
         Select the most appropriate HS code for each product name based on the context of the user's 
@@ -304,6 +302,9 @@ class ProductLookupTool:
             for result in product_search_results
         )
 
+        # Partially format prompt template using search results
+        prompt = prompt.partial(product_search_results=results_str)
+
         llm = self.llm.bind_tools([ProductCodeMapping], tool_choice=True)
         chain = (
             prompt
@@ -311,12 +312,12 @@ class ProductLookupTool:
             | PydanticToolsParser(tools=[ProductCodeMapping], first_tool_only=True)
         )
 
-        return chain.invoke(
-            {
-                "question": question,
-                "product_search_results": results_str,
-            }
-        )
+        return chain
+        # return chain.invoke(
+        #     {
+        #         "question": question,
+        #     }
+        # )
 
     def get_candidate_codes(
         self, product_mention: ProductMention
@@ -353,26 +354,28 @@ class ProductLookupTool:
 
         return search_results
 
-    def lookup_product_codes(self, question: str) -> Optional[ProductCodeMapping]:
+    def lookup_product_codes(self) -> Runnable:
         """
         Process a user's question to identify and look up any product codes needed.
 
-        Args:
-            question: User's question about trade data
-
         Returns:
-            ProductCodeMapping if products were found and mapped, None otherwise
+            Langchain Runnable which when invoked returns a ProductCodeMapping object with final selected codes
+
+        Usage: lookup_product_codes().invoke({"question": question})
         """
         # First, extract product mentions and LLM's suggested codes
         mentions_chain = self._extract_product_mentions()
-        # mentions = mentions_chain.invoke({"question": question})
 
-        # Get candidate codes for each product
-        product_search_chain = mentions_chain | self.get_candidate_codes
-        product_search_results = product_search_chain.invoke({"question": question})
+        final_chain = (
+            # Extract product mentions
+            mentions_chain
+            # Get candidate codes for each product
+            | self.get_candidate_codes
+            # Select final codes using both LLM and DB suggestions
+            | self._select_final_codes
+        )
 
-        # Select final codes using both LLM and DB suggestions
-        return self._select_final_codes(question, product_search_results)
+        return final_chain
 
 
 def format_product_codes_for_prompt(mappings: Optional[ProductCodeMapping]) -> str:

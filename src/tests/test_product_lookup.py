@@ -7,10 +7,6 @@ from src.product_lookup import (
     ProductCodeMapping,
     ProductSearchResult,
 )
-import logging
-
-
-logger = logging.getLogger("test_logger")
 
 
 @pytest.fixture
@@ -35,15 +31,15 @@ def product_lookup(llm):
 
 
 @pytest.mark.integration
-def test_extract_product_mentions(product_lookup):
+def test_extract_product_mentions(product_lookup, logger):
     """Test product mention extraction and initial LLM code suggestions."""
-    logger.info("Running test_extract_product_mentions")
+    logger.debug("Running test_extract_product_mentions")
 
     # Test question with product mentions
     question1 = "How much cotton and wheat did Brazil export in 2021?"
     result1 = product_lookup._extract_product_mentions().invoke({"question": question1})
-    logger.info(f"Question 1: {question1}")
-    logger.info(f"Result 1: {result1}")
+    logger.debug(f"Question 1: {question1}")
+    logger.debug(f"Result 1: {result1}")
     assert isinstance(result1, ProductMention)
     assert result1.has_mentions
     product_names = [item.product_name for item in result1.product_names_with_codes]
@@ -57,24 +53,24 @@ def test_extract_product_mentions(product_lookup):
     # Test question with HS codes (should be ignored)
     question2 = "What were US exports of cars and vehicles (HS 87) in 2020?"
     result2 = product_lookup._extract_product_mentions().invoke({"question": question2})
-    logger.info(f"Question 2: {question2}")
-    logger.info(f"Result 2: {result2}")
+    logger.debug(f"Question 2: {question2}")
+    logger.debug(f"Result 2: {result2}")
     assert not result2.has_mentions
     assert len(result2.product_names_with_codes) == 0
 
     # Test question with no product mentions
     question3 = "What were the top 5 products exported from United States to China?"
     result3 = product_lookup._extract_product_mentions().invoke({"question": question3})
-    logger.info(f"Question 3: {question3}")
-    logger.info(f"Result 3: {result3}")
+    logger.debug(f"Question 3: {question3}")
+    logger.debug(f"Result 3: {result3}")
     assert not result3.has_mentions
     assert len(result3.product_names_with_codes) == 0
 
 
 @pytest.mark.integration
-def test_verify_product_codes(product_lookup):
+def test_verify_product_codes(product_lookup, logger):
     """Test verification of LLM-suggested codes against database."""
-    logger.info("Running test_verify_product_codes")
+    logger.debug("Running test_verify_product_codes")
 
     # Test with valid codes
     valid_codes = ["5201", "5202"]
@@ -95,40 +91,42 @@ def test_verify_product_codes(product_lookup):
     mixed_codes = ["5201", "abcd"]
     results3 = product_lookup._verify_product_codes(mixed_codes)
     assert len(results3) > 0, f"Expected >0 results, got {len(results3)}: {results3}"
-    assert len(results3) < len(mixed_codes), f"Expected <{len(mixed_codes)} results, got {len(results3)}: {results3}"
+    assert len(results3) < len(
+        mixed_codes
+    ), f"Expected <{len(mixed_codes)} results, got {len(results3)}: {results3}"
 
 
 @pytest.mark.integration
-def test_direct_text_search(product_lookup):
+def test_direct_text_search(product_lookup, logger):
     """Test the direct text search functionality with full-text and trigram fallback."""
-    logger.info("Running test_direct_text_search")
+    logger.debug("Running test_direct_text_search")
 
     # Test exact match (should use full-text search)
     results1 = product_lookup._direct_text_search("cotton")
-    logger.info(f"Direct text search results for 'cotton': {results1}")
+    logger.debug(f"Direct text search results for 'cotton': {results1}")
     assert len(results1) > 0
     assert any("cotton" in result["product_name"].lower() for result in results1)
 
     # Test partial match (might use trigram)
     results2 = product_lookup._direct_text_search("cott")
-    logger.info(f"Direct text search results for partial 'cott': {results2}")
+    logger.debug(f"Direct text search results for partial 'cott': {results2}")
     assert len(results2) > 0
 
     # Test with misspelling (should use trigram)
     results3 = product_lookup._direct_text_search("cottin")
-    logger.info(f"Direct text search results for misspelled 'cottin': {results3}")
+    logger.debug(f"Direct text search results for misspelled 'cottin': {results3}")
     assert len(results3) > 0
 
     # Test with nonsense term
     results4 = product_lookup._direct_text_search("xyzabc123")
-    logger.info(f"Direct text search results for nonsense term: {results4}")
+    logger.debug(f"Direct text search results for nonsense term: {results4}")
     assert len(results4) == 0
 
 
 @pytest.mark.integration
-def test_select_final_codes(product_lookup):
+def test_select_final_codes(product_lookup, logger):
     """Test the LLM-based final code selection process."""
-    logger.info("Running test_select_final_codes")
+    logger.debug("Running test_select_final_codes")
 
     # Create test search results
     search_results = [
@@ -160,7 +158,9 @@ def test_select_final_codes(product_lookup):
     ]
 
     question = "How much raw cotton did Brazil export?"
-    result = product_lookup._select_final_codes(question, search_results)
+    result = product_lookup._select_final_codes(search_results).invoke(
+        {"question": question}
+    )
 
     assert isinstance(result, ProductCodeMapping)
     assert len(result.mappings) > 0
@@ -169,21 +169,21 @@ def test_select_final_codes(product_lookup):
 
 
 @pytest.mark.integration
-def test_full_product_lookup_flow(product_lookup):
+def test_full_product_lookup_flow(product_lookup, logger):
     """Test the complete product lookup flow including LLM suggestions and text search."""
-    logger.info("Running test_full_product_lookup_flow")
+    logger.debug("Running test_full_product_lookup_flow")
 
     # Test with simple products
     question1 = "How much cotton and wheat did Brazil export in 2021?"
-    result1 = product_lookup.lookup_product_codes(question1)
-    logger.info(f"Results for simple products: {result1}")
+    result1 = product_lookup.lookup_product_codes().invoke({"question": question1})
+    logger.debug(f"Results for simple products: {result1}")
     assert isinstance(result1, ProductCodeMapping)
     assert len(result1.mappings) > 0
 
     # Test with more specific product
     question2 = "What were exports of raw cotton fiber?"
-    result2 = product_lookup.lookup_product_codes(question2)
-    logger.info(f"Results for specific product: {result2}")
+    result2 = product_lookup.lookup_product_codes().invoke({"question": question2})
+    logger.debug(f"Results for specific product: {result2}")
     assert isinstance(result2, ProductCodeMapping)
     assert len(result2.mappings) > 0
 
@@ -196,3 +196,9 @@ def test_full_product_lookup_flow(product_lookup):
             assert isinstance(code, str)
             assert any(char.isdigit() for char in code)
 
+    # Test with 6-digit product
+    question3 = "What were exports of cotton seeds in 2021?"
+    result3 = product_lookup.lookup_product_codes().invoke({"question": question3})
+    logger.debug(f"Results for 6-digit product: {result3}")
+    assert isinstance(result3, ProductCodeMapping)
+    assert len(result3.mappings) > 0
