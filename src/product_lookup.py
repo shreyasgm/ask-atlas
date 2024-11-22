@@ -256,7 +256,7 @@ class ProductLookupTool:
     def _select_final_codes(
         self,
         product_search_results: List[ProductSearchResult],
-    ) -> ProductCodeMapping:
+    ) -> Runnable:
         """
         Select the most appropriate HS codes from both LLM and DB suggestions.
 
@@ -313,11 +313,6 @@ class ProductLookupTool:
         )
 
         return chain
-        # return chain.invoke(
-        #     {
-        #         "question": question,
-        #     }
-        # )
 
     def get_candidate_codes(
         self, product_mention: ProductMention
