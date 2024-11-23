@@ -1,4 +1,4 @@
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Union
 from pydantic import BaseModel, Field
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.prompts import ChatPromptTemplate
@@ -256,7 +256,7 @@ class ProductLookupTool:
     def _select_final_codes(
         self,
         product_search_results: List[ProductSearchResult],
-    ) -> Runnable:
+    ) -> Union[Runnable, ProductCodeMapping]:
         """
         Select the most appropriate HS codes from both LLM and DB suggestions.
 
@@ -266,6 +266,10 @@ class ProductLookupTool:
         Returns:
             Langchain Runnable which when invoked returns a ProductCodeMapping object with final selected codes
         """
+        # If product_search_results is empty, return an empty list
+        if not product_search_results:
+            return ProductCodeMapping(mappings=[])
+
         system = """
         Select the most appropriate HS code for each product name based on the context of the user's 
         question and the candidate codes.

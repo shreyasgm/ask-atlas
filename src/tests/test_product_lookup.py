@@ -187,6 +187,13 @@ def test_full_product_lookup_flow(product_lookup, logger):
     assert isinstance(result2, ProductCodeMapping)
     assert len(result2.mappings) > 0
 
+    # Test with no product mentions
+    question3 = "What were the top 5 products exported from United States to China?"
+    result3 = product_lookup.lookup_product_codes().invoke({"question": question3})
+    logger.debug(f"Results for no product mentions: {result3}")
+    assert isinstance(result3, ProductCodeMapping)
+    assert len(result3.mappings) == 0
+
     # Verify mappings structure
     for mapping in result1.mappings + result2.mappings:
         assert isinstance(mapping.product_name, str)
@@ -197,8 +204,8 @@ def test_full_product_lookup_flow(product_lookup, logger):
             assert any(char.isdigit() for char in code)
 
     # Test with 6-digit product
-    question3 = "What were exports of cotton seeds in 2021?"
-    result3 = product_lookup.lookup_product_codes().invoke({"question": question3})
-    logger.debug(f"Results for 6-digit product: {result3}")
-    assert isinstance(result3, ProductCodeMapping)
-    assert len(result3.mappings) > 0
+    question4 = "What were exports of cotton seeds in 2021?"
+    result4 = product_lookup.lookup_product_codes().invoke({"question": question4})
+    logger.debug(f"Results for 6-digit product: {result4}")
+    assert isinstance(result4, ProductCodeMapping)
+    assert len(result4.mappings) > 0
