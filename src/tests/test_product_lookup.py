@@ -26,7 +26,6 @@ def product_lookup(llm):
             "execution_options": {"postgresql_readonly": True},
             "connect_args": {"connect_timeout": 10},
         },
-        products_table="classification.product_hs92",
     )
 
 
@@ -37,7 +36,9 @@ def test_extract_product_mentions(product_lookup, logger):
 
     # Test question with product mentions
     question1 = "How much cotton and wheat did Brazil export in 2021?"
-    result1 = product_lookup._extract_product_mentions().invoke({"question": question1})
+    result1 = product_lookup._extract_product_mentions(
+        product_classification="HS 1992"
+    ).invoke({"question": question1})
     logger.debug(f"Question 1: {question1}")
     logger.debug(f"Result 1: {result1}")
     assert isinstance(result1, ProductMention)
@@ -52,7 +53,9 @@ def test_extract_product_mentions(product_lookup, logger):
 
     # Test question with HS codes (should be ignored)
     question2 = "What were US exports of cars and vehicles (HS 87) in 2020?"
-    result2 = product_lookup._extract_product_mentions().invoke({"question": question2})
+    result2 = product_lookup._extract_product_mentions(
+        product_classification="HS 2012"
+    ).invoke({"question": question2})
     logger.debug(f"Question 2: {question2}")
     logger.debug(f"Result 2: {result2}")
     assert not result2.has_mentions
@@ -60,7 +63,9 @@ def test_extract_product_mentions(product_lookup, logger):
 
     # Test question with no product mentions
     question3 = "What were the top 5 products exported from United States to China?"
-    result3 = product_lookup._extract_product_mentions().invoke({"question": question3})
+    result3 = product_lookup._extract_product_mentions(
+        product_classification="HS 1992"
+    ).invoke({"question": question3})
     logger.debug(f"Question 3: {question3}")
     logger.debug(f"Result 3: {result3}")
     assert not result3.has_mentions
@@ -74,7 +79,9 @@ def test_verify_product_codes(product_lookup, logger):
 
     # Test with valid codes
     valid_codes = ["5201", "5202"]
-    results1 = product_lookup._verify_product_codes(valid_codes)
+    results1 = product_lookup._verify_product_codes(
+        valid_codes, classification_schema="hs92"
+    )
     assert len(results1) > 0
     for result in results1:
         assert "product_code" in result
@@ -84,12 +91,16 @@ def test_verify_product_codes(product_lookup, logger):
 
     # Test with invalid codes
     invalid_codes = ["abcd"]
-    results2 = product_lookup._verify_product_codes(invalid_codes)
+    results2 = product_lookup._verify_product_codes(
+        invalid_codes, classification_schema="hs92"
+    )
     assert len(results2) == 0, f"Expected 0 results, got {len(results2)}: {results2}"
 
     # Test with mixed valid/invalid codes
     mixed_codes = ["5201", "abcd"]
-    results3 = product_lookup._verify_product_codes(mixed_codes)
+    results3 = product_lookup._verify_product_codes(
+        mixed_codes, classification_schema="hs12"
+    )
     assert len(results3) > 0, f"Expected >0 results, got {len(results3)}: {results3}"
     assert len(results3) < len(
         mixed_codes
@@ -102,23 +113,29 @@ def test_direct_text_search(product_lookup, logger):
     logger.debug("Running test_direct_text_search")
 
     # Test exact match (should use full-text search)
-    results1 = product_lookup._direct_text_search("cotton")
+    results1 = product_lookup._direct_text_search(
+        "cotton", classification_schema="hs92"
+    )
     logger.debug(f"Direct text search results for 'cotton': {results1}")
     assert len(results1) > 0
     assert any("cotton" in result["product_name"].lower() for result in results1)
 
     # Test partial match (might use trigram)
-    results2 = product_lookup._direct_text_search("cott")
+    results2 = product_lookup._direct_text_search("cott", classification_schema="hs92")
     logger.debug(f"Direct text search results for partial 'cott': {results2}")
     assert len(results2) > 0
 
     # Test with misspelling (should use trigram)
-    results3 = product_lookup._direct_text_search("cottin")
+    results3 = product_lookup._direct_text_search(
+        "cottin", classification_schema="hs92"
+    )
     logger.debug(f"Direct text search results for misspelled 'cottin': {results3}")
     assert len(results3) > 0
 
     # Test with nonsense term
-    results4 = product_lookup._direct_text_search("xyzabc123")
+    results4 = product_lookup._direct_text_search(
+        "xyzabc123", classification_schema="hs92"
+    )
     logger.debug(f"Direct text search results for nonsense term: {results4}")
     assert len(results4) == 0
 
@@ -132,6 +149,7 @@ def test_select_final_codes(product_lookup, logger):
     search_results = [
         ProductSearchResult(
             product_name="cotton",
+            classification_schema="hs92",
             llm_suggestions=[
                 {
                     "product_code": "5201",
@@ -197,9 +215,9 @@ def test_full_product_lookup_flow(product_lookup, logger):
     # Verify mappings structure
     for mapping in result1.mappings + result2.mappings:
         assert isinstance(mapping.product_name, str)
-        assert isinstance(mapping.hs_codes, list)
-        assert len(mapping.hs_codes) > 0
-        for code in mapping.hs_codes:
+        assert isinstance(mapping.codes, list)
+        assert len(mapping.codes) > 0
+        for code in mapping.codes:
             assert isinstance(code, str)
             assert any(char.isdigit() for char in code)
 
