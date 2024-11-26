@@ -38,7 +38,7 @@ def test_extract_schemas_and_product_mentions(product_lookup, logger):
 
     # Test question with product mentions
     question1 = "How much cotton and wheat did Brazil export in 2021?"
-    result1 = product_lookup._extract_schemas_and_product_mentions().invoke(
+    result1 = product_lookup.extract_schemas_and_product_mentions().invoke(
         {"question": question1}
     )
     logger.debug(f"Question 1: {question1}")
@@ -53,7 +53,7 @@ def test_extract_schemas_and_product_mentions(product_lookup, logger):
 
     # Test question with HS codes (should be ignored)
     question2 = "What were US exports of cars and vehicles (HS 87) in 2020?"
-    result2 = product_lookup._extract_schemas_and_product_mentions().invoke(
+    result2 = product_lookup.extract_schemas_and_product_mentions().invoke(
         {"question": question2}
     )
     logger.debug(f"Question 2: {question2}")
@@ -63,7 +63,7 @@ def test_extract_schemas_and_product_mentions(product_lookup, logger):
 
     # Test question with no product mentions
     question3 = "What were the top 5 products exported from United States to China?"
-    result3 = product_lookup._extract_schemas_and_product_mentions().invoke(
+    result3 = product_lookup.extract_schemas_and_product_mentions().invoke(
         {"question": question3}
     )
     logger.debug(f"Question 3: {question3}")
@@ -178,7 +178,7 @@ def test_select_final_codes(product_lookup, logger):
     ]
 
     question = "How much raw cotton did Brazil export?"
-    result = product_lookup._select_final_codes(search_results).invoke(
+    result = product_lookup.select_final_codes(search_results).invoke(
         {"question": question}
     )
 

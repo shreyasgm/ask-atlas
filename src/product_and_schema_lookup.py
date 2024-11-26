@@ -99,7 +99,7 @@ class ProductAndSchemaLookup:
         Usage: lookup_product_codes(classification_schema).invoke({"question": question})
         """
         # Extract product mentions and LLM's suggested codes
-        mentions_chain = self._extract_schemas_and_product_mentions()
+        mentions_chain = self.extract_schemas_and_product_mentions()
 
         final_chain = (
             # Extract product mentions
@@ -107,19 +107,19 @@ class ProductAndSchemaLookup:
             # Get candidate codes for each product
             | self.get_candidate_codes
             # Select final codes using both LLM and DB suggestions
-            | self._select_final_codes
+            | self.select_final_codes
         )
 
         return final_chain
 
-    def _extract_schemas_and_product_mentions(self) -> Runnable:
+    def extract_schemas_and_product_mentions(self) -> Runnable:
         """
         Creates a chain that analyzes the trade query for schemas and products.
 
         Returns:
             Langchain Runnable which when invoked returns a SchemasAndProductsFound object
 
-        Usage: _extract_schemas_and_product_mentions().invoke({"question": question})
+        Usage: extract_schemas_and_product_mentions().invoke({"question": question})
         """
 
         system = """
@@ -219,7 +219,7 @@ class ProductAndSchemaLookup:
         )
         return mentions_chain
 
-    def _select_final_codes(
+    def select_final_codes(
         self,
         product_search_results: List[ProductSearchResult],
     ) -> Union[Runnable, ProductCodesMapping]:
@@ -474,13 +474,17 @@ def format_product_codes_for_prompt(analysis: ProductCodesMapping) -> str:
     return result
 
 
+
 # Usage example
 if __name__ == "__main__":
     from langchain_openai import ChatOpenAI
 
     llm = ChatOpenAI(model="gpt-4", temperature=0)
     analyzer = ProductAndSchemaLookup(
-        llm=llm, connection_string="postgresql://user:pass@localhost:5432/dbname"
+        llm=llm,
+        connection="postgresql://user:pass@localhost:5432/dbname"
+        # Optionally, you can pass engine_args if needed:
+        # engine_args={"echo": True}
     )
 
     # Example usage
