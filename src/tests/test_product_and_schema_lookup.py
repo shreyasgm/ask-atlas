@@ -1,11 +1,13 @@
 import pytest
 from langchain_openai import ChatOpenAI
 import os
-from src.product_lookup import (
-    ProductLookupTool,
-    ProductMention,
-    ProductCodeMapping,
+from src.product_and_schema_lookup import (
+    ProductAndSchemaLookup,
+    ProductDetails,
+    ProductCodesMapping,
     ProductSearchResult,
+    SchemasAndProductsFound,
+    format_product_codes_for_prompt,
 )
 
 
@@ -19,9 +21,9 @@ def llm():
 def product_lookup(llm):
     """Initialize the ProductLookupTool with actual database connection."""
     connection_string = os.getenv("ATLAS_DB_URL")
-    return ProductLookupTool(
+    return ProductAndSchemaLookup(
         llm=llm,
-        connection_string=connection_string,
+        connection=connection_string,
         engine_args={
             "execution_options": {"postgresql_readonly": True},
             "connect_args": {"connect_timeout": 10},
@@ -30,56 +32,54 @@ def product_lookup(llm):
 
 
 @pytest.mark.integration
-def test_extract_product_mentions(product_lookup, logger):
+def test_extract_schemas_and_product_mentions(product_lookup, logger):
     """Test product mention extraction and initial LLM code suggestions."""
-    logger.debug("Running test_extract_product_mentions")
+    logger.debug("Running test_extract_schemas_and_product_mentions")
 
     # Test question with product mentions
     question1 = "How much cotton and wheat did Brazil export in 2021?"
-    result1 = product_lookup._extract_product_mentions(
-        product_classification="HS 1992"
-    ).invoke({"question": question1})
+    result1 = product_lookup._extract_schemas_and_product_mentions().invoke(
+        {"question": question1}
+    )
     logger.debug(f"Question 1: {question1}")
     logger.debug(f"Result 1: {result1}")
-    assert isinstance(result1, ProductMention)
-    assert result1.has_mentions
-    product_names = [item.product_name for item in result1.product_names_with_codes]
+    assert isinstance(result1, SchemasAndProductsFound)
+    assert result1.products
+    product_names = [item.name for item in result1.products]
     assert "cotton" in product_names
     assert "wheat" in product_names
-    assert all(
-        isinstance(item.codes, list) for item in result1.product_names_with_codes
-    )
-    assert any(len(item.codes) > 0 for item in result1.product_names_with_codes)
+    assert all(isinstance(item.codes, list) for item in result1.products)
+    assert any(len(item.codes) > 0 for item in result1.products)
 
     # Test question with HS codes (should be ignored)
     question2 = "What were US exports of cars and vehicles (HS 87) in 2020?"
-    result2 = product_lookup._extract_product_mentions(
-        product_classification="HS 2012"
-    ).invoke({"question": question2})
+    result2 = product_lookup._extract_schemas_and_product_mentions().invoke(
+        {"question": question2}
+    )
     logger.debug(f"Question 2: {question2}")
     logger.debug(f"Result 2: {result2}")
-    assert not result2.has_mentions
-    assert len(result2.product_names_with_codes) == 0
+    assert not result2.products
+    assert len(result2.products) == 0
 
     # Test question with no product mentions
     question3 = "What were the top 5 products exported from United States to China?"
-    result3 = product_lookup._extract_product_mentions(
-        product_classification="HS 1992"
-    ).invoke({"question": question3})
+    result3 = product_lookup._extract_schemas_and_product_mentions().invoke(
+        {"question": question3}
+    )
     logger.debug(f"Question 3: {question3}")
     logger.debug(f"Result 3: {result3}")
-    assert not result3.has_mentions
-    assert len(result3.product_names_with_codes) == 0
+    assert not result3.products
+    assert len(result3.products) == 0
 
 
 @pytest.mark.integration
-def test_verify_product_codes(product_lookup, logger):
+def test_get_official_product_details(product_lookup, logger):
     """Test verification of LLM-suggested codes against database."""
-    logger.debug("Running test_verify_product_codes")
+    logger.debug("Running test_get_official_product_details")
 
     # Test with valid codes
     valid_codes = ["5201", "5202"]
-    results1 = product_lookup._verify_product_codes(
+    results1 = product_lookup._get_official_product_details(
         valid_codes, classification_schema="hs92"
     )
     assert len(results1) > 0
@@ -91,20 +91,22 @@ def test_verify_product_codes(product_lookup, logger):
 
     # Test with invalid codes
     invalid_codes = ["abcd"]
-    results2 = product_lookup._verify_product_codes(
+    results2 = product_lookup._get_official_product_details(
         invalid_codes, classification_schema="hs92"
     )
     assert len(results2) == 0, f"Expected 0 results, got {len(results2)}: {results2}"
 
     # Test with mixed valid/invalid codes
     mixed_codes = ["5201", "abcd"]
-    results3 = product_lookup._verify_product_codes(
+    results3 = product_lookup._get_official_product_details(
         mixed_codes, classification_schema="hs12"
     )
     assert len(results3) > 0, f"Expected >0 results, got {len(results3)}: {results3}"
     assert len(results3) < len(
         mixed_codes
     ), f"Expected <{len(mixed_codes)} results, got {len(results3)}: {results3}"
+
+    # TODO: Add test with services codes
 
 
 @pytest.mark.integration
@@ -148,7 +150,7 @@ def test_select_final_codes(product_lookup, logger):
     # Create test search results
     search_results = [
         ProductSearchResult(
-            product_name="cotton",
+            name="cotton",
             classification_schema="hs92",
             llm_suggestions=[
                 {
@@ -180,7 +182,7 @@ def test_select_final_codes(product_lookup, logger):
         {"question": question}
     )
 
-    assert isinstance(result, ProductCodeMapping)
+    assert isinstance(result, ProductCodesMapping)
     assert len(result.mappings) > 0
     assert "cotton" in str(result.mappings).lower()
     assert any("5201" in str(mapping) for mapping in result.mappings)
@@ -193,28 +195,29 @@ def test_full_product_lookup_flow(product_lookup, logger):
 
     # Test with simple products
     question1 = "How much cotton and wheat did Brazil export in 2021?"
-    result1 = product_lookup.lookup_product_codes().invoke({"question": question1})
+    result1 = product_lookup.get_product_details().invoke({"question": question1})
     logger.debug(f"Results for simple products: {result1}")
-    assert isinstance(result1, ProductCodeMapping)
+    assert isinstance(result1, ProductCodesMapping)
     assert len(result1.mappings) > 0
 
     # Test with more specific product
     question2 = "What were exports of raw cotton fiber?"
-    result2 = product_lookup.lookup_product_codes().invoke({"question": question2})
+    result2 = product_lookup.get_product_details().invoke({"question": question2})
     logger.debug(f"Results for specific product: {result2}")
-    assert isinstance(result2, ProductCodeMapping)
+    assert isinstance(result2, ProductCodesMapping)
     assert len(result2.mappings) > 0
 
     # Test with no product mentions
     question3 = "What were the top 5 products exported from United States to China?"
-    result3 = product_lookup.lookup_product_codes().invoke({"question": question3})
+    result3 = product_lookup.get_product_details().invoke({"question": question3})
     logger.debug(f"Results for no product mentions: {result3}")
-    assert isinstance(result3, ProductCodeMapping)
+    assert isinstance(result3, ProductCodesMapping)
     assert len(result3.mappings) == 0
 
     # Verify mappings structure
     for mapping in result1.mappings + result2.mappings:
-        assert isinstance(mapping.product_name, str)
+        assert isinstance(mapping.name, str)
+        assert isinstance(mapping.classification_schema, str)
         assert isinstance(mapping.codes, list)
         assert len(mapping.codes) > 0
         for code in mapping.codes:
@@ -223,7 +226,39 @@ def test_full_product_lookup_flow(product_lookup, logger):
 
     # Test with 6-digit product
     question4 = "What were exports of cotton seeds in 2021?"
-    result4 = product_lookup.lookup_product_codes().invoke({"question": question4})
+    result4 = product_lookup.get_product_details().invoke({"question": question4})
     logger.debug(f"Results for 6-digit product: {result4}")
-    assert isinstance(result4, ProductCodeMapping)
+    assert isinstance(result4, ProductCodesMapping)
     assert len(result4.mappings) > 0
+
+
+def test_format_product_codes_for_prompt():
+    """Test formatting of product codes for prompt inclusion."""
+    # Test with empty mappings
+    result2 = format_product_codes_for_prompt(ProductCodesMapping(mappings=[]))
+    assert result2 == ""
+
+    # Test with single mapping
+    mapping = ProductCodesMapping(
+        mappings=[
+            ProductDetails(name="cotton", codes=["5201"], classification_schema="hs92")
+        ]
+    )
+    result3 = format_product_codes_for_prompt(mapping)
+    assert "cotton" in result3
+    assert "5201" in result3
+    assert "hs92" in result3
+
+    # Test with multiple mappings
+    multiple_mappings = ProductCodesMapping(
+        mappings=[
+            ProductDetails(name="cotton", codes=["5201"], classification_schema="hs92"),
+            ProductDetails(name="wheat", codes=["1001"], classification_schema="hs92"),
+        ]
+    )
+    result4 = format_product_codes_for_prompt(multiple_mappings)
+    assert "cotton" in result4
+    assert "wheat" in result4
+    assert "5201" in result4
+    assert "1001" in result4
+    assert result4.count("hs92") == 2

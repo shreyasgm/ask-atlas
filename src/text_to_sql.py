@@ -16,6 +16,7 @@ from src.select_schema_and_tables import (
     create_schema_selection_chain,
     get_tables_in_schemas,
 )
+from src.product_and_schema_lookup import ProductAndSchemaLookup
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 from src.generate_query import load_example_queries, create_query_generation_chain
 
