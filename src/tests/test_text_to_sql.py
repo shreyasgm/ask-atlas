@@ -39,12 +39,13 @@ def test_get_table_info_for_schemas(atlas_sql, sample_schemas):
     assert "group" not in table_info.lower()
 
 
-def test_answer_question_basic(atlas_sql):
+def test_answer_question_basic(atlas_sql, logger):
     """Test if the system can answer a basic trade-related question"""
     question = (
         "What were the top 5 products exported from United States to China in 2020?"
     )
     answer = atlas_sql.answer_question(question)
+    logger.debug(f"Question: {question}\nAnswer: {answer}")
     assert isinstance(answer, str)
     assert len(answer) > 0
     # Check if the answer contains relevant keywords
@@ -62,10 +63,11 @@ def test_json_loading(base_dir):
     assert len(result) > 0
 
 
-def test_max_results_limit(atlas_sql):
+def test_max_results_limit(atlas_sql, logger):
     """Test if the max_results parameter is respected"""
     question = "List all products exported from United States"
     answer = atlas_sql.answer_question(question)
+    logger.info(f"Question: {question}\nAnswer: {answer}")
     # This is a bit tricky to test exactly, but we can check if the answer exists
     assert isinstance(answer, str)
     assert len(answer) > 0

@@ -69,7 +69,14 @@ class SchemasAndProductsFound(BaseModel):
 
 
 class ProductAndSchemaLookup:
-    """Tool for analyzing trade-related questions to determine schemas and product codes."""
+    """
+    Tool for analyzing trade-related questions to determine schemas and product codes.
+    
+    Args:
+        llm: Language model to use for analysis
+        connection: Database connection string or SQLAlchemy Engine
+        engine_args: Additional arguments for SQLAlchemy Engine
+    """
 
     def __init__(
         self,
@@ -78,13 +85,15 @@ class ProductAndSchemaLookup:
         engine_args: Dict[str, Any] = None,
     ):
         self.llm = llm
-        if not isinstance(connection, str) and engine_args:
-            warnings.warn(
-                "engine_args specified but connection is already an sqlalchemy Engine - these will be ignored"
-            )
-            self.engine = connection
-        else:
+        if isinstance(connection, str):
             self.engine = create_engine(connection, **(engine_args or {}))
+        else:
+            if engine_args:
+                warnings.warn(
+                    "engine_args specified but connection is already an sqlalchemy Engine - these will be ignored"
+                )
+            self.engine = connection
+            
 
     def get_product_details(self) -> Runnable:
         """

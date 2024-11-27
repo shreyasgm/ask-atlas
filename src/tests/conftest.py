@@ -1,6 +1,5 @@
 from pathlib import Path
 from dotenv import load_dotenv
-from langchain.globals import set_verbose, set_debug
 import pytest
 import logging
 
