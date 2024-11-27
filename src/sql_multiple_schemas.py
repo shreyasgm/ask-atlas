@@ -11,6 +11,8 @@ from sqlalchemy.sql.expression import Executable
 from sqlalchemy.exc import ProgrammingError
 from langchain_community.utilities import SQLDatabase
 import sqlalchemy
+import warnings
+from sqlalchemy.exc import SAWarning
 
 
 def _format_index(index: sqlalchemy.engine.interfaces.ReflectedIndex) -> str:
@@ -123,16 +125,21 @@ class SQLDatabaseWithSchemas(SQLDatabase):
         """Initialize metadata for all schemas."""
         self._metadata = metadata or MetaData()
         for schema in self._schemas:
-            self._metadata.reflect(
-                views=view_support,
-                bind=self._engine,
-                only=[
-                    v.split(".")[-1]
-                    for v in self._usable_tables
-                    if v.startswith(f"{schema}.")
-                ],
-                schema=schema,
-            )
+            # Suppress only the specific warning about vector type
+            with warnings.catch_warnings():
+                warnings.filterwarnings('ignore', 
+                                     category=SAWarning,
+                                     message="Did not recognize type 'vector' of column 'embedding'")
+                self._metadata.reflect(
+                    views=view_support,
+                    bind=self._engine,
+                    only=[
+                        v.split(".")[-1]
+                        for v in self._usable_tables
+                        if v.startswith(f"{schema}.")
+                    ],
+                    schema=schema,
+                )
 
     def _initialize_other_settings(
         self,
