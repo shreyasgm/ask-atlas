@@ -41,11 +41,11 @@ def test_get_table_info_for_schemas(atlas_sql, sample_schemas):
 
 def test_answer_question_basic(atlas_sql, logger):
     """Test if the system can answer a basic trade-related question"""
-    question = (
+    question1 = (
         "What were the top 5 products exported from United States to China in 2020?"
     )
-    answer = atlas_sql.answer_question(question)
-    logger.debug(f"Question: {question}\nAnswer: {answer}")
+    answer = atlas_sql.answer_question(question1, stream_response=False)
+    logger.info(f"Question: {question1}\nAnswer: {answer}")
     assert isinstance(answer, str)
     assert len(answer) > 0
     # Check if the answer contains relevant keywords
@@ -53,6 +53,44 @@ def test_answer_question_basic(atlas_sql, logger):
         word in answer.lower()
         for word in ["united states", "china", "export", "product"]
     )
+
+    question2 = (
+        "Compare India's exports in agricultural goods to China's, from 2000 to 2020"
+    )
+    answer2 = atlas_sql.answer_question(question2, stream_response=False)
+    logger.info(f"Question: {question2}\nAnswer: {answer2}")
+    assert isinstance(answer2, str)
+    assert len(answer2) > 0
+
+
+def test_answer_question_stream(atlas_sql, logger):
+    """Test if the system can stream a basic trade-related question response"""
+    question1 = (
+        "What were the top 5 products exported from United States to China in 2020?"
+    )
+    answer_generator = atlas_sql.answer_question(question1, stream_response=True)
+
+    # Collect chunks and simulate real-time printing
+    chunks = []
+    for chunk in answer_generator:
+        chunks.append(chunk)
+
+    answer = "".join(chunks)
+    logger.debug(f"Question: {question1}\nAnswer: {answer}")
+    assert isinstance(answer, str)
+    assert len(answer) > 0
+    assert "soy" in answer.lower()
+
+    question2 = (
+        "Compare India's exports in agricultural goods to China's, from 2000 to 2020"
+    )
+    answer_generator2 = atlas_sql.answer_question(question2, stream_response=True)
+    answer2 = "".join(answer_generator2)
+    logger.info(f"Question: {question2}\nAnswer: {answer2}")
+    assert isinstance(answer2, str)
+    assert len(answer2) > 0
+    assert "agri" in answer2.lower()
+
 
 def test_json_loading(base_dir):
     """Test the JSON loading functionality"""
@@ -71,4 +109,3 @@ def test_max_results_limit(atlas_sql, logger):
     # This is a bit tricky to test exactly, but we can check if the answer exists
     assert isinstance(answer, str)
     assert len(answer) > 0
-

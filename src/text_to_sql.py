@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List
+from typing import Dict, List, Union, Generator
 from pathlib import Path
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
@@ -83,7 +83,8 @@ class AtlasTextToSQL:
         self.example_queries = load_example_queries(queries_json, example_queries_dir)
 
         # Initialize language models
-        self.llm = ChatOpenAI(model="gpt-4o", temperature=0)
+        self.metadata_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        self.query_llm = ChatOpenAI(model="gpt-4o", temperature=0)
 
         self.max_results = max_results
 
@@ -134,19 +135,22 @@ class AtlasTextToSQL:
                     )
         return tables
 
-    def answer_question(self, question: str) -> str:
+    def answer_question(
+        self, question: str, stream_response: bool = False
+    ) -> Union[str, Generator[str, None, None]]:
         """
         Process a user's question and return the answer.
 
         Args:
             question: The user's question about the trade data
+            stream_response: Whether to stream the response back to the user
 
         Returns:
-            The answer to the user's question
+            Either a string answer or a generator yielding string chunks
         """
         # Product and schema lookup
         product_lookup = ProductAndSchemaLookup(
-            llm=self.llm,
+            llm=self.metadata_llm,
             connection=self.engine,
         )
 
@@ -167,7 +171,7 @@ class AtlasTextToSQL:
 
         # Create query generation chain with selected tables
         query_chain = create_query_generation_chain(
-            llm=self.llm,
+            llm=self.query_llm,
             example_queries=self.example_queries,
         )
 
@@ -191,7 +195,7 @@ class AtlasTextToSQL:
         SQL Result: {result}
         Answer: """
         )
-        answer_chain = answer_prompt | self.llm | StrOutputParser()
+        answer_chain = answer_prompt | self.metadata_llm | StrOutputParser()
 
         # # Execute step-wise for now
         # mentions = mentions_chain.invoke({"question": question})
@@ -235,8 +239,11 @@ class AtlasTextToSQL:
             | answer_chain
         )
 
-        answer = full_chain.invoke({"question": question})
-        return answer
+        if stream_response:
+            return full_chain.stream({"question": question})
+        else:
+            answer = full_chain.invoke({"question": question})
+            return answer
 
 
 # Usage example:
