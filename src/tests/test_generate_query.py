@@ -3,8 +3,13 @@ from pathlib import Path
 import json
 import tempfile
 from unittest.mock import Mock
-from src.generate_query import load_example_queries, create_query_generation_chain
-from langchain_core.language_models import BaseLanguageModel
+from src.generate_query import (
+    load_example_queries,
+    create_query_generation_chain,
+    create_query_tool,
+    create_sql_agent,
+)
+from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 from langchain_openai import ChatOpenAI
 
 
@@ -49,11 +54,9 @@ def temp_query_files():
 
 
 @pytest.fixture
-def mock_llm():
-    """Create a mock language model for testing."""
-    mock = Mock(spec=BaseLanguageModel)
-    mock.invoke.return_value = "SELECT * FROM mock_table LIMIT 5;"
-    return mock
+def llm():
+    """Create a GPT-4 language model for testing."""
+    return ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
 
 @pytest.fixture
@@ -63,6 +66,21 @@ def project_paths(base_dir):
         "queries_json": base_dir / "src/example_queries/queries.json",
         "example_queries_dir": base_dir / "src/example_queries",
     }
+
+
+@pytest.fixture
+def mock_db():
+    """Create a mock database for testing."""
+    mock = Mock(spec=SQLDatabaseWithSchemas)
+    
+    # Create a string response that simulates database output
+    mock_response = str([{"result": "mock data", "value": 100}])
+    
+    # Set return_value instead of side_effect to ensure we get a string
+    mock.run.return_value = mock_response
+    mock.run_no_throw.return_value = mock_response
+    
+    return mock
 
 
 class TestLoadExampleQueries:
@@ -194,15 +212,19 @@ class TestCreateQueryGenerationChain:
         )
 
         llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-        chain = create_query_generation_chain(llm, example_queries)
+        chain = create_query_generation_chain(
+            llm=llm,
+            example_queries=example_queries,
+            codes=None,
+            top_k=5,
+            table_info="Use the example queries to infer the table structure.",
+        )
         assert chain is not None
 
         # Test chain invocation with real LLM
         result = chain.invoke(
             {
-                "question": "What are the top US exports by value?",
-                "top_k": 5,
-                "table_info": "Use the example queries to infer the table structure.",
+                "question": "What are the top US exports by value?"
             }
         )
 
@@ -226,3 +248,105 @@ class TestCreateQueryGenerationChain:
 
         assert isinstance(result, str)
         assert "SELECT" in result.upper()
+
+
+class TestQueryTool:
+    def test_core_functionality(self, llm, mock_db, project_paths, logger):
+        """Test basic query generation and execution functionality of QueryTool."""
+        example_queries = load_example_queries(
+            project_paths["queries_json"], project_paths["example_queries_dir"]
+        )
+
+        # Mock the database response
+        mock_db.run.return_value = [{"result": "mock data"}]
+        
+        # Create the tool
+        tool = create_query_tool(
+            llm=llm,
+            db=mock_db,
+            example_queries=example_queries,
+            table_info="trades(date, country, value)",
+            top_k_per_query=5,
+        )
+
+        # Modify the test to expect a string result instead of a list
+        result = tool.invoke({"question": "Show me the top trades"})
+        logger.info(f"Result: {result}")
+        assert isinstance(result, str)  # Changed from list to str
+        assert "mock data" in result
+
+    def test_max_queries(self, llm, mock_db, project_paths):
+        """Test that QueryTool enforces maximum query limit."""
+        example_queries = load_example_queries(
+            project_paths["queries_json"], project_paths["example_queries_dir"]
+        )
+
+        tool = create_query_tool(
+            llm=llm,
+            db=mock_db,
+            example_queries=example_queries,
+            table_info="trades(date, country, value)",
+            max_uses=2,
+        )
+
+        # Execute queries up to and beyond limit
+        tool.invoke({"question": "Query 1"})
+        tool.invoke({"question": "Query 2"})
+        result = tool.invoke({"question": "Query 3"})
+
+        assert result == "Error: Maximum number of queries exceeded."
+
+
+class TestCreateSQLAgent:
+    def test_agent_creation_and_execution(self, llm, mock_db, project_paths, logger):
+        """Test creation and basic execution of SQL agent."""
+        example_queries = load_example_queries(
+            project_paths["queries_json"], project_paths["example_queries_dir"]
+        )
+        # Create agent
+        agent = create_sql_agent(
+            llm=llm,
+            db=mock_db,
+            example_queries=example_queries,
+            table_info="trades(date, country, value)",
+            top_k_per_query=5,
+            max_uses=3,
+        )
+
+        # Initialize with proper message structure
+        result = agent.invoke({
+            "messages": [{"content": "What is the total trade value?", "role": "user"}]
+        })
+        logger.info(f"Result: {result}")
+        assert result is not None
+
+    @pytest.mark.integration
+    def test_integration_with_real_llm(self, mock_db, project_paths):
+        """Test agent with real LLM (marked as integration test)."""
+        example_queries = load_example_queries(
+            project_paths["queries_json"], project_paths["example_queries_dir"]
+        )
+
+        # Setup mock database response
+        mock_db.run.return_value = [
+            {"country": "US", "value": 1000000},
+            {"country": "UK", "value": 800000},
+        ]
+
+        # Create agent with real LLM
+        llm = ChatOpenAI(model="gpt-4", temperature=0)
+        agent = create_sql_agent(
+            llm=llm,
+            db=mock_db,
+            example_queries=example_queries,
+            table_info="trades(date, country, value)",
+            top_k_per_query=5,
+        )
+
+        # Initialize with proper message structure
+        result = agent.invoke({
+            "messages": [{"content": "What are our top trading partners by value?", "role": "user"}]
+        })
+
+        assert result is not None
+        assert mock_db.run.call_count <= 3  # Should not exceed max_uses

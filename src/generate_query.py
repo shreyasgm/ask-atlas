@@ -1,9 +1,25 @@
+import os
 from typing import List, Dict, Union
 import json
 from pathlib import Path
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.messages import SystemMessage
+from langgraph.prebuilt import create_react_agent
+from langchain_core.runnables import Runnable
+from src.sql_multiple_schemas import SQLDatabaseWithSchemas
+from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
+from langchain_core.tools import BaseTool, tool
+from pydantic import BaseModel, Field
+
+# Define BASE_DIR
+BASE_DIR = Path(__file__).resolve().parents[1]
+
+QUERIES_JSON_PATH = BASE_DIR / "src/example_queries/queries.json"
+EXAMPLE_QUERIES_DIR = BASE_DIR / "src/example_queries"
+DB_URI = os.getenv("ATLAS_DB_URL")
+QUERY_LLM = os.getenv("QUERY_LLM")
 
 
 def load_example_queries(
@@ -37,13 +53,19 @@ def _strip(text: str) -> str:
 
 def create_query_generation_chain(
     llm: BaseLanguageModel,
-    example_queries: List[Dict[str, str]],
-):
+    codes: str = None,
+    top_k: int = 15,
+    table_info: str = "",
+    example_queries: List[Dict[str, str]] = [],
+) -> Runnable:
     """
     Creates a chain that generates SQL queries based on the user's question.
 
     Args:
         llm: The language model to use for query generation
+        codes: Reference string of product codes
+        top_k: Maximum rows to return per query
+        table_info: Information about database tables
         example_queries: List of example SQL queries for reference
 
     Returns:
@@ -58,6 +80,9 @@ Only use the tables and columns provided. Here is the relevant table information
 Below are some examples of user questions and their corresponding SQL queries.
     """
 
+    if codes:
+        prefix += f"\nProduct codes for reference:\n{codes}"
+
     example_prompt = PromptTemplate.from_template(
         "User question: {question}\nSQL query: {query}"
     )
@@ -66,7 +91,123 @@ Below are some examples of user questions and their corresponding SQL queries.
         example_prompt=example_prompt,
         prefix=prefix,
         suffix="User question: {question}\nSQL query: ",
-        input_variables=["question", "top_k", "table_info"],
+        input_variables=["question", "top_k", "table_info", "codes"],
     )
+    if codes:
+        prompt = prompt.partial(top_k=top_k, table_info=table_info, codes=codes)
+    else:
+        prompt = prompt.partial(top_k=top_k, table_info=table_info)
 
     return prompt | llm | StrOutputParser() | _strip
+
+
+class QueryToolInput(BaseModel):
+    question: str = Field(description="A question about international trade data")
+
+
+def create_query_tool(
+    llm: BaseLanguageModel,
+    db: SQLDatabaseWithSchemas,
+    example_queries: List[Dict[str, str]],
+    table_info: str,
+    codes: str = None,
+    top_k_per_query: int = 15,
+    max_uses: int = 3,
+) -> BaseTool:
+    """
+    Factory function that creates a QueryTool with all dependencies pre-configured.
+    Returns a tool that only requires the question as input.
+    """
+    execute_query_tool = QuerySQLDataBaseTool(db=db)
+
+    # Create the query generation chain and convert to tool
+    query_gen_chain = create_query_generation_chain(
+        llm=llm,
+        top_k=top_k_per_query,
+        table_info=table_info,
+        example_queries=example_queries,
+        codes=codes,
+    )
+    query_gen_tool = query_gen_chain.as_tool(
+        name="Query generator",
+        description="Tool to convert a user question to a SQL query",
+    )
+
+    # Track uses in a closure
+    uses_counter = {"current": 0}
+
+    @tool("database_query_tool", args_schema=QueryToolInput)
+    def query_tool(question: str) -> str:
+        """
+        A tool that generates and executes SQL queries based on natural language questions.
+        Input should be a natural language question about the database.
+        The tool will generate an appropriate SQL query and execute it.
+        """
+        uses_counter["current"] += 1
+        if uses_counter["current"] > max_uses:
+            return "Error: Maximum number of queries exceeded."
+
+        query = query_gen_tool.invoke({"question": question})
+        results = execute_query_tool.invoke({"query": query})
+
+        return results
+
+    return query_tool
+
+
+def create_sql_agent(
+    llm: BaseLanguageModel,
+    db: SQLDatabaseWithSchemas,
+    codes: str = None,
+    example_queries: List[Dict[str, str]] = [],
+    table_info: str = "",
+    top_k_per_query: int = 15,
+    max_uses: int = 3,
+):
+    """
+    Creates a React agent for handling complex SQL queries through multiple steps.
+
+    Args:
+        llm: Language model for the agent
+        query_chain: Chain for generating SQL queries
+        execute_query_tool: Tool for executing SQL queries
+        table_info: Information about database tables
+        top_k_per_query: Maximum rows to return per query
+        max_uses: Maximum number of queries the agent can execute
+    """
+    # Define the query generation and execution tool
+    query_tool = create_query_tool(
+        llm=llm,
+        db=db,
+        codes=codes,
+        example_queries=example_queries,
+        table_info=table_info,
+        top_k_per_query=top_k_per_query,
+        max_uses=max_uses,
+    )
+
+    # Create the system message
+    AGENT_PREFIX = f"""You are an agent designed to answer complex questions about international trade data using a database of international trade data. You have access to a tool that can generate and execute SQL queries given a natural language question.
+
+Your primary goal is to provide accurate and comprehensive answers to user questions by following these steps:
+1. Understand the user's question about international trade and formulate a plan for answering the question
+2. For simple questions:
+    - Just send the user's question to the tool and answer the question based on the results
+3. For complex questions:
+    - Formulate a plan for answering the question by breaking it down into smaller, manageable sub-questions. Explain how these sub-questions will help answer the main question.
+    - Use the tool to answer each sub-question one at a time.
+    - After each tool run, analyze the results and determine if you need additional queries to answer the question.
+
+Important rules:
+- You can use the SQL generation and execution tool up to {max_uses} times to answer a single user question
+- Each query will return at most {top_k_per_query} rows, so plan accordingly
+- Remember to be precise and efficient with your queries. Don't query for information you don't need."""
+
+    # Create the agent
+    agent = create_react_agent(
+        model=llm,
+        tools=[query_tool],
+        state_modifier=SystemMessage(content=AGENT_PREFIX),
+    )
+
+    return agent

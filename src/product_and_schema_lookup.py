@@ -476,9 +476,9 @@ def format_product_codes_for_prompt(analysis: ProductCodesMapping) -> str:
 
     result = ""
     if analysis.mappings:
-        result += "\nProduct codes:\n"
+        result += "\n"
         for product in analysis.mappings:
-            result += f"- {product.name} ({product.classification_schema}): {', '.join(product.codes)}\n"
+            result += f"- {product.name} (Schema: {product.classification_schema}): {', '.join(product.codes)}\n"
 
     return result
 
