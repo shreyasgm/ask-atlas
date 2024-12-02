@@ -31,6 +31,15 @@ st.info(
     """
 )
 
+# Add disclaimers
+st.warning(
+    """
+    **Important Disclaimers:**
+    - This tool is currently in alpha stage and under active development. Please report any bugs or issues to Shreyas through Slack.
+    - This tool is open source ([Github repo](https://github.com/shreyasgm/ask-atlas)) and licensed under [CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). 
+    - As with any AI-powered tool, responses may contain inaccuracies or hallucinations. Please verify all results independently
+    """
+)
 
 # Initialize the AtlasTextToSQL instance
 @st.cache_resource(ttl=3600, show_spinner=False)
