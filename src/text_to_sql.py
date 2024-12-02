@@ -195,7 +195,7 @@ class AtlasTextToSQL:
 
         # Answer question given the query and results
         answer_prompt = PromptTemplate.from_template(
-            """Given the following user question, corresponding SQL query, and SQL result, answer the user question. When interpreting the SQL results, convert large dollar amounts (if any) to easily readable formats. Use millions, billions, etc. as appropriate.
+            """Given the following user question, corresponding SQL query, and SQL result, answer the user question. When interpreting the SQL results, convert large dollar amounts (if any) to easily readable formats. Use millions, billions, etc. as appropriate. Note that any export and import values returned by the DB are in current USD.
 
         Question: {question}
         SQL Query: {query}
@@ -248,7 +248,7 @@ class AtlasTextToSQL:
                 table_info=table_info,
                 codes=final_codes_str,
                 top_k_per_query=self.max_results,
-                max_uses=5,
+                max_uses=10,
             )
 
             if stream_response:
@@ -314,7 +314,7 @@ if __name__ == "__main__":
         example_queries_dir=BASE_DIR / "src/example_queries",
         max_results=15,
     )
-    question = "Analyze the trade relationship between Germany and Eastern European countries (Poland, Czech Republic, Hungary) from 2010-2020. How has the nature of traded goods evolved, particularly in the automotive sector?"
+    question = "Analyze the trade relationship between Germany and Eastern European countries (Poland, Czech Republic, Hungary) from 2010-2020."
     print(f"User question: {question}")
     answer = atlas_sql.answer_question(question, stream_response=True, use_agent=True)
     print("Answer: ")
