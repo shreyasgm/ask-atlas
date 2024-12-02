@@ -248,11 +248,9 @@ class AtlasTextToSQL:
                 table_info=table_info,
                 codes=final_codes_str,
                 top_k_per_query=self.max_results,
-                max_uses=8,
+                max_uses=5,
             )
 
-            print(f"Mentions: {mentions}")
-            print(f"Codes: {final_codes}")
             if stream_response:
                 for msg, metadata in agent.stream(
                     {"messages": [HumanMessage(content=question)]},

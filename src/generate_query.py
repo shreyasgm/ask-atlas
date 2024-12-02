@@ -72,7 +72,13 @@ def create_query_generation_chain(
         A chain that generates SQL queries
     """
     prefix = """You are a SQL expert that writes queries for a postgres database containing trade data.
-Given an input question, create a syntactically correct SQL query to answer the user's question. Unless otherwise specified, do not return more than {top_k} rows. Note that you should never use the location_level or partner_level columns in your query. Just ignore those columns.
+Given an input question, create a syntactically correct SQL query to answer the user's question. Unless otherwise specified, do not return more than {top_k} rows.
+
+Notes on these tables:
+- Never use the location_level or partner_level columns in your query. Just ignore those columns.
+- product_id and product_code are NOT the same thing. product_id is an internal ID used by the db, but when looking up specific product codes, use product_code, which contains the actual official product codes. Similarly, country_id and iso3_code are NOT the same thing, and if you need to look up specific countries, use iso3_code. Use the id variables for joins, but not for looking up official codes.
+- What this means concretely is that the query should never have a WHERE clause that filters on product_id or country_id. Use product_code and iso3_code instead.
+
 
 Only use the tables and columns provided. Here is the relevant table information:
 {table_info}
@@ -203,6 +209,7 @@ Your primary goal is to provide accurate and comprehensive answers to user quest
 
 Important rules:
 - You can use the SQL generation and execution tool up to {max_uses} times to answer a single user question
+- If you realize that you will need to run more than {max_uses} queries to answer a single user question, respond to the user saying that the question would need more steps than allowed to answer, so ask the user to ask a simpler question. Suggest that they split their question into multiple short questions.
 - Each query will return at most {top_k_per_query} rows, so plan accordingly
 - Remember to be precise and efficient with your queries. Don't query for information you don't need."""
 
