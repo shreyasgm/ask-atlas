@@ -1,6 +1,6 @@
 # Ask-Atlas
 
-Ask-Atlas is a chatbot that allows users to ask questions about the Atlas database and receive answers. It is a RAG chatbot that uses Langchain, Chainlit, and OpenAI's LLMs (GPT-4o, GPT-4o-mini).
+Ask-Atlas is a chatbot that allows users to ask questions about the Atlas database and receive answers. It is a RAG chatbot that uses Langchain, Streamlit, and OpenAI's LLMs (GPT-4o, GPT-4o-mini).
 
 
 ```mermaid
@@ -13,8 +13,8 @@ flowchart TD
 
     D1 --> E{Check for Product Names}
     
-    E -->|Products Found| F[Product Lookup Vector Search]
-    E -->|No Products| H[Generate SQL Query]
+    E -->|Products Found| F[Product Lookup]
+    E -->|No Products| H[Agentic Query Planning]
     
     D --> F
     
@@ -22,9 +22,15 @@ flowchart TD
     D --> D2[Get Schema]
     D2 -->|Schema| H
     
-    H --> I[Execute SQL Query]
-    I --> J[Generate Response]
+    H --> H1[Generate SQL Query]
+    H1 --> H2[Execute Query]
+    H2 --> H3{Answer Complete?}
+    H3 -->|No| H
+    H3 -->|Yes| J[Generate Final Response]
+    
     
     style C fill:#ffcccc
     style F fill:#e6f3ff
+    style H fill:#e6e6ff
+    style J fill:#e6ffe6
 ```

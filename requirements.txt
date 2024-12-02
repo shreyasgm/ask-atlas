@@ -10,4 +10,4 @@ langchain-community==0.3.3
 langchain-postgres==0.0.12
 langgraph==0.2.44
 streamlit==1.39.0
-psycopg2
+psycopg2-binary
