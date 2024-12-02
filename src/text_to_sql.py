@@ -15,6 +15,7 @@ from langchain_core.runnables import (
 )
 from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.messages import HumanMessage, AIMessage
 import warnings
 from sqlalchemy import exc as sa_exc
 from operator import itemgetter
@@ -24,7 +25,11 @@ from src.product_and_schema_lookup import (
     format_product_codes_for_prompt,
 )
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
-from src.generate_query import load_example_queries, create_query_generation_chain
+from src.generate_query import (
+    load_example_queries,
+    create_query_generation_chain,
+    create_sql_agent,
+)
 
 # Define BASE_DIR
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -136,7 +141,7 @@ class AtlasTextToSQL:
         return tables
 
     def answer_question(
-        self, question: str, stream_response: bool = False
+        self, question: str, stream_response: bool = False, use_agent: bool = False
     ) -> Union[str, Generator[str, None, None]]:
         """
         Process a user's question and return the answer.
@@ -144,6 +149,7 @@ class AtlasTextToSQL:
         Args:
             question: The user's question about the trade data
             stream_response: Whether to stream the response back to the user
+            use_agent: Whether to use an agent to do query planning and execution
 
         Returns:
             Either a string answer or a generator yielding string chunks
@@ -215,35 +221,83 @@ class AtlasTextToSQL:
         # answer = answer_chain.invoke(
         #     {"question": question, "query": query, "result": results}
         # )
-
-        # Combine all elements into a single chain
-        full_chain = (
-            RunnableParallel(
-                {
-                    "products_found": mentions_chain,
-                    "question": itemgetter("question") | RunnablePassthrough(),
-                }
+        if use_agent:
+            # Get product codes and schemas and then use agent to plan and execute query
+            # Split the chain into two parts: mentions and query agent
+            mentions = mentions_chain.invoke({"question": question})
+            candidate_codes = product_lookup.get_candidate_codes(
+                products_found=mentions
             )
-            | {
-                "codes": itemgetter("products_found") | codes_chain,
-                "table_info": itemgetter("products_found") | table_info_chain,
-                "top_k": lambda x: self.max_results,
-                "question": itemgetter("question"),
-            }
-            | {"query": query_chain, "question": itemgetter("question")}
-            | {
-                "result": execute_query_chain,
-                "question": itemgetter("question"),
-                "query": itemgetter("query"),
-            }
-            | answer_chain
-        )
+            final_codes = format_product_codes_for_prompt(
+                product_lookup.select_final_codes(candidate_codes)
+            )
+            table_info = self.get_table_info_for_schemas(
+                classification_schemas=mentions.classification_schemas
+            )
+            # Use agent to plan and execute query
+            agent = create_sql_agent(
+                llm=self.query_llm,
+                db=self.db,
+                example_queries=self.example_queries,
+                table_info=table_info,
+                codes=final_codes,
+                top_k_per_query=self.max_results,
+                max_uses=8,
+            )
 
-        if stream_response:
-            return full_chain.stream({"question": question})
+            print(f"Mentions: {mentions}")
+            print(f"Codes: {final_codes}")
+            if stream_response:
+                for msg, metadata in agent.stream(
+                    {"messages": [HumanMessage(content=question)]},
+                    stream_mode="messages",
+                ):
+                    if (
+                        msg.content
+                        and isinstance(msg, AIMessage)
+                        and metadata["langgraph_node"] != "tools"
+                    ):
+                        yield msg.content
+
+            else:
+                # Get the last message directly without streaming
+                result = agent.stream(
+                    {"messages": [HumanMessage(content=question)]}, stream_mode="values"
+                )
+                for step in result:
+                    message = step["messages"][-1]
+                final_message = message.content
+                return final_message
+
         else:
-            answer = full_chain.invoke({"question": question})
-            return answer
+            # Combine all elements into a single chain
+            full_chain = (
+                RunnableParallel(
+                    {
+                        "products_found": mentions_chain,
+                        "question": itemgetter("question") | RunnablePassthrough(),
+                    }
+                )
+                | {
+                    "codes": itemgetter("products_found") | codes_chain,
+                    "table_info": itemgetter("products_found") | table_info_chain,
+                    "top_k": lambda x: self.max_results,
+                    "question": itemgetter("question"),
+                }
+                | {"query": query_chain, "question": itemgetter("question")}
+                | {
+                    "result": execute_query_chain,
+                    "question": itemgetter("question"),
+                    "query": itemgetter("query"),
+                }
+                | answer_chain
+            )
+
+            if stream_response:
+                return full_chain.stream({"question": question})
+            else:
+                answer = full_chain.invoke({"question": question})
+                return answer
 
 
 # Usage example:
@@ -256,9 +310,9 @@ if __name__ == "__main__":
         example_queries_dir=BASE_DIR / "src/example_queries",
         max_results=15,
     )
-    question = (
-        "What were the top 5 products exported from United States to China in 2020?"
-    )
+    question = "What were the top 5 products exported from United States to China for the period 2015-2020? Compare these to the top 5 products exported from China to the United States in the same period."
     print(f"User question: {question}")
-    answer = atlas_sql.answer_question(question)
-    print(f"Answer: {answer}")
+    answer = atlas_sql.answer_question(question, stream_response=True, use_agent=True)
+    print("Answer: ")
+    for chunk in answer:
+        print(chunk, end="", flush=True)

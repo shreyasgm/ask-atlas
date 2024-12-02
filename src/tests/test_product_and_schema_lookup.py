@@ -45,6 +45,7 @@ def test_extract_schemas_and_product_mentions(product_lookup, logger):
     logger.debug(f"Result 1: {result1}")
     assert isinstance(result1, SchemasAndProductsFound)
     assert result1.products
+    assert result1.requires_product_lookup
     product_names = [item.name for item in result1.products]
     assert "cotton" in product_names
     assert "wheat" in product_names
@@ -60,9 +61,12 @@ def test_extract_schemas_and_product_mentions(product_lookup, logger):
     logger.debug(f"Result 2: {result2}")
     assert not result2.products
     assert len(result2.products) == 0
+    assert (
+        not result2.requires_product_lookup
+    ), "Should not require product lookup - HS codes already provided"
 
     # Test question with no product mentions
-    question3 = "What were the top 5 products exported from United States to China?"
+    question3 = "What were the top 5 products exported from United States to China in 2020?"
     result3 = product_lookup.extract_schemas_and_product_mentions().invoke(
         {"question": question3}
     )
@@ -70,6 +74,9 @@ def test_extract_schemas_and_product_mentions(product_lookup, logger):
     logger.debug(f"Result 3: {result3}")
     assert not result3.products
     assert len(result3.products) == 0
+    assert (
+        not result3.requires_product_lookup
+    ), "Should not require product lookup - no product mentions"
 
 
 @pytest.mark.integration
