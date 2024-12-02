@@ -79,7 +79,7 @@ if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant"):
         try:
             response_gen = st.session_state.atlas_sql.answer_question(
-                prompt, stream_response=True
+                prompt, stream_response=True, use_agent=True
             )
             full_response = st.write_stream(response_gen)
         except Exception as e:
