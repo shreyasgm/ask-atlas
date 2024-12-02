@@ -81,7 +81,10 @@ Below are some examples of user questions and their corresponding SQL queries.
     """
 
     if codes:
-        prefix += f"\nProduct codes for reference:\n{codes}"
+        prefix += f"""
+Product codes for reference:
+{codes}
+Always use these product codes provided, and do not try to search for products based on their names from the database."""
 
     example_prompt = PromptTemplate.from_template(
         "User question: {question}\nSQL query: {query}"
