@@ -71,7 +71,7 @@ class SchemasAndProductsFound(BaseModel):
 class ProductAndSchemaLookup:
     """
     Tool for analyzing trade-related questions to determine schemas and product codes.
-    
+
     Args:
         llm: Language model to use for analysis
         connection: Database connection string or SQLAlchemy Engine
@@ -93,7 +93,6 @@ class ProductAndSchemaLookup:
                     "engine_args specified but connection is already an sqlalchemy Engine - these will be ignored"
                 )
             self.engine = connection
-            
 
     def get_product_details(self) -> Runnable:
         """
@@ -250,6 +249,8 @@ class ProductAndSchemaLookup:
         question and the candidate codes.
 
         Choose the most accurate match based on the specific context. Include only the products that have clear matches. If a product name is too ambiguous or has no good matches among the candidates, exclude it from the final mapping.
+
+        If no products among the ones provided are relevant to the product mentioned in the user's question, return an empty mapping for that product.
         """
 
         prompt = ChatPromptTemplate.from_messages(
@@ -471,6 +472,8 @@ class ProductAndSchemaLookup:
 
 def format_product_codes_for_prompt(analysis: ProductCodesMapping) -> str:
     """Format the analysis results for inclusion in the SQL generation prompt."""
+    assert isinstance(analysis, ProductCodesMapping), "Input to format_product_codes_for_prompt must be a ProductCodesMapping object"
+
     if (not analysis) or (not analysis.mappings):
         return ""
 
@@ -478,10 +481,12 @@ def format_product_codes_for_prompt(analysis: ProductCodesMapping) -> str:
     if analysis.mappings:
         result += "\n"
         for product in analysis.mappings:
-            result += f"- {product.name} (Schema: {product.classification_schema}): {', '.join(product.codes)}\n"
+            if product.codes:
+                result += f"- {product.name} (Schema: {product.classification_schema}): {', '.join(product.codes)}\n"
+            else:
+                result += f"- {product.name} - There was an error looking up the product codes for this product. Ask the user to specify the product codes and the product classification system to use manually and error out. Otherwise, the SQL query will not be accurate.\n"
 
     return result
-
 
 
 # Usage example
@@ -491,7 +496,7 @@ if __name__ == "__main__":
     llm = ChatOpenAI(model="gpt-4", temperature=0)
     analyzer = ProductAndSchemaLookup(
         llm=llm,
-        connection="postgresql://user:pass@localhost:5432/dbname"
+        connection="postgresql://user:pass@localhost:5432/dbname",
         # Optionally, you can pass engine_args if needed:
         # engine_args={"echo": True}
     )

@@ -22,6 +22,7 @@ from operator import itemgetter
 
 from src.product_and_schema_lookup import (
     ProductAndSchemaLookup,
+    ProductCodesMapping,
     format_product_codes_for_prompt,
 )
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
@@ -88,7 +89,7 @@ class AtlasTextToSQL:
         self.example_queries = load_example_queries(queries_json, example_queries_dir)
 
         # Initialize language models
-        self.metadata_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        self.metadata_llm = ChatOpenAI(model="gpt-4o", temperature=0)
         self.query_llm = ChatOpenAI(model="gpt-4o", temperature=0)
 
         self.max_results = max_results
@@ -141,7 +142,7 @@ class AtlasTextToSQL:
         return tables
 
     def answer_question(
-        self, question: str, stream_response: bool = False, use_agent: bool = False
+        self, question: str, stream_response: bool = True, use_agent: bool = True
     ) -> Union[str, Generator[str, None, None]]:
         """
         Process a user's question and return the answer.
@@ -228,9 +229,14 @@ class AtlasTextToSQL:
             candidate_codes = product_lookup.get_candidate_codes(
                 products_found=mentions
             )
-            final_codes = format_product_codes_for_prompt(
-                product_lookup.select_final_codes(candidate_codes)
-            )
+            final_codes_chain = product_lookup.select_final_codes(candidate_codes)
+            if isinstance(final_codes_chain, ProductCodesMapping):
+                final_codes = final_codes_chain
+            else:
+                final_codes = final_codes_chain.invoke(
+                    {"question": question}
+                )
+            final_codes_str = format_product_codes_for_prompt(final_codes)
             table_info = self.get_table_info_for_schemas(
                 classification_schemas=mentions.classification_schemas
             )
@@ -240,7 +246,7 @@ class AtlasTextToSQL:
                 db=self.db,
                 example_queries=self.example_queries,
                 table_info=table_info,
-                codes=final_codes,
+                codes=final_codes_str,
                 top_k_per_query=self.max_results,
                 max_uses=8,
             )
@@ -310,7 +316,7 @@ if __name__ == "__main__":
         example_queries_dir=BASE_DIR / "src/example_queries",
         max_results=15,
     )
-    question = "What were the top 5 products exported from United States to China for the period 2015-2020? Compare these to the top 5 products exported from China to the United States in the same period."
+    question = "Analyze the trade relationship between Germany and Eastern European countries (Poland, Czech Republic, Hungary) from 2010-2020. How has the nature of traded goods evolved, particularly in the automotive sector?"
     print(f"User question: {question}")
     answer = atlas_sql.answer_question(question, stream_response=True, use_agent=True)
     print("Answer: ")
