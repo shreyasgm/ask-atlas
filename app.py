@@ -36,7 +36,7 @@ st.warning(
     """
     **Important Disclaimers:**
     - This tool is currently in alpha stage and under active development. Please report any bugs or issues to Shreyas through Slack.
-    - This tool is open source ([Github repo](https://github.com/shreyasgm/ask-atlas)) and licensed under [CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). 
+    - This tool is open source ([Github repo](https://github.com/shreyasgm/ask-atlas)) and the code is licensed under [CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). 
     - As with any AI-powered tool, responses may contain inaccuracies or hallucinations. Please verify all results independently
     """
 )
@@ -72,6 +72,9 @@ if "messages" not in st.session_state:
             "content": "Hello! Ask me a question about trade data from the Atlas of Economic Complexity.",
         }
     ]
+
+if "agent_chat_history" not in st.session_state:
+    st.session_state["agent_chat_history"] = []
 
 # Get user input for questions
 if prompt := st.chat_input("Ask a question about trade data"):
