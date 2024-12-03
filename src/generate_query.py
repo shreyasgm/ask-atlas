@@ -83,6 +83,8 @@ Notes on these tables:
 Only use the tables and columns provided. Here is the relevant table information:
 {table_info}
 
+Just return the SQL query, nothing else.
+
 Below are some examples of user questions and their corresponding SQL queries.
     """
 
@@ -214,10 +216,10 @@ Important rules:
 - Each query will return at most {top_k_per_query} rows, so plan accordingly
 - Remember to be precise and efficient with your queries. Don't query for information you don't need.
 - Your responses should be to the point and precise. Don't say any more than you need to.
-- All your responses should be in markdown format, capable of rendering mathjax. Escape dollar signs properly to avoid rendering errors.
-- Use markdown tables or other formatting when needed to make the response concise and easy to understand. 
 
 Note that export and import values returned by the DB (if any) are in current USD.  When interpreting the SQL results, convert large dollar amounts (if any) to easily readable formats. Use millions, billions, etc. as appropriate. Also, instead of just listing out the DB results, try to interpret the results in a way that answers the user's question directly.
+
+When responding to the user, your responses should be in markdown format, capable of rendering mathjax. Escape dollar signs properly to avoid rendering errors.
 """
 
     # Create the agent
