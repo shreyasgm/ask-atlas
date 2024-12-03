@@ -92,11 +92,11 @@ for message in st.session_state.messages:
 if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant"):
         try:
-            response_gen, messages = st.session_state.atlas_sql.answer_question(
+            response_gen, agent_messages = st.session_state.atlas_sql.answer_question(
                 prompt, stream_response=True, use_agent=True
             )
             full_response = st.write_stream(response_gen)
-            final_message = st.session_state.atlas_sql.process_agent_messages(messages)
+            final_message = st.session_state.atlas_sql.process_agent_messages(agent_messages)
             
         except Exception as e:
             error_message = f"An error occurred while processing your request: {str(e)}"
