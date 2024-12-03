@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Union, Generator
+from typing import Dict, List, Union, Generator, Tuple
 from pathlib import Path
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
@@ -143,7 +143,7 @@ class AtlasTextToSQL:
 
     def answer_question(
         self, question: str, stream_response: bool = True, use_agent: bool = True
-    ) -> Union[str, Generator[str, None, None]]:
+    ) -> Tuple[Union[str, Generator[str, None, None]], List[Dict]]:
         """
         Process a user's question and return the answer.
 
@@ -154,6 +154,7 @@ class AtlasTextToSQL:
 
         Returns:
             Either a string answer or a generator yielding string chunks
+            List of dictionaries containing messages from the agent
         """
         # Product and schema lookup
         product_lookup = ProductAndSchemaLookup(
@@ -233,9 +234,7 @@ class AtlasTextToSQL:
             if isinstance(final_codes_chain, ProductCodesMapping):
                 final_codes = final_codes_chain
             else:
-                final_codes = final_codes_chain.invoke(
-                    {"question": question}
-                )
+                final_codes = final_codes_chain.invoke({"question": question})
             final_codes_str = format_product_codes_for_prompt(final_codes)
             table_info = self.get_table_info_for_schemas(
                 classification_schemas=mentions.classification_schemas
@@ -252,16 +251,22 @@ class AtlasTextToSQL:
             )
 
             if stream_response:
-                for msg, metadata in agent.stream(
-                    {"messages": [HumanMessage(content=question)]},
-                    stream_mode="messages",
-                ):
-                    if (
-                        msg.content
-                        and isinstance(msg, AIMessage)
-                        and metadata["langgraph_node"] != "tools"
+                messages = []
+
+                def stream_agent_response():
+                    for msg, metadata in agent.stream(
+                        {"messages": [HumanMessage(content=question)]},
+                        stream_mode="messages",
                     ):
-                        yield msg.content
+                        if (
+                            msg.content
+                            and isinstance(msg, AIMessage)
+                            and metadata["langgraph_node"] != "tools"
+                        ):
+                            yield msg.content
+                        messages.append({"msg": msg, "metadata": metadata})
+
+                return stream_agent_response(), messages
 
             else:
                 # Get the last message directly without streaming
@@ -271,7 +276,7 @@ class AtlasTextToSQL:
                 for step in result:
                     message = step["messages"][-1]
                 final_message = message.content
-                return final_message
+                return final_message, []
 
         else:
             # Combine all elements into a single chain
@@ -298,10 +303,19 @@ class AtlasTextToSQL:
             )
 
             if stream_response:
-                return full_chain.stream({"question": question})
+                return full_chain.stream({"question": question}), []
             else:
                 answer = full_chain.invoke({"question": question})
-                return answer
+                return answer, []
+
+    def process_agent_messages(self, messages: List[Dict]) -> str:
+        final_message_str = ""
+        for message in reversed(messages):
+            if message["metadata"]["langgraph_node"] == "agent":
+                final_message_str = message["msg"].content + final_message_str
+            else:
+                break
+        return final_message_str
 
 
 # Usage example:
@@ -314,9 +328,19 @@ if __name__ == "__main__":
         example_queries_dir=BASE_DIR / "src/example_queries",
         max_results=15,
     )
-    question = "Analyze the trade relationship between Germany and Eastern European countries (Poland, Czech Republic, Hungary) from 2010-2020."
+    question = (
+        "Analyze the trade relationship between Germany and Poland from 2010-2020."
+    )
     print(f"User question: {question}")
-    answer = atlas_sql.answer_question(question, stream_response=True, use_agent=True)
+    stream_response = True
+    answer, messages = atlas_sql.answer_question(
+        question, stream_response=True, use_agent=True
+    )
     print("Answer: ")
     for chunk in answer:
         print(chunk, end="", flush=True)
+
+    if messages:
+        # Get the final agent message
+        final_message_str = atlas_sql.process_agent_messages(messages)
+        print(f"\n==================\nFinal message:\n{final_message_str}")

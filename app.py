@@ -77,6 +77,8 @@ if "messages" not in st.session_state:
 if prompt := st.chat_input("Ask a question about trade data"):
     # Append user message to the session state
     st.session_state["messages"].append({"role": "user", "content": prompt})
+    # Append user message to the modified session state for agent chat history
+    st.session_state["agent_chat_history"].append({"role": "user", "content": prompt})
 
 # Display the chat history in the UI
 for message in st.session_state.messages:
@@ -87,10 +89,12 @@ for message in st.session_state.messages:
 if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant"):
         try:
-            response_gen = st.session_state.atlas_sql.answer_question(
+            response_gen, messages = st.session_state.atlas_sql.answer_question(
                 prompt, stream_response=True, use_agent=True
             )
             full_response = st.write_stream(response_gen)
+            final_message = st.session_state.atlas_sql.process_agent_messages(messages)
+            
         except Exception as e:
             error_message = f"An error occurred while processing your request: {str(e)}"
             st.error(error_message)
@@ -100,4 +104,9 @@ if st.session_state.messages[-1]["role"] != "assistant":
         # Add the assistant's response to the message history
         st.session_state["messages"].append(
             {"role": "assistant", "content": full_response}
+        )
+
+        # Add the final message to the agent chat history
+        st.session_state["agent_chat_history"].append(
+            {"role": "assistant", "content": final_message}
         )
