@@ -109,7 +109,7 @@ if st.session_state.messages[-1]["role"] != "assistant":
             {"role": "assistant", "content": full_response}
         )
 
-        # Add the final message to the agent chat history
-        st.session_state["agent_chat_history"].append(
-            {"role": "assistant", "content": final_message}
-        )
+        # # Add the final message to the agent chat history
+        # st.session_state["agent_chat_history"].append(
+        #     {"role": "assistant", "content": final_message}
+        # )
