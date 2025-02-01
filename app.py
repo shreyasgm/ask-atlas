@@ -41,6 +41,7 @@ st.warning(
     """
 )
 
+
 # Initialize the AtlasTextToSQL instance
 @st.cache_resource(ttl=3600, show_spinner=False)
 def init_atlas_sql():
@@ -96,10 +97,12 @@ if st.session_state.messages[-1]["role"] != "assistant":
                 prompt, stream_response=True, use_agent=True
             )
             full_response = st.write_stream(response_gen)
-            final_message = st.session_state.atlas_sql.process_agent_messages(agent_messages)
-            
+            final_message = st.session_state.atlas_sql.process_agent_messages(
+                agent_messages
+            )
+
         except Exception as e:
-            error_message = f"An error occurred while processing your request: {str(e)}"
+            error_message = "Sorry, an error occurred while processing your request. Please report this query."
             st.error(error_message)
             logging.error(f"Error in answer_question: {e}", exc_info=True)
             full_response = error_message
