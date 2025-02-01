@@ -141,21 +141,9 @@ class AtlasTextToSQL:
                     )
         return tables
 
-    def answer_question(
-        self, question: str, stream_response: bool = True, use_agent: bool = True
+    def _answer_with_chain(
+        self, question: str, stream_response: bool = True
     ) -> Tuple[Union[str, Generator[str, None, None]], List[Dict]]:
-        """
-        Process a user's question and return the answer.
-
-        Args:
-            question: The user's question about the trade data
-            stream_response: Whether to stream the response back to the user
-            use_agent: Whether to use an agent to do query planning and execution
-
-        Returns:
-            Either a string answer or a generator yielding string chunks
-            List of dictionaries containing messages from the agent
-        """
         # Product and schema lookup
         product_lookup = ProductAndSchemaLookup(
             llm=self.metadata_llm,
@@ -196,7 +184,7 @@ class AtlasTextToSQL:
 
         # Answer question given the query and results
         answer_prompt = PromptTemplate.from_template(
-            """Given the following user question, corresponding SQL query, and SQL result, answer the user question. When interpreting the SQL results, convert large dollar amounts (if any) to easily readable formats. Use millions, billions, etc. as appropriate. Note that any export and import values returned by the DB are in current USD.
+            """Given the following user question, corresponding SQL query, and SQL result, answer the user question. When interpreting the SQL results, convert large dollar amounts (if any) to easily readable formats. Use millions, billions, etc. as appropriate. Note that any export and import values returned by the DB are in current USD. If the sql query yields no result or if there was an error running the query, mention that there was an error in running the query and don't try to answer using your prior knowledge.
 
         Question: {question}
         SQL Query: {query}
@@ -223,90 +211,120 @@ class AtlasTextToSQL:
         # answer = answer_chain.invoke(
         #     {"question": question, "query": query, "result": results}
         # )
-        if use_agent:
-            # Get product codes and schemas and then use agent to plan and execute query
-            # Split the chain into two parts: mentions and query agent
-            mentions = mentions_chain.invoke({"question": question})
-            candidate_codes = product_lookup.get_candidate_codes(
-                products_found=mentions
-            )
-            final_codes_chain = product_lookup.select_final_codes(candidate_codes)
-            if isinstance(final_codes_chain, ProductCodesMapping):
-                final_codes = final_codes_chain
-            else:
-                final_codes = final_codes_chain.invoke({"question": question})
-            final_codes_str = format_product_codes_for_prompt(final_codes)
-            table_info = self.get_table_info_for_schemas(
-                classification_schemas=mentions.classification_schemas
-            )
-            # Use agent to plan and execute query
-            agent = create_sql_agent(
-                llm=self.query_llm,
-                db=self.db,
-                example_queries=self.example_queries,
-                table_info=table_info,
-                codes=final_codes_str,
-                top_k_per_query=self.max_results,
-                max_uses=10,
-            )
 
-            if stream_response:
-                messages = []
+        # Combine all elements into a single chain
+        full_chain = (
+            RunnableParallel(
+                {
+                    "products_found": mentions_chain,
+                    "question": itemgetter("question") | RunnablePassthrough(),
+                }
+            )
+            | {
+                "codes": itemgetter("products_found") | codes_chain,
+                "table_info": itemgetter("products_found") | table_info_chain,
+                "top_k": lambda x: self.max_results,
+                "question": itemgetter("question"),
+            }
+            | {"query": query_chain, "question": itemgetter("question")}
+            | {
+                "result": execute_query_chain,
+                "question": itemgetter("question"),
+                "query": itemgetter("query"),
+            }
+            | answer_chain
+        )
 
-                def stream_agent_response():
-                    for msg, metadata in agent.stream(
-                        {"messages": [HumanMessage(content=question)]},
-                        stream_mode="messages",
+        if stream_response:
+            return full_chain.stream({"question": question}), []
+        else:
+            answer = full_chain.invoke({"question": question})
+            return answer, []
+
+    def _answer_with_agent(
+        self, question: str, stream_response: bool = True
+    ) -> Tuple[Union[str, Generator[str, None, None]], List[Dict]]:
+        # Product and schema lookup
+        product_lookup = ProductAndSchemaLookup(
+            llm=self.metadata_llm,
+            connection=self.engine,
+        )
+
+        # Extract product codes and schemas
+        mentions_chain = product_lookup.extract_schemas_and_product_mentions()
+
+        # Get product codes and schemas and then use agent to plan and execute query
+        # Split the chain into two parts: mentions and query agent
+        mentions = mentions_chain.invoke({"question": question})
+        candidate_codes = product_lookup.get_candidate_codes(products_found=mentions)
+        final_codes_chain = product_lookup.select_final_codes(candidate_codes)
+        if isinstance(final_codes_chain, ProductCodesMapping):
+            final_codes = final_codes_chain
+        else:
+            final_codes = final_codes_chain.invoke({"question": question})
+        final_codes_str = format_product_codes_for_prompt(final_codes)
+        table_info = self.get_table_info_for_schemas(
+            classification_schemas=mentions.classification_schemas
+        )
+        # Use agent to plan and execute query
+        agent = create_sql_agent(
+            llm=self.query_llm,
+            db=self.db,
+            example_queries=self.example_queries,
+            table_info=table_info,
+            codes=final_codes_str,
+            top_k_per_query=self.max_results,
+            max_uses=10,
+        )
+
+        if stream_response:
+            messages = []
+
+            def stream_agent_response():
+                for msg, metadata in agent.stream(
+                    {"messages": [HumanMessage(content=question)]},
+                    stream_mode="messages",
+                ):
+                    if (
+                        msg.content
+                        and isinstance(msg, AIMessage)
+                        and metadata["langgraph_node"] != "tools"
                     ):
-                        if (
-                            msg.content
-                            and isinstance(msg, AIMessage)
-                            and metadata["langgraph_node"] != "tools"
-                        ):
-                            yield msg.content
-                        messages.append({"msg": msg, "metadata": metadata})
+                        yield msg.content
+                    messages.append({"msg": msg, "metadata": metadata})
 
-                return stream_agent_response(), messages
-
-            else:
-                # Get the last message directly without streaming
-                result = agent.stream(
-                    {"messages": [HumanMessage(content=question)]}, stream_mode="values"
-                )
-                for step in result:
-                    message = step["messages"][-1]
-                final_message = message.content
-                return final_message, []
+            return stream_agent_response(), messages
 
         else:
-            # Combine all elements into a single chain
-            full_chain = (
-                RunnableParallel(
-                    {
-                        "products_found": mentions_chain,
-                        "question": itemgetter("question") | RunnablePassthrough(),
-                    }
-                )
-                | {
-                    "codes": itemgetter("products_found") | codes_chain,
-                    "table_info": itemgetter("products_found") | table_info_chain,
-                    "top_k": lambda x: self.max_results,
-                    "question": itemgetter("question"),
-                }
-                | {"query": query_chain, "question": itemgetter("question")}
-                | {
-                    "result": execute_query_chain,
-                    "question": itemgetter("question"),
-                    "query": itemgetter("query"),
-                }
-                | answer_chain
+            # Get the last message directly without streaming
+            result = agent.stream(
+                {"messages": [HumanMessage(content=question)]}, stream_mode="values"
             )
+            for step in result:
+                message = step["messages"][-1]
+            final_message = message.content
+            return final_message, []
 
-            if stream_response:
-                return full_chain.stream({"question": question}), []
-            else:
-                answer = full_chain.invoke({"question": question})
-                return answer, []
+    def answer_question(
+        self, question: str, stream_response: bool = True, use_agent: bool = True
+    ) -> Tuple[Union[str, Generator[str, None, None]], List[Dict]]:
+        """
+        Process a user's question and return the answer.
+
+        Args:
+            question: The user's question about the trade data
+            stream_response: Whether to stream the response back to the user
+            use_agent: Whether to use an agent to do query planning and execution
+
+        Returns:
+            Either a string answer or a generator yielding string chunks
+            List of dictionaries containing messages from the agent
+        """
+        if use_agent:
+            return self._answer_with_agent(question, stream_response)
+        else:
+            return self._answer_with_chain(question, stream_response)
+
 
     def process_agent_messages(self, messages: List[Dict]) -> str:
         final_message_str = ""
