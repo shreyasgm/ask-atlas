@@ -9,7 +9,7 @@ from langchain_core.messages import SystemMessage
 from langgraph.prebuilt import create_react_agent
 from langchain_core.runnables import Runnable
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
-from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
+from langchain_community.tools.sql_database.tool import QuerySQLDatabaseTool
 from langchain_core.tools import BaseTool, tool
 from pydantic import BaseModel, Field
 
@@ -129,7 +129,7 @@ def create_query_tool(
     Factory function that creates a QueryTool with all dependencies pre-configured.
     Returns a tool that only requires the question as input.
     """
-    execute_query_tool = QuerySQLDataBaseTool(db=db)
+    execute_query_tool = QuerySQLDatabaseTool(db=db)
 
     # Create the query generation chain and convert to tool
     query_gen_chain = create_query_generation_chain(

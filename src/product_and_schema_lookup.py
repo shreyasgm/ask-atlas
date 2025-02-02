@@ -122,7 +122,7 @@ class ProductAndSchemaLookup:
 
     def extract_schemas_and_product_mentions(self) -> Runnable:
         """
-        Creates a chain that analyzes the trade query for schemas and products.
+        Creates a chain that analyzes the trade query for trade classification schemas and products.
 
         Returns:
             Langchain Runnable which when invoked returns a SchemasAndProductsFound object
@@ -155,7 +155,8 @@ class ProductAndSchemaLookup:
         - Never return more than two schemas unless explicitly required
         
         Guidelines for product identification:
-        - Only identify products that don't already have codes specified. Ignore products that have codes specified already in the query.
+        - "products" here is how international trade data is classified. Product groups like "machinery" are considered products, and should be identified as such. Be liberal with identifying products. Products could be goods, services, or a mix of both. Here are some examples of products: "cars", "soap", "information technology", "iron", "tourism", "petroleum gas", etc. - anything classified by international trade data classification systems.
+        - We are identifying products here for the purpose of looking up their product codes. Only identify products that don't already have codes specified. Ignore products that have codes specified already in the query.
         - Be specific with the codes - suggest the product code at the level most specific to the product mentioned.
         - Include multiple relevant codes if needed for broad product categories
         
@@ -184,12 +185,12 @@ class ProductAndSchemaLookup:
             "products": [
                 {{
                     "name": "cotton",
-                    "schema": "hs92",
+                    "classification_schema": "hs92",
                     "codes": ["5201", "5202"]
                 }},
                 {{
                     "name": "wheat",
-                    "schema": "hs92",
+                    "classification_schema": "hs92",
                     "codes": ["1001"]
                 }}
             ],
