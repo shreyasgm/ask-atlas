@@ -14,5 +14,9 @@
     {
         "question": "Which country is the world's largest exporter of fruits and vegetables?",
         "file": "largest_exporter_fruits_vegetables.sql"
+    },
+    {
+        "question": "What are the top 5 imported products for Canada in the latest year? What is the PCI of these products?",
+        "file": "pci_top_imports_canada.sql"
     }
 ]
