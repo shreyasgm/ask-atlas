@@ -18,5 +18,13 @@
     {
         "question": "What are the top 5 imported products for Canada in the latest year? What is the PCI of these products?",
         "file": "pci_top_imports_canada.sql"
+    },
+    {
+        "question": "What are the best products for India in terms of distance?",
+        "file": "distance_india.sql"
+    },
+    {
+        "question": "What are the best products for Kenya in terms of COG?",
+        "file": "cog_kenya.sql"
     }
 ]
