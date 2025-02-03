@@ -36,7 +36,8 @@ st.warning(
     """
     **Important Disclaimers:**
     - This tool is currently in alpha stage and under active development. Please report any bugs or issues to Shreyas through Slack.
-    - This tool is open source ([Github repo](https://github.com/shreyasgm/ask-atlas)) and the code is licensed under [CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). 
+    - This tool is open source ([Github repo](https://github.com/shreyasgm/ask-atlas)) and the code is licensed under [CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+    - You can currently only access this tool while connected to the Harvard network (or using a VPN into the Harvard network).
     - As with any AI-powered tool, responses may contain inaccuracies or hallucinations. Please verify all results independently
     """
 )

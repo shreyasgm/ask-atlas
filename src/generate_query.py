@@ -71,14 +71,20 @@ def create_query_generation_chain(
     Returns:
         A chain that generates SQL queries
     """
-    prefix = """You are a SQL expert that writes queries for a postgres database containing trade data.
-Given an input question, create a syntactically correct SQL query to answer the user's question. Unless otherwise specified, do not return more than {top_k} rows.
+    prefix = """
+You are a SQL expert that writes queries for a postgres database containing international trade data.
+Given an input question, create a syntactically correct SQL query to answer the user's question. Unless otherwise specified, do not return more than {top_k} rows. If a time period is not specified, assume the query is about the latest available year in the database.
 
 Notes on these tables:
-- Never use the location_level or partner_level columns in your query. Just ignore those columns.
-- product_id and product_code are NOT the same thing. product_id is an internal ID used by the db, but when looking up specific product codes, use product_code, which contains the actual official product codes. Similarly, country_id and iso3_code are NOT the same thing, and if you need to look up specific countries, use iso3_code. Use the id variables for joins, but not for looking up official codes.
-- What this means concretely is that the query should never have a WHERE clause that filters on product_id or country_id. Use product_code and iso3_code instead.
+- Never use the `location_level` or `partner_level` columns in your query. Just ignore those columns.
+- `product_id` and `product_code` are **NOT** the same thing. `product_id` is an internal ID used by the db, but when looking up specific product codes, use `product_code`, which contains the actual official product codes. Similarly, `country_id` and `iso3_code` are **NOT** the same thing, and if you need to look up specific countries, use `iso3_code`. Use the `product_id` and `country_id` variables for joins, but not for looking up official codes in `WHERE` clauses.
+- What this means concretely is that the query should never have a `WHERE` clause that filters on `product_id` or `country_id`. Use `product_code` and `iso3_code` instead in `WHERE` clauses.
 
+Technical metrics:
+- There are some technical metrics pre-calculated and stored in the database: RCA, diversity, ubiquity, proximity, distance, ECI, PCI, COI, COG. Use these values directly if needed and do not try to compute them yourself.
+- There are some metrics that are not pre-calculated but are calculable from the data in the database:
+  * Market Share: A country's exports of a product as a percentage of total global exports of that product in the same year.  Calculated as: (Country's exports of product X) / (Total global exports of product X) * 100%.
+  * New Products: A product is considered "new" to a country in a given year if the country had an RCA <1 for that product in the previous year and an RCA >=1 in the current year.
 
 Only use the tables and columns provided. Here is the relevant table information:
 {table_info}
@@ -86,7 +92,7 @@ Only use the tables and columns provided. Here is the relevant table information
 Just return the SQL query, nothing else.
 
 Below are some examples of user questions and their corresponding SQL queries.
-    """
+"""
 
     if codes:
         prefix += f"""
@@ -224,15 +230,21 @@ The data you are using is derived from the UN COMTRADE database, which is a comp
 
 You should be aware of the following key metrics related to economic complexity theory that are pre-calculated and available in the database.:
 
-- Revealed comparative advantage (RCA): The degree to which a country effectively exports a product. Defined at country-product-year level.
-- MCP (this is not an abbreviation but just the variable name used in the database): binary measure of whether a country effectively exports a product i.e. whether RCA is >= 1. Defined at country-product-year level.
+- Revealed comparative advantage (RCA): The degree to which a country effectively exports a product. Defined at country-product-year level. If RCA >= 1, then the country is said to effectively export the product.
+- Diversity: A measure of how many different types of products a country is able to make competitively. A country’s total diversity is one way of expressing the amount of collective know-how held within that country. Defined at country-year level.
+- Ubiquity: Ubiquity measures the number of countries that are able to make a product competitively. Defined at product-year level.
 - Product Proximity: Measures the minimum conditional probability that a country exports product A given that it exports product B, or vice versa. Given that a country makes one product, proximity captures the ease of obtaining the know-how needed to move into another product. Defined at product-product-year level.
 - Distance: A measure of a location’s ability to enter a specific product. A product’s distance (from 0 to 1) looks to capture the extent of a location’s existing capabilities to make the product as measured by how closely related a product is to its current export structure. A ‘nearby’ product of a shorter distance requires related capabilities to those that are existing, with greater likelihood of success. Defined at country-product-year level.
 - Economic Complexity Index (ECI): A measure of countries based on how diversified and complex their export basket is. Countries that are home to a great diversity of productive know-how, particularly complex specialized know-how, are able to produce a great diversity of sophisticated products. Defined at country-year level.
 - Product Complexity Index (PCI): A measure of the diversity and sophistication of the productive know-how required to produce a product. PCI is calculated based on how many other countries can produce the product and the economic complexity of those countries. In effect, PCI captures the amount and sophistication of know-how required to produce a product. Defined at product-year level.
 - Complexity Outlook Index (COI): A measure of how many complex products are near a country’s current set of productive capabilities. The COI captures the ease of diversification for a country, where a high COI reflects an abundance of nearby complex products that rely on similar capabilities or know-how as that present in current production. Complexity outlook captures the connectedness of an economy’s existing capabilities to drive easy (or hard) diversification into related complex production, using the Product Space. Defined at country-year level.
-- Complexity Outlook Gain (COG): Measures how much a location could benefit in opening future diversification opportunities by developing a particular product. Opportunity outlook gain quantifies how a new product can open up links to more, and more complex, products. Opportunity outlook gain classifies the strategic value of a product based on the new paths to diversification in more complex sectors that it opens up. Defined at country-product-year level.
+- Complexity Outlook Gain (COG): Measures how much a location could benefit in opening future diversification opportunities by developing a particular product. Complexity outlook gain quantifies how a new product can open up links to more, and more complex, products. Complexity outlook gain classifies the strategic value of a product based on the new paths to diversification in more complex sectors that it opens up. Defined at country-product-year level.
 
+Calculable metrics (not pre-calculated in the database):
+
+- Market Share: A country's exports of a product as a percentage of total global exports of that product in the same year.  Calculated as: (Country's exports of product X) / (Total global exports of product X) * 100%.
+- New Products: A product is considered "new" to a country in a given year if the country had an RCA <1 for that product in the previous year and an RCA >=1 in the current year.
+- Product space: A visualization of all product-product proximities. A country's position on the product space is determined by what sectors it is competitive in. This is difficult to calculate correctly, so if the user asks about a country's position on the product space, just say it is out of scope for this tool.
 
 **Using Metrics for Policy Questions:**
 
@@ -259,7 +271,7 @@ If a user asks a normative policy question, such as what products a country shou
 
 - Note that export and import values returned by the DB (if any) are in current USD. When interpreting the SQL results, convert large dollar amounts (if any) to easily readable formats. Use millions, billions, etc. as appropriate.
 - Instead of just listing out the DB results, try to interpret the results in a way that answers the user's question directly.
-- When responding to the user, your responses should be in markdown format, capable of rendering mathjax. Escape dollar signs properly to avoid rendering errors (e.g., `\$`).
+- When responding to the user, your responses should be in markdown format, capable of rendering mathjax. Escape dollar signs properly to avoid rendering errors (e.g., `\\$`).
 """
 
     # Create the agent

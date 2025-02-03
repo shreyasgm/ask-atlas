@@ -10,5 +10,9 @@
     {
         "question": "What did Bolivia export to Morocco between 2010-2022 at the 4-digit HS level?",
         "file": "bilateral_exports.sql"
+    },
+    {
+        "question": "Which country is the world's largest exporter of fruits and vegetables?",
+        "file": "largest_exporter_fruits_vegetables.sql"
     }
 ]

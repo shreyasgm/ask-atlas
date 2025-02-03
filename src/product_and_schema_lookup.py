@@ -213,6 +213,25 @@ class ProductAndSchemaLookup:
             "requires_product_lookup": false
         }}
         Reason: The question mentions two different product classifications, so include both 'hs12' and 'services_bilateral' schemas. No products are mentioned, so no further lookup is needed for the codes.
+
+        Question: "Which country is the world's biggest exporter of fruits and vegetables?"
+        Response: {{
+            "classification_schemas": ["hs92"],
+            "products": [
+                {{
+                    "name": "fruits",
+                    "classification_schema": "hs92",
+                    "codes": ["0801", "0802", "0803", "0804", "0805", "0806", "0807", "0808", "0809", "0810", "0811", "0812", "0813", "0814"]
+                }},
+                {{
+                    "name": "vegetables",
+                    "classification_schema": "hs92",
+                    "codes": ["07"]
+                }}
+            ],
+            "requires_product_lookup": true
+        }}
+        Reason: The question mentions two different product classifications, so include both 'hs12' and 'services_bilateral' schemas. No products are mentioned, so no further lookup is needed for the codes.
         """
 
         prompt = ChatPromptTemplate.from_messages(
@@ -494,7 +513,7 @@ def format_product_codes_for_prompt(analysis: ProductCodesMapping) -> str:
 if __name__ == "__main__":
     from langchain_openai import ChatOpenAI
 
-    llm = ChatOpenAI(model="gpt-4", temperature=0)
+    llm = ChatOpenAI(model="gpt-4o", temperature=0)
     analyzer = ProductAndSchemaLookup(
         llm=llm,
         connection="postgresql://user:pass@localhost:5432/dbname",

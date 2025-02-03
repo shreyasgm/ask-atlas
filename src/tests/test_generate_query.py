@@ -334,7 +334,7 @@ class TestCreateSQLAgent:
         ]
 
         # Create agent with real LLM
-        llm = ChatOpenAI(model="gpt-4", temperature=0)
+        llm = ChatOpenAI(model="gpt-4o", temperature=0)
         agent = create_sql_agent(
             llm=llm,
             db=mock_db,
