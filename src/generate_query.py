@@ -3,7 +3,11 @@ from typing import List, Dict, Union
 import json
 from pathlib import Path
 from langchain_core.language_models import BaseLanguageModel
-from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    FewShotChatMessagePromptTemplate,
+    MessagesPlaceholder,
+)
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.messages import SystemMessage
 from langgraph.prebuilt import create_react_agent
@@ -100,15 +104,24 @@ Product codes for reference:
 {codes}
 Always use these product codes provided, and do not try to search for products based on their names from the database."""
 
-    example_prompt = PromptTemplate.from_template(
-        "User question: {question}\nSQL query: {query}"
+    example_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("human", "User question: {question}"),
+            ("ai", "{query}"),
+        ]
     )
-    prompt = FewShotPromptTemplate(
+    few_shot_prompt_template = FewShotChatMessagePromptTemplate(
         examples=example_queries,
         example_prompt=example_prompt,
-        prefix=prefix,
-        suffix="User question: {question}\nSQL query: ",
         input_variables=["question", "top_k", "table_info", "codes"],
+    )
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", prefix),
+            MessagesPlaceholder(variable_name="history", optional=True),
+            few_shot_prompt_template,
+            ("human", "{question}"),
+        ]
     )
     if codes:
         prompt = prompt.partial(top_k=top_k, table_info=table_info, codes=codes)
