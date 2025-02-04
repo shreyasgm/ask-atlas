@@ -72,14 +72,14 @@ def project_paths(base_dir):
 def mock_db():
     """Create a mock database for testing."""
     mock = Mock(spec=SQLDatabaseWithSchemas)
-    
+
     # Create a string response that simulates database output
     mock_response = str([{"result": "mock data", "value": 100}])
-    
+
     # Set return_value instead of side_effect to ensure we get a string
     mock.run.return_value = mock_response
     mock.run_no_throw.return_value = mock_response
-    
+
     return mock
 
 
@@ -192,14 +192,25 @@ class TestProjectFiles:
             assert "question" in entry
             assert "query" in entry
             assert len(entry["query"]) > 0, "SQL query should not be empty"
-            # Verify basic SQL structure - first non-comment line should be SELECT
+            # Verify basic SQL structure - should start with either SELECT or WITH
             query_lines = [line.strip() for line in entry["query"].split("\n")]
             non_comment_lines = [
                 line for line in query_lines if line and not line.startswith("--")
             ]
-            assert (
-                non_comment_lines[0].upper().startswith("SELECT")
-            ), f"First non-comment line should start with SELECT: {entry['query']}"
+            first_line = non_comment_lines[0].upper()
+            assert first_line.startswith("SELECT") or first_line.startswith(
+                "WITH"
+            ), f"Query should start with SELECT or WITH: {entry['query']}"
+
+            # If it starts with WITH, verify there's a SELECT in the query
+            if first_line.startswith("WITH"):
+                has_select = any(
+                    line.upper().strip().startswith("SELECT")
+                    for line in non_comment_lines
+                )
+                assert (
+                    has_select
+                ), f"Query with CTE should contain a SELECT statement: {entry['query']}"
 
 
 class TestCreateQueryGenerationChain:
@@ -222,11 +233,7 @@ class TestCreateQueryGenerationChain:
         assert chain is not None
 
         # Test chain invocation with real LLM
-        result = chain.invoke(
-            {
-                "question": "What are the top US exports by value?"
-            }
-        )
+        result = chain.invoke({"question": "What are the top US exports by value?"})
 
         assert isinstance(result, str)
         assert "SELECT" in result.upper()
@@ -259,7 +266,7 @@ class TestQueryTool:
 
         # Mock the database response
         mock_db.run.return_value = [{"result": "mock data"}]
-        
+
         # Create the tool
         tool = create_query_tool(
             llm=llm,
@@ -314,9 +321,14 @@ class TestCreateSQLAgent:
         )
 
         # Initialize with proper message structure
-        result = agent.invoke({
-            "messages": [{"content": "What is the total trade value?", "role": "user"}]
-        })
+        result = agent.invoke(
+            {
+                "messages": [
+                    {"content": "What is the total trade value?", "role": "user"}
+                ],
+            },
+            config={"configurable": {"thread_id": "test_thread"}},
+        )
         logger.info(f"Result: {result}")
         assert result is not None
 
@@ -344,9 +356,17 @@ class TestCreateSQLAgent:
         )
 
         # Initialize with proper message structure
-        result = agent.invoke({
-            "messages": [{"content": "What are our top trading partners by value?", "role": "user"}]
-        })
+        result = agent.invoke(
+            {
+                "messages": [
+                    {
+                        "content": "What are our top trading partners by value?",
+                        "role": "user",
+                    }
+                ],
+            },
+            config={"configurable": {"thread_id": "test_thread"}},
+        )
 
         assert result is not None
         assert mock_db.run.call_count <= 3  # Should not exceed max_uses
