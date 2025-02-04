@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Union
 from pydantic import BaseModel, Field
 from langchain_core.language_models import BaseLanguageModel
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers.openai_tools import PydanticToolsParser
 from langchain_core.runnables import Runnable
 from sqlalchemy import create_engine, text, Engine
@@ -235,7 +235,11 @@ class ProductAndSchemaLookup:
         """
 
         prompt = ChatPromptTemplate.from_messages(
-            [("system", system), ("human", "{question}")]
+            [
+                ("system", system),
+                MessagesPlaceholder(variable_name="history", optional=True),
+                ("human", "{question}"),
+            ]
         )
 
         # Create initial chain to identify product and schema mentions
@@ -276,6 +280,7 @@ class ProductAndSchemaLookup:
         prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system),
+                MessagesPlaceholder(variable_name="history", optional=True),
                 (
                     "human",
                     """
