@@ -146,7 +146,7 @@ class AtlasTextToSQL:
         question: str,
         stream_response: bool = True,
         history: List[Dict] = None,
-    ) -> Tuple[Union[str, Generator[str, None, None]], List[Dict]]:
+    ) -> Union[Tuple[Generator[str, None, None], List[Dict]], str]:
         """
         Process a user's question and return the answer.
 
@@ -218,7 +218,7 @@ class AtlasTextToSQL:
             for step in result:
                 message = step["messages"][-1]
             final_message = message.content
-            return final_message, []
+            return final_message
 
     def process_agent_messages(self, messages: List[Dict]) -> str:
         final_message_str = ""
