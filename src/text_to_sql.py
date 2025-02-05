@@ -141,116 +141,23 @@ class AtlasTextToSQL:
                     )
         return tables
 
-    def _answer_with_chain(
-        self, question: str, stream_response: bool = True
+    def answer_question(
+        self,
+        question: str,
+        stream_response: bool = True,
+        history: List[Dict] = None,
     ) -> Tuple[Union[str, Generator[str, None, None]], List[Dict]]:
         """
-        Answer a question using Langchain chains.
-        NOTE: Does not currently support conversation history.
-        """
-        # Product and schema lookup
-        product_lookup = ProductAndSchemaLookup(
-            llm=self.metadata_llm,
-            connection=self.engine,
-        )
+        Process a user's question and return the answer.
 
-        # Extract product codes and schemas
-        mentions_chain = product_lookup.extract_schemas_and_product_mentions()
+        Args:
+            question: The user's question about the trade data
+            stream_response: Whether to stream the response back to the user
+            history: A list of messages from the conversation history
 
-        # Extract official product codes
-        codes_chain = (
-            RunnableLambda(product_lookup.get_candidate_codes)
-            | RunnableLambda(product_lookup.select_final_codes)
-            | RunnableLambda(format_product_codes_for_prompt)
-        )
-
-        # Select relevant schemas
-        table_info_chain = RunnableLambda(
-            lambda x: self.get_table_info_for_schemas(x.classification_schemas)
-        )
-
-        # Create query generation chain with selected tables
-        query_chain = create_query_generation_chain(
-            llm=self.query_llm,
-            example_queries=self.example_queries,
-        )
-
-        # Get query results
-        execute_query = QuerySQLDataBaseTool(db=self.db)
-
-        # Ensure that the query resulted in at least a few results - results (stripped) should not be empty
-        def check_results(results: str) -> str:
-            if results.strip() == "":
-                return "SQL query returned no results."
-            return results
-
-        execute_query_chain = execute_query | check_results
-
-        # Answer question given the query and results
-        answer_prompt = PromptTemplate.from_template(
-            """Given the following user question, corresponding SQL query, and SQL result, answer the user question. When interpreting the SQL results, convert large dollar amounts (if any) to easily readable formats. Use millions, billions, etc. as appropriate. Note that any export and import values returned by the DB are in current USD. If the sql query yields no result or if there was an error running the query, mention that there was an error in running the query and don't try to answer using your prior knowledge.
-
-        Question: {question}
-        SQL Query: {query}
-        SQL Result: {result}
-        Answer: """
-        )
-        answer_chain = answer_prompt | self.metadata_llm | StrOutputParser()
-
-        # # Execute step-wise for now
-        # mentions = mentions_chain.invoke({"question": question})
-        # codes = codes_chain.invoke(mentions)
-        # table_info = self.get_table_info_for_schemas(
-        #     classification_schemas=mentions.classification_schemas
-        # )
-        # query = query_chain.invoke(
-        #     {
-        #         "question": question,
-        #         "top_k": self.max_results,
-        #         "table_info": table_info,
-        #         "codes": codes,
-        #     }
-        # )
-        # results = execute_query_chain.invoke({"query": query})
-        # answer = answer_chain.invoke(
-        #     {"question": question, "query": query, "result": results}
-        # )
-
-        # Combine all elements into a single chain
-        full_chain = (
-            RunnableParallel(
-                {
-                    "products_found": mentions_chain,
-                    "question": itemgetter("question") | RunnablePassthrough(),
-                }
-            )
-            | {
-                "codes": itemgetter("products_found") | codes_chain,
-                "table_info": itemgetter("products_found") | table_info_chain,
-                "top_k": lambda x: self.max_results,
-                "question": itemgetter("question"),
-            }
-            | {"query": query_chain, "question": itemgetter("question")}
-            | {
-                "result": execute_query_chain,
-                "question": itemgetter("question"),
-                "query": itemgetter("query"),
-            }
-            | answer_chain
-        )
-
-        if stream_response:
-            return full_chain.stream({"question": question}), []
-        else:
-            answer = full_chain.invoke({"question": question})
-            return answer, []
-
-    def _answer_with_agent(
-        self, question: str, stream_response: bool = True, history: List[Dict] = None
-    ) -> Tuple[Union[str, Generator[str, None, None]], List[Dict]]:
-        """
-        Answer a question using a LangGraph agent.
-        Supports conversation history
+        Returns:
+            Either a string answer or a generator yielding string chunks
+            List of dictionaries containing messages from the agent
         """
         # Product and schema lookup
         product_lookup = ProductAndSchemaLookup(
@@ -262,7 +169,6 @@ class AtlasTextToSQL:
         mentions_chain = product_lookup.extract_schemas_and_product_mentions()
 
         # Get product codes and schemas and then use agent to plan and execute query
-        # Split the chain into two parts: mentions and query agent
         mentions = mentions_chain.invoke({"question": question})
         candidate_codes = product_lookup.get_candidate_codes(products_found=mentions)
         final_codes_chain = product_lookup.select_final_codes(candidate_codes)
@@ -312,36 +218,7 @@ class AtlasTextToSQL:
             for step in result:
                 message = step["messages"][-1]
             final_message = message.content
-            return final_message
-
-    def answer_question(
-        self,
-        question: str,
-        stream_response: bool = True,
-        use_agent: bool = True,
-        history: List[Dict] = None,
-    ) -> Tuple[Union[str, Generator[str, None, None]], List[Dict]]:
-        """
-        Process a user's question and return the answer.
-
-        Args:
-            question: The user's question about the trade data
-            stream_response: Whether to stream the response back to the user
-            use_agent: Whether to use an agent to do query planning and execution
-            history: A list of messages from the conversation history
-
-        Returns:
-            Either a string answer or a generator yielding string chunks
-            List of dictionaries containing messages from the agent
-        """
-        if use_agent:
-            return self._answer_with_agent(
-                question=question, stream_response=stream_response, history=history
-            )
-        else:
-            return self._answer_with_chain(
-                question=question, stream_response=stream_response
-            )
+            return final_message, []
 
     def process_agent_messages(self, messages: List[Dict]) -> str:
         final_message_str = ""
@@ -372,7 +249,7 @@ if __name__ == "__main__":
     print(f"User question: {question}")
     stream_response = True
     answer, messages = atlas_sql.answer_question(
-        question, stream_response=True, use_agent=True, history=None
+        question, stream_response=True, history=None
     )
     
     print("Answer: ")
