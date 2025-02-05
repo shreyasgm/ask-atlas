@@ -7,11 +7,22 @@ from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.messages import SystemMessage
 from langgraph.prebuilt import create_react_agent
-from langchain_core.runnables import Runnable
+from langchain_core.runnables import (
+    Runnable,
+    RunnableLambda,
+    RunnableParallel,
+    RunnablePassthrough,
+)
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 from langchain_community.tools.sql_database.tool import QuerySQLDatabaseTool
 from langchain_core.tools import BaseTool, tool
 from pydantic import BaseModel, Field
+from src.product_and_schema_lookup import (
+    ProductAndSchemaLookup,
+    format_product_codes_for_prompt,
+)
+from operator import itemgetter
+from sqlalchemy.engine import Engine
 
 # Define BASE_DIR
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -45,6 +56,20 @@ def load_example_queries(
             example_queries.append({"question": entry["question"], "query": f.read()})
 
     return example_queries
+
+
+def load_table_descriptions(table_descriptions_json: Union[str, Path]) -> Dict:
+    """
+    Loads table descriptions from a JSON file.
+
+    Args:
+        table_descriptions_json: Path to the table descriptions JSON file
+
+    Returns:
+        Dictionary containing table descriptions
+    """
+    with open(table_descriptions_json, "r") as f:
+        return json.load(f)
 
 
 def _strip(text: str) -> str:
@@ -122,62 +147,62 @@ class QueryToolInput(BaseModel):
     question: str = Field(description="A question about international trade data")
 
 
-def create_query_tool(
-    llm: BaseLanguageModel,
-    db: SQLDatabaseWithSchemas,
-    example_queries: List[Dict[str, str]],
-    table_info: str,
-    codes: str = None,
-    top_k_per_query: int = 15,
-    max_uses: int = 3,
-) -> BaseTool:
-    """
-    Factory function that creates a QueryTool with all dependencies pre-configured.
-    Returns a tool that only requires the question as input.
-    """
-    execute_query_tool = QuerySQLDatabaseTool(db=db)
+# def create_query_tool(
+#     llm: BaseLanguageModel,
+#     db: SQLDatabaseWithSchemas,
+#     example_queries: List[Dict[str, str]],
+#     table_info: str,
+#     codes: str = None,
+#     top_k_per_query: int = 15,
+#     max_uses: int = 3,
+# ) -> BaseTool:
+#     """
+#     Factory function that creates a QueryTool with all dependencies pre-configured.
+#     Returns a tool that only requires the question as input.
+#     """
+#     execute_query_tool = QuerySQLDatabaseTool(db=db)
 
-    # Create the query generation chain and convert to tool
-    query_gen_chain = create_query_generation_chain(
-        llm=llm,
-        top_k=top_k_per_query,
-        table_info=table_info,
-        example_queries=example_queries,
-        codes=codes,
-    )
-    query_gen_tool = query_gen_chain.as_tool(
-        name="Query generator",
-        description="Tool to convert a user question to a SQL query",
-    )
+#     # Create the query generation chain and convert to tool
+#     query_gen_chain = create_query_generation_chain(
+#         llm=llm,
+#         top_k=top_k_per_query,
+#         table_info=table_info,
+#         example_queries=example_queries,
+#         codes=codes,
+#     )
+#     query_gen_tool = query_gen_chain.as_tool(
+#         name="Query generator",
+#         description="Tool to convert a user question to a SQL query",
+#     )
 
-    # Track uses in a closure
-    uses_counter = {"current": 0}
+#     # Track uses in a closure
+#     uses_counter = {"current": 0}
 
-    @tool("database_query_tool", args_schema=QueryToolInput)
-    def query_tool(question: str) -> str:
-        """
-        A tool that generates and executes SQL queries based on natural language questions.
-        Input should be a natural language question about the database.
-        The tool will generate an appropriate SQL query and execute it.
-        """
-        uses_counter["current"] += 1
-        if uses_counter["current"] > max_uses:
-            return "Error: Maximum number of queries exceeded."
+#     @tool("database_query_tool", args_schema=QueryToolInput)
+#     def query_tool(question: str) -> str:
+#         """
+#         A tool that generates and executes SQL queries based on natural language questions.
+#         Input should be a natural language question about the database.
+#         The tool will generate an appropriate SQL query and execute it.
+#         """
+#         uses_counter["current"] += 1
+#         if uses_counter["current"] > max_uses:
+#             return "Error: Maximum number of queries exceeded."
 
-        query = query_gen_tool.invoke({"question": question})
-        results = execute_query_tool.invoke({"query": query})
+#         query = query_gen_tool.invoke({"question": question})
+#         results = execute_query_tool.invoke({"query": query})
 
-        return results
+#         return results
 
-    return query_tool
+#     return query_tool
 
 
 def create_sql_agent(
     llm: BaseLanguageModel,
     db: SQLDatabaseWithSchemas,
-    codes: str = None,
+    engine: Engine,
+    table_descriptions: Dict,
     example_queries: List[Dict[str, str]] = [],
-    table_info: str = "",
     top_k_per_query: int = 15,
     max_uses: int = 3,
 ):
@@ -186,6 +211,8 @@ def create_sql_agent(
 
     Args:
         llm: Language model for the agent
+        db: Database connection in SQLDatabaseWithSchemas format
+        engine: SQLAlchemy engine
         query_chain: Chain for generating SQL queries
         execute_query_tool: Tool for executing SQL queries
         table_info: Information about database tables
@@ -196,10 +223,10 @@ def create_sql_agent(
     query_tool = create_query_tool(
         llm=llm,
         db=db,
-        codes=codes,
+        engine=engine,
+        table_descriptions=table_descriptions,
         example_queries=example_queries,
-        table_info=table_info,
-        top_k_per_query=top_k_per_query,
+        max_results=top_k_per_query,
         max_uses=max_uses,
     )
 
@@ -231,13 +258,13 @@ The data you are using is derived from the UN COMTRADE database, which is a comp
 You should be aware of the following key metrics related to economic complexity theory that are pre-calculated and available in the database.:
 
 - Revealed comparative advantage (RCA): The degree to which a country effectively exports a product. Defined at country-product-year level. If RCA >= 1, then the country is said to effectively export the product.
-- Diversity: A measure of how many different types of products a country is able to make competitively. A country’s total diversity is one way of expressing the amount of collective know-how held within that country. Defined at country-year level.
+- Diversity: A measure of how many different types of products a country is able to make competitively. A country's total diversity is one way of expressing the amount of collective know-how held within that country. Defined at country-year level.
 - Ubiquity: Ubiquity measures the number of countries that are able to make a product competitively. Defined at product-year level.
 - Product Proximity: Measures the minimum conditional probability that a country exports product A given that it exports product B, or vice versa. Given that a country makes one product, proximity captures the ease of obtaining the know-how needed to move into another product. Defined at product-product-year level.
-- Distance: A measure of a location’s ability to enter a specific product. A product’s distance (from 0 to 1) looks to capture the extent of a location’s existing capabilities to make the product as measured by how closely related a product is to its current export structure. A ‘nearby’ product of a shorter distance requires related capabilities to those that are existing, with greater likelihood of success. Defined at country-product-year level.
+- Distance: A measure of a location's ability to enter a specific product. A product's distance (from 0 to 1) looks to capture the extent of a location's existing capabilities to make the product as measured by how closely related a product is to its current export structure. A 'nearby' product of a shorter distance requires related capabilities to those that are existing, with greater likelihood of success. Defined at country-product-year level.
 - Economic Complexity Index (ECI): A measure of countries based on how diversified and complex their export basket is. Countries that are home to a great diversity of productive know-how, particularly complex specialized know-how, are able to produce a great diversity of sophisticated products. Defined at country-year level.
 - Product Complexity Index (PCI): A measure of the diversity and sophistication of the productive know-how required to produce a product. PCI is calculated based on how many other countries can produce the product and the economic complexity of those countries. In effect, PCI captures the amount and sophistication of know-how required to produce a product. Defined at product-year level.
-- Complexity Outlook Index (COI): A measure of how many complex products are near a country’s current set of productive capabilities. The COI captures the ease of diversification for a country, where a high COI reflects an abundance of nearby complex products that rely on similar capabilities or know-how as that present in current production. Complexity outlook captures the connectedness of an economy’s existing capabilities to drive easy (or hard) diversification into related complex production, using the Product Space. Defined at country-year level.
+- Complexity Outlook Index (COI): A measure of how many complex products are near a country's current set of productive capabilities. The COI captures the ease of diversification for a country, where a high COI reflects an abundance of nearby complex products that rely on similar capabilities or know-how as that present in current production. Complexity outlook captures the connectedness of an economy's existing capabilities to drive easy (or hard) diversification into related complex production, using the Product Space. Defined at country-year level.
 - Complexity Outlook Gain (COG): Measures how much a location could benefit in opening future diversification opportunities by developing a particular product. Complexity outlook gain quantifies how a new product can open up links to more, and more complex, products. Complexity outlook gain classifies the strategic value of a product based on the new paths to diversification in more complex sectors that it opens up. Defined at country-product-year level.
 
 Calculable metrics (not pre-calculated in the database):
@@ -281,3 +308,162 @@ If a user asks a normative policy question, such as what products a country shou
     )
 
     return agent
+
+
+def get_tables_in_schemas(
+    table_descriptions: Dict, classification_schemas: List[str]
+) -> List[Dict]:
+    """
+    Gets all tables and their descriptions for the selected schemas.
+
+    Args:
+        classification_schemas: List of classification schema names
+
+    Returns:
+        List of dictionaries containing table information with schema-qualified table_name and context_str
+    """
+    tables = []
+    for schema in classification_schemas:
+        if schema in table_descriptions:
+            for table in table_descriptions[schema]:
+                # Create a new dict with schema-qualified table name
+                tables.append(
+                    {
+                        "table_name": f"{schema}.{table['table_name']}",
+                        "context_str": table["context_str"],
+                    }
+                )
+    return tables
+
+
+def get_table_info_for_schemas(
+    db: SQLDatabaseWithSchemas,
+    table_descriptions: Dict,
+    classification_schemas: List[str],
+) -> str:
+    """Get table information for a list of schemas."""
+    table_descriptions = get_tables_in_schemas(
+        table_descriptions=table_descriptions,
+        classification_schemas=classification_schemas,
+    )
+    # Temporarily, remove any tables that have the word "group" in the table name
+    table_descriptions = [
+        table
+        for table in table_descriptions
+        if "group" not in table["table_name"].lower()
+    ]
+    table_info = ""
+    for table in table_descriptions:
+        table_info += (
+            f"Table: {table['table_name']}\nDescription: {table['context_str']}\n"
+        )
+        table_info += db.get_table_info(table_names=[table["table_name"]])
+        table_info += "\n\n"
+    return table_info
+
+
+def create_query_tool(
+    llm: BaseLanguageModel,
+    db: SQLDatabaseWithSchemas,
+    engine: Engine,
+    table_descriptions: Dict,
+    example_queries: List[Dict[str, str]],
+    max_results: int = 15,
+    max_uses: int = 3,
+) -> BaseTool:
+    """
+    Creates a comprehensive query tool that handles both product/schema lookup and SQL query generation/execution.
+    """
+    uses_counter = {"current": 0}
+
+    # Product and schema lookup
+    product_lookup = ProductAndSchemaLookup(
+        llm=llm,
+        connection=engine,
+    )
+
+    # Extract product codes and schemas
+    mentions_chain = product_lookup.extract_schemas_and_product_mentions()
+
+    # Extract official product codes
+    codes_chain = (
+        RunnableLambda(product_lookup.get_candidate_codes)
+        | RunnableLambda(product_lookup.select_final_codes)
+        | RunnableLambda(format_product_codes_for_prompt)
+    )
+
+    # Select relevant schemas
+    table_info_chain = RunnableLambda(
+        lambda x: get_table_info_for_schemas(
+            db=db,
+            table_descriptions=table_descriptions,
+            classification_schemas=x.classification_schemas,
+        )
+    )
+
+    # Create query generation chain with selected tables
+    query_chain = create_query_generation_chain(
+        llm=llm,
+        example_queries=example_queries,
+    )
+
+    # Get query results
+    execute_query = QuerySQLDatabaseTool(db=db)
+
+    # Ensure that the query resulted in at least a few results - results (stripped) should not be empty
+    def check_results(results: str) -> str:
+        if results.strip() == "":
+            return "SQL query returned no results."
+        return results
+
+    execute_query_chain = execute_query | check_results
+
+    # Answer question given the query and results
+    answer_prompt = PromptTemplate.from_template(
+        """Given the following user question, corresponding SQL query, and SQL result, answer the user question. When interpreting the SQL results, convert large dollar amounts (if any) to easily readable formats. Use millions, billions, etc. as appropriate. Note that any export and import values returned by the DB are in current USD. If the sql query yields no result or if there was an error running the query, mention that there was an error in running the query and don't try to answer using your prior knowledge.
+
+        Question: {question}
+        SQL Query: {query}
+        SQL Result: {result}
+        Answer: """
+    )
+    answer_chain = answer_prompt | llm | StrOutputParser()
+
+    # Combine all elements into a single chain
+    full_chain = (
+        RunnableParallel(
+            {
+                "products_found": mentions_chain,
+                "question": itemgetter("question") | RunnablePassthrough(),
+            }
+        )
+        | {
+            "codes": itemgetter("products_found") | codes_chain,
+            "table_info": itemgetter("products_found") | table_info_chain,
+            "top_k": lambda x: max_results,
+            "question": itemgetter("question"),
+        }
+        | {"query": query_chain, "question": itemgetter("question")}
+        | {
+            "result": execute_query_chain,
+            "question": itemgetter("question"),
+            "query": itemgetter("query"),
+        }
+        | answer_chain
+    )
+
+    @tool("comprehensive_query_tool", args_schema=QueryToolInput)
+    def query_tool(question: str) -> str:
+        """
+        A tool that handles the entire query process from product lookup to SQL execution.
+        Input should be a natural language question about trade data.
+        """
+        uses_counter["current"] += 1
+        if uses_counter["current"] > max_uses:
+            return "Error: Maximum number of queries exceeded."
+
+        results = full_chain.invoke({"question": question})
+
+        return results
+
+    return query_tool

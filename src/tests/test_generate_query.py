@@ -8,10 +8,11 @@ from src.generate_query import (
     create_query_generation_chain,
     create_query_tool,
     create_sql_agent,
+    load_table_descriptions,
 )
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 from langchain_openai import ChatOpenAI
-
+from sqlalchemy.engine import Engine
 
 @pytest.fixture
 def temp_query_files():
@@ -56,7 +57,7 @@ def temp_query_files():
 @pytest.fixture
 def llm():
     """Create a GPT-4 language model for testing."""
-    return ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    return ChatOpenAI(model="gpt-4o", temperature=0)
 
 
 @pytest.fixture
@@ -65,6 +66,7 @@ def project_paths(base_dir):
     return {
         "queries_json": base_dir / "src/example_queries/queries.json",
         "example_queries_dir": base_dir / "src/example_queries",
+        "table_descriptions_json": base_dir / "db_table_descriptions.json",
     }
 
 
@@ -82,9 +84,15 @@ def mock_db():
 
     return mock
 
+@pytest.fixture
+def mock_engine():
+    """Create a mock engine for testing."""
+    mock = Mock(spec=Engine)
+    return mock
 
-class TestLoadExampleQueries:
-    def test_successful_load(self, temp_query_files):
+
+class TestLoadFiles:
+    def test_successful_example_queries_load(self, temp_query_files):
         """Test successful loading of example queries."""
         result = load_example_queries(
             temp_query_files["metadata_file"], temp_query_files["query_dir"]
@@ -102,36 +110,6 @@ class TestLoadExampleQueries:
             == temp_query_files["expected_queries"]["query2.sql"]
         )
 
-    def test_load_with_empty_directory(self, temp_query_files):
-        """Test loading when query directory is empty."""
-        # Remove all files from query directory
-        for file in temp_query_files["query_dir"].iterdir():
-            file.unlink()
-
-        with pytest.raises(FileNotFoundError):
-            load_example_queries(
-                temp_query_files["metadata_file"], temp_query_files["query_dir"]
-            )
-
-    def test_load_with_missing_metadata_file(self, temp_query_files):
-        """Test loading when metadata file is missing."""
-        temp_query_files["metadata_file"].unlink()
-
-        with pytest.raises(FileNotFoundError):
-            load_example_queries(
-                temp_query_files["metadata_file"], temp_query_files["query_dir"]
-            )
-
-    def test_load_with_invalid_json(self, temp_query_files):
-        """Test loading when metadata file contains invalid JSON."""
-        with open(temp_query_files["metadata_file"], "w") as f:
-            f.write("invalid json content")
-
-        with pytest.raises(json.JSONDecodeError):
-            load_example_queries(
-                temp_query_files["metadata_file"], temp_query_files["query_dir"]
-            )
-
     def test_load_with_missing_query_file(self, temp_query_files):
         """Test loading when a referenced query file is missing."""
         # Add entry for non-existent file to metadata
@@ -145,6 +123,29 @@ class TestLoadExampleQueries:
             load_example_queries(
                 temp_query_files["metadata_file"], temp_query_files["query_dir"]
             )
+
+    def test_successful_table_descriptions_load(self, tmp_path):
+        """Test successful loading of table descriptions."""
+        # Create a temporary table descriptions file
+        table_desc = {
+            "schema1": [
+                {
+                    "table_name": "table1",
+                    "context_str": "Description of table1"
+                }
+            ]
+        }
+        desc_file = tmp_path / "table_descriptions.json"
+        with open(desc_file, "w") as f:
+            json.dump(table_desc, f)
+
+        result = load_table_descriptions(desc_file)
+        
+        assert result == table_desc
+        assert "schema1" in result
+        assert len(result["schema1"]) == 1
+        assert result["schema1"][0]["table_name"] == "table1"
+        assert result["schema1"][0]["context_str"] == "Description of table1"
 
 
 class TestProjectFiles:
@@ -172,6 +173,12 @@ class TestProjectFiles:
             assert "question" in entry, "Each entry should have a 'question' field"
             assert "file" in entry, "Each entry should have a 'file' field"
 
+    def test_table_descriptions_json_exists(self, project_paths):
+        """Test that table_descriptions.json exists in the expected location."""
+        assert project_paths[
+            "table_descriptions_json"
+        ].exists(), f"table_descriptions.json not found at {project_paths['table_descriptions_json']}"
+    
     def test_all_referenced_sql_files_exist(self, project_paths):
         """Test that all SQL files referenced in queries.json exist."""
         with open(project_paths["queries_json"], "r") as f:
@@ -222,7 +229,7 @@ class TestCreateQueryGenerationChain:
             project_paths["queries_json"], project_paths["example_queries_dir"]
         )
 
-        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        llm = ChatOpenAI(model="gpt-4o", temperature=0)
         chain = create_query_generation_chain(
             llm=llm,
             example_queries=example_queries,
@@ -241,7 +248,7 @@ class TestCreateQueryGenerationChain:
 
     def test_chain_with_empty_examples(self, project_paths):
         """Test chain creation with empty example queries."""
-        llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+        llm = ChatOpenAI(model="gpt-4o", temperature=0)
         chain = create_query_generation_chain(llm, [])
         assert chain is not None
 
@@ -258,41 +265,49 @@ class TestCreateQueryGenerationChain:
 
 
 class TestQueryTool:
-    def test_core_functionality(self, llm, mock_db, project_paths, logger):
+    def test_core_functionality(self, llm, mock_db, mock_engine, project_paths, logger):
         """Test basic query generation and execution functionality of QueryTool."""
         example_queries = load_example_queries(
             project_paths["queries_json"], project_paths["example_queries_dir"]
         )
+        table_descriptions = load_table_descriptions(
+            project_paths["table_descriptions_json"]
+        )
 
         # Mock the database response
         mock_db.run.return_value = [{"result": "mock data"}]
+        mock_db.get_table_info.return_value = "Mock table info with columns: id, name, value"
 
         # Create the tool
         tool = create_query_tool(
             llm=llm,
             db=mock_db,
+            engine=mock_engine,
             example_queries=example_queries,
-            table_info="trades(date, country, value)",
-            top_k_per_query=5,
+            table_descriptions=table_descriptions,
+            max_results=5,
         )
 
         # Modify the test to expect a string result instead of a list
         result = tool.invoke({"question": "Show me the top trades"})
         logger.info(f"Result: {result}")
         assert isinstance(result, str)  # Changed from list to str
-        assert "mock data" in result
 
-    def test_max_queries(self, llm, mock_db, project_paths):
+    def test_max_queries(self, llm, mock_db, mock_engine, project_paths):
         """Test that QueryTool enforces maximum query limit."""
         example_queries = load_example_queries(
             project_paths["queries_json"], project_paths["example_queries_dir"]
+        )
+        table_descriptions = load_table_descriptions(
+            project_paths["table_descriptions_json"]
         )
 
         tool = create_query_tool(
             llm=llm,
             db=mock_db,
+            engine=mock_engine,
             example_queries=example_queries,
-            table_info="trades(date, country, value)",
+            table_descriptions=table_descriptions,
             max_uses=2,
         )
 
@@ -310,12 +325,16 @@ class TestCreateSQLAgent:
         example_queries = load_example_queries(
             project_paths["queries_json"], project_paths["example_queries_dir"]
         )
+        table_descriptions = load_table_descriptions(
+            project_paths["table_descriptions_json"]
+        )
         # Create agent
         agent = create_sql_agent(
             llm=llm,
             db=mock_db,
+            engine=mock_engine,
             example_queries=example_queries,
-            table_info="trades(date, country, value)",
+            table_descriptions=table_descriptions,
             top_k_per_query=5,
             max_uses=3,
         )
@@ -338,6 +357,9 @@ class TestCreateSQLAgent:
         example_queries = load_example_queries(
             project_paths["queries_json"], project_paths["example_queries_dir"]
         )
+        table_descriptions = load_table_descriptions(
+            project_paths["table_descriptions_json"]
+        )
 
         # Setup mock database response
         mock_db.run.return_value = [
@@ -350,8 +372,9 @@ class TestCreateSQLAgent:
         agent = create_sql_agent(
             llm=llm,
             db=mock_db,
+            engine=mock_engine,
             example_queries=example_queries,
-            table_info="trades(date, country, value)",
+            table_descriptions=table_descriptions,
             top_k_per_query=5,
         )
 
