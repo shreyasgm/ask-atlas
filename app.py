@@ -3,6 +3,7 @@ from pathlib import Path
 import logging
 import sys
 from src.text_to_sql import AtlasTextToSQL
+import uuid
 
 # Set up logging
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -25,7 +26,7 @@ st.title("Ask-Atlas 🌍: Your Trade Data Assistant")
 # Display some information
 st.info(
     """
-    Welcome to Ask-Atlas, a chatbot that provides insights from the [Atlas of Economic Complexity](https://atlas.cid.harvard.edu/) using trade data sourced from UN COMTRADE and cleaned and processed by the [Growth Lab at Harvard University](https://growthlab.hks.harvard.edu/).
+    Welcome to Ask-Atlas, an AI agent that provides insights from the [Atlas of Economic Complexity](https://atlas.cid.harvard.edu/) using trade data sourced from UN COMTRADE and cleaned and processed by the [Growth Lab at Harvard University](https://growthlab.hks.harvard.edu/).
 
     Created by: [Shreyas Gadgin Matha](https://growthlab.hks.harvard.edu/people/shreyas-matha)
     """
@@ -34,11 +35,11 @@ st.info(
 # Add disclaimers
 st.warning(
     """
-    **Important Disclaimers:**
+    **Notes:**
     - This tool is currently in alpha stage and under active development. Please report any bugs or issues to Shreyas through Slack.
     - This tool is open source ([Github repo](https://github.com/shreyasgm/ask-atlas)) and the code is licensed under [CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
     - You can currently only access this tool while connected to the Harvard network (or using a VPN into the Harvard network).
-    - As with any AI-powered tool, responses may contain inaccuracies or hallucinations. Please verify all results independently
+    - As with any LLM-powered tool, responses may contain inaccuracies or hallucinations. Please verify all results independently
     """
 )
 
@@ -66,6 +67,10 @@ def init_atlas_sql():
 if "atlas_sql" not in st.session_state:
     st.session_state.atlas_sql = init_atlas_sql()
 
+# Initialize the thread ID
+if "thread_id" not in st.session_state:
+    st.session_state["thread_id"] = str(uuid.uuid4())
+
 # Initialize message history for the chat
 if "messages" not in st.session_state:
     st.session_state["messages"] = [
@@ -75,15 +80,10 @@ if "messages" not in st.session_state:
         }
     ]
 
-if "agent_chat_history" not in st.session_state:
-    st.session_state["agent_chat_history"] = []
-
 # Get user input for questions
 if prompt := st.chat_input("Ask a question about trade data"):
     # Append user message to the session state
     st.session_state["messages"].append({"role": "user", "content": prompt})
-    # Append user message to the modified session state for agent chat history
-    st.session_state["agent_chat_history"].append({"role": "user", "content": prompt})
 
 # Display the chat history in the UI
 for message in st.session_state.messages:
@@ -95,7 +95,7 @@ if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant"):
         try:
             response_gen, agent_messages = st.session_state.atlas_sql.answer_question(
-                prompt, stream_response=True, use_agent=True
+                prompt, stream_response=True, thread_id=st.session_state["thread_id"]
             )
             full_response = st.write_stream(response_gen)
             final_message = st.session_state.atlas_sql.process_agent_messages(
@@ -103,7 +103,7 @@ if st.session_state.messages[-1]["role"] != "assistant":
             )
 
         except Exception as e:
-            error_message = "Sorry, an error occurred while processing your request. Please report this query."
+            error_message = "Sorry, an error occurred while processing your request. Please report this query to Shreyas through Slack."
             st.error(error_message)
             logging.error(f"Error in answer_question: {e}", exc_info=True)
             full_response = error_message
@@ -112,8 +112,3 @@ if st.session_state.messages[-1]["role"] != "assistant":
         st.session_state["messages"].append(
             {"role": "assistant", "content": full_response}
         )
-
-        # # Add the final message to the agent chat history
-        # st.session_state["agent_chat_history"].append(
-        #     {"role": "assistant", "content": final_message}
-        # )
