@@ -74,7 +74,9 @@ def init_atlas_sql():
         )
         st.stop()
     except Exception as e:
-        st.error("Unable to connect to the Atlas Database")
+        st.error(
+            "Unable to connect to the Atlas Database. Please check your VPN connection to the Harvard network."
+        )
         logging.error(f"Failed to connect to Atlas Database: {e}", exc_info=True)
         st.stop()
 
@@ -96,57 +98,76 @@ if "messages" not in st.session_state:
         }
     ]
 
-# Get user input for questions
-if prompt := st.chat_input("Ask a question about trade data"):
-    # Append user message to the session state
-    st.session_state["messages"].append({"role": "user", "content": prompt})
+# Create a container for the chat interface
+chat_container = st.container()
 
-# Display the chat history in the UI
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
+with chat_container:
+    # Display the chat history in the UI
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
 
-# If last message is not from assistant, generate a new response
-if st.session_state.messages[-1]["role"] != "assistant":
-    with st.chat_message("assistant"):
-        try:
-            response_gen, agent_messages = st.session_state.atlas_sql.answer_question(
-                prompt, stream_response=True, thread_id=st.session_state["thread_id"]
+    # Get user input for questions
+    if prompt := st.chat_input("Ask a question about trade data"):
+        # Append user message to the session state
+        st.session_state["messages"].append({"role": "user", "content": prompt})
+
+    # If last message is not from assistant, generate a new response
+    if st.session_state.messages[-1]["role"] != "assistant":
+        with st.chat_message("assistant"):
+            try:
+                response_gen, agent_messages = (
+                    st.session_state.atlas_sql.answer_question(
+                        prompt,
+                        stream_response=True,
+                        thread_id=st.session_state["thread_id"],
+                    )
+                )
+                full_response = st.write_stream(response_gen)
+                final_message = st.session_state.atlas_sql.process_agent_messages(
+                    agent_messages
+                )
+
+            except ConnectionError:
+                error_message = "⚠️ Lost connection to the database. Please check your VPN connection to the Harvard network and try again."
+                st.error(error_message)
+                logging.error("Database connection error", exc_info=True)
+                full_response = error_message
+
+            except ValueError as e:
+                error_message = f"⚠️ Invalid query: {str(e)}"
+                st.warning(error_message)
+                logging.warning(f"Invalid query: {e}")
+                full_response = error_message
+
+            except Exception as e:
+                error_message = "Sorry, an unexpected error occurred while processing your request. Please report this query to Shreyas through Slack."
+                st.error(error_message)
+                logging.error(f"Error in answer_question: {e}", exc_info=True)
+                full_response = error_message
+
+            # Add the assistant's response to the message history
+            st.session_state["messages"].append(
+                {"role": "assistant", "content": full_response}
             )
-            full_response = st.write_stream(response_gen)
-            final_message = st.session_state.atlas_sql.process_agent_messages(
-                agent_messages
-            )
-
-        except ConnectionError:
-            error_message = "⚠️ Lost connection to the database. Please check your VPN connection to the Harvard network and try again."
-            st.error(error_message)
-            logging.error("Database connection error", exc_info=True)
-            full_response = error_message
-
-        except ValueError as e:
-            error_message = f"⚠️ Invalid query: {str(e)}"
-            st.warning(error_message)
-            logging.warning(f"Invalid query: {e}")
-            full_response = error_message
-
-        except Exception as e:
-            error_message = "Sorry, an unexpected error occurred while processing your request. Please report this query to Shreyas through Slack."
-            st.error(error_message)
-            logging.error(f"Error in answer_question: {e}", exc_info=True)
-            full_response = error_message
-
-        # Add the assistant's response to the message history
-        st.session_state["messages"].append(
-            {"role": "assistant", "content": full_response}
-        )
 
 
-# Add a clear chat button below the chat
+# Add a clear chat button in the second column
 def reset_chat():
     # Delete all the items in Session state
     for key in st.session_state.keys():
         del st.session_state[key]
 
 
-st.button("Clear Chat", on_click=reset_chat)
+# Add buttons in a compact horizontal layout
+button_cols = st.columns([0.2, 0.2, 0.2, 0.4])
+with button_cols[0]:
+    st.button("Clear Chat", on_click=reset_chat, use_container_width=True)
+with button_cols[1]:
+    st.link_button(
+        "Learn More", "https://github.com/shreyasgm/ask-atlas", use_container_width=True
+    )
+with button_cols[2]:
+    st.link_button(
+        "Atlas Website", "https://atlas.hks.harvard.edu/", use_container_width=True
+    )
