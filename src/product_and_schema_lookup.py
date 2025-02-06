@@ -134,8 +134,7 @@ class ProductAndSchemaLookup:
         You are an assistant for a text-to-sql system that uses a database of international trade data.
 
         Analyze the user's question about trade data to determine which database schemas are needed and what product codes 
-        should be looked up. Return empty objects for schemas and products if the question isn't about 
-        international trade data.
+        should be looked up.
 
         Available schemas in the postgres db:
         - hs92: Trade data for goods, in HS 1992 product classification
@@ -144,7 +143,6 @@ class ProductAndSchemaLookup:
         - services_unilateral: Trade data for services products with exporter-product-year data. Use this schema if the user asks about services data for a specific country.
         - services_bilateral: Trade data for services products with exporter-importer-product-year data. Use this schema if the user asks about services trade between two specific countries.
 
-        
         Guidelines for schema selection:
         - For questions without a specified product classification:
             * Default to 'hs92' for goods
@@ -160,16 +158,7 @@ class ProductAndSchemaLookup:
         - Be specific with the codes - suggest the product code at the level most specific to the product mentioned.
         - Include multiple relevant codes if needed for broad product categories
         
-        
         Examples:
-
-        Question: "What's the weather like in Paris?"
-        Response: {{
-            "classification_schemas": [],
-            "products": [],
-            "requires_product_lookup": false
-        }}
-        Reason: This question isn't about trade data, so no schemas or products are needed.
 
         Question: "What were US exports of cars and vehicles (HS 87) in 2020?"
         Response: {{
