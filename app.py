@@ -112,3 +112,12 @@ if st.session_state.messages[-1]["role"] != "assistant":
         st.session_state["messages"].append(
             {"role": "assistant", "content": full_response}
         )
+
+# Add a clear chat button below the chat
+def reset_chat():
+    # Delete all the items in Session state
+    for key in st.session_state.keys():
+        del st.session_state[key]
+
+st.button("Clear Chat", on_click=reset_chat)
+
