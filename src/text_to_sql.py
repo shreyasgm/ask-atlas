@@ -7,28 +7,12 @@ import logging
 import sys
 import json
 from sqlalchemy import create_engine
-from langchain.prompts import PromptTemplate
-from langchain_core.runnables import (
-    RunnableLambda,
-    RunnablePassthrough,
-    RunnableParallel,
-)
-from langchain_community.tools.sql_database.tool import QuerySQLDataBaseTool
-from langchain_core.output_parsers import StrOutputParser
 from langchain_core.messages import HumanMessage, AIMessage
 import warnings
 from sqlalchemy import exc as sa_exc
-from operator import itemgetter
-
-from src.product_and_schema_lookup import (
-    ProductAndSchemaLookup,
-    ProductCodesMapping,
-    format_product_codes_for_prompt,
-)
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 from src.generate_query import (
     load_example_queries,
-    create_query_generation_chain,
     create_sql_agent,
 )
 
@@ -94,52 +78,22 @@ class AtlasTextToSQL:
 
         self.max_results = max_results
 
+        # Initialize the agent once
+        self.agent = create_sql_agent(
+            llm=self.query_llm,
+            db=self.db,
+            engine=self.engine,
+            example_queries=self.example_queries,
+            table_descriptions=self.table_descriptions,
+            top_k_per_query=self.max_results,
+            max_uses=10,
+        )
+
     @staticmethod
     def _load_json_as_dict(file_path: str) -> Dict:
         """Loads a JSON file as a dictionary."""
         with open(file_path, "r") as f:
             return json.load(f)
-
-    def get_table_info_for_schemas(self, classification_schemas: List[str]) -> str:
-        """Get table information for a list of schemas."""
-        table_descriptions = self.get_tables_in_schemas(classification_schemas)
-        # Temporarily, remove any tables that have the word "group" in the table name
-        table_descriptions = [
-            table
-            for table in table_descriptions
-            if "group" not in table["table_name"].lower()
-        ]
-        table_info = ""
-        for table in table_descriptions:
-            table_info += (
-                f"Table: {table['table_name']}\nDescription: {table['context_str']}\n"
-            )
-            table_info += self.db.get_table_info(table_names=[table["table_name"]])
-            table_info += "\n\n"
-        return table_info
-
-    def get_tables_in_schemas(self, classification_schemas: List[str]) -> List[Dict]:
-        """
-        Gets all tables and their descriptions for the selected schemas.
-
-        Args:
-            classification_schemas: List of classification schema names
-
-        Returns:
-            List of dictionaries containing table information with schema-qualified table_name and context_str
-        """
-        tables = []
-        for schema in classification_schemas:
-            if schema in self.table_descriptions:
-                for table in self.table_descriptions[schema]:
-                    # Create a new dict with schema-qualified table name
-                    tables.append(
-                        {
-                            "table_name": f"{schema}.{table['table_name']}",
-                            "context_str": table["context_str"],
-                        }
-                    )
-        return tables
 
     def answer_question(
         self,
@@ -159,43 +113,12 @@ class AtlasTextToSQL:
             Either a string answer or a generator yielding string chunks
             List of dictionaries containing messages from the agent
         """
-        # Product and schema lookup
-        product_lookup = ProductAndSchemaLookup(
-            llm=self.metadata_llm,
-            connection=self.engine,
-        )
-
-        # Extract product codes and schemas
-        mentions_chain = product_lookup.extract_schemas_and_product_mentions()
-
-        # Get product codes and schemas and then use agent to plan and execute query
-        mentions = mentions_chain.invoke({"question": question})
-        candidate_codes = product_lookup.get_candidate_codes(products_found=mentions)
-        final_codes_chain = product_lookup.select_final_codes(candidate_codes)
-        if isinstance(final_codes_chain, ProductCodesMapping):
-            final_codes = final_codes_chain
-        else:
-            final_codes = final_codes_chain.invoke({"question": question})
-        final_codes_str = format_product_codes_for_prompt(final_codes)
-        table_info = self.get_table_info_for_schemas(
-            classification_schemas=mentions.classification_schemas
-        )
-        # Use agent to plan and execute query
-        agent = create_sql_agent(
-            llm=self.query_llm,
-            db=self.db,
-            example_queries=self.example_queries,
-            table_info=table_info,
-            codes=final_codes_str,
-            top_k_per_query=self.max_results,
-            max_uses=10,
-        )
-
+        
         if stream_response:
             messages = []
 
             def stream_agent_response():
-                for msg, metadata in agent.stream(
+                for msg, metadata in self.agent.stream(
                     {"messages": [HumanMessage(content=question)]},
                     stream_mode="messages",
                 ):
@@ -211,7 +134,7 @@ class AtlasTextToSQL:
 
         else:
             # Get the last message directly without streaming
-            result = agent.stream(
+            result = self.agent.stream(
                 {"messages": [HumanMessage(content=question)]},
                 stream_mode="values",
             )

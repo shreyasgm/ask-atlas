@@ -30,15 +30,6 @@ def test_initialization(atlas_sql):
     assert atlas_sql.max_results == 15
 
 
-def test_get_table_info_for_schemas(atlas_sql, sample_schemas):
-    """Test if table information can be retrieved for given schemas"""
-    table_info = atlas_sql.get_table_info_for_schemas(sample_schemas)
-    assert isinstance(table_info, str)
-    assert len(table_info) > 0
-    # Check if it properly filters out tables with 'group' in the name
-    assert "group" not in table_info.lower()
-
-
 def test_answer_question_basic(atlas_sql, logger):
     """Test if the system can answer a basic trade-related question"""
     question1 = (
