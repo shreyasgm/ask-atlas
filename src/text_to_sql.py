@@ -15,6 +15,7 @@ from src.generate_query import (
     load_example_queries,
     create_sql_agent,
 )
+import uuid
 
 # Define BASE_DIR
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -99,28 +100,35 @@ class AtlasTextToSQL:
         self,
         question: str,
         stream_response: bool = True,
-        history: List[Dict] = None,
+        thread_id: str = None,
     ) -> Union[Tuple[Generator[str, None, None], List[Dict]], str]:
         """
         Process a user's question and return the answer.
+        Supports conversation history when thread_id is provided.
 
         Args:
             question: The user's question about the trade data
             stream_response: Whether to stream the response back to the user
-            history: A list of messages from the conversation history
+            thread_id: The ID of the thread to use for the conversation
 
         Returns:
             Either a string answer or a generator yielding string chunks
             List of dictionaries containing messages from the agent
         """
         
+        # If no thread_id provided, generate a new one for each question
+        # This effectively disables conversation history
+        config = {
+            "configurable": {"thread_id": thread_id if thread_id else str(uuid.uuid4())}
+        }
         if stream_response:
             messages = []
 
-            def stream_agent_response():
+            def stream_agent_response(config):
                 for msg, metadata in self.agent.stream(
                     {"messages": [HumanMessage(content=question)]},
                     stream_mode="messages",
+                    config=config,
                 ):
                     if (
                         msg.content
@@ -130,13 +138,14 @@ class AtlasTextToSQL:
                         yield msg.content
                     messages.append({"msg": msg, "metadata": metadata})
 
-            return stream_agent_response(), messages
+            return stream_agent_response(config), messages
 
         else:
             # Get the last message directly without streaming
             result = self.agent.stream(
                 {"messages": [HumanMessage(content=question)]},
                 stream_mode="values",
+                config=config,
             )
             for step in result:
                 message = step["messages"][-1]
@@ -172,7 +181,7 @@ if __name__ == "__main__":
     print(f"User question: {question}")
     stream_response = True
     answer, messages = atlas_sql.answer_question(
-        question, stream_response=True, history=None
+        question, stream_response=True, thread_id="test_thread"
     )
     
     print("Answer: ")
@@ -181,20 +190,18 @@ if __name__ == "__main__":
         print(chunk, end="", flush=True)
         full_answer += chunk
 
-    print("\nFull answer stored in variable:", full_answer)
-
-    # if messages:
-    #     # Get the final agent message
-    #     final_message_str = atlas_sql.process_agent_messages(messages)
-    #     print(f"\n==================\nFinal message:\n{final_message_str}")
+    if messages:
+        # Get the final agent message
+        final_message_str = atlas_sql.process_agent_messages(messages)
+        print(f"\n==================\nFinal message:\n{final_message_str}")
 
 
     # Test conversation history
-    # follow_up_question = "How did these products change in 2021?"
-    # answer, messages = atlas_sql.answer_question(
-    #     follow_up_question, stream_response=True, use_agent=True, history=messages
-    # )
-    # print(f"Follow-up question: {follow_up_question}")
-    # print("Answer: ")
-    # for chunk in answer:
-    #     print(chunk, end="", flush=True)
+    follow_up_question = "How did these products change in 2021?"
+    answer, messages = atlas_sql.answer_question(
+        follow_up_question, stream_response=True, thread_id="test_thread"
+    )
+    print(f"Follow-up question: {follow_up_question}")
+    print("Answer: ")
+    for chunk in answer:
+        print(chunk, end="", flush=True)

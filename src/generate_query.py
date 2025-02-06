@@ -7,6 +7,7 @@ from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.messages import SystemMessage
 from langgraph.prebuilt import create_react_agent
+from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.runnables import (
     Runnable,
     RunnableLambda,
@@ -300,10 +301,15 @@ If a user asks a normative policy question, such as what products a country shou
 - Instead of just listing out the DB results, try to interpret the results in a way that answers the user's question directly.
 - When responding to the user, your responses should be in markdown format, capable of rendering mathjax. Escape dollar signs properly to avoid rendering errors (e.g., `\\$`).
 """
+    
+    # Add chat memory
+    memory = MemorySaver()
+
     # Create the agent
     agent = create_react_agent(
         model=llm,
         tools=[query_tool],
+        checkpointer=memory,
         state_modifier=SystemMessage(content=AGENT_PREFIX),
     )
 
