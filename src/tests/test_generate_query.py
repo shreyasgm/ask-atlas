@@ -9,6 +9,7 @@ from src.generate_query import (
     create_query_tool,
     create_sql_agent,
     load_table_descriptions,
+    get_table_info_for_schemas
 )
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 from langchain_openai import ChatOpenAI
@@ -262,6 +263,32 @@ class TestCreateQueryGenerationChain:
 
         assert isinstance(result, str)
         assert "SELECT" in result.upper()
+
+
+    def test_get_table_info_for_schemas(self, mock_db, project_paths):
+        """Test if table information can be retrieved for given schemas"""
+        table_descriptions = load_table_descriptions(
+            project_paths["table_descriptions_json"]
+        )
+        # Set the return value of get_table_info to a mock string
+        mock_db.get_table_info.return_value = "Mock table info with columns: id, name, value"
+
+        # Test with sample schemas
+        sample_schemas = ["hs92", "classification"]
+        table_info = get_table_info_for_schemas(
+            db=mock_db,
+            table_descriptions=table_descriptions,
+            classification_schemas=sample_schemas
+        )
+        
+        assert isinstance(table_info, str)
+        assert len(table_info) > 0
+        # Check if it properly filters out tables with 'group' in the name
+        assert "group" not in table_info.lower()
+        # Check if schema-qualified table names are present
+        assert "hs92.product" in table_info
+        assert "classification.product_services_bilateral" in table_info
+
 
 
 class TestQueryTool:

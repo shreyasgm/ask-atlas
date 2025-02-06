@@ -418,17 +418,6 @@ def create_query_tool(
 
     execute_query_chain = execute_query | check_results
 
-    # Answer question given the query and results
-    answer_prompt = PromptTemplate.from_template(
-        """Given the following user question, corresponding SQL query, and SQL result, answer the user question. When interpreting the SQL results, convert large dollar amounts (if any) to easily readable formats. Use millions, billions, etc. as appropriate. Note that any export and import values returned by the DB are in current USD. If the sql query yields no result or if there was an error running the query, mention that there was an error in running the query and don't try to answer using your prior knowledge.
-
-        Question: {question}
-        SQL Query: {query}
-        SQL Result: {result}
-        Answer: """
-    )
-    answer_chain = answer_prompt | llm | StrOutputParser()
-
     # Combine all elements into a single chain
     full_chain = (
         RunnableParallel(
@@ -444,12 +433,7 @@ def create_query_tool(
             "question": itemgetter("question"),
         }
         | {"query": query_chain, "question": itemgetter("question")}
-        | {
-            "result": execute_query_chain,
-            "question": itemgetter("question"),
-            "query": itemgetter("query"),
-        }
-        | answer_chain
+        | execute_query_chain
     )
 
     @tool("comprehensive_query_tool", args_schema=QueryToolInput)
