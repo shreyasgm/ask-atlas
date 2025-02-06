@@ -43,6 +43,17 @@ st.warning(
     """
 )
 
+# Add example questions section
+with st.expander("📝 Example Questions You Can Ask"):
+    st.markdown("""
+        Try asking questions like:
+        - What were India's top 5 exports in 2020?
+        - How has the trade relationship between China and the USA evolved from 2010 to 2020?
+        - Which countries are the largest exporters of semiconductors?
+        - What is the trade balance between Brazil and Argentina?
+        - Show me Germany's main trading partners in the automotive sector
+    """)
+
 
 # Initialize the AtlasTextToSQL instance
 @st.cache_resource(ttl=3600, show_spinner=False)
@@ -57,6 +68,11 @@ def init_atlas_sql():
                 example_queries_dir=BASE_DIR / "src/example_queries",
                 max_results=15,
             )
+    except ConnectionError:
+        st.error(
+            "⚠️ Unable to connect to the database. Please check your VPN connection to the Harvard network."
+        )
+        st.stop()
     except Exception as e:
         st.error("Unable to connect to the Atlas Database")
         logging.error(f"Failed to connect to Atlas Database: {e}", exc_info=True)
@@ -102,8 +118,20 @@ if st.session_state.messages[-1]["role"] != "assistant":
                 agent_messages
             )
 
+        except ConnectionError:
+            error_message = "⚠️ Lost connection to the database. Please check your VPN connection to the Harvard network and try again."
+            st.error(error_message)
+            logging.error("Database connection error", exc_info=True)
+            full_response = error_message
+
+        except ValueError as e:
+            error_message = f"⚠️ Invalid query: {str(e)}"
+            st.warning(error_message)
+            logging.warning(f"Invalid query: {e}")
+            full_response = error_message
+
         except Exception as e:
-            error_message = "Sorry, an error occurred while processing your request. Please report this query to Shreyas through Slack."
+            error_message = "Sorry, an unexpected error occurred while processing your request. Please report this query to Shreyas through Slack."
             st.error(error_message)
             logging.error(f"Error in answer_question: {e}", exc_info=True)
             full_response = error_message
@@ -113,11 +141,12 @@ if st.session_state.messages[-1]["role"] != "assistant":
             {"role": "assistant", "content": full_response}
         )
 
+
 # Add a clear chat button below the chat
 def reset_chat():
     # Delete all the items in Session state
     for key in st.session_state.keys():
         del st.session_state[key]
 
-st.button("Clear Chat", on_click=reset_chat)
 
+st.button("Clear Chat", on_click=reset_chat)
