@@ -38,7 +38,6 @@ st.warning(
     **Notes:**
     - This tool is currently in alpha stage and under active development. Please report any bugs or issues to Shreyas through Slack.
     - This tool is open source ([Github repo](https://github.com/shreyasgm/ask-atlas)) and the code is licensed under [CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
-    - You can currently only access this tool while connected to the Harvard network (or using a VPN into the Harvard network).
     - As with any LLM-powered tool, responses may contain inaccuracies or hallucinations. Please verify all results independently
     """
 )
@@ -76,12 +75,12 @@ def init_atlas_sql():
             return atlas_sql
     except ConnectionError:
         st.error(
-            "⚠️ Unable to connect to the database. Please check your VPN connection to the Harvard network."
+            "⚠️ Unable to connect to the database."
         )
         st.stop()
     except Exception as e:
         st.error(
-            "Unable to connect to the Atlas Database. Please check your VPN connection to the Harvard network."
+            "Unable to connect to the Atlas Database."
         )
         logging.error(f"Failed to connect to Atlas Database: {e}", exc_info=True)
         st.stop()
@@ -143,7 +142,7 @@ with chat_container:
                     )
 
                 except ConnectionError:
-                    error_message = "⚠️ Lost connection to the database. Please check your VPN connection to the Harvard network and try again."
+                    error_message = "⚠️ Lost connection to the database."
                     st.error(error_message)
                     logging.error("Database connection error", exc_info=True)
                     full_response = error_message
