@@ -58,15 +58,14 @@ class AtlasTextToSQL:
             max_results: Maximum number of results to return from SELECT queries on the database
         """
         # Initialize engine
-        engine = create_engine(
+        self.engine = create_engine(
             db_uri,
             execution_options={"postgresql_readonly": True},
             connect_args={"connect_timeout": 10},
         )
 
         # Initialize database connection
-        self.engine = engine
-        self.db = SQLDatabaseWithSchemas(engine=engine)
+        self.db = SQLDatabaseWithSchemas(engine=self.engine)
 
         # Load schema and structure information
         self.table_descriptions = self._load_json_as_dict(table_descriptions_json)
@@ -161,39 +160,48 @@ class AtlasTextToSQL:
                 break
         return final_message_str
 
+    def __enter__(self):
+        """Context manager entry point"""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit point - ensures proper cleanup"""
+        self.close()
+
+    def close(self):
+        """Close database connections and cleanup resources"""
+        if hasattr(self, 'engine'):
+            self.engine.dispose()
+
 
 # Usage example:
 if __name__ == "__main__":
-    atlas_sql = AtlasTextToSQL(
+    # Example usage with context manager
+    with AtlasTextToSQL(
         db_uri=os.getenv("ATLAS_DB_URL"),
         table_descriptions_json=BASE_DIR / "db_table_descriptions.json",
         table_structure_json=BASE_DIR / "db_table_structure.json",
         queries_json=BASE_DIR / "src/example_queries/queries.json",
         example_queries_dir=BASE_DIR / "src/example_queries",
         max_results=15,
-    )
-    # question = (
-    #     "Analyze the trade relationship between Germany and Poland from 2010-2020."
-    # )
-    question = (
-        "What were the top 5 products exported by the US to China in 2020?"
-    )
-    print(f"User question: {question}")
-    stream_response = True
-    answer, messages = atlas_sql.answer_question(
-        question, stream_response=True, thread_id="test_thread"
-    )
-    
-    print("Answer: ")
-    full_answer = ""
-    for chunk in answer:
-        print(chunk, end="", flush=True)
-        full_answer += chunk
+    ) as atlas_sql:
+        question = "What were the top 5 products exported by the US to China in 2020?"
+        print(f"User question: {question}")
+        stream_response = True
+        answer, messages = atlas_sql.answer_question(
+            question, stream_response=True, thread_id="test_thread"
+        )
+        
+        print("Answer: ")
+        full_answer = ""
+        for chunk in answer:
+            print(chunk, end="", flush=True)
+            full_answer += chunk
 
-    if messages:
-        # Get the final agent message
-        final_message_str = atlas_sql.process_agent_messages(messages)
-        print(f"\n==================\nFinal message:\n{final_message_str}")
+        if messages:
+            # Get the final agent message
+            final_message_str = atlas_sql.process_agent_messages(messages)
+            print(f"\n==================\nFinal message:\n{final_message_str}")
 
 
     # Test conversation history
