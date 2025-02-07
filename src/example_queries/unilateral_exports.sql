@@ -1,4 +1,3 @@
--- This query answers the question: "What did the US export in 2022? Include both goods and services exports."
 -- Goods exports (HS92)
 SELECT 
     'Goods' as category,

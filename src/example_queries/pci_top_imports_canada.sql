@@ -3,35 +3,55 @@ WITH latest_year AS (
     SELECT MAX(year) as max_year 
     FROM hs92.country_country_product_year_4
 ),
--- Get the top 5 imported products for Canada in the latest year
+-- Get the top imported goods and services for Canada from USA in the latest year
 top_imports AS (
-    SELECT 
+    (SELECT 
+        'Goods' as category,
         p.product_id,
-        p.code as product_code,
-        p.name_en as product_name,
-        SUM(ccpy.import_value) as total_import_value
-    FROM hs92.country_country_product_year_4 ccpy
+        p.code,
+        p.name_en as name,
+        cpy.import_value,
+        py.pci
+    FROM hs92.country_product_year_4 cpy
+    JOIN hs92.product_year_4 py
+        ON cpy.product_id = py.product_id
+        AND cpy.year = py.year
     JOIN classification.location_country loc_exp 
-        ON ccpy.country_id = loc_exp.country_id 
+        ON cpy.country_id = loc_exp.country_id 
         AND loc_exp.iso3_code = 'CAN'
-    JOIN classification.location_country loc_imp 
-        ON ccpy.partner_id = loc_imp.country_id 
-        AND loc_imp.iso3_code = 'USA'
     JOIN classification.product_hs92 p 
-        ON ccpy.product_id = p.product_id
-    WHERE ccpy.year = (SELECT max_year FROM latest_year)
-    GROUP BY p.product_id, p.code, p.name_en
-    ORDER BY total_import_value DESC
-    LIMIT 5
+        ON cpy.product_id = p.product_id
+    WHERE cpy.year = (SELECT max_year FROM latest_year)
+    ORDER BY cpy.import_value DESC
+    LIMIT 5)
+    
+    UNION ALL
+    
+    (SELECT 
+        'Services' as category,
+        p.product_id,
+        p.code,
+        p.name_en as name,
+        cpy.import_value,
+        py.pci
+    FROM services_unilateral.country_product_year_4 cpy
+    JOIN services_unilateral.product_year_4 py
+        ON cpy.product_id = py.product_id
+        AND cpy.year = py.year
+    JOIN classification.location_country loc_exp 
+        ON cpy.country_id = loc_exp.country_id 
+        AND loc_exp.iso3_code = 'CAN'
+    JOIN classification.product_services_unilateral p 
+        ON cpy.product_id = p.product_id
+    WHERE cpy.year = (SELECT max_year FROM latest_year)
+    ORDER BY cpy.import_value DESC
+    LIMIT 5)
 )
--- Get the PCI for the top 5 imported products for Canada in the latest year
+-- Get the PCI for the top imported goods and services
 SELECT 
-    tis.product_code,
-    tis.product_name,
-    py4.pci
-FROM top_imports tis
-JOIN hs92.product_year_4 py4 
-    ON tis.product_id = py4.product_id
-    AND py4.year = (SELECT max_year FROM latest_year)
-ORDER BY py4.pci DESC
-LIMIT 15;
+    ti.category,
+    ti.code,
+    ti.name,
+    ti.import_value,
+    ti.pci
+FROM top_imports ti;
