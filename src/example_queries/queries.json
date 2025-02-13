@@ -4,7 +4,7 @@
         "file": "unilateral_exports.sql"
     },
     {
-        "question": "What did the US export in 2022, at the 4-digit HS classification level?",
+        "question": "What goods did the US export in 2022, at the 4-digit HS classification level?",
         "file": "unilateral_exports_4_digit.sql"
     },
     {

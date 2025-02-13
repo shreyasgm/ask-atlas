@@ -12,6 +12,10 @@ archive/
 test_queries.ipynb
 .streamlit/
 src/setup/whitelist_ip_addresses.py
+evaluation/results/**/agent_runs/
+evaluation/questions/
+evaluation/results/
+evaluation/evaluations/
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks,macos
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,jupyternotebooks,macos

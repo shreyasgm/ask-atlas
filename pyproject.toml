@@ -24,7 +24,6 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "psycopg>=3.2.3",
     "psycopg2==2.9.10",
     "beautifulsoup4>=4.12.3",
     "faiss-cpu>=1.9.0",
@@ -37,9 +36,11 @@ dev = [
     "black>=23.10.1",
     "llm-comparator>=0.1",
     "pytest>=8.3.4",
+    "browser-use>=0.1.24"
 ]
 
 [project.urls]
 Homepage = "https://ask-atlas.streamlit.app/"
 Repository = "https://github.com/shreyasgm/ask-atlas.git"
 "Bug Tracker" = "https://github.com/shreyasgm/ask-atlas/issues"
+
