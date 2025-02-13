@@ -2,15 +2,15 @@
 """
 evaluation_dataset_generator.py
 
-This script generates an evaluation dataset for a text-to-SQL system.
+This script generates an evaluation dataset for a text-to-SQL system asynchronously to improve speed.
 For each common question, it:
   - Sets up a directory structure.
   - Saves a question.json file.
   - Loads database schema information.
   - Builds a prompt (using static cached parts and a dynamic user question)
-    to call Anthropic's Claude 3.5 Sonnet LLM for SQL generation.
+    to call OpenAI's GPT-4o LLM for SQL generation asynchronously.
   - Parses the LLM response and writes the SQL query/queries.
-  - Executes the SQL queries against a Postgres database and saves the ground truth results.
+  - Executes the SQL queries against a Postgres database asynchronously and saves the ground truth results.
   - Simulates an agent run and then compares the results with the ground truth.
   - Stores evaluation metrics.
 
@@ -27,11 +27,13 @@ import logging
 import traceback
 from pathlib import Path
 import openai
-import psycopg2
-from psycopg2.extras import DictCursor
+import asyncpg
 from dotenv import load_dotenv
 from typing import List, Optional
 from pydantic import BaseModel
+import asyncio
+import backoff  # For retries of openai api calls
+import decimal
 
 # Load environment variables
 # Define BASE_DIR
@@ -110,29 +112,28 @@ def setup_directories(question_id):
     dirs = {}
     try:
         # Base directories
-        dirs["question_dir"] = os.path.join(
-            EVALUATION_BASE_DIR, "questions", question_id
-        )
-        dirs["queries_dir"] = os.path.join(dirs["question_dir"], "queries")
-        dirs["results_dir"] = os.path.join(EVALUATION_BASE_DIR, "results", question_id)
-        dirs["ground_truth_dir"] = os.path.join(dirs["results_dir"], "ground_truth")
-        dirs["agent_runs_dir"] = os.path.join(dirs["results_dir"], "agent_runs")
-        dirs["evaluation_dir"] = os.path.join(
-            EVALUATION_BASE_DIR, "evaluations", question_id
-        )
+        dirs["question_dir"] = EVALUATION_BASE_DIR / "questions" / question_id
+        dirs["queries_dir"] = dirs["question_dir"] / "queries"
+        dirs["results_dir"] = EVALUATION_BASE_DIR / "results" / question_id
+        dirs["ground_truth_dir"] = dirs["results_dir"] / "ground_truth"
+        dirs["agent_runs_dir"] = dirs["results_dir"] / "agent_runs"
+        dirs["evaluation_dir"] = EVALUATION_BASE_DIR / "evaluations" / question_id
 
-        for key, directory in dirs.items():
-            os.makedirs(directory, exist_ok=True)
-            logging.info(f"Directory created (or exists): {directory}")
+        # Create directories
+        for directory in dirs.values():
+            if not directory.exists():
+                directory.mkdir(parents=True, exist_ok=True)
+                logging.info(f"Directory created: {directory}")
+            else:
+                directory.mkdir(parents=True, exist_ok=True)
     except Exception as e:
         logging.error(f"Error setting up directories for {question_id}: {str(e)}")
         raise
     return dirs
 
 
-
 # -----------------------------------------------------------------------------
-# Anthropic API / Prompt Caching Functions
+# OpenAI API / Prompt Caching Functions
 # -----------------------------------------------------------------------------
 
 
@@ -146,62 +147,51 @@ class SQLResponse(BaseModel):
     queries: List[SQLQuery]
 
 
-
-
-
-def call_openai_api(
-    user_question, db_descriptions_text, db_structure_text
-):
+@backoff.on_exception(backoff.expo, openai.RateLimitError)
+async def call_openai_api(user_question, db_descriptions_text, db_structure_text):
     """
-    Calls OpenAI API with structured output format using Pydantic.
-    Returns a dictionary with the following structure:
-    {
-      "plan": "<plan text, if any>",
-      "queries": [
-         {"filename": "query.sql", "query": "<SQL query text>"},
-         ... (if multiple queries are provided for a complex question)
-      ]
-    }
+    Calls OpenAI API asynchronously with retry for rate limits.
+    Returns a dictionary with structured output format using Pydantic.
     """
-    client = openai.OpenAI()
+    client = openai.AsyncOpenAI()
     try:
         # Read base system prompt
         SYSTEM_PROMPT = Path(BASE_DIR / "evaluation/system_prompt.md").read_text()
-        
+
         # Add database schema information
-        SYSTEM_PROMPT = SYSTEM_PROMPT + """
+        SYSTEM_PROMPT = (
+            SYSTEM_PROMPT
+            + """
 
 Database Table Descriptions:
 The following text describes each table in the database and its purpose:
 
-""" + db_descriptions_text + """
+"""
+            + db_descriptions_text
+            + """
 
 Database Schema Structure:
 The following contains the detailed schema for each table, including columns, data types, and constraints:
 
-""" + db_structure_text
+"""
+            + db_structure_text
+        )
         messages = [
-            {
-                "role": "system",
-                "content": SYSTEM_PROMPT
-            },
-            {
-                "role": "user",
-                "content": f"Generate SQL queries for: {user_question}"
-            }
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": f"Generate SQL queries for: {user_question}"},
         ]
 
-        completion = client.beta.chat.completions.parse(
+        completion = await client.beta.chat.completions.parse(
             model="gpt-4o",
             messages=messages,
             response_format=SQLResponse,
         )
-        
+
         response = completion.choices[0].message.parsed
         logging.info("OpenAI API call successful.")
         return {
             "plan": response.plan,
-            "queries": [query.model_dump() for query in response.queries]
+            "queries": [query.model_dump() for query in response.queries],
         }
 
     except Exception as e:
@@ -214,16 +204,15 @@ The following contains the detailed schema for each table, including columns, da
 # SQL Execution Functions
 # -----------------------------------------------------------------------------
 
-
-def execute_sql_query(query, query_file_name):
+async def execute_sql_query(query, query_file_name):
     """
-    Executes a single SQL query against a Postgres database.
+    Executes a single SQL query against a Postgres database asynchronously using asyncpg.
 
     Returns a tuple: (result_rows, execution_log)
       - result_rows: list of dictionaries representing rows
       - execution_log: dictionary with details of the execution (start_time, end_time, status, etc.)
     """
-    start_time = datetime.datetime.utcnow()
+    start_time = datetime.datetime.now(datetime.UTC)
     execution_log = {
         "query_file": query_file_name,
         "start_time": start_time.isoformat() + "Z",
@@ -234,37 +223,38 @@ def execute_sql_query(query, query_file_name):
     }
     results = []
 
+    conn = None
     try:
-        with psycopg2.connect(os.getenv('ATLAS_DB_URL')) as conn:
-            with conn.cursor(cursor_factory=DictCursor) as cursor:
-                logging.info(f"Executing query from {query_file_name}")
-                cursor.execute(query)
-                try:
-                    # Try to fetch results if any
-                    results = [dict(row) for row in cursor.fetchall()]
-                except psycopg2.ProgrammingError:
-                    # No results to fetch (e.g. if the query was an update)
-                    results = []
-                execution_log["status"] = "success"
-                execution_log["rows_returned"] = len(results)
+        conn = await asyncpg.connect(os.getenv("ATLAS_DB_URL"))
+        rows = await conn.fetch(query)
+        # Convert Decimal objects to float in the results
+        results = []
+        for row in rows:
+            row_dict = dict(row)
+            for key, value in row_dict.items():
+                if isinstance(value, decimal.Decimal):
+                    row_dict[key] = float(value)
+            results.append(row_dict)
+        execution_log["status"] = "success"
+        execution_log["rows_returned"] = len(results)
     except Exception as e:
         execution_log["status"] = "failure"
         error_message = str(e)
         execution_log["error_log"].append(error_message)
-        logging.error(
-            f"Error executing SQL query from {query_file_name}: {error_message}"
-        )
+        logging.error(f"Error executing SQL query from {query_file_name}: {error_message}")
     finally:
-        end_time = datetime.datetime.utcnow()
+        if conn:
+            await conn.close()
+        end_time = datetime.datetime.now(datetime.UTC)
         execution_log["end_time"] = end_time.isoformat() + "Z"
 
     return results, execution_log
+    return results, execution_log
 
 
-def execute_sql_queries(queries, dirs):
+async def execute_sql_queries(queries, dirs):
     """
-    Given a list of queries (each with filename and query text) and directory information,
-    execute each query against the database.
+    Given a list of queries, execute each query asynchronously.
 
     Saves:
       - Combined results into {ground_truth_dir}/results.json
@@ -278,27 +268,26 @@ def execute_sql_queries(queries, dirs):
     for query_obj in queries:
         filename = query_obj.get("filename", "query.sql")
         query_text = query_obj.get("query", "")
-        query_filepath = os.path.join(dirs["queries_dir"], filename)
+        query_filepath = dirs["queries_dir"] / filename
         try:
             # Save the SQL query to file
-            with open(query_filepath, "w", encoding="utf-8") as f:
-                f.write(query_text)
+            query_filepath.write_text(query_text, encoding="utf-8")
             logging.info(f"Saved query file: {query_filepath}")
         except Exception as e:
             logging.error(f"Error saving query file {query_filepath}: {str(e)}")
             continue
 
-        # Execute the query
-        results, exec_log = execute_sql_query(query_text, filename)
+        # Execute the query asynchronously
+        results, exec_log = await execute_sql_query(query_text, filename)
         combined_results.extend(results)
         execution_logs.append(exec_log)
 
     # Save combined results and logs in the ground truth directory
-    results_json_path = os.path.join(dirs["ground_truth_dir"], "results.json")
-    execution_log_path = os.path.join(dirs["ground_truth_dir"], "execution_log.json")
+    results_json_path = dirs["ground_truth_dir"] / "results.json"
+    execution_log_path = dirs["ground_truth_dir"] / "execution_log.json"
 
     ground_truth = {
-        "question_id": dirs["question_dir"].split(os.sep)[-1],
+        "question_id": dirs["question_dir"].name,
         "execution_timestamp": get_timestamp(),
         "results": {"data": combined_results},
         "execution_stats": {
@@ -381,10 +370,68 @@ def evaluate_agent_run(ground_truth, agent_run):
 # -----------------------------------------------------------------------------
 
 
-def main():
+async def process_question(idx, question, db_descriptions_text, db_structure_text):
+    """Processes a single question asynchronously."""
+    try:
+        question_id = generate_question_id(idx)
+        logging.info(f"Processing question {question_id}: {question['user_question']}")
+        dirs = setup_directories(question_id)
+
+        # Save the question.json file
+        question_json = {
+            "question_id": question_id,
+            "user_question": question["user_question"],
+            "category": question["category"],
+        }
+        question_json_path = dirs["question_dir"] / "question.json"
+        save_json_file(question_json_path, question_json)
+
+        # Call the LLM to generate SQL (or plan and queries)
+        llm_result = await call_openai_api(
+            question["user_question"],
+            db_descriptions_text,
+            db_structure_text,
+        )
+
+        # Save the plan (if any) as a separate file (optional)
+        if llm_result.get("plan"):
+            plan_filepath = dirs["queries_dir"] / "plan.txt"
+            plan_filepath.write_text(llm_result["plan"], encoding="utf-8")
+            logging.info(f"Saved plan file: {plan_filepath}")
+
+        # Save and execute queries
+        ground_truth, exec_logs = await execute_sql_queries(
+            llm_result.get("queries", []), dirs
+        )
+
+        # Simulate an agent run
+        agent_run = simulate_agent_run(ground_truth)
+        # Create a subfolder under agent_runs with a timestamp
+        agent_timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y%m%dT%H%M%SZ")
+        agent_run_dir = dirs["agent_runs_dir"] / agent_timestamp
+        agent_run_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Save simulated agent files
+        agent_query_path = agent_run_dir / "query.sql"
+        agent_query_path.write_text(agent_run["query"], encoding="utf-8")
+        save_json_file(agent_run_dir / "results.json", agent_run["results"])
+        save_json_file(agent_run_dir / "execution_log.json", agent_run["execution_log"])
+
+        # Evaluate the agent run against the ground truth
+        evaluation = evaluate_agent_run(ground_truth, agent_run)
+        eval_filepath = dirs["evaluation_dir"] / f"{agent_timestamp}.json"
+        save_json_file(eval_filepath, evaluation)
+
+        logging.info(f"Finished processing question {question_id}")
+    except Exception as e:
+        logging.error(f"Error processing question {idx}: {str(e)}")
+        traceback.print_exc()
+
+
+async def main():
     logging.info("Starting evaluation dataset generation...")
 
-    # Load database schema files
+    # Load database schema files (synchronous - done once at the beginning)
     try:
         db_descriptions = load_json_file(DB_DESCRIPTIONS_FILE)
         db_structure = load_json_file(DB_STRUCTURE_FILE)
@@ -392,11 +439,10 @@ def main():
         db_descriptions_text = json.dumps(db_descriptions, indent=2)
         db_structure_text = json.dumps(db_structure, indent=2)
     except Exception as e:
-        logging.error("Failed to load database schema files. Exiting.")
+        logging.error(f"Failed to load database schema files. Exiting. Error: {str(e)}")
         return
 
     # Define a list of common questions for evaluation
-    # Each question is a dictionary with required fields.
     questions = [
         {
             "user_question": "What were the top 10 goods and services exported from Bolivia to Morocco between 2010-2022?",
@@ -409,75 +455,15 @@ def main():
         # Add more questions as needed.
     ]
 
-    # Process each question sequentially.
-    for idx, question in enumerate(questions, start=1):
-        try:
-            question_id = generate_question_id(idx)
-            logging.info(
-                f"Processing question {question_id}: {question['user_question']}"
-            )
-            dirs = setup_directories(question_id)
-
-            # Save the question.json file
-            question_json = {
-                "question_id": question_id,
-                "user_question": question["user_question"],
-                "category": question["category"],
-            }
-            question_json_path = os.path.join(dirs["question_dir"], "question.json")
-            save_json_file(question_json_path, question_json)
-
-            # Call the LLM to generate SQL (or plan and queries)
-            llm_result = call_openai_api(
-                question["user_question"],
-                db_descriptions_text,
-                db_structure_text,
-            )
-
-            # Save the plan (if any) as a separate file (optional)
-            if llm_result.get("plan"):
-                plan_filepath = os.path.join(dirs["queries_dir"], "plan.txt")
-                with open(plan_filepath, "w", encoding="utf-8") as f:
-                    f.write(llm_result["plan"])
-                logging.info(f"Saved plan file: {plan_filepath}")
-
-            # Save and execute queries
-            ground_truth, exec_logs = execute_sql_queries(
-                llm_result.get("queries", []), dirs
-            )
-
-            # Simulate an agent run (in a real scenario, run the system agent here)
-            agent_run = simulate_agent_run(ground_truth)
-            # Create a subfolder under agent_runs with a timestamp
-            agent_timestamp = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
-            agent_run_dir = os.path.join(dirs["agent_runs_dir"], agent_timestamp)
-            os.makedirs(agent_run_dir, exist_ok=True)
-            # Save simulated agent files
-            agent_query_path = os.path.join(agent_run_dir, "query.sql")
-            with open(agent_query_path, "w", encoding="utf-8") as f:
-                f.write(agent_run["query"])
-            save_json_file(
-                os.path.join(agent_run_dir, "results.json"), agent_run["results"]
-            )
-            save_json_file(
-                os.path.join(agent_run_dir, "execution_log.json"),
-                agent_run["execution_log"],
-            )
-
-            # Evaluate the agent run against the ground truth
-            evaluation = evaluate_agent_run(ground_truth, agent_run)
-            eval_filepath = os.path.join(
-                dirs["evaluation_dir"], f"{agent_timestamp}.json"
-            )
-            save_json_file(eval_filepath, evaluation)
-
-            logging.info(f"Finished processing question {question_id}")
-        except Exception as e:
-            logging.error(f"Error processing question {idx}: {str(e)}")
-            traceback.print_exc()
+    # Process each question concurrently using asyncio.gather
+    tasks = [
+        process_question(idx, question, db_descriptions_text, db_structure_text)
+        for idx, question in enumerate(questions, start=1)
+    ]
+    await asyncio.gather(*tasks)
 
     logging.info("Evaluation dataset generation complete.")
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
