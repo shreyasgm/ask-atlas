@@ -129,13 +129,16 @@ class AtlasTextToSQL:
                     stream_mode="messages",
                     config=config,
                 ):
+                    # Always append to messages regardless of node type
+                    messages.append({"msg": msg, "metadata": metadata})
+                    
+                    # Only yield content for non-tools nodes
                     if (
                         msg.content
                         and isinstance(msg, AIMessage)
-                        and metadata["langgraph_node"] != "tools"
+                        and metadata.get("langgraph_node") != "tools"
                     ):
                         yield msg.content
-                    messages.append({"msg": msg, "metadata": metadata})
 
             return stream_agent_response(config), messages
 
@@ -176,7 +179,7 @@ class AtlasTextToSQL:
 
 # Usage example:
 if __name__ == "__main__":
-    # Example usage with context manager
+    # Example usage
     with AtlasTextToSQL(
         db_uri=os.getenv("ATLAS_DB_URL"),
         table_descriptions_json=BASE_DIR / "db_table_descriptions.json",
@@ -204,12 +207,34 @@ if __name__ == "__main__":
             print(f"\n==================\nFinal message:\n{final_message_str}")
 
 
-    # Test conversation history
-    follow_up_question = "How did these products change in 2021?"
-    answer, messages = atlas_sql.answer_question(
-        follow_up_question, stream_response=True, thread_id="test_thread"
-    )
-    print(f"Follow-up question: {follow_up_question}")
-    print("Answer: ")
-    for chunk in answer:
-        print(chunk, end="", flush=True)
+        # Test conversation history
+        follow_up_question = "How did these products change in 2021?"
+        answer, messages = atlas_sql.answer_question(
+            follow_up_question, stream_response=True, thread_id="test_thread"
+        )
+        print(f"Follow-up question: {follow_up_question}")
+        print("Answer: ")
+        for chunk in answer:
+            print(chunk, end="", flush=True)
+
+        # Set up a separate thread for a more complex question
+        question = "How does Kenya's trade balance vary across its top 10 trading partners, and what factors drive these differences?"
+        answer, messages = atlas_sql.answer_question(
+            question, stream_response=True, thread_id="test_thread_2"
+        )
+        print(f"User question: {question}")
+        print("Answer: ")
+        for chunk in answer:
+            print(chunk, end="", flush=True)
+        # Convert messages to serializable format
+        serializable_messages = [
+            {
+                "content": msg["msg"].content,
+                "type": msg["msg"].type,
+                "metadata": msg["metadata"],
+            }
+            for msg in messages
+        ]
+
+        with open(BASE_DIR / "src/messages_logs.json", "w") as f:
+            json.dump(serializable_messages, f, indent=4)

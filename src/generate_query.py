@@ -144,58 +144,27 @@ Always use these product codes provided, and do not try to search for products b
     return prompt | llm | StrOutputParser() | _strip
 
 
+def create_query_validation_chain(llm: BaseLanguageModel) -> Runnable:
+    """
+    Creates a chain that validates an SQL query.
+    """
+    prompt_message = """
+    You are checking a SQL query meant to be run on a postgres database containing international trade data. Double check that the postgresql query is syntactically and logically correct. Common mistakes include:
+    - Querying the wrong table for the product digit level. For example, if the product codes are 4-digit codes, then the query should be querying the 4-digit product table, not the 6-digit product table.
+    - Not using exact product codes in the WHERE clause. For example, if the query is about a specific product, then the WHERE clause should use the exact product code, not product codes with the LIKE operator.
+    - Syntax errors
+    
+    Check for mistakes and correct them. Only correct mistakes that you are sure are mistakes. If you are not sure, do not change the query.
+
+    Output the final SQL query, and nothing else.
+    """
+    prompt = PromptTemplate.from_template("User question: {question}\nSQL query to review: {query}\nFinal revised SQL query:{revised_query}")
+    return llm | StrOutputParser()
+
+
+
 class QueryToolInput(BaseModel):
     question: str = Field(description="A question about international trade data")
-
-
-# def create_query_tool(
-#     llm: BaseLanguageModel,
-#     db: SQLDatabaseWithSchemas,
-#     example_queries: List[Dict[str, str]],
-#     table_info: str,
-#     codes: str = None,
-#     top_k_per_query: int = 15,
-#     max_uses: int = 3,
-# ) -> BaseTool:
-#     """
-#     Factory function that creates a QueryTool with all dependencies pre-configured.
-#     Returns a tool that only requires the question as input.
-#     """
-#     execute_query_tool = QuerySQLDatabaseTool(db=db)
-
-#     # Create the query generation chain and convert to tool
-#     query_gen_chain = create_query_generation_chain(
-#         llm=llm,
-#         top_k=top_k_per_query,
-#         table_info=table_info,
-#         example_queries=example_queries,
-#         codes=codes,
-#     )
-#     query_gen_tool = query_gen_chain.as_tool(
-#         name="Query generator",
-#         description="Tool to convert a user question to a SQL query",
-#     )
-
-#     # Track uses in a closure
-#     uses_counter = {"current": 0}
-
-#     @tool("database_query_tool", args_schema=QueryToolInput)
-#     def query_tool(question: str) -> str:
-#         """
-#         A tool that generates and executes SQL queries based on natural language questions.
-#         Input should be a natural language question about the database.
-#         The tool will generate an appropriate SQL query and execute it.
-#         """
-#         uses_counter["current"] += 1
-#         if uses_counter["current"] > max_uses:
-#             return "Error: Maximum number of queries exceeded."
-
-#         query = query_gen_tool.invoke({"question": question})
-#         results = execute_query_tool.invoke({"query": query})
-
-#         return results
-
-#     return query_tool
 
 
 def create_sql_agent(
@@ -447,7 +416,7 @@ def create_query_tool(
         | execute_query_chain
     )
 
-    @tool("comprehensive_query_tool", args_schema=QueryToolInput)
+    @tool("query_tool", args_schema=QueryToolInput)
     def query_tool(question: str) -> str:
         """
         A tool that handles the entire query process from product lookup to SQL execution.
