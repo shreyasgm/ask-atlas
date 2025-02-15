@@ -54,7 +54,6 @@ with st.expander("📝 Example Questions You Can Ask"):
     """)
 
 # Initialize the AtlasTextToSQL instance
-@st.cache_resource(ttl=3600, show_spinner=False)
 def init_atlas_sql():
     try:
         with st.spinner("Connecting to Atlas Database..."):
