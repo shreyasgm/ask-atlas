@@ -20,13 +20,13 @@ st.set_page_config(
     initial_sidebar_state="auto",
 )
 
-# Title of the app
-st.title("Ask-Atlas 🌍: Your Trade Data Assistant")
+# Title and subtitle of the app
+st.title("Ask-Atlas: Trade Data Assistant")
 
 # Display some information
 st.info(
     """
-    Welcome to Ask-Atlas, an AI agent that provides insights from the [Atlas of Economic Complexity](https://atlas.cid.harvard.edu/) using trade data sourced from UN COMTRADE and cleaned and processed by the [Growth Lab at Harvard University](https://growthlab.hks.harvard.edu/).
+    Ask-Atlas is an AI agent that provides insights from the [Atlas of Economic Complexity](https://atlas.cid.harvard.edu/) using trade data sourced from UN COMTRADE and processed by the [Growth Lab at Harvard University](https://growthlab.hks.harvard.edu/).
 
     Created by: [Shreyas Gadgin Matha](https://growthlab.hks.harvard.edu/people/shreyas-matha)
     """
@@ -35,10 +35,9 @@ st.info(
 # Add disclaimers
 st.warning(
     """
-    **Notes:**
-    - This tool is currently in alpha stage and under active development. Please report any bugs or issues to Shreyas through Slack.
-    - This tool is open source ([Github repo](https://github.com/shreyasgm/ask-atlas)) and the code is licensed under [CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
-    - As with any LLM-powered tool, responses may contain inaccuracies or hallucinations. Please verify all results independently
+    - Alpha release. Feedback and bug reports are welcome.
+    - Code is open sourced ([Github repo](https://github.com/shreyasgm/ask-atlas)) under [CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+    - Responses may contain inaccuracies. Verify results independently.
     """
 )
 
