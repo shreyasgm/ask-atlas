@@ -92,11 +92,10 @@ def get_timestamp():
 
 def generate_question_id(seq_number):
     """
-    Generates a unique question ID using the current date and a sequential number.
-    Format: Q{YYYYMMDD}_{sequential_number:03d}
+    Generates a unique question ID using a sequential number.
+    Format: Q{sequential_number:03d}
     """
-    today = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d")
-    return f"Q{today}_{seq_number:03d}"
+    return f"Q{seq_number:03d}"
 
 
 def setup_directories(question_id):
@@ -138,7 +137,6 @@ def setup_directories(question_id):
 
 
 class SQLQuery(BaseModel):
-    filename: str
     query: str
 
 
@@ -265,8 +263,8 @@ async def execute_sql_queries(queries, dirs):
     combined_results = []
     execution_logs = []
 
-    for query_obj in queries:
-        filename = query_obj.get("filename", "query.sql")
+    for idx, query_obj in enumerate(queries, start=1):
+        filename = f"{idx:02d}.sql"
         query_text = query_obj.get("query", "")
         query_filepath = dirs["queries_dir"] / filename
         try:

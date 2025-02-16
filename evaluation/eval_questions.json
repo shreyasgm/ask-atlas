@@ -1,0 +1,300 @@
+{
+  "categories": [
+    {
+      "id": "total_export_values",
+      "name": "Total Export Values",
+      "description": "Questions about pure export values"
+    },
+    {
+      "id": "sectoral_composition",
+      "name": "Sectoral Export Composition",
+      "description": "Questions about sector shares and compositions"
+    },
+    {
+      "id": "trade_position",
+      "name": "Trade Partners and Market Position",
+      "description": "Questions about trade relationships and market share"
+    },
+    {
+      "id": "growth_performance",
+      "name": "Growth and Performance",
+      "description": "Questions about growth rates and changes over time"
+    },
+    {
+      "id": "economic_complexity",
+      "name": "Economic Complexity",
+      "description": "Questions about economic complexity indices and sophisticated exports"
+    },
+    {
+      "id": "diversification",
+      "name": "Export Diversification Strategies",
+      "description": "Questions about export diversification and strategic development"
+    }
+  ],
+  "questions": [
+    {
+      "id": 1,
+      "category_id": "total_export_values",
+      "difficulty": "easy",
+      "text": "What is the total value of exports for Brazil in 2018?"
+    },
+    {
+      "id": 2,
+      "category_id": "total_export_values",
+      "difficulty": "easy",
+      "text": "What is the export value of crude oil from Nigeria in 2020?"
+    },
+    {
+      "id": 3,
+      "category_id": "total_export_values",
+      "difficulty": "easy",
+      "text": "What is the value of service exports for Singapore in 2018?"
+    },
+    {
+      "id": 4,
+      "category_id": "sectoral_composition",
+      "difficulty": "medium",
+      "text": "What percentage of Germany's total exports are represented by the automotive sector?"
+    },
+    {
+      "id": 5,
+      "category_id": "sectoral_composition",
+      "difficulty": "easy",
+      "text": "List the top 5 export sectors for Canada in 2021 by export value."
+    },
+    {
+      "id": 6,
+      "category_id": "sectoral_composition",
+      "difficulty": "easy",
+      "text": "What were the top 3 exported products from India in 2020?"
+    },
+    {
+      "id": 7,
+      "category_id": "sectoral_composition",
+      "difficulty": "easy",
+      "text": "What is the share of minerals in the total exports of South Africa in 2019?"
+    },
+    {
+      "id": 8,
+      "category_id": "sectoral_composition",
+      "difficulty": "easy",
+      "text": "What is the share of services in the total exports of France in 2022?"
+    },
+    {
+      "id": 9,
+      "category_id": "sectoral_composition",
+      "difficulty": "medium",
+      "text": "Compare the share of mineral exports to service exports for Chile in 2017."
+    },
+    {
+      "id": 10,
+      "category_id": "sectoral_composition",
+      "difficulty": "medium",
+      "text": "Identify the top 3 products driving mineral exports for Peru in 2016."
+    },
+    {
+      "id": 11,
+      "category_id": "sectoral_composition",
+      "difficulty": "medium",
+      "text": "Identify the top 3 service sectors driving service exports for the United Kingdom in 2019."
+    },
+    {
+      "id": 12,
+      "category_id": "sectoral_composition",
+      "difficulty": "easy",
+      "text": "What percentage of Switzerland's total exports are services in 2022?"
+    },
+    {
+      "id": 13,
+      "category_id": "sectoral_composition",
+      "difficulty": "easy",
+      "text": "What is the share of \"Travel\" services in the total service exports of Thailand in 2022?"
+    },
+    {
+      "id": 14,
+      "category_id": "sectoral_composition",
+      "difficulty": "easy",
+      "text": "What is the share of \"Transport\" services in the total service exports of the Netherlands in 2017?"
+    },
+    {
+      "id": 15,
+      "category_id": "sectoral_composition",
+      "difficulty": "medium",
+      "text": "How does the growth of \"ICT\" service exports in Ireland compare to \"Travel\" service exports between 2015 and 2021?"
+    },
+    {
+      "id": 16,
+      "category_id": "sectoral_composition",
+      "difficulty": "hard",
+      "text": "What are the major trends in service exports for Spain over the past decade, and how do they align with global shifts in trade patterns?"
+    },
+    {
+      "id": 17,
+      "category_id": "trade_position",
+      "difficulty": "easy",
+      "text": "What are the main export destinations for Japan in 2021?"
+    },
+    {
+      "id": 18,
+      "category_id": "trade_position",
+      "difficulty": "medium",
+      "text": "What percentage of Australia's exports go to Southeast Asia?"
+    },
+    {
+      "id": 19,
+      "category_id": "trade_position",
+      "difficulty": "hard",
+      "text": "How does Kenya's trade balance vary across its top 10 trading partners, and what factors drive these differences?"
+    },
+    {
+      "id": 20,
+      "category_id": "trade_position",
+      "difficulty": "hard",
+      "text": "To what extent do re-exports shape the trade profile of Singapore, and how does this affect its trade balance?"
+    },
+    {
+      "id": 21,
+      "category_id": "trade_position",
+      "difficulty": "medium",
+      "text": "Compare the export market share of Australia for iron ore in Asia to its global market share for the same sector."
+    },
+    {
+      "id": 22,
+      "category_id": "trade_position",
+      "difficulty": "easy",
+      "text": "What is China's market share in global electronics exports?"
+    },
+    {
+      "id": 23,
+      "category_id": "trade_position",
+      "difficulty": "medium",
+      "text": "How has South Korea's market share in the semiconductor industry evolved over the past decade?"
+    },
+    {
+      "id": 24,
+      "category_id": "trade_position",
+      "difficulty": "medium",
+      "text": "What is Germany's market share in the global automotive exports market?"
+    },
+    {
+      "id": 25,
+      "category_id": "growth_performance",
+      "difficulty": "easy",
+      "text": "What is the percentage change in total export value for Spain between 2016 and 2021?"
+    },
+    {
+      "id": 26,
+      "category_id": "growth_performance",
+      "difficulty": "medium",
+      "text": "What was the compound annual growth rate (CAGR) of exports for Vietnam between 2010 and 2020?"
+    },
+    {
+      "id": 27,
+      "category_id": "growth_performance",
+      "difficulty": "medium",
+      "text": "Compare the export growth rate of the Netherlands with Sweden between 2012 and 2022?"
+    },
+    {
+      "id": 28,
+      "category_id": "growth_performance",
+      "difficulty": "medium",
+      "text": "How has the share of mineral fuels in Russia's total exports changed between 2015 and 2021?"
+    },
+    {
+      "id": 29,
+      "category_id": "growth_performance",
+      "difficulty": "medium",
+      "text": "Which sectors contributed most to the export growth of Turkey between 2015 and 2020?"
+    },
+    {
+      "id": 30,
+      "category_id": "growth_performance",
+      "difficulty": "easy",
+      "text": "What was the export growth rate for pharmaceuticals in Switzerland between 2010 and 2020?"
+    },
+    {
+      "id": 31,
+      "category_id": "growth_performance",
+      "difficulty": "hard",
+      "text": "How has Colombia's export market share in global trade changed over the last 10 years, and what factors explain these shifts?"
+    },
+    {
+      "id": 32,
+      "category_id": "economic_complexity",
+      "difficulty": "medium",
+      "text": "What has been the trend in the Economic Complexity Index (ECI) of Brazil over the past 15 years?"
+    },
+    {
+      "id": 33,
+      "category_id": "economic_complexity",
+      "difficulty": "hard",
+      "text": "How does the export basket of Vietnam compare in terms of complexity with its regional peers?"
+    },
+    {
+      "id": 34,
+      "category_id": "economic_complexity",
+      "difficulty": "medium",
+      "text": "What are the top five products that contribute the most to the economic complexity of South Africa?"
+    },
+    {
+      "id": 35,
+      "category_id": "economic_complexity",
+      "difficulty": "hard",
+      "text": "What proportion of Indonesia's total exports come from high-complexity sectors, and how has this changed in the past decade?"
+    },
+    {
+      "id": 36,
+      "category_id": "economic_complexity",
+      "difficulty": "medium",
+      "text": "How has the share of high-tech manufactured exports evolved in Poland over the last 20 years?"
+    },
+    {
+      "id": 37,
+      "category_id": "economic_complexity",
+      "difficulty": "hard",
+      "text": "How does the Complexity Outlook Index (COI) of Egypt compare to that of its regional competitors?"
+    },
+    {
+      "id": 38,
+      "category_id": "economic_complexity",
+      "difficulty": "hard",
+      "text": "What are the leading industries driving complexity growth in South Korea's export portfolio, and how do they compare to those of advanced economies?"
+    },
+    {
+      "id": 39,
+      "category_id": "economic_complexity",
+      "difficulty": "hard",
+      "text": "How does the complexity of Malaysia's exports compare to the global average, and which sectors have contributed most to recent changes?"
+    },
+    {
+      "id": 40,
+      "category_id": "diversification",
+      "difficulty": "hard",
+      "text": "Which sectors have contributed the most to the diversification of Mexico's exports in the past decade, and how does that compare to other middle-income countries?"
+    },
+    {
+      "id": 41,
+      "category_id": "diversification",
+      "difficulty": "hard",
+      "text": "What new export opportunities exist for Portugal based on its position in the Product Space, and which sectors are the most promising?"
+    },
+    {
+      "id": 42,
+      "category_id": "diversification",
+      "difficulty": "hard",
+      "text": "What are the major risks associated with Argentina's current export diversification strategy, particularly regarding commodity dependence?"
+    },
+    {
+      "id": 43,
+      "category_id": "diversification",
+      "difficulty": "hard",
+      "text": "Which goods and services sectors offer the best diversification potential for Ghana, considering its current economic complexity?"
+    },
+    {
+      "id": 44,
+      "category_id": "diversification",
+      "difficulty": "hard",
+      "text": "What is the impact of resource-based exports on the economic complexity of Kazakhstan, and what alternative paths for diversification exist?"
+    }
+  ]
+}
