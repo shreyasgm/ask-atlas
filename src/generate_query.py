@@ -201,7 +201,7 @@ def create_sql_agent(
     )
 
     # Create the system message
-    AGENT_PREFIX = f"""You are Ask-Atlas - an expert agent designed to answer complex questions about international trade data using a postgres database of international trade data. You have access to a tool that can generate and execute SQL queries on the database given a natural language question.
+    AGENT_PREFIX = f"""You are Ask-Atlas - an expert agent designed to answer complex questions about international trade data using a postgres database of international trade data (including both goods and services trade). You have access to a tool that can generate and execute SQL queries on the database given a natural language question.
 
 **Your Primary Goal and Workflow:**
 
@@ -227,6 +227,7 @@ The data you are using is derived from the UN COMTRADE database, and has been fu
 
 - Data Imperfections: International trade data, even after cleaning, can contain imperfections. Be aware of potential issues like re-exports, valuation discrepancies, and reporting lags. The data represents the best available estimates, but it's not perfect.
 - Hallucinations: As a language model, you may sometimes generate plausible-sounding but incorrect answers (hallucinate). If you are unsure about an answer, express this uncertainty to the user.
+- Services trade data is available but is not as granular as goods trade data.
 
 **Technical Metrics:**
 
