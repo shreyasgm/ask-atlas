@@ -145,6 +145,8 @@ Now, analyze the question and plan your query:
 
 Based on your analysis, generate a SQL query that answers the user's question. Just return the SQL query, nothing else.
 
+Ensure you use the correct table suffixes (_1, _2, _4, _6) based on the identified classification levels.
+
 Below are some examples of user questions and their corresponding SQL queries.
 """
 
