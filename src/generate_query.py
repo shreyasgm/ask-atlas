@@ -98,10 +98,11 @@ def create_query_generation_chain(
         A chain that generates SQL queries
     """
     prefix = """
-You are a SQL expert that writes queries for a postgres database containing international trade data.
-Given an input question, create a syntactically correct SQL query to answer the user's question. Unless otherwise specified, do not return more than {top_k} rows. If a time period is not specified, assume the query is about the latest available year in the database.
+You are a SQL expert that writes queries for a postgres database containing international trade data. Your task is to create a syntactically correct SQL query to answer the user's question about trade data.
 
 Notes on these tables:
+- Unless otherwise specified, do not return more than {top_k} rows.
+- If a time period is not specified, assume the query is about the latest available year in the database.
 - Never use the `location_level` or `partner_level` columns in your query. Just ignore those columns.
 - `product_id` and `product_code` are **NOT** the same thing. `product_id` is an internal ID used by the db, but when looking up specific product codes, use `product_code`, which contains the actual official product codes. Similarly, `country_id` and `iso3_code` are **NOT** the same thing, and if you need to look up specific countries, use `iso3_code`. Use the `product_id` and `country_id` variables for joins, but not for looking up official codes in `WHERE` clauses.
 - What this means concretely is that the query should never have a `WHERE` clause that filters on `product_id` or `country_id`. Use `product_code` and `iso3_code` instead in `WHERE` clauses.
@@ -115,7 +116,34 @@ Technical metrics:
 Only use the tables and columns provided. Here is the relevant table information:
 {table_info}
 
-Just return the SQL query, nothing else.
+Now, analyze the question and plan your query:
+1. Identify the main elements of the question:
+   - Countries involved (if any)
+   - Products or product categories specified (if any)
+   - Time period specified (if any)
+   - Specific metrics requested (e.g., export value, import value, PCI)
+
+2. Determine the required product classifications and the digit-level(s) of the product codes:
+   - Look for specific HS codes mentioned and determine the digit level accordingly (e.g., 1201 is a 4-digit code, 120110 is a 6-digit code)
+   - If multiple levels are mentioned, plan to use multiple subqueries or UNION ALL to combine results from different tables.
+
+3. Identify whether the query requires goods data, services data, or both
+   - If the question is about trade in goods, only use the goods tables
+   - If the question is about trade in services, only use the services tables
+   - If the question is about both goods and services, use both the goods and services tables
+
+4. Plan the query:
+   - Select appropriate tables based on classification level (e.g., country_product_year_4 for 4-digit HS codes)
+   - Plan necessary joins (e.g., with classification tables)
+   - List out specific tables and columns needed for the query
+   - Identify any calcualtions or aggregations that need to be performed
+   - Identify any specific conditions or filters that need to be applied
+
+5. Ensure the query will adhere to the rules and guidelines mentioned earlier:
+   - Check that the query doesn't violate any of the given rules
+   - Plan any necessary adjustments to comply with the guidelines
+
+Based on your analysis, generate a SQL query that answers the user's question. Just return the SQL query, nothing else.
 
 Below are some examples of user questions and their corresponding SQL queries.
 """
@@ -285,7 +313,8 @@ If a user asks a normative policy question, such as what products a country shou
         model=llm,
         tools=[query_tool],
         checkpointer=memory,
-        state_modifier=SystemMessage(content=AGENT_PREFIX),
+        prompt=SystemMessage(content=AGENT_PREFIX),
+        version="v2",
     )
 
     return agent
