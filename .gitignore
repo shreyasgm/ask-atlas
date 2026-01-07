@@ -4,6 +4,8 @@ data/
 proj/
 tables/
 logs/
+CLAUDE.md
+.claude/
 *.csv
 *.parquet
 .config
