@@ -52,6 +52,84 @@ with st.expander("📝 Example Questions You Can Ask"):
         - Show me Germany's main trading partners in the automotive sector
     """)
 
+# Writing stream with tool blocks separated into an expander
+def write_stream(response_gen):
+    """Stream response text with typewriter effect, handling sequential blocks of text and tool blocks.
+
+    Args:
+        response_gen: Generator yielding tuples of (text, is_in_tools_block)
+
+    Returns:
+        str: The complete response text
+    """
+    # Current streaming containers
+    current_regular_container = None
+    current_tool_container = None
+    current_expander = None
+
+    # State variables
+    in_tool_block = False
+
+    # Buffers for current block
+    current_text = ""
+    full_response = ""
+
+    # Text cursor for typewriter effect
+    TEXT_CURSOR = " ▏"
+
+    def finalize_current_block():
+        """Finalize the current block by removing the cursor."""
+        nonlocal current_text
+        if in_tool_block and current_tool_container and current_text:
+            current_tool_container.markdown(current_text)
+        elif not in_tool_block and current_regular_container and current_text:
+            current_regular_container.markdown(current_text)
+
+    for chunk, is_tools_block in response_gen:
+        if not chunk:  # Skip empty chunks
+            continue
+
+        # Detect transition between block types
+        if is_tools_block != in_tool_block:
+            # Finalize the current block
+            finalize_current_block()
+            current_text = ""
+
+            # Set up new block
+            if is_tools_block:
+                # Transition to tool block
+                in_tool_block = True
+                current_expander = st.expander("SQL Query", expanded=True)
+                current_tool_container = current_expander.empty()
+                current_regular_container = None
+            else:
+                # Transition to regular block
+                in_tool_block = False
+                current_expander = None
+                current_tool_container = None
+                current_regular_container = st.empty()
+
+        # If we're starting fresh without a container, create one
+        if in_tool_block and not current_tool_container:
+            current_expander = st.expander("SQL Query", expanded=True)
+            current_tool_container = current_expander.empty()
+        elif not in_tool_block and not current_regular_container:
+            current_regular_container = st.empty()
+
+        # Update current block
+        current_text += chunk
+        if in_tool_block:
+            current_tool_container.markdown(current_text + TEXT_CURSOR)
+        else:
+            current_regular_container.markdown(current_text + TEXT_CURSOR)
+
+        full_response += chunk
+
+    # Finalize the last block
+    finalize_current_block()
+
+    return full_response
+
 # Initialize the AtlasTextToSQL instance
 def init_atlas_sql():
     try:
@@ -104,7 +182,7 @@ if prompt := st.chat_input("Ask a question about trade data"):
     st.session_state["messages"].append({"role": "user", "content": prompt})
 
 # Display the chat history in the UI
-for message in st.session_state.messages:
+for message in st.session_state["messages"]:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
@@ -117,7 +195,7 @@ if st.session_state.messages[-1]["role"] != "assistant":
                 stream_response=True,
                 thread_id=st.session_state["thread_id"],
             )
-            full_response = st.write_stream(response_gen)
+            full_response = write_stream(response_gen)
             final_message = st.session_state.atlas_sql.process_agent_messages(
                 agent_messages
             )
