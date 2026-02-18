@@ -1,6 +1,5 @@
 import pytest
 from langchain_openai import ChatOpenAI
-import os
 from src.product_and_schema_lookup import (
     ProductAndSchemaLookup,
     ProductDetails,
@@ -9,21 +8,24 @@ from src.product_and_schema_lookup import (
     SchemasAndProductsFound,
     format_product_codes_for_prompt,
 )
+from src.config import get_settings
+
+# Load settings
+settings = get_settings()
 
 
 @pytest.fixture
 def llm():
-    """Initialize the language model."""
-    return ChatOpenAI(model="gpt-4o", temperature=0)
+    """Initialize the language model using configured model."""
+    return ChatOpenAI(model=settings.query_model, temperature=0)
 
 
 @pytest.fixture
 def product_lookup(llm):
     """Initialize the ProductLookupTool with actual database connection."""
-    connection_string = os.getenv("ATLAS_DB_URL")
     return ProductAndSchemaLookup(
         llm=llm,
-        connection=connection_string,
+        connection=settings.atlas_db_url,
         engine_args={
             "execution_options": {"postgresql_readonly": True},
             "connect_args": {"connect_timeout": 10},

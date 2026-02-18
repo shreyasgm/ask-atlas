@@ -506,11 +506,13 @@ def format_product_codes_for_prompt(analysis: ProductCodesMapping) -> str:
 # Usage example
 if __name__ == "__main__":
     from langchain_openai import ChatOpenAI
+    from src.config import get_settings
 
-    llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    settings = get_settings()
+    llm = ChatOpenAI(model=settings.query_model, temperature=0)
     analyzer = ProductAndSchemaLookup(
         llm=llm,
-        connection="postgresql://user:pass@localhost:5432/dbname",
+        connection=settings.atlas_db_url,
         # Optionally, you can pass engine_args if needed:
         # engine_args={"echo": True}
     )
