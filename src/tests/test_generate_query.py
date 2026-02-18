@@ -12,8 +12,12 @@ from src.generate_query import (
     get_table_info_for_schemas
 )
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
+from src.config import get_settings
 from langchain_openai import ChatOpenAI
 from sqlalchemy.engine import Engine
+
+# Load settings
+settings = get_settings()
 
 @pytest.fixture
 def temp_query_files():
@@ -57,8 +61,8 @@ def temp_query_files():
 
 @pytest.fixture
 def llm():
-    """Create a GPT-4 language model for testing."""
-    return ChatOpenAI(model="gpt-4o", temperature=0)
+    """Create a language model for testing using configured model."""
+    return ChatOpenAI(model=settings.query_model, temperature=0)
 
 
 @pytest.fixture
@@ -205,10 +209,10 @@ class TestProjectFiles:
             non_comment_lines = [
                 line for line in query_lines if line and not line.startswith("--")
             ]
-            first_line = non_comment_lines[0].upper()
+            first_line = non_comment_lines[0].upper().lstrip("(")
             assert first_line.startswith("SELECT") or first_line.startswith(
                 "WITH"
-            ), f"Query should start with SELECT or WITH: {entry['query']}"
+            ), f"Query should start with SELECT or WITH (optionally parenthesized): {entry['query']}"
 
             # If it starts with WITH, verify there's a SELECT in the query
             if first_line.startswith("WITH"):
@@ -230,7 +234,7 @@ class TestCreateQueryGenerationChain:
             project_paths["queries_json"], project_paths["example_queries_dir"]
         )
 
-        llm = ChatOpenAI(model="gpt-4o", temperature=0)
+        llm = ChatOpenAI(model=settings.query_model, temperature=0)
         chain = create_query_generation_chain(
             llm=llm,
             example_queries=example_queries,
@@ -249,7 +253,7 @@ class TestCreateQueryGenerationChain:
 
     def test_chain_with_empty_examples(self, project_paths):
         """Test chain creation with empty example queries."""
-        llm = ChatOpenAI(model="gpt-4o", temperature=0)
+        llm = ChatOpenAI(model=settings.query_model, temperature=0)
         chain = create_query_generation_chain(llm, [])
         assert chain is not None
 
@@ -395,7 +399,7 @@ class TestCreateSQLAgent:
         ]
 
         # Create agent with real LLM
-        llm = ChatOpenAI(model="gpt-4o", temperature=0)
+        llm = ChatOpenAI(model=settings.query_model, temperature=0)
         agent = create_sql_agent(
             llm=llm,
             db=mock_db,
