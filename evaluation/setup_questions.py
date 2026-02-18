@@ -18,10 +18,13 @@ from utils import (
     BASE_DIR,
     load_json_file,
     save_json_file,
-    generate_question_id,
     setup_directories,
     logging,
 )
+from src.config import get_settings
+
+# Load settings
+settings = get_settings()
 
 class SQLQuery(BaseModel):
     query: str
@@ -51,7 +54,7 @@ async def call_openai_api(user_question: str, db_descriptions_text: str, db_stru
         ]
 
         completion = await client.beta.chat.completions.parse(
-            model="gpt-4o",
+            model=settings.query_model,
             messages=messages,
             response_format=SQLResponse,
         )

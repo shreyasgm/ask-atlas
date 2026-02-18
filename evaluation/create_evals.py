@@ -20,7 +20,6 @@ Before running, ensure that:
   - The OpenAI API key is set appropriately in the environment variable OPENAI_API_KEY
 """
 
-import os
 import json
 import datetime
 import logging
@@ -28,20 +27,21 @@ import traceback
 from pathlib import Path
 import openai
 import asyncpg
-from dotenv import load_dotenv
 from typing import List, Optional
 from pydantic import BaseModel
 import asyncio
 import backoff  # For retries of openai api calls
 import decimal
 
-# Load environment variables
 # Define BASE_DIR
 BASE_DIR = Path(__file__).resolve().parents[1]
 print(f"BASE_DIR: {BASE_DIR}")
 
-# Load environment variables
-load_dotenv(BASE_DIR / ".env")
+
+from src.config import get_settings
+
+# Load settings (replaces load_dotenv)
+settings = get_settings()
 
 # -----------------------------------------------------------------------------
 # Global configuration
@@ -180,7 +180,7 @@ The following contains the detailed schema for each table, including columns, da
         ]
 
         completion = await client.beta.chat.completions.parse(
-            model="gpt-4o",
+            model=settings.query_model,
             messages=messages,
             response_format=SQLResponse,
         )
@@ -223,7 +223,7 @@ async def execute_sql_query(query, query_file_name):
 
     conn = None
     try:
-        conn = await asyncpg.connect(os.getenv("ATLAS_DB_URL"))
+        conn = await asyncpg.connect(settings.atlas_db_url)
         rows = await conn.fetch(query)
         # Convert Decimal objects to float in the results
         results = []
