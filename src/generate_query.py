@@ -1,4 +1,3 @@
-import os
 from typing import List, Dict, Union
 import json
 from pathlib import Path
@@ -22,16 +21,19 @@ from src.product_and_schema_lookup import (
     ProductAndSchemaLookup,
     format_product_codes_for_prompt,
 )
+from src.error_handling import execute_with_retry, QueryExecutionError
+from src.config import get_settings
 from operator import itemgetter
 from sqlalchemy.engine import Engine
 
 # Define BASE_DIR
 BASE_DIR = Path(__file__).resolve().parents[1]
 
+# Load settings
+settings = get_settings()
+
 QUERIES_JSON_PATH = BASE_DIR / "src/example_queries/queries.json"
 EXAMPLE_QUERIES_DIR = BASE_DIR / "src/example_queries"
-DB_URI = os.getenv("ATLAS_DB_URL")
-QUERY_LLM = os.getenv("QUERY_LLM")
 
 
 def load_example_queries(
@@ -205,6 +207,7 @@ def create_sql_agent(
     example_queries: List[Dict[str, str]] = [],
     top_k_per_query: int = 15,
     max_uses: int = 3,
+    checkpointer: "BaseCheckpointSaver | None" = None,
 ):
     """
     Creates a React agent for handling complex SQL queries through multiple steps.
@@ -218,6 +221,8 @@ def create_sql_agent(
         table_info: Information about database tables
         top_k_per_query: Maximum rows to return per query
         max_uses: Maximum number of queries the agent can execute
+        checkpointer: Optional checkpoint saver for conversation persistence.
+            Falls back to MemorySaver when not provided.
     """
     # Define the query generation and execution tool
     query_tool = create_query_tool(
@@ -307,8 +312,8 @@ If a user asks a normative policy question, such as what products a country shou
 - When responding to the user, your responses should be in markdown format, capable of rendering mathjax. Escape dollar signs properly to avoid rendering errors (e.g., `\\$`).
 """
     
-    # Add chat memory
-    memory = MemorySaver()
+    # Use provided checkpointer or fall back to MemorySaver
+    memory = checkpointer if checkpointer is not None else MemorySaver()
 
     # Create the agent
     agent = create_react_agent(
@@ -458,7 +463,12 @@ def create_query_tool(
         if uses_counter["current"] > max_uses:
             return "Error: Maximum number of queries exceeded."
 
-        results = full_chain.invoke({"question": question})
+        try:
+            results = execute_with_retry(
+                full_chain.invoke, {"question": question}
+            )
+        except QueryExecutionError as e:
+            return f"Error executing query: {str(e)}"
 
         return results
 
