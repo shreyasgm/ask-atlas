@@ -3,13 +3,16 @@
 Tests real PostgresSaver connectivity and MemorySaver fallback behavior.
 
 NOTE: This file was generated with LLM assistance and needs human review.
-Fragile areas: test_checkpointer_round_trip_with_agent asserts specific words
-in LLM output (non-deterministic).
+Fragile areas: fallback test uses a bogus URL which may behave differently
+depending on network configuration.
 """
+
+import os
 
 import pytest
 from pathlib import Path
 
+from langgraph.checkpoint.base import empty_checkpoint
 from langgraph.checkpoint.memory import MemorySaver
 
 from src.config import get_settings
@@ -17,6 +20,15 @@ from src.persistence import CheckpointerManager
 from src.text_to_sql import AtlasTextToSQL
 
 BASE_DIR = Path(__file__).resolve().parents[2]
+
+
+@pytest.fixture
+def checkpoint_db_url():
+    """Provide the Docker test DB URL, skip if not set."""
+    url = os.environ.get("ATLAS_DB_URL")
+    if not url:
+        pytest.skip("ATLAS_DB_URL not set")
+    return url
 
 
 @pytest.mark.db
@@ -45,42 +57,31 @@ class TestPersistenceIntegration:
         finally:
             manager.close()
 
-    @pytest.mark.integration
-    def test_checkpointer_round_trip_with_agent(self):
-        """Ask a question, follow up, verify context is retained."""
-        settings = get_settings()
-        if not settings.checkpoint_db_url:
-            pytest.skip("CHECKPOINT_DB_URL not configured")
-        if not settings.openai_api_key:
-            pytest.skip("OPENAI_API_KEY not configured")
+    def test_state_survives_manager_restart(self, checkpoint_db_url):
+        """Checkpoint metadata persists across CheckpointerManager instances."""
+        config = {
+            "configurable": {
+                "thread_id": "restart-test-thread",
+                "checkpoint_ns": "",
+            }
+        }
+        metadata = {"source": "restart-test", "step": 1, "parents": {}}
 
-        atlas_sql = AtlasTextToSQL(
-            db_uri=settings.atlas_db_url,
-            table_descriptions_json=BASE_DIR / "db_table_descriptions.json",
-            table_structure_json=BASE_DIR / "db_table_structure.json",
-            queries_json=BASE_DIR / "src/example_queries/queries.json",
-            example_queries_dir=BASE_DIR / "src/example_queries",
-        )
+        # --- Manager A: store a checkpoint ---
+        manager_a = CheckpointerManager(db_url=checkpoint_db_url)
         try:
-            thread = "persistence_integration_test"
-            # First question
-            a1 = atlas_sql.answer_question(
-                "What were the top 3 exports of Kenya in 2019?",
-                stream_response=False,
-                thread_id=thread,
-            )
-            assert len(a1) > 0
-
-            # Follow-up referencing prior context
-            a2 = atlas_sql.answer_question(
-                "How did those change in 2020?",
-                stream_response=False,
-                thread_id=thread,
-            )
-            assert len(a2) > 0
-            # The follow-up should reference Kenya or the products
-            assert any(
-                word in a2.lower() for word in ["kenya", "export", "tea", "coffee"]
-            )
+            checkpoint = empty_checkpoint()
+            manager_a.checkpointer.put(config, checkpoint, metadata, {})
         finally:
-            atlas_sql.close()
+            manager_a.close()
+
+        # --- Manager B: read it back after a full restart ---
+        manager_b = CheckpointerManager(db_url=checkpoint_db_url)
+        try:
+            tup = manager_b.checkpointer.get_tuple(config)
+            assert tup is not None, "Checkpoint not found after manager restart"
+            assert tup.metadata["source"] == "restart-test"
+            assert tup.metadata["step"] == 1
+        finally:
+            manager_b.close()
+

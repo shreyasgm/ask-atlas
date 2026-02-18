@@ -1,8 +1,9 @@
-"""Unit tests for CheckpointerManager (mocked settings, no real DB)."""
+"""Unit tests for CheckpointerManager and MemorySaver checkpointer API."""
 
 import pytest
 from unittest.mock import patch, MagicMock
 
+from langgraph.checkpoint.base import empty_checkpoint
 from langgraph.checkpoint.memory import MemorySaver
 from src.persistence import CheckpointerManager
 
@@ -79,3 +80,73 @@ class TestCheckpointerManager:
             )
             manager = CheckpointerManager()
             assert manager._db_url == "postgresql://from-settings:5432/db"
+
+
+# ---------------------------------------------------------------------------
+# Checkpointer API tests — exercise MemorySaver directly, no DB, no LLM
+# ---------------------------------------------------------------------------
+
+
+class TestCheckpointerAPI:
+    """Verify the LangGraph checkpointer put/get/list API via MemorySaver."""
+
+    @pytest.fixture()
+    def saver(self) -> MemorySaver:
+        return MemorySaver()
+
+    @pytest.fixture()
+    def make_config(self):
+        """Factory for RunnableConfig dicts with a ``thread_id``."""
+
+        def _make(thread_id: str) -> dict:
+            return {"configurable": {"thread_id": thread_id, "checkpoint_ns": ""}}
+
+        return _make
+
+    @pytest.fixture()
+    def sample_metadata(self) -> dict:
+        return {"source": "unit-test", "step": 1, "parents": {}}
+
+    def test_put_and_get(self, saver, make_config, sample_metadata):
+        """Store a checkpoint, retrieve by thread_id, verify ``id`` matches."""
+        config = make_config("thread-1")
+        checkpoint = empty_checkpoint()
+        stored = saver.put(config, checkpoint, sample_metadata, {})
+        retrieved = saver.get(stored)
+        assert retrieved is not None
+        assert retrieved["id"] == checkpoint["id"]
+
+    def test_get_tuple_returns_metadata(self, saver, make_config, sample_metadata):
+        """Custom metadata fields round-trip through ``get_tuple()``."""
+        config = make_config("thread-meta")
+        checkpoint = empty_checkpoint()
+        stored = saver.put(config, checkpoint, sample_metadata, {})
+        tup = saver.get_tuple(stored)
+        assert tup is not None
+        assert tup.metadata["source"] == "unit-test"
+        assert tup.metadata["step"] == 1
+
+    def test_list_returns_stored_checkpoints(self, saver, make_config, sample_metadata):
+        """Two checkpoints on same thread → ``list()`` returns 2 items, newest-first."""
+        config = make_config("thread-list")
+        cp1 = empty_checkpoint()
+        saver.put(config, cp1, {**sample_metadata, "step": 1}, {})
+        cp2 = empty_checkpoint()
+        saver.put(config, cp2, {**sample_metadata, "step": 2}, {})
+
+        items = list(saver.list(config))
+        assert len(items) == 2
+        # newest first (highest step)
+        assert items[0].metadata["step"] == 2
+        assert items[1].metadata["step"] == 1
+
+    def test_different_threads_are_isolated(self, saver, make_config, sample_metadata):
+        """A checkpoint stored on thread-1 is invisible from thread-2."""
+        config_a = make_config("thread-A")
+        config_b = make_config("thread-B")
+
+        checkpoint = empty_checkpoint()
+        saver.put(config_a, checkpoint, sample_metadata, {})
+
+        assert saver.get(config_b) is None
+        assert list(saver.list(config_b)) == []
