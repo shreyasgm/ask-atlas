@@ -13,10 +13,9 @@ def pytest_configure(config):
         "markers",
         "integration: marks tests that require integration with external services (like LLM)",
     )
-    
     config.addinivalue_line(
         "markers",
-        "integration: marks tests that require integration with external services (like LLM)",
+        "db: marks tests that require a live database connection",
     )
 
     # Set up logging configuration for stdout only
@@ -37,6 +36,11 @@ def logger():
     """Fixture to provide a logger instance to tests."""
     return logging.getLogger("test_logger")
 
-
-# set_verbose(True)
-# set_debug(True)
+@pytest.fixture
+def db_available():
+    """Skip test if database is not available."""
+    from src.config import get_settings
+    settings = get_settings()
+    if not settings.atlas_db_url:
+        pytest.skip("ATLAS_DB_URL not configured in settings")
+    return settings.atlas_db_url

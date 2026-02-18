@@ -55,6 +55,12 @@ dev = [
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
 
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests that require integration with external services (like LLM)",
+    "db: marks tests that require a live database connection",
+]
+
 [tool.uv]
 # Include dev dependencies by default when running uv sync
 default-groups = ["dev"]

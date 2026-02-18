@@ -1,16 +1,20 @@
 import pytest
 from sqlalchemy import create_engine, text, MetaData
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
-import os
+from src.config import get_settings
 
-ATLAS_DB_URL = os.getenv("ATLAS_DB_URL")
+# Load settings
+settings = get_settings()
+ATLAS_DB_URL = settings.atlas_db_url
+
+pytestmark = pytest.mark.db
 
 
 @pytest.fixture(autouse=True)
 def check_atlas_db_url():
     """Fixture to check if ATLAS_DB_URL is set before running tests."""
-    if not os.getenv("ATLAS_DB_URL"):
-        pytest.xfail("ATLAS_DB_URL environment variable not set")
+    if not settings.atlas_db_url:
+        pytest.xfail("ATLAS_DB_URL not configured in settings")
 
 
 @pytest.fixture
@@ -156,31 +160,31 @@ def test_get_context(db_instance):
 def test_real_world_query(db_instance):
     """Test execution of a real-world complex query"""
     query = """
-    SELECT 
+    SELECT
         loc_exp.iso3_code as exporter,
         loc_imp.iso3_code as importer,
         p.code as product_code,
         p.name_en as product_name,
         SUM(ccpy.export_value) as total_export_value
     FROM hs92.country_country_product_year_4 ccpy
-    JOIN classification.location_country loc_exp 
-        ON ccpy.country_id = loc_exp.country_id 
+    JOIN classification.location_country loc_exp
+        ON ccpy.country_id = loc_exp.country_id
         AND loc_exp.iso3_code = 'BOL'
-    JOIN classification.location_country loc_imp 
-        ON ccpy.partner_id = loc_imp.country_id 
+    JOIN classification.location_country loc_imp
+        ON ccpy.partner_id = loc_imp.country_id
         AND loc_imp.iso3_code = 'MAR'
-    JOIN classification.product_hs92 p 
+    JOIN classification.product_hs92 p
         ON ccpy.product_id = p.product_id
     WHERE ccpy.year BETWEEN 2010 AND 2022
         AND ccpy.export_value > 0
         AND ccpy.location_level = 'country'
         AND ccpy.partner_level = 'country'
-    GROUP BY 
+    GROUP BY
         p.code,
         p.name_en,
         loc_exp.iso3_code,
         loc_imp.iso3_code
-    ORDER BY 
+    ORDER BY
         total_export_value DESC
     LIMIT 10;
     """

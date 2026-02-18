@@ -1,18 +1,23 @@
 import pytest
-import os
 from src.text_to_sql import AtlasTextToSQL
+from src.config import get_settings
+
+# Load settings
+settings = get_settings()
+
+pytestmark = pytest.mark.db
 
 
 # Set up fixtures
 @pytest.fixture
 def atlas_sql(base_dir):
     return AtlasTextToSQL(
-        db_uri=os.getenv("ATLAS_DB_URL"),
+        db_uri=settings.atlas_db_url,
         table_descriptions_json=base_dir / "db_table_descriptions.json",
         table_structure_json=base_dir / "db_table_structure.json",
         queries_json=base_dir / "src/example_queries/queries.json",
         example_queries_dir=base_dir / "src/example_queries",
-        max_results=15,
+        max_results=settings.max_results_per_query,
     )
 
 
