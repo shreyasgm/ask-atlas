@@ -243,3 +243,10 @@ pyrightconfig.json
 
 messages.json
 requirements_uv.txt
+
+# Project tracking docs (not for public repo)
+implementation_plan.md
+modernizing_ask_atlas.md
+long_term_roadmap.md
+technical_overview.md
+*.pen
