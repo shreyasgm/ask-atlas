@@ -48,9 +48,38 @@ Ask-Atlas supports natural language queries about international trade data. Exam
 
 Users can refine their queries or ask follow-ups, and the system will maintain context.
 
+## Development
+
+This project uses **test-driven development**. Write tests first, then implement.
+
+```bash
+# Run unit tests (no external dependencies)
+PYTHONPATH=$(pwd) pytest -m "not db and not integration"
+
+# Start Docker test DB (real production data subset, port 5433)
+docker compose -f docker-compose.test.yml up -d --wait
+
+# Run DB integration tests
+ATLAS_DB_URL=postgresql://postgres:testpass@localhost:5433/atlas_test \
+  PYTHONPATH=$(pwd) pytest -m "db" -v
+```
+
+See `CLAUDE.md` for full developer guidelines.
+
+## Test Coverage TODOs
+
+Prioritized gaps in the current test suite:
+
+1. **Error scenarios in main pipeline** — LLM failures, malformed SQL recovery, empty results, rate limiting
+2. **Product lookup edge cases** — services codes untested, no conflicting code tests
+3. **Streaming error paths** — only happy-path streaming tested, no error-during-stream tests
+4. **State transitions** — tests validate structure but not actual state changes during agent execution
+5. **Broader query variety** — only 3 E2E questions tested; need year ranges, aggregations, complex filters
+6. **Parametrize repetitive tests** — many tests repeat similar patterns that could use `@pytest.mark.parametrize`
+
 ## Planned Enhancements
 - **Advanced Query Optimization:** Improving SQL generation efficiency.
-- **Adding evals**: Adding a set of evals to the project with an LLM-as-a-judge to check for correctness against a range of known questions and answers.
+- **Adding evals**: Expanding integration test coverage and adding LLM-as-a-judge evaluation for answer quality.
 - **FastAPI Integration**: Integrating the existing project with a FastAPI backend so that the system can be deployed on other services such as Slack, an app, or even integrated into the Atlas.
 
 ## Acknowledgments
