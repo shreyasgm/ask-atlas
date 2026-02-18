@@ -190,15 +190,12 @@ for message in st.session_state["messages"]:
 if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant"):
         try:
-            response_gen, agent_messages = st.session_state.atlas_sql.answer_question(
+            response_gen, _agent_messages = st.session_state.atlas_sql.answer_question(
                 prompt,
                 stream_response=True,
                 thread_id=st.session_state["thread_id"],
             )
             full_response = write_stream(response_gen)
-            final_message = st.session_state.atlas_sql.process_agent_messages(
-                agent_messages
-            )
 
         except ConnectionError:
             error_message = "⚠️ Lost connection to the database."

@@ -5,7 +5,7 @@ from langchain_core.language_models import BaseLanguageModel
 from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.messages import SystemMessage
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.runnables import (
     Runnable,
@@ -316,12 +316,11 @@ If a user asks a normative policy question, such as what products a country shou
     memory = checkpointer if checkpointer is not None else MemorySaver()
 
     # Create the agent
-    agent = create_react_agent(
+    agent = create_agent(
         model=llm,
         tools=[query_tool],
         checkpointer=memory,
-        prompt=SystemMessage(content=AGENT_PREFIX),
-        version="v2",
+        system_prompt=SystemMessage(content=AGENT_PREFIX),
     )
 
     return agent

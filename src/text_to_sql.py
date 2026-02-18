@@ -254,11 +254,9 @@ class AtlasTextToSQL:
         question: str,
         stream_response: bool = True,
         thread_id: str = None,
-    ) -> Union[
-        Tuple[Generator[Tuple[str, StreamData], None, None], List[StreamData]], str
-    ]:
+    ) -> Union[Tuple[Generator[Tuple[str, bool], None, None], List[StreamData]], str]:
         """
-        Process a user's question and return the answer with simplified streaming output.
+        Process a user's question and return the answer.
 
         Args:
             question: The user's question about the trade data
@@ -267,13 +265,12 @@ class AtlasTextToSQL:
 
         Returns:
             If stream_response is True:
-                - A tuple containing:
-                    1. Generator yielding tuples of (stream_mode, stream_data)
-                    where stream_mode is either "updates" or "messages"
-                    and stream_data is a StreamData object
-                    2. List of all StreamData objects accumulated during processing
+                A tuple of (generator, messages) where the generator yields
+                (text_chunk, is_tools_block) tuples suitable for write_stream(),
+                and messages is a list of StreamData objects accumulated during
+                streaming.
             If stream_response is False:
-                - A string containing the final answer
+                A string containing the final answer.
         """
         # Generate thread_id if not provided to handle fresh conversations
         config = {
@@ -291,18 +288,17 @@ class AtlasTextToSQL:
                 message = step["messages"][-1]
             return message.content
 
-        # Initialize messages list to store all StreamData objects
+        # Shared list that accumulates StreamData during iteration
         messages: List[StreamData] = []
 
-        # # Create a generator that yields ordered stream data
-        # def collect_messages():
-        #     for stream_mode, stream_data in self.stream_agent_response(question, config):
-        #         messages.append(stream_data)
-        #         yield stream_mode, stream_data
+        def stream_for_ui():
+            for stream_mode, stream_data in self.stream_agent_response(question, config):
+                messages.append(stream_data)
+                is_tools = stream_data.source == "tool"
+                if stream_data.content:
+                    yield stream_data.content, is_tools
 
-        # return collect_messages(), messages
-
-        return self.stream_agent_response(question=question, config=config)
+        return stream_for_ui(), messages
 
     def stream_agent_response(
         self,
@@ -399,7 +395,7 @@ class AtlasTextToSQL:
                         current_tool_id = None
                     
                     # Now yield the agent message
-                    stream_obj = StreamData(source="agent", content=msg.content)
+                    stream_obj = StreamData(source="agent", content=msg.content, message_type="agent_talk")
                     yield stream_mode, stream_obj
                 
                 # For tool messages with content, buffer by ID
@@ -509,20 +505,6 @@ class AtlasTextToSQL:
         debug_handler.close()
         
         return debug_log_file
-
-    def process_agent_messages(self, messages: List[Dict]) -> str:
-        """
-        DEPRECATED: This method is deprecated and will be removed in a future version.
-        
-        Process agent messages to extract final response content.
-        """
-        final_message_str = ""
-        for message in reversed(messages):
-            if message["metadata"]["langgraph_node"] == "agent":
-                final_message_str = message["msg"].content + final_message_str
-            else:
-                break
-        return final_message_str
 
     def process_stream_output(
         self,
