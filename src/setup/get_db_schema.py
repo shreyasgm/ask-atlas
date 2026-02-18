@@ -1,13 +1,13 @@
 import psycopg2
-from dotenv import load_dotenv
 from pathlib import Path
-import sys
-import os
 import json
 
 BASE_DIR = Path(__file__).parents[2]
-sys.path.append(BASE_DIR)
-load_dotenv(dotenv_path=BASE_DIR / ".env")
+
+from src.config import get_settings
+
+# Load settings (replaces load_dotenv)
+settings = get_settings()
 
 
 def simplify_type(udt_name, char_length, numeric_precision, numeric_scale):
@@ -113,7 +113,7 @@ def get_db_schema(db_url):
 
 
 print("Fetching schema...")
-schema_tables = get_db_schema(os.getenv("ATLAS_DB_URL"))
+schema_tables = get_db_schema(settings.atlas_db_url)
 
 # Save to JSON
 json_file_path = BASE_DIR / "db_table_structure.json"

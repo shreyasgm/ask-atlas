@@ -1,7 +1,4 @@
-import os
 from pathlib import Path
-import sys
-from dotenv import load_dotenv
 from typing import List, Dict, Any
 import logging
 from dataclasses import dataclass
@@ -10,8 +7,11 @@ from langchain_postgres import PGVector
 from langchain_core.documents import Document
 
 BASE_DIR = Path(__file__).parents[2]
-sys.path.append(BASE_DIR)
-load_dotenv(dotenv_path=BASE_DIR / ".env")
+
+from src.config import get_settings
+
+# Load settings (replaces load_dotenv)
+settings = get_settings()
 
 # Configure logging
 logging.basicConfig(
@@ -102,11 +102,8 @@ class EmbeddingManager:
             ValueError: If required environment variables are not set
         """
         self.config = config
-        db_url = os.getenv("ATLAS_DB_URL")
-        api_key = os.getenv("OPENAI_API_KEY")
-
-        if not db_url or not api_key:
-            raise ValueError("Required environment variables not set")
+        db_url = settings.atlas_db_url
+        api_key = settings.openai_api_key
 
         self.embeddings = OpenAIEmbeddings(
             model=config.EMBEDDING_MODEL, openai_api_key=api_key
@@ -196,11 +193,8 @@ def main() -> None:
     ]
 
     embedding_manager = EmbeddingManager(config)
-    db_url = os.getenv("ATLAS_DB_URL")
-    if not db_url:
-        raise ValueError("ATLAS_DB_URL environment variable not set")
 
-    with DatabaseReader(db_url) as db:
+    with DatabaseReader(settings.atlas_db_url) as db:
         # Process each classification
         for classification in classifications:
             logger.info(f"Processing {classification.name} classification...")

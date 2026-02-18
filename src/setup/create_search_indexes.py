@@ -1,7 +1,4 @@
-import os
 from pathlib import Path
-import sys
-from dotenv import load_dotenv
 import psycopg
 import logging
 from dataclasses import dataclass
@@ -14,8 +11,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).parents[2]
-sys.path.append(BASE_DIR)
-load_dotenv(dotenv_path=BASE_DIR / ".env")
+
+from src.config import get_settings
+
+# Load settings (replaces load_dotenv)
+settings = get_settings()
 
 
 @dataclass
@@ -97,10 +97,8 @@ def main() -> None:
         ProductClassification("Services Bilateral", "product_services_bilateral"),
     ]
 
-    # Get database URL from environment
-    db_url = os.getenv("ATLAS_DB_URL")
-    if not db_url:
-        raise ValueError("ATLAS_DB_URL environment variable not set")
+    # Get database URL from settings
+    db_url = settings.atlas_db_url
 
     try:
         # Connect to database
