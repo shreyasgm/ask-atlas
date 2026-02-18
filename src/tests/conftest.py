@@ -27,7 +27,7 @@ def pytest_configure(config):
         ],
     )
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def base_dir():
     return BASE_DIR
 
