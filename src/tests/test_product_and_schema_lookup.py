@@ -1,5 +1,4 @@
 import pytest
-from langchain_openai import ChatOpenAI
 from src.product_and_schema_lookup import (
     ProductAndSchemaLookup,
     ProductDetails,
@@ -8,7 +7,7 @@ from src.product_and_schema_lookup import (
     SchemasAndProductsFound,
     format_product_codes_for_prompt,
 )
-from src.config import get_settings
+from src.config import get_settings, create_llm
 
 # Load settings
 settings = get_settings()
@@ -17,7 +16,7 @@ settings = get_settings()
 @pytest.fixture
 def llm():
     """Initialize the language model using configured model."""
-    return ChatOpenAI(model=settings.query_model, temperature=0)
+    return create_llm(settings.query_model, settings.query_model_provider, temperature=0)
 
 
 @pytest.fixture

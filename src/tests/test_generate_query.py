@@ -11,8 +11,7 @@ from src.generate_query import (
     get_table_info_for_schemas,
 )
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
-from src.config import get_settings
-from langchain_openai import ChatOpenAI
+from src.config import get_settings, create_llm
 from sqlalchemy.engine import Engine
 
 # Load settings
@@ -61,7 +60,7 @@ def temp_query_files():
 @pytest.fixture
 def llm():
     """Create a language model for testing using configured model."""
-    return ChatOpenAI(model=settings.query_model, temperature=0)
+    return create_llm(settings.query_model, settings.query_model_provider, temperature=0)
 
 
 @pytest.fixture
@@ -233,7 +232,7 @@ class TestCreateQueryGenerationChain:
             project_paths["queries_json"], project_paths["example_queries_dir"]
         )
 
-        llm = ChatOpenAI(model=settings.query_model, temperature=0)
+        llm = create_llm(settings.query_model, settings.query_model_provider, temperature=0)
         chain = create_query_generation_chain(
             llm=llm,
             example_queries=example_queries,
@@ -252,7 +251,7 @@ class TestCreateQueryGenerationChain:
 
     def test_chain_with_empty_examples(self, project_paths):
         """Test chain creation with empty example queries."""
-        llm = ChatOpenAI(model=settings.query_model, temperature=0)
+        llm = create_llm(settings.query_model, settings.query_model_provider, temperature=0)
         chain = create_query_generation_chain(llm, [])
         assert chain is not None
 

@@ -19,7 +19,8 @@ class TestConfigIntegration:
         """Settings loads successfully with required env vars present."""
         settings = get_settings()
         assert settings.atlas_db_url.startswith("postgresql")
-        assert settings.openai_api_key  # non-empty
+        # At least one LLM API key should be configured
+        assert settings.openai_api_key or settings.anthropic_api_key or settings.google_api_key
 
     def test_settings_defaults(self):
         """Default values for agent configuration are sensible."""
