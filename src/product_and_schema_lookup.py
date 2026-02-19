@@ -240,6 +240,39 @@ class ProductAndSchemaLookup:
         )
         return mentions_chain
 
+    def extract_schemas_and_product_mentions_direct(
+        self, question: str
+    ) -> SchemasAndProductsFound:
+        """Run product/schema extraction and return the result directly.
+
+        Args:
+            question: The user's trade-related question.
+
+        Returns:
+            SchemasAndProductsFound with identified schemas and products.
+        """
+        chain = self.extract_schemas_and_product_mentions()
+        return chain.invoke({"question": question})
+
+    def select_final_codes_direct(
+        self,
+        question: str,
+        product_search_results: List[ProductSearchResult],
+    ) -> ProductCodesMapping:
+        """Select final product codes and return the result directly.
+
+        Args:
+            question: The user's trade-related question.
+            product_search_results: Combined search results from LLM and DB.
+
+        Returns:
+            ProductCodesMapping with the final selected codes.
+        """
+        if not product_search_results:
+            return ProductCodesMapping(mappings=[])
+        chain = self.select_final_codes(product_search_results)
+        return chain.invoke({"question": question})
+
     def select_final_codes(
         self,
         product_search_results: List[ProductSearchResult],

@@ -1,14 +1,16 @@
 """Typed state definitions for the Atlas agent graph.
 
-Provides a well-typed state schema that will replace the implicit
-``{"messages": list}`` dict once the custom StateGraph (F-4) is wired up.
+Provides a well-typed state schema used by the StateGraph that powers
+the Atlas agent and its inner query pipeline.
 """
 
-from typing import Annotated
+from typing import Annotated, Optional
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
+
+from src.product_and_schema_lookup import SchemasAndProductsFound
 
 
 class AtlasAgentState(TypedDict):
@@ -19,9 +21,22 @@ class AtlasAgentState(TypedDict):
         queries_executed: Number of SQL queries executed so far for this turn.
         last_error: Most recent error message, or empty string if none.
         retry_count: Number of retries attempted for the current query.
+        pipeline_question: Question extracted from the agent's tool_call args.
+        pipeline_products: Product/schema extraction results.
+        pipeline_codes: Formatted product codes string for the SQL prompt.
+        pipeline_table_info: Table DDL/descriptions for identified schemas.
+        pipeline_sql: Generated SQL query string.
+        pipeline_result: Formatted query result string.
     """
 
     messages: Annotated[list[BaseMessage], add_messages]
     queries_executed: int
     last_error: str
     retry_count: int
+    # Pipeline intermediate state (populated during query execution)
+    pipeline_question: str
+    pipeline_products: Optional[SchemasAndProductsFound]
+    pipeline_codes: str
+    pipeline_table_info: str
+    pipeline_sql: str
+    pipeline_result: str

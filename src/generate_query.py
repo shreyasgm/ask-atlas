@@ -1,30 +1,31 @@
-from typing import List, Dict, Union
+from typing import Dict, List, Union
 import json
+import logging
+from functools import partial
 from pathlib import Path
+
 from langchain_core.language_models import BaseLanguageModel
-from langchain_core.prompts import PromptTemplate, FewShotPromptTemplate
+from langchain_core.messages import SystemMessage, ToolMessage
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.messages import SystemMessage
-from langchain.agents import create_agent
+from langchain_core.prompts import FewShotPromptTemplate, PromptTemplate
+from langchain_core.runnables import Runnable
+from langchain_core.tools import tool
 from langgraph.checkpoint.memory import MemorySaver
-from langchain_core.runnables import (
-    Runnable,
-    RunnableLambda,
-    RunnableParallel,
-    RunnablePassthrough,
-)
-from src.sql_multiple_schemas import SQLDatabaseWithSchemas
-from langchain_community.tools.sql_database.tool import QuerySQLDatabaseTool
-from langchain_core.tools import BaseTool, tool
+from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
+from sqlalchemy import text
+from sqlalchemy.engine import Engine
+
+from src.config import get_settings
+from src.error_handling import QueryExecutionError, execute_with_retry
 from src.product_and_schema_lookup import (
     ProductAndSchemaLookup,
     format_product_codes_for_prompt,
 )
-from src.error_handling import execute_with_retry, QueryExecutionError
-from src.config import get_settings
-from operator import itemgetter
-from sqlalchemy.engine import Engine
+from src.sql_multiple_schemas import SQLDatabaseWithSchemas
+from src.state import AtlasAgentState
+
+logger = logging.getLogger(__name__)
 
 # Define BASE_DIR
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -34,6 +35,11 @@ settings = get_settings()
 
 QUERIES_JSON_PATH = BASE_DIR / "src/example_queries/queries.json"
 EXAMPLE_QUERIES_DIR = BASE_DIR / "src/example_queries"
+
+
+# ---------------------------------------------------------------------------
+# File / data loading helpers
+# ---------------------------------------------------------------------------
 
 
 def load_example_queries(
@@ -73,6 +79,11 @@ def load_table_descriptions(table_descriptions_json: Union[str, Path]) -> Dict:
     """
     with open(table_descriptions_json, "r") as f:
         return json.load(f)
+
+
+# ---------------------------------------------------------------------------
+# SQL generation chain (LCEL kept — prompt | llm | parser)
+# ---------------------------------------------------------------------------
 
 
 def _strip(text: str) -> str:
@@ -185,7 +196,7 @@ def create_query_validation_chain(llm: BaseLanguageModel) -> Runnable:
     - Querying the wrong table for the product digit level. For example, if the product codes are 4-digit codes, then the query should be querying the 4-digit product table, not the 6-digit product table.
     - Not using exact product codes in the WHERE clause. For example, if the query is about a specific product, then the WHERE clause should use the exact product code, not product codes with the LIKE operator.
     - Syntax errors
-    
+
     Check for mistakes and correct them. Only correct mistakes that you are sure are mistakes. If you are not sure, do not change the query.
 
     Output the final SQL query, and nothing else.
@@ -194,9 +205,233 @@ def create_query_validation_chain(llm: BaseLanguageModel) -> Runnable:
     return llm | StrOutputParser()
 
 
+# ---------------------------------------------------------------------------
+# Tool schema (LLM sees this as a callable tool; execution goes through nodes)
+# ---------------------------------------------------------------------------
+
 
 class QueryToolInput(BaseModel):
     question: str = Field(description="A question about international trade data")
+
+
+@tool("query_tool", args_schema=QueryToolInput)
+def _query_tool_schema(question: str) -> str:
+    """A tool that generates and executes SQL queries on the trade database.
+    Input should be a natural language question about trade data."""
+    raise NotImplementedError("Schema-only tool; execution routes through graph nodes.")
+
+
+# ---------------------------------------------------------------------------
+# Table / schema helpers
+# ---------------------------------------------------------------------------
+
+
+def get_tables_in_schemas(
+    table_descriptions: Dict, classification_schemas: List[str]
+) -> List[Dict]:
+    """
+    Gets all tables and their descriptions for the selected schemas.
+
+    Args:
+        classification_schemas: List of classification schema names
+
+    Returns:
+        List of dictionaries containing table information with schema-qualified table_name and context_str
+    """
+    tables = []
+    for schema in classification_schemas:
+        if schema in table_descriptions:
+            for table in table_descriptions[schema]:
+                # Create a new dict with schema-qualified table name
+                tables.append(
+                    {
+                        "table_name": f"{schema}.{table['table_name']}",
+                        "context_str": table["context_str"],
+                    }
+                )
+    return tables
+
+
+def get_table_info_for_schemas(
+    db: SQLDatabaseWithSchemas,
+    table_descriptions: Dict,
+    classification_schemas: List[str],
+) -> str:
+    """Get table information for a list of schemas."""
+    table_descriptions = get_tables_in_schemas(
+        table_descriptions=table_descriptions,
+        classification_schemas=classification_schemas,
+    )
+    # Temporarily, remove any tables that have the word "group" in the table name
+    table_descriptions = [
+        table
+        for table in table_descriptions
+        if "group" not in table["table_name"].lower()
+    ]
+    table_info = ""
+    for table in table_descriptions:
+        table_info += (
+            f"Table: {table['table_name']}\nDescription: {table['context_str']}\n"
+        )
+        table_info += db.get_table_info(table_names=[table["table_name"]])
+        table_info += "\n\n"
+    return table_info
+
+
+# ---------------------------------------------------------------------------
+# Pipeline node functions (each takes AtlasAgentState, returns partial update)
+# ---------------------------------------------------------------------------
+
+
+def extract_tool_question(state: AtlasAgentState) -> dict:
+    """Extract the question from the agent's tool_call args."""
+    last_msg = state["messages"][-1]
+    question = last_msg.tool_calls[0]["args"]["question"]
+    return {"pipeline_question": question}
+
+
+def extract_products_node(
+    state: AtlasAgentState, *, llm: BaseLanguageModel, engine: Engine
+) -> dict:
+    """Run product/schema extraction LLM chain."""
+    lookup = ProductAndSchemaLookup(llm=llm, connection=engine)
+    products = lookup.extract_schemas_and_product_mentions_direct(
+        state["pipeline_question"]
+    )
+    return {"pipeline_products": products}
+
+
+def lookup_codes_node(
+    state: AtlasAgentState, *, llm: BaseLanguageModel, engine: Engine
+) -> dict:
+    """Get candidate codes from DB and select final codes via LLM."""
+    products = state.get("pipeline_products")
+    if not products or not products.products:
+        return {"pipeline_codes": ""}
+
+    lookup = ProductAndSchemaLookup(llm=llm, connection=engine)
+    candidates = lookup.get_candidate_codes(products)
+    codes = lookup.select_final_codes_direct(
+        state["pipeline_question"], candidates
+    )
+    return {"pipeline_codes": format_product_codes_for_prompt(codes)}
+
+
+def get_table_info_node(
+    state: AtlasAgentState,
+    *,
+    db: SQLDatabaseWithSchemas,
+    table_descriptions: Dict,
+) -> dict:
+    """Get table info for the identified schemas."""
+    products = state.get("pipeline_products")
+    schemas = products.classification_schemas if products else []
+    info = get_table_info_for_schemas(
+        db=db,
+        table_descriptions=table_descriptions,
+        classification_schemas=schemas,
+    )
+    return {"pipeline_table_info": info}
+
+
+def generate_sql_node(
+    state: AtlasAgentState,
+    *,
+    llm: BaseLanguageModel,
+    example_queries: List[Dict[str, str]],
+    max_results: int,
+) -> dict:
+    """Generate SQL query using LLM."""
+    codes = state.get("pipeline_codes") or None
+    chain = create_query_generation_chain(
+        llm=llm,
+        codes=codes,
+        top_k=max_results,
+        table_info=state.get("pipeline_table_info", ""),
+        example_queries=example_queries,
+    )
+    sql = chain.invoke({"question": state["pipeline_question"]})
+    return {"pipeline_sql": sql}
+
+
+def execute_sql_node(state: AtlasAgentState, *, engine: Engine) -> dict:
+    """Execute SQL directly via SQLAlchemy (replaces QuerySQLDatabaseTool)."""
+    sql = state["pipeline_sql"]
+
+    def _run_query() -> str:
+        with engine.connect() as conn:
+            result = conn.execute(text(sql))
+            if not result.returns_rows:
+                return ""
+            columns = list(result.keys())
+            rows = result.fetchall()
+            if not rows:
+                return ""
+            return "\n".join(str(dict(zip(columns, row))) for row in rows)
+
+    try:
+        result_str = execute_with_retry(_run_query)
+        if not result_str or not result_str.strip():
+            result_str = "SQL query returned no results."
+        return {"pipeline_result": result_str, "last_error": ""}
+    except QueryExecutionError as e:
+        logger.error("Query execution failed: %s", e)
+        return {"pipeline_result": "", "last_error": str(e)}
+    except Exception as e:
+        logger.error("Unexpected error executing SQL: %s", e)
+        return {"pipeline_result": "", "last_error": str(e)}
+
+
+def format_results_node(state: AtlasAgentState) -> dict:
+    """Create a ToolMessage from pipeline results and route back to agent."""
+    last_msg = state["messages"][-1]
+    tool_call_id = last_msg.tool_calls[0]["id"]
+
+    if state.get("last_error"):
+        content = f"Error executing query: {state['last_error']}"
+    else:
+        content = state.get("pipeline_result", "SQL query returned no results.")
+
+    return {
+        "messages": [ToolMessage(content=content, tool_call_id=tool_call_id)],
+        "queries_executed": state.get("queries_executed", 0) + 1,
+    }
+
+
+def max_queries_exceeded_node(state: AtlasAgentState) -> dict:
+    """Return a ToolMessage indicating the query limit was hit."""
+    last_msg = state["messages"][-1]
+    tool_call_id = last_msg.tool_calls[0]["id"]
+    return {
+        "messages": [
+            ToolMessage(
+                content="Error: Maximum number of queries exceeded.",
+                tool_call_id=tool_call_id,
+            )
+        ],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Set of pipeline node names (used by streaming code in text_to_sql.py)
+# ---------------------------------------------------------------------------
+
+
+PIPELINE_NODES = frozenset({
+    "extract_tool_question",
+    "extract_products",
+    "lookup_codes",
+    "get_table_info",
+    "generate_sql",
+    "execute_sql",
+    "format_results",
+    "max_queries_exceeded",
+})
+
+
+# ---------------------------------------------------------------------------
+# Agent + graph construction
+# ---------------------------------------------------------------------------
 
 
 def create_sql_agent(
@@ -210,31 +445,24 @@ def create_sql_agent(
     checkpointer: "BaseCheckpointSaver | None" = None,
 ):
     """
-    Creates a React agent for handling complex SQL queries through multiple steps.
+    Creates a StateGraph agent for handling complex SQL queries.
+
+    The outer agent loop uses *llm* to decide when to query the database.
+    When the LLM produces a ``tool_calls`` entry for ``query_tool``, control
+    flows through an explicit pipeline of nodes that extract products, look up
+    codes, generate SQL, execute it, and return the results as a ToolMessage.
 
     Args:
         llm: Language model for the agent
         db: Database connection in SQLDatabaseWithSchemas format
         engine: SQLAlchemy engine
-        query_chain: Chain for generating SQL queries
-        execute_query_tool: Tool for executing SQL queries
-        table_info: Information about database tables
+        table_descriptions: Dictionary of table descriptions keyed by schema
+        example_queries: List of example question/query pairs
         top_k_per_query: Maximum rows to return per query
         max_uses: Maximum number of queries the agent can execute
         checkpointer: Optional checkpoint saver for conversation persistence.
             Falls back to MemorySaver when not provided.
     """
-    # Define the query generation and execution tool
-    query_tool = create_query_tool(
-        llm=llm,
-        db=db,
-        engine=engine,
-        table_descriptions=table_descriptions,
-        example_queries=example_queries,
-        max_results=top_k_per_query,
-        max_uses=max_uses,
-    )
-
     # Create the system message
     AGENT_PREFIX = f"""You are Ask-Atlas - an expert agent designed to answer complex questions about international trade data using a postgres database of international trade data (including both goods and services trade). You have access to a tool that can generate and execute SQL queries on the database given a natural language question.
 
@@ -311,164 +539,68 @@ If a user asks a normative policy question, such as what products a country shou
 - Instead of just listing out the DB results, try to interpret the results in a way that answers the user's question directly.
 - When responding to the user, your responses should be in markdown format, capable of rendering mathjax. Escape dollar signs properly to avoid rendering errors (e.g., `\\$`).
 """
-    
-    # Use provided checkpointer or fall back to MemorySaver
+
+    system_prompt = SystemMessage(content=AGENT_PREFIX)
+
+    def agent_node(state: AtlasAgentState) -> dict:
+        model_with_tools = llm.bind_tools([_query_tool_schema])
+        response = model_with_tools.invoke(
+            [system_prompt] + state["messages"]
+        )
+        return {"messages": [response]}
+
+    def route_after_agent(state: AtlasAgentState) -> str:
+        last_msg = state["messages"][-1]
+        if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
+            if state.get("queries_executed", 0) >= max_uses:
+                return "max_queries_exceeded"
+            return "extract_tool_question"
+        return END
+
+    # Build the graph
+    builder = StateGraph(AtlasAgentState)
+
+    # Agent node
+    builder.add_node("agent", agent_node)
+
+    # Pipeline nodes (bound with dependencies via functools.partial)
+    builder.add_node("extract_tool_question", extract_tool_question)
+    builder.add_node(
+        "extract_products",
+        partial(extract_products_node, llm=llm, engine=engine),
+    )
+    builder.add_node(
+        "lookup_codes",
+        partial(lookup_codes_node, llm=llm, engine=engine),
+    )
+    builder.add_node(
+        "get_table_info",
+        partial(get_table_info_node, db=db, table_descriptions=table_descriptions),
+    )
+    builder.add_node(
+        "generate_sql",
+        partial(
+            generate_sql_node,
+            llm=llm,
+            example_queries=example_queries,
+            max_results=top_k_per_query,
+        ),
+    )
+    builder.add_node("execute_sql", partial(execute_sql_node, engine=engine))
+    builder.add_node("format_results", format_results_node)
+    builder.add_node("max_queries_exceeded", max_queries_exceeded_node)
+
+    # Edges
+    builder.add_edge(START, "agent")
+    builder.add_conditional_edges("agent", route_after_agent)
+    builder.add_edge("extract_tool_question", "extract_products")
+    builder.add_edge("extract_products", "lookup_codes")
+    builder.add_edge("lookup_codes", "get_table_info")
+    builder.add_edge("get_table_info", "generate_sql")
+    builder.add_edge("generate_sql", "execute_sql")
+    builder.add_edge("execute_sql", "format_results")
+    builder.add_edge("format_results", "agent")
+    builder.add_edge("max_queries_exceeded", "agent")
+
     memory = checkpointer if checkpointer is not None else MemorySaver()
-
-    # Create the agent
-    agent = create_agent(
-        model=llm,
-        tools=[query_tool],
-        checkpointer=memory,
-        system_prompt=SystemMessage(content=AGENT_PREFIX),
-    )
-
-    return agent
-
-
-def get_tables_in_schemas(
-    table_descriptions: Dict, classification_schemas: List[str]
-) -> List[Dict]:
-    """
-    Gets all tables and their descriptions for the selected schemas.
-
-    Args:
-        classification_schemas: List of classification schema names
-
-    Returns:
-        List of dictionaries containing table information with schema-qualified table_name and context_str
-    """
-    tables = []
-    for schema in classification_schemas:
-        if schema in table_descriptions:
-            for table in table_descriptions[schema]:
-                # Create a new dict with schema-qualified table name
-                tables.append(
-                    {
-                        "table_name": f"{schema}.{table['table_name']}",
-                        "context_str": table["context_str"],
-                    }
-                )
-    return tables
-
-
-def get_table_info_for_schemas(
-    db: SQLDatabaseWithSchemas,
-    table_descriptions: Dict,
-    classification_schemas: List[str],
-) -> str:
-    """Get table information for a list of schemas."""
-    table_descriptions = get_tables_in_schemas(
-        table_descriptions=table_descriptions,
-        classification_schemas=classification_schemas,
-    )
-    # Temporarily, remove any tables that have the word "group" in the table name
-    table_descriptions = [
-        table
-        for table in table_descriptions
-        if "group" not in table["table_name"].lower()
-    ]
-    table_info = ""
-    for table in table_descriptions:
-        table_info += (
-            f"Table: {table['table_name']}\nDescription: {table['context_str']}\n"
-        )
-        table_info += db.get_table_info(table_names=[table["table_name"]])
-        table_info += "\n\n"
-    return table_info
-
-
-def create_query_tool(
-    llm: BaseLanguageModel,
-    db: SQLDatabaseWithSchemas,
-    engine: Engine,
-    table_descriptions: Dict,
-    example_queries: List[Dict[str, str]],
-    max_results: int = 15,
-    max_uses: int = 3,
-) -> BaseTool:
-    """
-    Creates a comprehensive query tool that handles both product/schema lookup and SQL query generation/execution.
-    """
-    uses_counter = {"current": 0}
-
-    # Product and schema lookup
-    product_lookup = ProductAndSchemaLookup(
-        llm=llm,
-        connection=engine,
-    )
-
-    # Extract product codes and schemas
-    mentions_chain = product_lookup.extract_schemas_and_product_mentions()
-
-    # Extract official product codes
-    codes_chain = (
-        RunnableLambda(product_lookup.get_candidate_codes)
-        | RunnableLambda(product_lookup.select_final_codes)
-        | RunnableLambda(format_product_codes_for_prompt)
-    )
-
-    # Select relevant schemas
-    table_info_chain = RunnableLambda(
-        lambda x: get_table_info_for_schemas(
-            db=db,
-            table_descriptions=table_descriptions,
-            classification_schemas=x.classification_schemas,
-        )
-    )
-
-    # Create query generation chain with selected tables
-    query_chain = create_query_generation_chain(
-        llm=llm,
-        example_queries=example_queries,
-    )
-
-    # Get query results
-    execute_query = QuerySQLDatabaseTool(db=db)
-
-    # Ensure that the query resulted in at least a few results - results (stripped) should not be empty
-    def check_results(results: str) -> str:
-        if results.strip() == "":
-            return "SQL query returned no results."
-        return results
-
-    execute_query_chain = execute_query | check_results
-
-    # Combine all elements into a single chain
-    full_chain = (
-        RunnableParallel(
-            {
-                "products_found": mentions_chain,
-                "question": itemgetter("question") | RunnablePassthrough(),
-            }
-        )
-        | {
-            "codes": itemgetter("products_found") | codes_chain,
-            "table_info": itemgetter("products_found") | table_info_chain,
-            "top_k": lambda x: max_results,
-            "question": itemgetter("question"),
-        }
-        | {"query": query_chain, "question": itemgetter("question")}
-        | execute_query_chain
-    )
-
-    @tool("query_tool", args_schema=QueryToolInput)
-    def query_tool(question: str) -> str:
-        """
-        A tool that handles the entire query process from product lookup to SQL execution.
-        Input should be a natural language question about trade data.
-        """
-        uses_counter["current"] += 1
-        if uses_counter["current"] > max_uses:
-            return "Error: Maximum number of queries exceeded."
-
-        try:
-            results = execute_with_retry(
-                full_chain.invoke, {"question": question}
-            )
-        except QueryExecutionError as e:
-            return f"Error executing query: {str(e)}"
-
-        return results
-
-    return query_tool
+    return builder.compile(checkpointer=memory)

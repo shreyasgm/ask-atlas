@@ -13,6 +13,7 @@ from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 from src.generate_query import (
     load_example_queries,
     create_sql_agent,
+    PIPELINE_NODES,
 )
 from src.config import get_settings
 from src.persistence import CheckpointerManager
@@ -361,28 +362,31 @@ class AtlasTextToSQL:
                                 )
                                 yield stream_mode, stream_obj
 
-                # Updates for tools exports tool output but not llm tokens
-                elif "tools" in stream_data:
-                    in_tool_stream = True
-                    for msg in stream_data["tools"].get("messages", []):
-                        if isinstance(msg, ToolMessage) and msg.content:
-                            stream_obj = StreamData(
-                                source="tool",
-                                content=msg.content,
-                                message_type="tool_output",
-                                name=msg.name
-                            )
-                            yield stream_mode, stream_obj
+                # Updates for pipeline / tool nodes export tool output
+                else:
+                    pipeline_keys = set(stream_data.keys()) & PIPELINE_NODES
+                    if pipeline_keys:
+                        in_tool_stream = True
+                        for node_name in pipeline_keys:
+                            for msg in stream_data[node_name].get("messages", []):
+                                if isinstance(msg, ToolMessage) and msg.content:
+                                    stream_obj = StreamData(
+                                        source="tool",
+                                        content=msg.content,
+                                        message_type="tool_output",
+                                        name=msg.name,
+                                    )
+                                    yield stream_mode, stream_obj
 
             elif stream_mode == "messages":
                 # This streams llm tokens
                 msg, metadata = stream_data
                 msg_id = getattr(msg, "id", None)
                 
-                # For agent messages (not from tools), yield directly and flush any active tool buffers
+                # For agent messages (not from pipeline nodes), yield directly and flush any active tool buffers
                 if (
                     isinstance(msg, AIMessage)
-                    and metadata.get("langgraph_node") != "tools"
+                    and metadata.get("langgraph_node") not in PIPELINE_NODES
                     and msg.content
                 ):
                     # Flush all tool buffers before yielding new agent content
@@ -398,10 +402,10 @@ class AtlasTextToSQL:
                     stream_obj = StreamData(source="agent", content=msg.content, message_type="agent_talk")
                     yield stream_mode, stream_obj
                 
-                # For tool messages with content, buffer by ID
+                # For pipeline/tool messages with content, buffer by ID
                 elif (
                     isinstance(msg, AIMessage)
-                    and metadata.get("langgraph_node") == "tools"
+                    and metadata.get("langgraph_node") in PIPELINE_NODES
                     and msg.content
                 ):
                     in_tool_stream = True
