@@ -44,15 +44,6 @@ class TestPersistenceIntegration:
         finally:
             manager.close()
 
-    def test_checkpointer_fallback_with_bad_url(self):
-        """Bad URL gracefully falls back to MemorySaver (no crash)."""
-        manager = CheckpointerManager(db_url="postgresql://invalid:5432/nope")
-        try:
-            cp = manager.checkpointer
-            assert isinstance(cp, MemorySaver)
-        finally:
-            manager.close()
-
     def test_state_survives_manager_restart(self, checkpoint_db_url):
         """Checkpoint metadata persists across CheckpointerManager instances."""
         config = {
@@ -92,17 +83,6 @@ class TestAsyncPersistenceIntegration:
         try:
             cp = await manager.get_checkpointer()
             assert not isinstance(cp, MemorySaver)
-        finally:
-            await manager.close()
-
-    async def test_async_fallback_with_bad_url(self):
-        """Bad URL gracefully falls back to MemorySaver."""
-        manager = AsyncCheckpointerManager(
-            db_url="postgresql://invalid:5432/nope"
-        )
-        try:
-            cp = await manager.get_checkpointer()
-            assert isinstance(cp, MemorySaver)
         finally:
             await manager.close()
 

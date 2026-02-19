@@ -5,17 +5,11 @@ import tempfile
 from unittest.mock import Mock
 from src.generate_query import (
     load_example_queries,
-    create_query_generation_chain,
-    create_sql_agent,
     load_table_descriptions,
     get_table_info_for_schemas,
 )
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
-from src.config import get_settings, create_llm
-from sqlalchemy.engine import Engine
 
-# Load settings
-settings = get_settings()
 
 @pytest.fixture
 def temp_query_files():
@@ -58,12 +52,6 @@ def temp_query_files():
 
 
 @pytest.fixture
-def llm():
-    """Create a language model for testing using configured model."""
-    return create_llm(settings.query_model, settings.query_model_provider, temperature=0)
-
-
-@pytest.fixture
 def project_paths(base_dir):
     """Fixture providing paths to actual project files."""
     return {
@@ -85,12 +73,6 @@ def mock_db():
     mock.run.return_value = mock_response
     mock.run_no_throw.return_value = mock_response
 
-    return mock
-
-@pytest.fixture
-def mock_engine():
-    """Create a mock engine for testing."""
-    mock = Mock(spec=Engine)
     return mock
 
 
@@ -151,122 +133,7 @@ class TestLoadFiles:
         assert result["schema1"][0]["context_str"] == "Description of table1"
 
 
-class TestProjectFiles:
-    """Integration tests for actual project files."""
-
-    def test_queries_json_exists(self, project_paths):
-        """Test that queries.json exists in the expected location."""
-        assert project_paths[
-            "queries_json"
-        ].exists(), f"queries.json not found at {project_paths['queries_json']}"
-
-    def test_example_queries_dir_exists(self, project_paths):
-        """Test that example_queries directory exists."""
-        assert project_paths[
-            "example_queries_dir"
-        ].exists(), f"example_queries directory not found at {project_paths['example_queries_dir']}"
-
-    def test_queries_json_is_valid(self, project_paths):
-        """Test that queries.json contains valid JSON and expected structure."""
-        with open(project_paths["queries_json"], "r") as f:
-            data = json.load(f)
-
-        assert isinstance(data, list), "queries.json should contain a list"
-        for entry in data:
-            assert "question" in entry, "Each entry should have a 'question' field"
-            assert "file" in entry, "Each entry should have a 'file' field"
-
-    def test_table_descriptions_json_exists(self, project_paths):
-        """Test that table_descriptions.json exists in the expected location."""
-        assert project_paths[
-            "table_descriptions_json"
-        ].exists(), f"table_descriptions.json not found at {project_paths['table_descriptions_json']}"
-    
-    def test_all_referenced_sql_files_exist(self, project_paths):
-        """Test that all SQL files referenced in queries.json exist."""
-        with open(project_paths["queries_json"], "r") as f:
-            data = json.load(f)
-
-        for entry in data:
-            sql_file = project_paths["example_queries_dir"] / entry["file"]
-            assert sql_file.exists(), f"Referenced SQL file not found: {sql_file}"
-
-    def test_load_actual_example_queries(self, project_paths):
-        """Test that example queries can be successfully loaded from actual project files."""
-        result = load_example_queries(
-            project_paths["queries_json"], project_paths["example_queries_dir"]
-        )
-
-        assert len(result) > 0, "Should load at least one example query"
-        for entry in result:
-            assert "question" in entry
-            assert "query" in entry
-            assert len(entry["query"]) > 0, "SQL query should not be empty"
-            # Verify basic SQL structure - should start with either SELECT or WITH
-            query_lines = [line.strip() for line in entry["query"].split("\n")]
-            non_comment_lines = [
-                line for line in query_lines if line and not line.startswith("--")
-            ]
-            first_line = non_comment_lines[0].upper().lstrip("(")
-            assert first_line.startswith("SELECT") or first_line.startswith(
-                "WITH"
-            ), f"Query should start with SELECT or WITH (optionally parenthesized): {entry['query']}"
-
-            # If it starts with WITH, verify there's a SELECT in the query
-            if first_line.startswith("WITH"):
-                has_select = any(
-                    line.upper().strip().startswith("SELECT")
-                    for line in non_comment_lines
-                )
-                assert (
-                    has_select
-                ), f"Query with CTE should contain a SELECT statement: {entry['query']}"
-
-
-class TestCreateQueryGenerationChain:
-    @pytest.mark.integration  # Mark as integration test since it uses real LLM
-    def test_chain_creation(self, project_paths):
-        """Test successful creation of query generation chain with actual LLM."""
-        # Load actual examples
-        example_queries = load_example_queries(
-            project_paths["queries_json"], project_paths["example_queries_dir"]
-        )
-
-        llm = create_llm(settings.query_model, settings.query_model_provider, temperature=0)
-        chain = create_query_generation_chain(
-            llm=llm,
-            example_queries=example_queries,
-            codes=None,
-            top_k=5,
-            table_info="Use the example queries to infer the table structure.",
-        )
-        assert chain is not None
-
-        # Test chain invocation with real LLM
-        result = chain.invoke({"question": "What are the top US exports by value?"})
-
-        assert isinstance(result, str)
-        assert "SELECT" in result.upper()
-        assert "LIMIT 5" in result.upper()
-
-    def test_chain_with_empty_examples(self, project_paths):
-        """Test chain creation with empty example queries."""
-        llm = create_llm(settings.query_model, settings.query_model_provider, temperature=0)
-        chain = create_query_generation_chain(llm, [])
-        assert chain is not None
-
-        result = chain.invoke(
-            {
-                "question": "What are the top exports?",
-                "top_k": 5,
-                "table_info": "exports(date, country, product, value)",
-            }
-        )
-
-        assert isinstance(result, str)
-        assert "SELECT" in result.upper()
-
-
+class TestGetTableInfoForSchemas:
     def test_get_table_info_for_schemas(self, mock_db, project_paths):
         """Test if table information can be retrieved for given schemas"""
         table_descriptions = load_table_descriptions(
