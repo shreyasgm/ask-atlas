@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """LLM-as-judge: evaluate agent answers against ground truth data.
 
-Compares the agent's **text answer** to the ground truth **data** (not SQL),
-using a 4-dimension rubric scored 1-5 each.  Produces a weighted overall
-score and a pass / partial / fail verdict.
+Three evaluation paths:
 
-For questions without ground truth (edge cases, refusals), the judge
-evaluates the *appropriateness* of the response instead.
+1. **Ground truth** — agent's text answer is scored against verified data rows
+   from executed SQL (4-dimension rubric, 1-5 each).
+2. **Refusal** — for out-of-scope / data-boundary questions with an
+   ``expected_behavior`` field, checks whether the agent refused appropriately.
+3. **Plausibility** — for questions without ground truth SQL *and* without an
+   expected_behavior field, the judge uses its own knowledge to assess whether
+   the answer is roughly plausible (not fabricated nonsense).  These results
+   are flagged as ``"judge_mode": "plausibility"`` so they're clearly
+   distinguished from verified evaluations.
 """
 
 from __future__ import annotations
@@ -76,6 +81,7 @@ class JudgeVerdict(BaseModel):
 
     def to_dict(self) -> dict:
         return {
+            "judge_mode": "ground_truth",
             "factual_correctness": {
                 "score": self.factual_correctness.score,
                 "reasoning": self.factual_correctness.reasoning,
@@ -122,12 +128,61 @@ class RefusalVerdict(BaseModel):
 
     def to_dict(self) -> dict:
         return {
+            "judge_mode": "refusal",
             "appropriate_refusal": self.appropriate_refusal,
             "graceful": self.graceful,
             "score": self.score,
             "weighted_score": float(self.score),
             "verdict": self.verdict,
             "reasoning": self.reasoning,
+        }
+
+
+class PlausibilityVerdict(BaseModel):
+    """Verdict for questions without ground truth SQL — rough plausibility check.
+
+    The judge uses its own world knowledge to assess whether the agent's
+    answer is broadly reasonable, not whether it is precisely correct.
+    """
+
+    plausible: bool = Field(
+        ...,
+        description="Is the answer broadly plausible based on real-world knowledge?",
+    )
+    factually_absurd: bool = Field(
+        ...,
+        description="Does the answer contain obviously wrong claims (e.g. wrong order of magnitude, impossible values)?",
+    )
+    score: int = Field(
+        ...,
+        ge=1,
+        le=5,
+        description=(
+            "Plausibility score 1-5: "
+            "1=nonsense/fabricated, 2=major issues, 3=somewhat plausible, "
+            "4=mostly plausible, 5=highly plausible"
+        ),
+    )
+    reasoning: str = Field(..., description="Justification for the score")
+
+    @property
+    def verdict(self) -> Literal["pass", "partial", "fail"]:
+        if self.score >= 4:
+            return "pass"
+        if self.score >= 3:
+            return "partial"
+        return "fail"
+
+    def to_dict(self) -> dict:
+        return {
+            "judge_mode": "plausibility",
+            "plausible": self.plausible,
+            "factually_absurd": self.factually_absurd,
+            "score": self.score,
+            "weighted_score": float(self.score),
+            "verdict": self.verdict,
+            "reasoning": self.reasoning,
+            "note": "No ground truth SQL — scored on plausibility only, not verified accuracy.",
         }
 
 
@@ -184,6 +239,38 @@ _REFUSAL_PROMPT = ChatPromptTemplate.from_messages(
     ]
 )
 
+_PLAUSIBILITY_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "You are an expert evaluator for a trade-data Q&A system. "
+            "The following question does NOT have verified ground truth data, "
+            "so you cannot check exact numbers. Instead, use your own knowledge "
+            "of international trade, economics, and the countries involved to "
+            "assess whether the agent's answer is **broadly plausible**.\n\n"
+            "Things to check:\n"
+            "- Are the countries, products, and time periods reasonable?\n"
+            "- Are dollar values in the right order of magnitude? (e.g. a small "
+            "island nation shouldn't have $500B in exports)\n"
+            "- Are rankings and relative magnitudes sensible? (e.g. petroleum "
+            "for Saudi Arabia, electronics for South Korea)\n"
+            "- Does the agent acknowledge uncertainty or data limitations "
+            "when appropriate?\n"
+            "- Did the agent fabricate data or present made-up numbers?\n\n"
+            "Be lenient on exact figures — the goal is to catch answers that "
+            "are obviously wrong or fabricated, not to verify precision.\n\n"
+            "IMPORTANT: This is a plausibility check only. A 'pass' here does "
+            "NOT mean the answer is verified — it means it's not obviously wrong.",
+        ),
+        (
+            "human",
+            "**Question**: {question}\n\n"
+            "**Agent answer**:\n{agent_answer}\n\n"
+            "Assess whether this answer is plausible.",
+        ),
+    ]
+)
+
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -200,20 +287,26 @@ async def judge_answer(
 ) -> dict:
     """Score an agent answer using an LLM judge.
 
+    Three paths:
+    1. **ground_truth_data provided** → full 4-dimension rubric against data.
+    2. **expected_behavior provided** (no data) → refusal appropriateness check.
+    3. **neither** → plausibility check using the judge's own knowledge.
+
     Args:
         question: The original user question.
         agent_answer: The agent's text response.
-        ground_truth_data: Rows from verified SQL execution (None for refusal questions).
-        expected_behavior: For refusal/edge-case questions, the expected behaviour description.
+        ground_truth_data: Rows from verified SQL execution, or None.
+        expected_behavior: For refusal/edge-case questions, the expected behaviour.
         model: Judge LLM model name.
         provider: Judge LLM provider.
 
     Returns:
-        Dictionary with scores, verdict, and reasoning.
+        Dictionary with scores, verdict, reasoning, and ``judge_mode``.
     """
     llm = create_llm(model, provider, temperature=0)
 
     if ground_truth_data is not None:
+        # Path 1: verified ground truth
         chain = _GROUND_TRUTH_PROMPT | llm.with_structured_output(JudgeVerdict)
         result: JudgeVerdict = await chain.ainvoke(
             {
@@ -223,13 +316,25 @@ async def judge_answer(
             }
         )
         return result.to_dict()
-    else:
+
+    if expected_behavior is not None:
+        # Path 2: expected refusal / limitation acknowledgment
         chain = _REFUSAL_PROMPT | llm.with_structured_output(RefusalVerdict)
         result: RefusalVerdict = await chain.ainvoke(
             {
                 "question": question,
-                "expected_behavior": expected_behavior or "Graceful refusal",
+                "expected_behavior": expected_behavior,
                 "agent_answer": agent_answer,
             }
         )
         return result.to_dict()
+
+    # Path 3: no ground truth, no expected behavior → plausibility check
+    chain = _PLAUSIBILITY_PROMPT | llm.with_structured_output(PlausibilityVerdict)
+    result: PlausibilityVerdict = await chain.ainvoke(
+        {
+            "question": question,
+            "agent_answer": agent_answer,
+        }
+    )
+    return result.to_dict()
