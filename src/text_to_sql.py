@@ -1,4 +1,4 @@
-from typing import Dict, List, Union, Generator, Tuple, Optional
+from typing import AsyncGenerator, Dict, Generator, List, Optional, Tuple, Union
 from pathlib import Path
 import logging
 import datetime
@@ -15,7 +15,7 @@ from src.generate_query import (
     PIPELINE_NODES,
 )
 from src.config import get_settings, create_llm
-from src.persistence import CheckpointerManager
+from src.persistence import AsyncCheckpointerManager, CheckpointerManager
 import uuid
 
 # Define BASE_DIR
@@ -89,11 +89,16 @@ class AtlasTextToSQL:
         max_results = max_results if max_results is not None else settings.max_results_per_query
         max_queries = max_queries if max_queries is not None else settings.max_queries_per_question
 
-        # Initialize engine
+        # Initialize engine with connection pooling for concurrent usage
         self.engine = create_engine(
             db_uri,
             execution_options={"postgresql_readonly": True},
             connect_args={"connect_timeout": 10},
+            pool_size=10,
+            max_overflow=20,
+            pool_timeout=30,
+            pool_recycle=1800,
+            pool_pre_ping=True,
         )
 
         # Initialize database connection
@@ -644,6 +649,277 @@ class AtlasTextToSQL:
             self._checkpointer_manager.close()
         if hasattr(self, "engine"):
             self.engine.dispose()
+
+    async def aclose(self) -> None:
+        """Async close — release async checkpointer and DB engine."""
+        if hasattr(self, "_async_checkpointer_manager"):
+            await self._async_checkpointer_manager.close()
+        if hasattr(self, "engine"):
+            self.engine.dispose()
+
+    async def __aenter__(self):
+        """Async context manager entry point."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit point — ensures proper cleanup."""
+        await self.aclose()
+
+    # ------------------------------------------------------------------
+    # Async factory & methods
+    # ------------------------------------------------------------------
+
+    @classmethod
+    async def create_async(
+        cls,
+        db_uri: str | None = None,
+        table_descriptions_json: str = "db_table_descriptions.json",
+        table_structure_json: str = "db_table_structure.json",
+        queries_json: str = "queries.json",
+        example_queries_dir: str = "example_queries",
+        max_results: int | None = None,
+        max_queries: int | None = None,
+    ) -> "AtlasTextToSQL":
+        """Factory for async-capable instances (uses AsyncCheckpointerManager).
+
+        Same interface as ``__init__`` but compiles the graph with an
+        async-capable checkpointer so ``.astream()`` / ``.ainvoke()`` work
+        correctly with PostgresSaver.
+
+        Args:
+            db_uri: Database connection URI (defaults to settings.atlas_db_url)
+            table_descriptions_json: Path to JSON with table descriptions
+            table_structure_json: Path to JSON with table structure
+            queries_json: Path to JSON with example queries
+            example_queries_dir: Directory with example SQL queries
+            max_results: Max rows per SELECT query
+            max_queries: Max queries per question
+        """
+        instance = cls.__new__(cls)
+
+        _settings = get_settings()
+        db_uri = db_uri or _settings.atlas_db_url
+        max_results = max_results if max_results is not None else _settings.max_results_per_query
+        max_queries = max_queries if max_queries is not None else _settings.max_queries_per_question
+
+        instance.engine = create_engine(
+            db_uri,
+            execution_options={"postgresql_readonly": True},
+            connect_args={"connect_timeout": 10},
+            pool_size=10,
+            max_overflow=20,
+            pool_timeout=30,
+            pool_recycle=1800,
+            pool_pre_ping=True,
+        )
+        instance.db = SQLDatabaseWithSchemas(engine=instance.engine)
+        instance.table_descriptions = cls._load_json_as_dict(table_descriptions_json)
+        instance.table_structure = cls._load_json_as_dict(table_structure_json)
+        instance.example_queries = load_example_queries(queries_json, example_queries_dir)
+        instance.metadata_llm = create_llm(
+            _settings.metadata_model, _settings.metadata_model_provider, temperature=0
+        )
+        instance.query_llm = create_llm(
+            _settings.query_model, _settings.query_model_provider, temperature=0
+        )
+        instance.max_results = max_results
+        instance.max_queries = max_queries
+
+        # Async checkpointer (AsyncPostgresSaver or MemorySaver fallback)
+        instance._async_checkpointer_manager = AsyncCheckpointerManager()
+        checkpointer = await instance._async_checkpointer_manager.get_checkpointer()
+
+        instance.agent = create_sql_agent(
+            llm=instance.query_llm,
+            db=instance.db,
+            engine=instance.engine,
+            example_queries=instance.example_queries,
+            table_descriptions=instance.table_descriptions,
+            top_k_per_query=instance.max_results,
+            max_uses=instance.max_queries,
+            checkpointer=checkpointer,
+        )
+
+        return instance
+
+    async def aanswer_question(
+        self,
+        question: str,
+        thread_id: str | None = None,
+    ) -> str:
+        """Non-streaming async answer.
+
+        Args:
+            question: The user's question about the trade data.
+            thread_id: Conversation thread ID (generated if not provided).
+
+        Returns:
+            The agent's final text answer.
+        """
+        config = {
+            "configurable": {"thread_id": thread_id or str(uuid.uuid4())}
+        }
+        message = None
+        async for step in self.agent.astream(
+            self._turn_input(question),
+            stream_mode="values",
+            config=config,
+        ):
+            message = step["messages"][-1]
+        return self._extract_text(message.content)
+
+    async def astream_agent_response(
+        self,
+        question: str,
+        config: Dict,
+    ) -> AsyncGenerator[Tuple[str, StreamData], None]:
+        """Async variant of ``stream_agent_response()``.
+
+        Same buffering / ordering logic but uses ``async for`` over
+        ``self.agent.astream()``.
+
+        Args:
+            question: The user's question.
+            config: Configuration dictionary for the agent.
+
+        Yields:
+            Tuples of (stream_mode, StreamData).
+        """
+        tool_buffers: Dict[str, list[StreamData]] = {}
+        current_tool_id: str | None = None
+        in_tool_stream = False
+
+        async for stream_mode, stream_data in self.agent.astream(
+            self._turn_input(question),
+            stream_mode=["messages", "updates"],
+            config=config,
+        ):
+            if stream_mode == "updates":
+                if "agent" in stream_data:
+                    if in_tool_stream:
+                        for tool_id in list(tool_buffers.keys()):
+                            for buffered_msg in tool_buffers[tool_id]:
+                                yield "messages", buffered_msg
+                            del tool_buffers[tool_id]
+                        in_tool_stream = False
+                        current_tool_id = None
+
+                    for msg in stream_data["agent"].get("messages", []):
+                        if isinstance(msg, AIMessage) and msg.content:
+                            tool_calls = getattr(msg, "tool_calls", [])
+                            if tool_calls:
+                                for tool_call in tool_calls:
+                                    yield stream_mode, StreamData(
+                                        source="agent",
+                                        content=msg.content or "",
+                                        message_type="tool_call",
+                                        tool_call=tool_call.get("name"),
+                                    )
+                            elif msg.content:
+                                yield stream_mode, StreamData(
+                                    source="agent",
+                                    content=msg.content,
+                                    message_type="agent_talk",
+                                )
+                else:
+                    pipeline_keys = set(stream_data.keys()) & PIPELINE_NODES
+                    if pipeline_keys:
+                        in_tool_stream = True
+                        for node_name in pipeline_keys:
+                            for msg in stream_data[node_name].get("messages", []):
+                                if isinstance(msg, ToolMessage) and msg.content:
+                                    yield stream_mode, StreamData(
+                                        source="tool",
+                                        content=msg.content,
+                                        message_type="tool_output",
+                                        name=msg.name,
+                                    )
+
+            elif stream_mode == "messages":
+                msg, metadata = stream_data
+                msg_id = getattr(msg, "id", None)
+
+                if (
+                    isinstance(msg, AIMessage)
+                    and metadata.get("langgraph_node") not in PIPELINE_NODES
+                    and msg.content
+                ):
+                    if in_tool_stream:
+                        for tool_id in list(tool_buffers.keys()):
+                            for buffered_msg in tool_buffers[tool_id]:
+                                yield "messages", buffered_msg
+                            del tool_buffers[tool_id]
+                        in_tool_stream = False
+                        current_tool_id = None
+
+                    yield stream_mode, StreamData(
+                        source="agent",
+                        content=msg.content,
+                        message_type="agent_talk",
+                    )
+
+                elif (
+                    isinstance(msg, AIMessage)
+                    and metadata.get("langgraph_node") in PIPELINE_NODES
+                    and msg.content
+                ):
+                    in_tool_stream = True
+
+                    if not msg_id:
+                        tool_name = getattr(msg, "name", "unknown_tool")
+                        msg_id = f"pseudo_{tool_name}_{hash(msg.content[:20])}"
+
+                    if current_tool_id is None or current_tool_id == msg_id:
+                        current_tool_id = msg_id
+                        yield stream_mode, StreamData(
+                            source="tool",
+                            content=msg.content,
+                            message_type="tool_output",
+                            name=getattr(msg, "name", None),
+                            message_id=msg_id,
+                        )
+                    else:
+                        if msg_id not in tool_buffers:
+                            tool_buffers[msg_id] = []
+                        tool_buffers[msg_id].append(
+                            StreamData(
+                                source="tool",
+                                content=msg.content,
+                                message_type="tool_output",
+                                name=getattr(msg, "name", None),
+                                message_id=msg_id,
+                            )
+                        )
+
+        # Flush remaining tool buffers
+        for tool_id in list(tool_buffers.keys()):
+            for buffered_msg in tool_buffers[tool_id]:
+                yield "messages", buffered_msg
+
+    async def aanswer_question_stream(
+        self,
+        question: str,
+        thread_id: str | None = None,
+    ) -> AsyncGenerator[StreamData, None]:
+        """High-level async streaming that yields ``StreamData`` objects.
+
+        Convenience wrapper around ``astream_agent_response`` that handles
+        config creation and strips the stream-mode prefix.
+
+        Args:
+            question: The user's question.
+            thread_id: Conversation thread ID (generated if not provided).
+
+        Yields:
+            StreamData objects for each piece of streamed content.
+        """
+        config = {
+            "configurable": {"thread_id": thread_id or str(uuid.uuid4())}
+        }
+        async for _stream_mode, stream_data in self.astream_agent_response(
+            question, config
+        ):
+            yield stream_data
 
 
 if __name__ == "__main__":

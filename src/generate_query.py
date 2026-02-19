@@ -1,4 +1,5 @@
 from typing import Dict, List, Union
+import asyncio
 import json
 import logging
 from functools import partial
@@ -16,7 +17,6 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
-from src.config import get_settings
 from src.error_handling import QueryExecutionError, execute_with_retry
 from src.product_and_schema_lookup import (
     ProductAndSchemaLookup,
@@ -29,9 +29,6 @@ logger = logging.getLogger(__name__)
 
 # Define BASE_DIR
 BASE_DIR = Path(__file__).resolve().parents[1]
-
-# Load settings
-settings = get_settings()
 
 QUERIES_JSON_PATH = BASE_DIR / "src/example_queries/queries.json"
 EXAMPLE_QUERIES_DIR = BASE_DIR / "src/example_queries"
@@ -283,7 +280,7 @@ def get_table_info_for_schemas(
 # ---------------------------------------------------------------------------
 
 
-def extract_tool_question(state: AtlasAgentState) -> dict:
+async def extract_tool_question(state: AtlasAgentState) -> dict:
     """Extract the question from the agent's tool_call args."""
     last_msg = state["messages"][-1]
     if len(last_msg.tool_calls) > 1:
@@ -295,18 +292,18 @@ def extract_tool_question(state: AtlasAgentState) -> dict:
     return {"pipeline_question": question}
 
 
-def extract_products_node(
+async def extract_products_node(
     state: AtlasAgentState, *, llm: BaseLanguageModel, engine: Engine
 ) -> dict:
     """Run product/schema extraction LLM chain."""
     lookup = ProductAndSchemaLookup(llm=llm, connection=engine)
-    products = lookup.extract_schemas_and_product_mentions_direct(
+    products = await lookup.aextract_schemas_and_product_mentions_direct(
         state["pipeline_question"]
     )
     return {"pipeline_products": products}
 
 
-def lookup_codes_node(
+async def lookup_codes_node(
     state: AtlasAgentState, *, llm: BaseLanguageModel, engine: Engine
 ) -> dict:
     """Get candidate codes from DB and select final codes via LLM."""
@@ -315,14 +312,14 @@ def lookup_codes_node(
         return {"pipeline_codes": ""}
 
     lookup = ProductAndSchemaLookup(llm=llm, connection=engine)
-    candidates = lookup.get_candidate_codes(products)
-    codes = lookup.select_final_codes_direct(
+    candidates = await asyncio.to_thread(lookup.get_candidate_codes, products)
+    codes = await lookup.aselect_final_codes_direct(
         state["pipeline_question"], candidates
     )
     return {"pipeline_codes": format_product_codes_for_prompt(codes)}
 
 
-def get_table_info_node(
+async def get_table_info_node(
     state: AtlasAgentState,
     *,
     db: SQLDatabaseWithSchemas,
@@ -331,7 +328,8 @@ def get_table_info_node(
     """Get table info for the identified schemas."""
     products = state.get("pipeline_products")
     schemas = products.classification_schemas if products else []
-    info = get_table_info_for_schemas(
+    info = await asyncio.to_thread(
+        get_table_info_for_schemas,
         db=db,
         table_descriptions=table_descriptions,
         classification_schemas=schemas,
@@ -339,7 +337,7 @@ def get_table_info_node(
     return {"pipeline_table_info": info}
 
 
-def generate_sql_node(
+async def generate_sql_node(
     state: AtlasAgentState,
     *,
     llm: BaseLanguageModel,
@@ -355,11 +353,11 @@ def generate_sql_node(
         table_info=state.get("pipeline_table_info", ""),
         example_queries=example_queries,
     )
-    sql = chain.invoke({"question": state["pipeline_question"]})
+    sql = await chain.ainvoke({"question": state["pipeline_question"]})
     return {"pipeline_sql": sql}
 
 
-def execute_sql_node(state: AtlasAgentState, *, engine: Engine) -> dict:
+async def execute_sql_node(state: AtlasAgentState, *, engine: Engine) -> dict:
     """Execute SQL directly via SQLAlchemy (replaces QuerySQLDatabaseTool)."""
     sql = state["pipeline_sql"]
 
@@ -375,7 +373,7 @@ def execute_sql_node(state: AtlasAgentState, *, engine: Engine) -> dict:
             return "\n".join(str(dict(zip(columns, row))) for row in rows)
 
     try:
-        result_str = execute_with_retry(_run_query)
+        result_str = await asyncio.to_thread(execute_with_retry, _run_query)
         if not result_str or not result_str.strip():
             result_str = "SQL query returned no results."
         return {"pipeline_result": result_str, "last_error": ""}
@@ -387,7 +385,7 @@ def execute_sql_node(state: AtlasAgentState, *, engine: Engine) -> dict:
         return {"pipeline_result": "", "last_error": str(e)}
 
 
-def format_results_node(state: AtlasAgentState) -> dict:
+async def format_results_node(state: AtlasAgentState) -> dict:
     """Create a ToolMessage for every tool_call and route back to agent.
 
     When the LLM produces multiple parallel tool_calls, only the first is
@@ -420,7 +418,7 @@ def format_results_node(state: AtlasAgentState) -> dict:
     }
 
 
-def max_queries_exceeded_node(state: AtlasAgentState) -> dict:
+async def max_queries_exceeded_node(state: AtlasAgentState) -> dict:
     """Return a ToolMessage for every tool_call indicating the query limit was hit."""
     last_msg = state["messages"][-1]
     error_content = "Error: Maximum number of queries exceeded."
@@ -561,9 +559,9 @@ If a user asks a normative policy question, such as what products a country shou
 
     system_prompt = SystemMessage(content=AGENT_PREFIX)
 
-    def agent_node(state: AtlasAgentState) -> dict:
+    async def agent_node(state: AtlasAgentState) -> dict:
         model_with_tools = llm.bind_tools([_query_tool_schema])
-        response = model_with_tools.invoke(
+        response = await model_with_tools.ainvoke(
             [system_prompt] + state["messages"]
         )
         return {"messages": [response]}

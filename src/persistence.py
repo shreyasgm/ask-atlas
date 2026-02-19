@@ -67,3 +67,59 @@ class CheckpointerManager:
             finally:
                 self._pg_conn = None
                 self._checkpointer = None
+
+
+class AsyncCheckpointerManager:
+    """Async checkpointer for FastAPI / async graph execution.
+
+    Uses ``AsyncPostgresSaver`` when a checkpoint DB URL is configured,
+    falling back to ``MemorySaver`` (which has working async pass-throughs).
+
+    Args:
+        db_url: Optional Postgres connection string for persistent checkpoints.
+            If ``None``, falls back to ``settings.checkpoint_db_url``, then
+            to an in-memory ``MemorySaver``.
+    """
+
+    def __init__(self, db_url: str | None = None) -> None:
+        settings = get_settings()
+        self._db_url: str | None = db_url or settings.checkpoint_db_url
+        self._checkpointer: Optional[BaseCheckpointSaver] = None
+        self._async_conn = None  # holds the async context manager
+
+    async def get_checkpointer(self) -> BaseCheckpointSaver:
+        """Lazily create and return the async checkpointer instance."""
+        if self._checkpointer is None:
+            self._checkpointer = await self._create_checkpointer()
+        return self._checkpointer
+
+    async def _create_checkpointer(self) -> BaseCheckpointSaver:
+        """Create the appropriate async checkpointer based on configuration."""
+        if self._db_url:
+            try:
+                from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+
+                self._async_conn = AsyncPostgresSaver.from_conn_string(self._db_url)
+                saver = await self._async_conn.__aenter__()
+                await saver.setup()
+                logger.info("Using AsyncPostgresSaver for checkpoint persistence")
+                return saver
+            except Exception:
+                logger.warning(
+                    "Failed to initialize AsyncPostgresSaver, falling back to MemorySaver",
+                    exc_info=True,
+                )
+
+        logger.info("Using MemorySaver for checkpoint persistence (async)")
+        return MemorySaver()
+
+    async def close(self) -> None:
+        """Release resources held by the async checkpointer."""
+        if self._async_conn is not None:
+            try:
+                await self._async_conn.__aexit__(None, None, None)
+            except Exception:
+                logger.warning("Error closing AsyncPostgresSaver connection", exc_info=True)
+            finally:
+                self._async_conn = None
+                self._checkpointer = None
