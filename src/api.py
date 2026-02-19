@@ -16,6 +16,8 @@ from src.text_to_sql import AtlasTextToSQL, StreamData
 
 logger = logging.getLogger(__name__)
 
+REQUEST_TIMEOUT_SECONDS: float = 120.0
+
 
 # ---------------------------------------------------------------------------
 # Request / Response models
@@ -78,11 +80,11 @@ app = FastAPI(title="Ask-Atlas API", version="0.1.0", lifespan=lifespan)
 
 @app.middleware("http")
 async def timeout_middleware(request: Request, call_next):
-    """Apply a 120-second timeout to all requests."""
+    """Apply a timeout to all requests."""
     import asyncio
 
     try:
-        return await asyncio.wait_for(call_next(request), timeout=120.0)
+        return await asyncio.wait_for(call_next(request), timeout=REQUEST_TIMEOUT_SECONDS)
     except asyncio.TimeoutError:
         return JSONResponse(status_code=504, content={"detail": "Request timed out."})
 
