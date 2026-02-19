@@ -1,12 +1,18 @@
-from typing import List, Dict, Any, Union
-from pydantic import BaseModel, Field
+from typing import List, Dict, Any, Optional, Union
+
 from langchain_core.language_models import BaseLanguageModel
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.output_parsers.openai_tools import PydanticToolsParser
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import Runnable
-from sqlalchemy import create_engine, text, Engine
+from pydantic import BaseModel, Field
+from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncEngine
+
+import logging
 import warnings
+
+logger = logging.getLogger(__name__)
 
 SCHEMA_TO_PRODUCTS_TABLE_MAP = {
     "hs92": "classification.product_hs92",
@@ -83,6 +89,7 @@ class ProductAndSchemaLookup:
         llm: BaseLanguageModel,
         connection: Union[str, Engine],
         engine_args: Dict[str, Any] = None,
+        async_engine: Optional[AsyncEngine] = None,
     ):
         self.llm = llm
         if isinstance(connection, str):
@@ -93,6 +100,7 @@ class ProductAndSchemaLookup:
                     "engine_args specified but connection is already an sqlalchemy Engine - these will be ignored"
                 )
             self.engine = connection
+        self.async_engine = async_engine
 
     def get_product_details(self) -> Runnable:
         """
@@ -548,6 +556,151 @@ class ProductAndSchemaLookup:
         except SQLAlchemyError as e:
             print(f"Database error during text search: {e}")
             return []
+
+    # ------------------------------------------------------------------
+    # Async DB methods (use AsyncEngine for true async I/O)
+    # ------------------------------------------------------------------
+
+    async def _aget_official_product_details(
+        self, codes: List[str], classification_schema: str
+    ) -> List[Dict[str, Any]]:
+        """Async version: query database to verify product codes and get official names."""
+        if not codes:
+            return []
+        if not self.async_engine:
+            raise RuntimeError("async_engine not set; pass async_engine to __init__")
+        if classification_schema not in SCHEMA_TO_PRODUCTS_TABLE_MAP:
+            raise ValueError(f"Invalid classification schema: {classification_schema}")
+
+        products_table = SCHEMA_TO_PRODUCTS_TABLE_MAP[classification_schema]
+        query = text(f"""
+            SELECT DISTINCT
+                code as product_code,
+                name_short_en as product_name,
+                product_id,
+                product_level
+            FROM {products_table}
+            WHERE code = ANY(:codes)
+        """)
+
+        try:
+            async with self.async_engine.connect() as conn:
+                result = await conn.execute(query, {"codes": codes})
+                rows = result.fetchall()
+                return [
+                    {
+                        "product_code": str(r[0]),
+                        "product_name": str(r[1]),
+                        "product_id": str(r[2]),
+                        "product_level": str(r[3]),
+                    }
+                    for r in rows
+                ]
+        except SQLAlchemyError as e:
+            logger.error("Database error during async code verification: %s", e)
+            return []
+
+    async def _adirect_text_search(
+        self, product_to_search: str, classification_schema: str
+    ) -> List[Dict[str, Any]]:
+        """Async version: full-text search with trigram fallback."""
+        if not self.async_engine:
+            raise RuntimeError("async_engine not set; pass async_engine to __init__")
+        if classification_schema not in SCHEMA_TO_PRODUCTS_TABLE_MAP:
+            raise ValueError(f"Invalid classification schema: {classification_schema}")
+
+        products_table = SCHEMA_TO_PRODUCTS_TABLE_MAP[classification_schema]
+
+        ts_query = text(f"""
+            SELECT DISTINCT
+                name_short_en as product_name,
+                code as product_code,
+                product_id,
+                product_level,
+                ts_rank_cd(to_tsvector('english', name_short_en),
+                        plainto_tsquery('english', :product_to_search)) as rank
+            FROM {products_table}
+            WHERE to_tsvector('english', name_short_en) @@
+                plainto_tsquery('english', :product_to_search)
+            ORDER BY rank DESC
+            LIMIT 5
+        """)
+
+        fuzzy_query = text(f"""
+            SELECT DISTINCT
+                name_short_en as product_name,
+                code as product_code,
+                product_id,
+                product_level,
+                similarity(LOWER(name_short_en), LOWER(:product_to_search)) as sim
+            FROM {products_table}
+            WHERE similarity(LOWER(name_short_en), LOWER(:product_to_search)) > 0.3
+            ORDER BY sim DESC
+            LIMIT 5
+        """)
+
+        try:
+            async with self.async_engine.connect() as conn:
+                result = await conn.execute(
+                    ts_query, {"product_to_search": product_to_search}
+                )
+                ts_results = result.fetchall()
+
+                if ts_results:
+                    return [
+                        {
+                            "product_name": str(r[0]),
+                            "product_code": str(r[1]),
+                            "product_id": str(r[2]),
+                            "product_level": str(r[3]),
+                        }
+                        for r in ts_results
+                    ]
+
+                result = await conn.execute(
+                    fuzzy_query, {"product_to_search": product_to_search}
+                )
+                fuzzy_results = result.fetchall()
+
+                return [
+                    {
+                        "product_name": str(r[0]),
+                        "product_code": str(r[1]),
+                        "product_id": str(r[2]),
+                        "product_level": str(r[3]),
+                    }
+                    for r in fuzzy_results
+                ]
+        except SQLAlchemyError as e:
+            logger.error("Database error during async text search: %s", e)
+            return []
+
+    async def aget_candidate_codes(
+        self, products_found: SchemasAndProductsFound
+    ) -> List[ProductSearchResult]:
+        """Async version: get candidate codes for each product using async DB queries."""
+        if not products_found.products:
+            return []
+
+        search_results: List[ProductSearchResult] = []
+
+        for product in products_found.products:
+            verified_llm_suggestions = await self._aget_official_product_details(
+                codes=product.codes, classification_schema=product.classification_schema
+            )
+            db_suggestions = await self._adirect_text_search(
+                product.name, product.classification_schema
+            )
+            search_results.append(
+                ProductSearchResult(
+                    name=product.name,
+                    classification_schema=product.classification_schema,
+                    llm_suggestions=verified_llm_suggestions,
+                    db_suggestions=db_suggestions,
+                )
+            )
+
+        return search_results
 
 
 def format_product_codes_for_prompt(analysis: ProductCodesMapping) -> str:

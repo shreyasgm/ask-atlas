@@ -16,8 +16,9 @@ from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
+from sqlalchemy.ext.asyncio import AsyncEngine
 
-from src.error_handling import QueryExecutionError, execute_with_retry
+from src.error_handling import QueryExecutionError, async_execute_with_retry, execute_with_retry
 from src.product_and_schema_lookup import (
     ProductAndSchemaLookup,
     format_product_codes_for_prompt,
@@ -304,15 +305,24 @@ async def extract_products_node(
 
 
 async def lookup_codes_node(
-    state: AtlasAgentState, *, llm: BaseLanguageModel, engine: Engine
+    state: AtlasAgentState,
+    *,
+    llm: BaseLanguageModel,
+    engine: Engine,
+    async_engine: AsyncEngine | None = None,
 ) -> dict:
     """Get candidate codes from DB and select final codes via LLM."""
     products = state.get("pipeline_products")
     if not products or not products.products:
         return {"pipeline_codes": ""}
 
-    lookup = ProductAndSchemaLookup(llm=llm, connection=engine)
-    candidates = await asyncio.to_thread(lookup.get_candidate_codes, products)
+    lookup = ProductAndSchemaLookup(
+        llm=llm, connection=engine, async_engine=async_engine
+    )
+    if async_engine is not None:
+        candidates = await lookup.aget_candidate_codes(products)
+    else:
+        candidates = await asyncio.to_thread(lookup.get_candidate_codes, products)
     codes = await lookup.aselect_final_codes_direct(
         state["pipeline_question"], candidates
     )
@@ -357,32 +367,64 @@ async def generate_sql_node(
     return {"pipeline_sql": sql}
 
 
-async def execute_sql_node(state: AtlasAgentState, *, engine: Engine) -> dict:
-    """Execute SQL directly via SQLAlchemy (replaces QuerySQLDatabaseTool)."""
+async def execute_sql_node(
+    state: AtlasAgentState, *, async_engine: AsyncEngine | Engine
+) -> dict:
+    """Execute SQL via async or sync SQLAlchemy engine.
+
+    Uses true async DB I/O when given an AsyncEngine (production path).
+    Falls back to asyncio.to_thread with a sync Engine (test/legacy path).
+    """
     sql = state["pipeline_sql"]
+    use_async = isinstance(async_engine, AsyncEngine)
 
-    def _run_query() -> str:
-        with engine.connect() as conn:
-            result = conn.execute(text(sql))
-            if not result.returns_rows:
-                return ""
-            columns = list(result.keys())
-            rows = result.fetchall()
-            if not rows:
-                return ""
-            return "\n".join(str(dict(zip(columns, row))) for row in rows)
+    if use_async:
+        async def _run_query() -> str:
+            async with async_engine.connect() as conn:
+                result = await conn.execute(text(sql))
+                if not result.returns_rows:
+                    return ""
+                columns = list(result.keys())
+                rows = result.fetchall()
+                if not rows:
+                    return ""
+                return "\n".join(str(dict(zip(columns, row))) for row in rows)
 
-    try:
-        result_str = await asyncio.to_thread(execute_with_retry, _run_query)
-        if not result_str or not result_str.strip():
-            result_str = "SQL query returned no results."
-        return {"pipeline_result": result_str, "last_error": ""}
-    except QueryExecutionError as e:
-        logger.error("Query execution failed: %s", e)
-        return {"pipeline_result": "", "last_error": str(e)}
-    except Exception as e:
-        logger.error("Unexpected error executing SQL: %s", e)
-        return {"pipeline_result": "", "last_error": str(e)}
+        try:
+            result_str = await async_execute_with_retry(_run_query)
+        except QueryExecutionError as e:
+            logger.error("Query execution failed: %s", e)
+            return {"pipeline_result": "", "last_error": str(e)}
+        except Exception as e:
+            logger.error("Unexpected error executing SQL: %s", e)
+            return {"pipeline_result": "", "last_error": str(e)}
+    else:
+        # Sync fallback (for tests or when async_engine is a sync Engine)
+        engine = async_engine
+
+        def _run_query_sync() -> str:
+            with engine.connect() as conn:
+                result = conn.execute(text(sql))
+                if not result.returns_rows:
+                    return ""
+                columns = list(result.keys())
+                rows = result.fetchall()
+                if not rows:
+                    return ""
+                return "\n".join(str(dict(zip(columns, row))) for row in rows)
+
+        try:
+            result_str = await asyncio.to_thread(execute_with_retry, _run_query_sync)
+        except QueryExecutionError as e:
+            logger.error("Query execution failed: %s", e)
+            return {"pipeline_result": "", "last_error": str(e)}
+        except Exception as e:
+            logger.error("Unexpected error executing SQL: %s", e)
+            return {"pipeline_result": "", "last_error": str(e)}
+
+    if not result_str or not result_str.strip():
+        result_str = "SQL query returned no results."
+    return {"pipeline_result": result_str, "last_error": ""}
 
 
 async def format_results_node(state: AtlasAgentState) -> dict:
@@ -460,6 +502,7 @@ def create_sql_agent(
     top_k_per_query: int = 15,
     max_uses: int = 3,
     checkpointer: "BaseCheckpointSaver | None" = None,
+    async_engine: AsyncEngine | None = None,
 ):
     """
     Creates a StateGraph agent for handling complex SQL queries.
@@ -586,9 +629,12 @@ If a user asks a normative policy question, such as what products a country shou
         "extract_products",
         partial(extract_products_node, llm=llm, engine=engine),
     )
+    _lookup_kwargs = {"llm": llm, "engine": engine}
+    if async_engine is not None:
+        _lookup_kwargs["async_engine"] = async_engine
     builder.add_node(
         "lookup_codes",
-        partial(lookup_codes_node, llm=llm, engine=engine),
+        partial(lookup_codes_node, **_lookup_kwargs),
     )
     builder.add_node(
         "get_table_info",
@@ -603,7 +649,10 @@ If a user asks a normative policy question, such as what products a country shou
             max_results=top_k_per_query,
         ),
     )
-    builder.add_node("execute_sql", partial(execute_sql_node, engine=engine))
+    builder.add_node(
+        "execute_sql",
+        partial(execute_sql_node, async_engine=async_engine if async_engine is not None else engine),
+    )
     builder.add_node("format_results", format_results_node)
     builder.add_node("max_queries_exceeded", max_queries_exceeded_node)
 
