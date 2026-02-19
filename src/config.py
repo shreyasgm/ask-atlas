@@ -2,15 +2,31 @@
 Application configuration using Pydantic Settings.
 
 Centralizes all configuration loaded from environment variables with type validation.
+Non-secret defaults (model names, providers) live in model_config.py at the project root.
 """
 
 from pathlib import Path
 from pydantic_settings import BaseSettings
 from pydantic import Field, AliasChoices
 from functools import lru_cache
+from langchain_core.language_models import BaseChatModel
 
 # Project root directory (parent of src/)
 BASE_DIR = Path(__file__).resolve().parents[1]
+
+# Import non-secret defaults from model_config.py
+import importlib.util
+
+_spec = importlib.util.spec_from_file_location("model_config", BASE_DIR / "model_config.py")
+_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_mod)
+
+_MODEL_DEFAULTS = {
+    "query_model": getattr(_mod, "QUERY_MODEL", "gpt-5.2"),
+    "query_model_provider": getattr(_mod, "QUERY_MODEL_PROVIDER", "openai"),
+    "metadata_model": getattr(_mod, "METADATA_MODEL", "gpt-5-mini"),
+    "metadata_model_provider": getattr(_mod, "METADATA_MODEL_PROVIDER", "openai"),
+}
 
 
 class Settings(BaseSettings):
@@ -28,21 +44,43 @@ class Settings(BaseSettings):
         description="PostgreSQL connection URI for checkpoint storage",
     )
 
-    # LLM Configuration
-    openai_api_key: str = Field(
-        ...,
+    # LLM Configuration — API keys
+    openai_api_key: str | None = Field(
+        None,
         validation_alias=AliasChoices("OPENAI_API_KEY", "openai_api_key"),
         description="OpenAI API key",
     )
+    anthropic_api_key: str | None = Field(
+        None,
+        validation_alias=AliasChoices("ANTHROPIC_API_KEY", "anthropic_api_key"),
+        description="Anthropic API key",
+    )
+    google_api_key: str | None = Field(
+        None,
+        validation_alias=AliasChoices("GOOGLE_API_KEY", "google_api_key"),
+        description="Google AI API key",
+    )
+
+    # LLM Configuration — models and providers (defaults from model_config.py)
     query_model: str = Field(
-        "gpt-5.2",
-        validation_alias=AliasChoices("QUERY_MODEL", "query_model"),
+        _MODEL_DEFAULTS["query_model"],
+        validation_alias=AliasChoices("QUERY_MODEL", "QUERY_LLM", "query_model"),
         description="Model for SQL query generation",
     )
+    query_model_provider: str = Field(
+        _MODEL_DEFAULTS["query_model_provider"],
+        validation_alias=AliasChoices("QUERY_MODEL_PROVIDER", "query_model_provider"),
+        description="Provider for the query model ('openai', 'anthropic', or 'google-genai')",
+    )
     metadata_model: str = Field(
-        "gpt-5-mini",
-        validation_alias=AliasChoices("METADATA_MODEL", "metadata_model"),
+        _MODEL_DEFAULTS["metadata_model"],
+        validation_alias=AliasChoices("METADATA_MODEL", "METADATA_LLM", "metadata_model"),
         description="Model for metadata extraction",
+    )
+    metadata_model_provider: str = Field(
+        _MODEL_DEFAULTS["metadata_model_provider"],
+        validation_alias=AliasChoices("METADATA_MODEL_PROVIDER", "metadata_model_provider"),
+        description="Provider for the metadata model ('openai', 'anthropic', or 'google-genai')",
     )
 
     # Agent Configuration
@@ -89,3 +127,36 @@ def get_settings() -> Settings:
     and cached for subsequent calls.
     """
     return Settings()
+
+
+def create_llm(model: str, provider: str, **kwargs) -> BaseChatModel:
+    """Create a chat model for the given provider.
+
+    Args:
+        model: Model name (e.g. "gpt-5.2", "claude-sonnet-4-5-20250929", "gemini-2.5-flash").
+        provider: One of "openai", "anthropic", or "google-genai" / "google".
+        **kwargs: Extra keyword arguments forwarded to the model constructor.
+
+    Returns:
+        A LangChain chat model instance.
+
+    Raises:
+        ValueError: If the provider is not supported.
+    """
+    if provider == "openai":
+        from langchain_openai import ChatOpenAI
+
+        return ChatOpenAI(model=model, **kwargs)
+    elif provider == "anthropic":
+        from langchain_anthropic import ChatAnthropic
+
+        return ChatAnthropic(model=model, **kwargs)
+    elif provider in ("google-genai", "google"):
+        from langchain_google_genai import ChatGoogleGenerativeAI
+
+        return ChatGoogleGenerativeAI(model=model, **kwargs)
+    else:
+        raise ValueError(
+            f"Unsupported LLM provider: {provider!r}. "
+            "Use 'openai', 'anthropic', or 'google-genai'."
+        )
