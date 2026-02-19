@@ -445,54 +445,27 @@ class TestServiceUnavailable:
 
 
 class TestTimeoutMiddleware:
-    """Verify the timeout middleware configuration and 504 response format.
+    """Verify the timeout middleware returns 504 when a request exceeds the timeout.
 
-    Actually waiting 120 seconds is impractical in tests. Instead we verify:
-    1. The middleware is attached to the app.
-    2. When a request exceeds the timeout, the response is 504 with the
-       expected JSON detail.
-
-    To make (2) feasible we temporarily monkey-patch the middleware's timeout
-    to a very short duration and make the mock sleep past it.
+    Strategy: patch ``REQUEST_TIMEOUT_SECONDS`` to a tiny value so we don't
+    have to wait 120 seconds, then make the mock sleep past it.
     """
 
     def test_504_response_on_timeout(self, client: TestClient) -> None:
-        """A slow handler returns 504 with the correct detail message.
-
-        Strategy: patch the timeout value on the middleware to 0.1 s, then
-        make the mock sleep for 0.5 s.
-        """
+        """A slow handler returns 504 with the correct detail message."""
         import asyncio
+        from unittest.mock import patch
 
-        # Find and patch the timeout middleware on the app
-        patched = False
-        for mw in app.user_middleware:
-            # Middleware may store kwargs with "timeout" key
-            if "timeout" in (mw.kwargs or {}):
-                original_timeout = mw.kwargs["timeout"]
-                mw.kwargs["timeout"] = 0.1
-                patched = True
-                break
+        async def _slow_answer(question, thread_id=None):
+            await asyncio.sleep(0.5)
+            return "late answer"
 
-        if not patched:
-            pytest.skip("Could not locate timeout middleware to patch")
+        _state.atlas_sql.aanswer_question = _slow_answer
 
-        try:
-            async def _slow_answer(question, thread_id=None):
-                await asyncio.sleep(1.0)
-                return "late answer"
-
-            _state.atlas_sql.aanswer_question = _slow_answer
-
-            # Need a fresh TestClient so the patched middleware takes effect
-            with TestClient(app, raise_server_exceptions=False) as fresh:
-                response = fresh.post("/chat", json={"question": "slow"})
-                assert response.status_code == 504
-                assert "timed out" in response.json()["detail"].lower()
-        finally:
-            # Restore original timeout so other tests are unaffected
-            if patched:
-                mw.kwargs["timeout"] = original_timeout
+        with patch("src.api.REQUEST_TIMEOUT_SECONDS", 0.05):
+            response = client.post("/chat", json={"question": "slow"})
+            assert response.status_code == 504
+            assert "timed out" in response.json()["detail"].lower()
 
 
 # ---------------------------------------------------------------------------
