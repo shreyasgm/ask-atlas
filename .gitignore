@@ -18,6 +18,8 @@ evaluation/results/**/agent_runs/
 evaluation/questions/
 evaluation/results/
 evaluation/evaluations/
+evaluation/logs/
+evaluation/runs/
 src/messages_logs.json
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks,macos
