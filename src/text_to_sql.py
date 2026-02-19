@@ -127,6 +127,21 @@ class AtlasTextToSQL:
         )
 
     @staticmethod
+    def _turn_input(question: str) -> dict:
+        """Build the input dict for a new conversational turn.
+
+        Resets per-turn counters so that Turn N doesn't inherit
+        Turn N-1's ``queries_executed`` / ``last_error`` / ``retry_count``
+        from the checkpoint.
+        """
+        return {
+            "messages": [HumanMessage(content=question)],
+            "queries_executed": 0,
+            "last_error": "",
+            "retry_count": 0,
+        }
+
+    @staticmethod
     def _extract_text(content: str | list) -> str:
         """Normalize message content to a plain string.
 
@@ -176,7 +191,7 @@ class AtlasTextToSQL:
         agent_messages = []
 
         for stream_data in self.agent.stream(
-            {"messages": [HumanMessage(content=question)]},
+            self._turn_input(question),
             stream_mode="messages",
             config=config,
         ):
@@ -296,7 +311,7 @@ class AtlasTextToSQL:
         if not stream_response:
             # Non-streaming mode: Return final message directly
             result = self.agent.stream(
-                {"messages": [HumanMessage(content=question)]},
+                self._turn_input(question),
                 stream_mode="values",
                 config=config,
             )
@@ -338,7 +353,7 @@ class AtlasTextToSQL:
         in_tool_stream = False
 
         for stream_mode, stream_data in self.agent.stream(
-            {"messages": [HumanMessage(content=question)]},
+            self._turn_input(question),
             stream_mode=["messages", "updates"],
             config=config,
         ):
@@ -490,7 +505,7 @@ class AtlasTextToSQL:
         
         message_count = 0
         for stream_mode, stream_data in self.agent.stream(
-            {"messages": [HumanMessage(content=question)]},
+            self._turn_input(question),
             stream_mode=["messages", "updates"],
             config=config,
         ):
