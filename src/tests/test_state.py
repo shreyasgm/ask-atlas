@@ -64,3 +64,10 @@ class TestAtlasAgentState:
         assert "queries_executed" in annotations
         assert "last_error" in annotations
         assert "retry_count" in annotations
+        # Pipeline intermediate state fields
+        assert "pipeline_question" in annotations
+        assert "pipeline_products" in annotations
+        assert "pipeline_codes" in annotations
+        assert "pipeline_table_info" in annotations
+        assert "pipeline_sql" in annotations
+        assert "pipeline_result" in annotations

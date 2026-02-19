@@ -2,12 +2,14 @@
 
 import pytest
 
-from langchain.agents import create_agent
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import tool
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph import StateGraph, START, END
+from langgraph.prebuilt import ToolNode, tools_condition
 
 from src.generate_query import QueryToolInput
+from src.state import AtlasAgentState
 from src.tests.fake_model import FakeToolCallingModel
 
 
@@ -24,6 +26,11 @@ def _tool_call(name: str, question: str, call_id: str) -> dict:
         "id": call_id,
         "type": "tool_call",
     }
+
+
+def _make_tool_message(content: str, tool_call_id: str) -> ToolMessage:
+    """Build a ToolMessage for pipeline simulation."""
+    return ToolMessage(content=content, tool_call_id=tool_call_id)
 
 
 # ---------------------------------------------------------------------------
@@ -45,16 +52,48 @@ def dummy_query_tool():
 
 @pytest.fixture()
 def make_agent(dummy_query_tool):
-    """Factory: takes a list of AIMessage responses, returns (agent, memory)."""
+    """Factory: takes a list of AIMessage responses, returns (agent, memory).
+
+    Builds a simplified graph that mirrors the production structure:
+    agent → (tool_calls?) → pipeline_stub → agent  or  agent → END
+
+    The pipeline_stub node extracts the tool_call_id, invokes the dummy tool,
+    and wraps the result in a ToolMessage — equivalent to the full pipeline's
+    format_results_node but without the intermediate steps.
+    """
 
     def _make(responses: list[AIMessage]):
         model = FakeToolCallingModel(responses=responses)
         memory = MemorySaver()
-        agent = create_agent(
-            model=model,
-            tools=[dummy_query_tool],
-            checkpointer=memory,
-        )
+
+        def agent_node(state: AtlasAgentState) -> dict:
+            model_with_tools = model.bind_tools([dummy_query_tool])
+            return {"messages": [model_with_tools.invoke(state["messages"])]}
+
+        def pipeline_stub(state: AtlasAgentState) -> dict:
+            """Simulate the full pipeline: extract question, run tool, return ToolMessage."""
+            last_msg = state["messages"][-1]
+            tc = last_msg.tool_calls[0]
+            result = dummy_query_tool.invoke(tc["args"])
+            return {
+                "messages": [ToolMessage(content=result, tool_call_id=tc["id"])],
+                "queries_executed": state.get("queries_executed", 0) + 1,
+            }
+
+        def route_after_agent(state: AtlasAgentState) -> str:
+            last_msg = state["messages"][-1]
+            if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
+                return "pipeline_stub"
+            return END
+
+        builder = StateGraph(AtlasAgentState)
+        builder.add_node("agent", agent_node)
+        builder.add_node("pipeline_stub", pipeline_stub)
+        builder.add_edge(START, "agent")
+        builder.add_conditional_edges("agent", route_after_agent)
+        builder.add_edge("pipeline_stub", "agent")
+
+        agent = builder.compile(checkpointer=memory)
         return agent, memory
 
     return _make
