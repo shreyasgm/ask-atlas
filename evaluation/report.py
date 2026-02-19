@@ -84,6 +84,7 @@ def generate_report(
             "duration_s": run.get("duration_s"),
             "verdict": verdict.get("verdict", "n/a"),
             "weighted_score": verdict.get("weighted_score", 0),
+            "judge_mode": verdict.get("judge_mode", "n/a"),
             "error": run.get("error"),
             "judge_comment": verdict.get("overall_comment", verdict.get("reasoning", "")),
         }
@@ -176,13 +177,14 @@ def report_to_markdown(report: dict[str, Any]) -> str:
     per_q = report.get("per_question", [])
     if per_q:
         lines.append("\n## Per-Question Details\n")
-        lines.append("| ID | Difficulty | Category | Verdict | Score | Duration |")
-        lines.append("|----|------------|----------|---------|-------|----------|")
+        lines.append("| ID | Difficulty | Category | Verdict | Score | Judge Mode | Duration |")
+        lines.append("|----|------------|----------|---------|-------|------------|----------|")
         for q in per_q:
             dur = f"{q['duration_s']}s" if q["duration_s"] is not None else "n/a"
+            mode = q.get("judge_mode", "n/a")
             lines.append(
                 f"| {q['question_id']} | {q['difficulty']} | {q['category']} "
-                f"| {q['verdict']} | {q['weighted_score']} | {dur} |"
+                f"| {q['verdict']} | {q['weighted_score']} | {mode} | {dur} |"
             )
 
     return "\n".join(lines) + "\n"

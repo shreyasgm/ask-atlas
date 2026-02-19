@@ -80,19 +80,22 @@ async def _judge_all(
         expected_behavior = meta.get("expected_behavior")
         ground_truth = _load_ground_truth(qid)
 
-        # If question has expected_behavior and no ground truth, treat as refusal
-        if expected_behavior and ground_truth is None:
-            gt_for_judge = None
-        else:
-            gt_for_judge = ground_truth
+        # Dispatch: ground truth → refusal → plausibility
+        # judge_answer handles the three-way branch internally;
+        # just pass what we have and let it decide.
 
         async with semaphore:
             try:
-                logging.info(f"Question {qid}: judging...")
+                mode = (
+                    "ground_truth" if ground_truth is not None
+                    else "refusal" if expected_behavior is not None
+                    else "plausibility"
+                )
+                logging.info(f"Question {qid}: judging ({mode})...")
                 verdict = await judge_answer(
                     question=meta.get("text", result.get("question_text", "")),
                     agent_answer=result["answer"],
-                    ground_truth_data=gt_for_judge,
+                    ground_truth_data=ground_truth,
                     expected_behavior=expected_behavior,
                     model=judge_model,
                     provider=judge_provider,
@@ -100,7 +103,8 @@ async def _judge_all(
                 judge_results[qid] = verdict
                 logging.info(
                     f"Question {qid}: verdict={verdict.get('verdict', 'n/a')} "
-                    f"score={verdict.get('weighted_score', 'n/a')}"
+                    f"score={verdict.get('weighted_score', 'n/a')} "
+                    f"mode={verdict.get('judge_mode', mode)}"
                 )
             except Exception as e:
                 logging.error(f"Question {qid}: judge error — {e}")
