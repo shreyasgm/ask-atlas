@@ -65,20 +65,31 @@ def build_test_graph(
 
         Extracts the tool_call from the last AI message, fabricates a result
         (or an error), wraps it in a ToolMessage, and increments
-        ``queries_executed``.
+        ``queries_executed``.  Mirrors production: responds to ALL tool_calls.
         """
         last_msg = state["messages"][-1]
-        tc = last_msg.tool_calls[0]
+        tool_calls = last_msg.tool_calls
+        tc = tool_calls[0]
         question = tc["args"]["question"]
 
         if pipeline_error:
-            # Simulate execute_sql setting last_error
             content = f"Error executing query: {pipeline_error}"
         else:
             content = f"Query results for: {question}"
 
+        messages: list[ToolMessage] = [
+            ToolMessage(content=content, tool_call_id=tc["id"])
+        ]
+        for extra_tc in tool_calls[1:]:
+            messages.append(
+                ToolMessage(
+                    content="Only one query can be executed at a time.",
+                    tool_call_id=extra_tc["id"],
+                )
+            )
+
         return {
-            "messages": [ToolMessage(content=content, tool_call_id=tc["id"])],
+            "messages": messages,
             "queries_executed": state.get("queries_executed", 0) + 1,
         }
 
@@ -279,6 +290,48 @@ class TestGraphRouting:
         # The final AI message should be the answer
         assert isinstance(msgs[3], AIMessage)
         assert msgs[3].content == "Brazil exports lots of coffee."
+
+    def test_agent_handles_parallel_tool_calls(self):
+        """When the LLM produces 2 parallel tool_calls, the graph completes without error.
+
+        Both tool_call_ids should receive a ToolMessage, and the agent should
+        produce a final answer.
+        """
+        model = FakeToolCallingModel(
+            responses=[
+                AIMessage(
+                    content="",
+                    tool_calls=[
+                        _tool_call("query_tool", "US exports 2020", "call-p1"),
+                        _tool_call("query_tool", "US exports 2021", "call-p2"),
+                    ],
+                ),
+                AIMessage(content="Here is the comparison."),
+            ]
+        )
+        graph = build_test_graph(model)
+        config = {"configurable": {"thread_id": "parallel-tc"}}
+
+        result = graph.invoke(
+            {"messages": [HumanMessage(content="Compare US exports 2020 vs 2021")]},
+            config=config,
+        )
+
+        msgs = result["messages"]
+        tool_msgs = [m for m in msgs if isinstance(m, ToolMessage)]
+
+        # Both tool_call_ids should have a ToolMessage
+        assert len(tool_msgs) == 2
+        tool_msg_ids = {tm.tool_call_id for tm in tool_msgs}
+        assert tool_msg_ids == {"call-p1", "call-p2"}
+
+        # First carries results, second carries the "one at a time" message
+        assert "Query results for: US exports 2020" in tool_msgs[0].content
+        assert "one query" in tool_msgs[1].content.lower()
+
+        # Final message is the agent answer
+        assert isinstance(msgs[-1], AIMessage)
+        assert msgs[-1].content == "Here is the comparison."
 
     def test_error_in_pipeline_propagates(self):
         """If execute_sql sets last_error, format_results creates a ToolMessage with the error content.

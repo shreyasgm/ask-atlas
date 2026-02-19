@@ -71,12 +71,27 @@ def make_agent(dummy_query_tool):
             return {"messages": [model_with_tools.invoke(state["messages"])]}
 
         def pipeline_stub(state: AtlasAgentState) -> dict:
-            """Simulate the full pipeline: extract question, run tool, return ToolMessage."""
+            """Simulate the full pipeline: extract question, run tool, return ToolMessage.
+
+            Mirrors production: responds to ALL tool_calls so that OpenAI
+            doesn't reject the message history when parallel calls are made.
+            """
             last_msg = state["messages"][-1]
-            tc = last_msg.tool_calls[0]
+            tool_calls = last_msg.tool_calls
+            tc = tool_calls[0]
             result = dummy_query_tool.invoke(tc["args"])
+            messages: list[ToolMessage] = [
+                ToolMessage(content=result, tool_call_id=tc["id"])
+            ]
+            for extra_tc in tool_calls[1:]:
+                messages.append(
+                    ToolMessage(
+                        content="Only one query can be executed at a time.",
+                        tool_call_id=extra_tc["id"],
+                    )
+                )
             return {
-                "messages": [ToolMessage(content=result, tool_call_id=tc["id"])],
+                "messages": messages,
                 "queries_executed": state.get("queries_executed", 0) + 1,
             }
 

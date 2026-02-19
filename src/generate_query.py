@@ -286,6 +286,11 @@ def get_table_info_for_schemas(
 def extract_tool_question(state: AtlasAgentState) -> dict:
     """Extract the question from the agent's tool_call args."""
     last_msg = state["messages"][-1]
+    if len(last_msg.tool_calls) > 1:
+        logger.warning(
+            "LLM produced %d parallel tool_calls; only the first will be executed.",
+            len(last_msg.tool_calls),
+        )
     question = last_msg.tool_calls[0]["args"]["question"]
     return {"pipeline_question": question}
 
@@ -383,33 +388,47 @@ def execute_sql_node(state: AtlasAgentState, *, engine: Engine) -> dict:
 
 
 def format_results_node(state: AtlasAgentState) -> dict:
-    """Create a ToolMessage from pipeline results and route back to agent."""
+    """Create a ToolMessage for every tool_call and route back to agent.
+
+    When the LLM produces multiple parallel tool_calls, only the first is
+    actually executed through the pipeline.  The remaining tool_call_ids
+    still need a corresponding ToolMessage so that provider APIs (e.g.
+    OpenAI) don't reject the message history.
+    """
     last_msg = state["messages"][-1]
-    tool_call_id = last_msg.tool_calls[0]["id"]
+    tool_calls = last_msg.tool_calls
 
     if state.get("last_error"):
         content = f"Error executing query: {state['last_error']}"
     else:
         content = state.get("pipeline_result", "SQL query returned no results.")
 
+    messages: list[ToolMessage] = [
+        ToolMessage(content=content, tool_call_id=tool_calls[0]["id"])
+    ]
+    for tc in tool_calls[1:]:
+        messages.append(
+            ToolMessage(
+                content="Only one query can be executed at a time. Please make additional queries sequentially.",
+                tool_call_id=tc["id"],
+            )
+        )
+
     return {
-        "messages": [ToolMessage(content=content, tool_call_id=tool_call_id)],
+        "messages": messages,
         "queries_executed": state.get("queries_executed", 0) + 1,
     }
 
 
 def max_queries_exceeded_node(state: AtlasAgentState) -> dict:
-    """Return a ToolMessage indicating the query limit was hit."""
+    """Return a ToolMessage for every tool_call indicating the query limit was hit."""
     last_msg = state["messages"][-1]
-    tool_call_id = last_msg.tool_calls[0]["id"]
-    return {
-        "messages": [
-            ToolMessage(
-                content="Error: Maximum number of queries exceeded.",
-                tool_call_id=tool_call_id,
-            )
-        ],
-    }
+    error_content = "Error: Maximum number of queries exceeded."
+    messages = [
+        ToolMessage(content=error_content, tool_call_id=tc["id"])
+        for tc in last_msg.tool_calls
+    ]
+    return {"messages": messages}
 
 
 # ---------------------------------------------------------------------------

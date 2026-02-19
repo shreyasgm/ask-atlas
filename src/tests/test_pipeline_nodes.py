@@ -50,6 +50,31 @@ def _make_tool_call_message(
     )
 
 
+def _make_multi_tool_call_message(
+    questions: list[str] | None = None,
+    tool_call_ids: list[str] | None = None,
+) -> AIMessage:
+    """Create an AIMessage with multiple parallel tool_calls."""
+    questions = questions or [
+        "What did Brazil export in 2021?",
+        "What did Argentina export in 2021?",
+    ]
+    tool_call_ids = tool_call_ids or [
+        f"call_{i}" for i in range(len(questions))
+    ]
+    return AIMessage(
+        content="",
+        tool_calls=[
+            {
+                "id": tc_id,
+                "name": "query_tool",
+                "args": {"question": q},
+            }
+            for q, tc_id in zip(questions, tool_call_ids)
+        ],
+    )
+
+
 def _base_state(**overrides) -> dict:
     """Return a minimal AtlasAgentState dict with sensible defaults.
 
@@ -112,6 +137,18 @@ class TestExtractToolQuestion:
         result = extract_tool_question(state)
 
         assert result == {"pipeline_question": ""}
+
+    def test_extracts_first_question_from_parallel_tool_calls(self):
+        """When the LLM emits multiple parallel tool_calls, only the first question is used."""
+        msg = _make_multi_tool_call_message(
+            questions=["First question?", "Second question?"],
+            tool_call_ids=["call_a", "call_b"],
+        )
+        state = _base_state(messages=[msg])
+
+        result = extract_tool_question(state)
+
+        assert result == {"pipeline_question": "First question?"}
 
 
 # ---------------------------------------------------------------------------
@@ -769,6 +806,51 @@ class TestFormatResultsNode:
 
         assert result["messages"][0].tool_call_id == custom_id
 
+    def test_multiple_tool_calls_all_get_tool_messages(self):
+        """N tool_calls should produce N ToolMessages."""
+        msg = _make_multi_tool_call_message(
+            questions=["Q1?", "Q2?", "Q3?"],
+            tool_call_ids=["call_x", "call_y", "call_z"],
+        )
+        state = _base_state(
+            messages=[msg],
+            pipeline_result="data for Q1",
+            last_error="",
+            queries_executed=0,
+        )
+
+        result = format_results_node(state)
+
+        assert len(result["messages"]) == 3
+        assert result["messages"][0].tool_call_id == "call_x"
+        assert "data for Q1" in result["messages"][0].content
+        assert result["messages"][1].tool_call_id == "call_y"
+        assert "one query" in result["messages"][1].content.lower()
+        assert result["messages"][2].tool_call_id == "call_z"
+        assert "one query" in result["messages"][2].content.lower()
+        assert result["queries_executed"] == 1
+
+    def test_multiple_tool_calls_with_error(self):
+        """Error path: all tool_calls get ToolMessages; first carries the error."""
+        msg = _make_multi_tool_call_message(
+            questions=["Q1?", "Q2?"],
+            tool_call_ids=["call_e1", "call_e2"],
+        )
+        state = _base_state(
+            messages=[msg],
+            pipeline_result="",
+            last_error="relation does not exist",
+            queries_executed=1,
+        )
+
+        result = format_results_node(state)
+
+        assert len(result["messages"]) == 2
+        assert "Error executing query" in result["messages"][0].content
+        assert result["messages"][0].tool_call_id == "call_e1"
+        assert result["messages"][1].tool_call_id == "call_e2"
+        assert "one query" in result["messages"][1].content.lower()
+
 
 # ---------------------------------------------------------------------------
 # 8. max_queries_exceeded_node
@@ -807,3 +889,20 @@ class TestMaxQueriesExceededNode:
         result = max_queries_exceeded_node(state)
 
         assert "queries_executed" not in result
+
+    def test_multiple_tool_calls_all_get_error_messages(self):
+        """All parallel tool_calls receive the exceeded-limit error ToolMessage."""
+        msg = _make_multi_tool_call_message(
+            questions=["Q1?", "Q2?"],
+            tool_call_ids=["call_m1", "call_m2"],
+        )
+        state = _base_state(messages=[msg], queries_executed=5)
+
+        result = max_queries_exceeded_node(state)
+
+        assert len(result["messages"]) == 2
+        for tm in result["messages"]:
+            assert isinstance(tm, ToolMessage)
+            assert "Maximum number of queries exceeded" in tm.content
+        assert result["messages"][0].tool_call_id == "call_m1"
+        assert result["messages"][1].tool_call_id == "call_m2"
