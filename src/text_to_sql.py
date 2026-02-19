@@ -1,6 +1,5 @@
 from typing import Dict, List, Union, Generator, Tuple, Optional
 from pathlib import Path
-from langchain_openai import ChatOpenAI
 import logging
 import datetime
 import json
@@ -15,7 +14,7 @@ from src.generate_query import (
     create_sql_agent,
     PIPELINE_NODES,
 )
-from src.config import get_settings
+from src.config import get_settings, create_llm
 from src.persistence import CheckpointerManager
 import uuid
 
@@ -106,8 +105,8 @@ class AtlasTextToSQL:
         self.example_queries = load_example_queries(queries_json, example_queries_dir)
 
         # Initialize language models using settings
-        self.metadata_llm = ChatOpenAI(model=settings.metadata_model, temperature=0)
-        self.query_llm = ChatOpenAI(model=settings.query_model, temperature=0)
+        self.metadata_llm = create_llm(settings.metadata_model, settings.metadata_model_provider, temperature=0)
+        self.query_llm = create_llm(settings.query_model, settings.query_model_provider, temperature=0)
 
         self.max_results = max_results
         self.max_queries = max_queries
@@ -126,6 +125,22 @@ class AtlasTextToSQL:
             max_uses=self.max_queries,
             checkpointer=self._checkpointer_manager.checkpointer,
         )
+
+    @staticmethod
+    def _extract_text(content: str | list) -> str:
+        """Normalize message content to a plain string.
+
+        Some providers (e.g. Google Gemini) return content as a list of
+        content blocks rather than a plain string. This extracts the text.
+        """
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            return "".join(
+                block.get("text", "") if isinstance(block, dict) else str(block)
+                for block in content
+            )
+        return str(content)
 
     @staticmethod
     def _load_json_as_dict(file_path: str) -> Dict:
@@ -287,7 +302,7 @@ class AtlasTextToSQL:
             )
             for step in result:
                 message = step["messages"][-1]
-            return message.content
+            return self._extract_text(message.content)
 
         # Shared list that accumulates StreamData during iteration
         messages: List[StreamData] = []

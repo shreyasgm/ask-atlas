@@ -232,7 +232,7 @@ class ProductAndSchemaLookup:
         )
 
         # Create initial chain to identify product and schema mentions
-        llm = self.llm.bind_tools([SchemasAndProductsFound], tool_choice=True)
+        llm = self.llm.bind_tools([SchemasAndProductsFound], tool_choice="any")
         mentions_chain = (
             prompt
             | llm
@@ -332,7 +332,7 @@ class ProductAndSchemaLookup:
         # Partially format prompt template using search results
         prompt = prompt.partial(product_search_results=results_str)
 
-        llm = self.llm.bind_tools([ProductCodesMapping], tool_choice=True)
+        llm = self.llm.bind_tools([ProductCodesMapping], tool_choice="any")
         chain = (
             prompt
             | llm
@@ -538,11 +538,10 @@ def format_product_codes_for_prompt(analysis: ProductCodesMapping) -> str:
 
 # Usage example
 if __name__ == "__main__":
-    from langchain_openai import ChatOpenAI
-    from src.config import get_settings
+    from src.config import get_settings, create_llm
 
     settings = get_settings()
-    llm = ChatOpenAI(model=settings.query_model, temperature=0)
+    llm = create_llm(settings.query_model, settings.query_model_provider, temperature=0)
     analyzer = ProductAndSchemaLookup(
         llm=llm,
         connection=settings.atlas_db_url,
