@@ -9,7 +9,7 @@ Proves that:
 4. Concurrent queries run in parallel (event loop not blocked)
 
 Run with:
-    PYTHONPATH=$(pwd) uv run python src/tests/verify_async_db.py
+    PYTHONPATH=$(pwd) uv run python scripts/verify_async_db.py
 """
 
 import asyncio

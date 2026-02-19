@@ -2,9 +2,6 @@
 
 Tests real tenacity retry behavior (no mocks of the retry decorator itself).
 No external dependencies required.
-
-NOTE: This file was generated with LLM assistance and needs human review.
-Fragile areas: call_count assertions are coupled to retry config (stop_after_attempt(3)).
 """
 
 import pytest
@@ -13,6 +10,9 @@ from sqlalchemy.exc import OperationalError
 from tenacity import RetryError
 
 from src.error_handling import execute_with_retry, QueryExecutionError
+
+# Read max attempts from the actual retry config so tests stay in sync
+MAX_ATTEMPTS = execute_with_retry.retry.stop.max_attempt_number
 
 
 class TestRetryBehavior:
@@ -26,17 +26,15 @@ class TestRetryBehavior:
         fn.assert_called_once_with("arg1", key="val")
 
     def test_retries_on_operational_error(self):
-        """Transient OperationalError is retried; succeeds on 3rd attempt."""
+        """Transient OperationalError is retried; succeeds on final attempt."""
         fn = MagicMock(
             side_effect=[
-                OperationalError("conn lost", params=None, orig=Exception()),
-                OperationalError("conn lost", params=None, orig=Exception()),
-                "recovered",
-            ]
+                OperationalError("conn lost", params=None, orig=Exception())
+            ] * (MAX_ATTEMPTS - 1) + ["recovered"]
         )
         result = execute_with_retry(fn, "q")
         assert result == "recovered"
-        assert fn.call_count == 3
+        assert fn.call_count == MAX_ATTEMPTS
 
     def test_wraps_non_retryable_error(self):
         """Non-retryable errors are wrapped in QueryExecutionError."""
@@ -53,4 +51,4 @@ class TestRetryBehavior:
         )
         with pytest.raises(RetryError):
             execute_with_retry(fn, "q")
-        assert fn.call_count == 3  # stop_after_attempt(3)
+        assert fn.call_count == MAX_ATTEMPTS
