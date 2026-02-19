@@ -1,10 +1,7 @@
 """Integration tests for checkpoint persistence.
 
-Tests real PostgresSaver connectivity and MemorySaver fallback behavior.
-
-NOTE: This file was generated with LLM assistance and needs human review.
-Fragile areas: fallback test uses a bogus URL which may behave differently
-depending on network configuration.
+Tests real PostgresSaver connectivity and MemorySaver fallback behavior
+against a live Postgres instance (Docker test DB on port 5433).
 """
 
 import os
@@ -16,8 +13,7 @@ from langgraph.checkpoint.base import empty_checkpoint
 from langgraph.checkpoint.memory import MemorySaver
 
 from src.config import get_settings
-from src.persistence import CheckpointerManager
-from src.text_to_sql import AtlasTextToSQL
+from src.persistence import AsyncCheckpointerManager, CheckpointerManager
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
@@ -85,3 +81,40 @@ class TestPersistenceIntegration:
         finally:
             manager_b.close()
 
+
+@pytest.mark.db
+class TestAsyncPersistenceIntegration:
+    """Validate async checkpointer behavior against real Postgres."""
+
+    async def test_async_checkpointer_with_real_db(self, checkpoint_db_url):
+        """AsyncCheckpointerManager returns a non-MemorySaver with a real DB URL."""
+        manager = AsyncCheckpointerManager(db_url=checkpoint_db_url)
+        try:
+            cp = await manager.get_checkpointer()
+            assert not isinstance(cp, MemorySaver)
+        finally:
+            await manager.close()
+
+    async def test_async_fallback_with_bad_url(self):
+        """Bad URL gracefully falls back to MemorySaver."""
+        manager = AsyncCheckpointerManager(
+            db_url="postgresql://invalid:5432/nope"
+        )
+        try:
+            cp = await manager.get_checkpointer()
+            assert isinstance(cp, MemorySaver)
+        finally:
+            await manager.close()
+
+    async def test_async_close_resets_state(self, checkpoint_db_url):
+        """With real Postgres, close() resets _checkpointer and _async_conn to None."""
+        manager = AsyncCheckpointerManager(db_url=checkpoint_db_url)
+        try:
+            await manager.get_checkpointer()
+            assert manager._checkpointer is not None
+            assert manager._async_conn is not None
+        finally:
+            await manager.close()
+
+        assert manager._checkpointer is None
+        assert manager._async_conn is None

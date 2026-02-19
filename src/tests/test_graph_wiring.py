@@ -56,11 +56,11 @@ def build_test_graph(
         """A trade data query tool."""
         return "stub result"
 
-    def agent_node(state: AtlasAgentState) -> dict:
+    async def agent_node(state: AtlasAgentState) -> dict:
         model_with_tools = fake_model.bind_tools([dummy_tool])
-        return {"messages": [model_with_tools.invoke(state["messages"])]}
+        return {"messages": [await model_with_tools.ainvoke(state["messages"])]}
 
-    def pipeline_stub(state: AtlasAgentState) -> dict:
+    async def pipeline_stub(state: AtlasAgentState) -> dict:
         """Simulate the full pipeline in one step.
 
         Extracts the tool_call from the last AI message, fabricates a result
@@ -122,7 +122,7 @@ def build_test_graph(
 class TestGraphRouting:
     """Verify conditional routing edges in the agent graph."""
 
-    def test_agent_routes_to_end_without_tool_call(self):
+    async def test_agent_routes_to_end_without_tool_call(self):
         """Agent produces AIMessage without tool_calls -> graph ends.
 
         When the LLM responds with a plain text answer (no tool_calls), the
@@ -135,7 +135,7 @@ class TestGraphRouting:
         graph = build_test_graph(model)
         config = {"configurable": {"thread_id": "end-no-tool"}}
 
-        result = graph.invoke(
+        result = await graph.ainvoke(
             {"messages": [HumanMessage(content="What is 6 times 7?")]},
             config=config,
         )
@@ -150,7 +150,7 @@ class TestGraphRouting:
         tool_msgs = [m for m in msgs if isinstance(m, ToolMessage)]
         assert len(tool_msgs) == 0
 
-    def test_agent_routes_to_pipeline_on_tool_call(self):
+    async def test_agent_routes_to_pipeline_on_tool_call(self):
         """Agent produces AIMessage with tool_calls -> pipeline -> ToolMessage -> agent -> final answer.
 
         The scripted model first emits a tool_call, which routes through the
@@ -171,7 +171,7 @@ class TestGraphRouting:
         graph = build_test_graph(model)
         config = {"configurable": {"thread_id": "pipeline-route"}}
 
-        result = graph.invoke(
+        result = await graph.ainvoke(
             {"messages": [HumanMessage(content="US machinery exports?")]},
             config=config,
         )
@@ -187,7 +187,7 @@ class TestGraphRouting:
         assert isinstance(msgs[3], AIMessage)
         assert msgs[3].content == "The US exported a lot of machinery."
 
-    def test_max_queries_enforced(self):
+    async def test_max_queries_enforced(self):
         """After N queries (queries_executed >= max_uses), tool_call routes to max_queries_exceeded.
 
         With max_uses=2, the first two tool_calls go through the pipeline stub.
@@ -224,7 +224,7 @@ class TestGraphRouting:
         graph = build_test_graph(model, max_uses=2)
         config = {"configurable": {"thread_id": "max-queries"}}
 
-        result = graph.invoke(
+        result = await graph.ainvoke(
             {"messages": [HumanMessage(content="Complex multi-step question")]},
             config=config,
         )
@@ -249,7 +249,7 @@ class TestGraphRouting:
         assert isinstance(msgs[-1], AIMessage)
         assert "exceeded" in msgs[-1].content.lower()
 
-    def test_full_round_trip_state(self):
+    async def test_full_round_trip_state(self):
         """After a complete pipeline pass, state fields are populated correctly.
 
         Verifies that messages contain the expected ToolMessage and that
@@ -269,7 +269,7 @@ class TestGraphRouting:
         graph = build_test_graph(model)
         config = {"configurable": {"thread_id": "round-trip"}}
 
-        result = graph.invoke(
+        result = await graph.ainvoke(
             {"messages": [HumanMessage(content="Brazil coffee exports?")]},
             config=config,
         )
@@ -291,7 +291,7 @@ class TestGraphRouting:
         assert isinstance(msgs[3], AIMessage)
         assert msgs[3].content == "Brazil exports lots of coffee."
 
-    def test_agent_handles_parallel_tool_calls(self):
+    async def test_agent_handles_parallel_tool_calls(self):
         """When the LLM produces 2 parallel tool_calls, the graph completes without error.
 
         Both tool_call_ids should receive a ToolMessage, and the agent should
@@ -312,7 +312,7 @@ class TestGraphRouting:
         graph = build_test_graph(model)
         config = {"configurable": {"thread_id": "parallel-tc"}}
 
-        result = graph.invoke(
+        result = await graph.ainvoke(
             {"messages": [HumanMessage(content="Compare US exports 2020 vs 2021")]},
             config=config,
         )
@@ -333,7 +333,7 @@ class TestGraphRouting:
         assert isinstance(msgs[-1], AIMessage)
         assert msgs[-1].content == "Here is the comparison."
 
-    def test_error_in_pipeline_propagates(self):
+    async def test_error_in_pipeline_propagates(self):
         """If execute_sql sets last_error, format_results creates a ToolMessage with the error content.
 
         Uses the pipeline_error parameter of build_test_graph to simulate
@@ -357,7 +357,7 @@ class TestGraphRouting:
         graph = build_test_graph(model, pipeline_error=error_text)
         config = {"configurable": {"thread_id": "error-propagation"}}
 
-        result = graph.invoke(
+        result = await graph.ainvoke(
             {"messages": [HumanMessage(content="Run a bad query")]},
             config=config,
         )
@@ -379,7 +379,7 @@ class TestGraphRouting:
 class TestMultiplePipelineRounds:
     """Verify correct state accumulation across multiple pipeline invocations."""
 
-    def test_queries_executed_increments_per_round(self):
+    async def test_queries_executed_increments_per_round(self):
         """Each pipeline pass increments queries_executed by 1."""
         model = FakeToolCallingModel(
             responses=[
@@ -401,7 +401,7 @@ class TestMultiplePipelineRounds:
         graph = build_test_graph(model, max_uses=5)
         config = {"configurable": {"thread_id": "multi-round"}}
 
-        result = graph.invoke(
+        result = await graph.ainvoke(
             {"messages": [HumanMessage(content="Multi-step question")]},
             config=config,
         )
@@ -417,7 +417,7 @@ class TestMultiplePipelineRounds:
         assert "round 1" in tool_msgs[0].content
         assert "round 2" in tool_msgs[1].content
 
-    def test_max_uses_one_blocks_immediately(self):
+    async def test_max_uses_one_blocks_immediately(self):
         """With max_uses=0, the very first tool_call is blocked."""
         model = FakeToolCallingModel(
             responses=[
@@ -433,7 +433,7 @@ class TestMultiplePipelineRounds:
         graph = build_test_graph(model, max_uses=0)
         config = {"configurable": {"thread_id": "block-immediate"}}
 
-        result = graph.invoke(
+        result = await graph.ainvoke(
             {"messages": [HumanMessage(content="Try to query")]},
             config=config,
         )

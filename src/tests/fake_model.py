@@ -22,6 +22,7 @@ class FakeToolCallingModel(BaseChatModel):
         self,
         messages: List[BaseMessage],
         stop: Optional[List[str]] = None,
+        run_manager: Any = None,
         **kwargs: Any,
     ) -> ChatResult:
         response = self.responses[self.index % len(self.responses)]
