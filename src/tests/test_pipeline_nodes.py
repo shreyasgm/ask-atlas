@@ -617,7 +617,7 @@ class TestExecuteSqlNode:
         )
 
         with patch("src.generate_query.execute_with_retry", side_effect=lambda fn, *a, **kw: fn()):
-            result = await execute_sql_node(state, engine=engine)
+            result = await execute_sql_node(state, async_engine=engine)
 
         assert result["last_error"] == ""
         assert "USA" in result["pipeline_result"]
@@ -629,7 +629,7 @@ class TestExecuteSqlNode:
         state = _base_state(pipeline_sql="SELECT * FROM hs92.country_year WHERE 1=0")
 
         with patch("src.generate_query.execute_with_retry", side_effect=lambda fn, *a, **kw: fn()):
-            result = await execute_sql_node(state, engine=engine)
+            result = await execute_sql_node(state, async_engine=engine)
 
         assert result["pipeline_result"] == "SQL query returned no results."
         assert result["last_error"] == ""
@@ -640,7 +640,7 @@ class TestExecuteSqlNode:
         state = _base_state(pipeline_sql="CREATE TABLE tmp (id int)")
 
         with patch("src.generate_query.execute_with_retry", side_effect=lambda fn, *a, **kw: fn()):
-            result = await execute_sql_node(state, engine=engine)
+            result = await execute_sql_node(state, async_engine=engine)
 
         assert result["pipeline_result"] == "SQL query returned no results."
         assert result["last_error"] == ""
@@ -654,7 +654,7 @@ class TestExecuteSqlNode:
             "src.generate_query.execute_with_retry",
             side_effect=QueryExecutionError("syntax error at position 7"),
         ):
-            result = await execute_sql_node(state, engine=mock_engine)
+            result = await execute_sql_node(state, async_engine=mock_engine)
 
         assert result["pipeline_result"] == ""
         assert "syntax error" in result["last_error"]
@@ -668,7 +668,7 @@ class TestExecuteSqlNode:
             "src.generate_query.execute_with_retry",
             side_effect=RuntimeError("connection lost"),
         ):
-            result = await execute_sql_node(state, engine=mock_engine)
+            result = await execute_sql_node(state, async_engine=mock_engine)
 
         assert result["pipeline_result"] == ""
         assert "connection lost" in result["last_error"]
@@ -682,7 +682,7 @@ class TestExecuteSqlNode:
         state = _base_state(pipeline_sql="SELECT iso3_code, export_value FROM t")
 
         with patch("src.generate_query.execute_with_retry", side_effect=lambda fn, *a, **kw: fn()):
-            result = await execute_sql_node(state, engine=engine)
+            result = await execute_sql_node(state, async_engine=engine)
 
         # The formatting is str(dict(zip(columns, row)))
         assert "'iso3_code': 'BRA'" in result["pipeline_result"]

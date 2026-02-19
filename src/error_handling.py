@@ -70,3 +70,40 @@ def execute_with_retry(execute_fn, *args, **kwargs):
             f"Failed to execute query: {str(e)}", original_error=e
         )
 
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type((OperationalError, TimeoutError)),
+    before_sleep=_log_retry,
+)
+async def async_execute_with_retry(execute_fn, *args, **kwargs):
+    """Async version of execute_with_retry for use with async DB operations.
+
+    Uses exponential backoff with the following behavior:
+    - Retries up to 3 times
+    - Wait time increases exponentially: 2s, 4s, 8s (capped at 10s)
+    - Only retries on OperationalError and TimeoutError
+
+    Args:
+        execute_fn: The async function to execute
+        *args: Positional arguments to pass to execute_fn
+        **kwargs: Keyword arguments to pass to execute_fn
+
+    Returns:
+        The result of execute_fn
+
+    Raises:
+        QueryExecutionError: If all retries fail
+    """
+    try:
+        return await execute_fn(*args, **kwargs)
+    except (OperationalError, TimeoutError):
+        # Re-raise to trigger retry logic
+        raise
+    except Exception as e:
+        logger.error(f"Query execution failed with non-retryable error: {e}")
+        raise QueryExecutionError(
+            f"Failed to execute query: {str(e)}", original_error=e
+        )
+

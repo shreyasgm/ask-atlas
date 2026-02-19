@@ -391,6 +391,7 @@ class TestCreateAsync:
         with (
             patch("src.text_to_sql.get_settings") as mock_settings,
             patch("src.text_to_sql.create_engine") as mock_engine,
+            patch("src.text_to_sql.create_async_engine") as mock_async_engine,
             patch("src.text_to_sql.SQLDatabaseWithSchemas") as mock_db_cls,
             patch("src.text_to_sql.create_llm") as mock_create_llm,
             patch("src.text_to_sql.load_example_queries") as mock_load_queries,
@@ -407,6 +408,7 @@ class TestCreateAsync:
                 query_model_provider="openai",
             )
             mock_engine.return_value = MagicMock()
+            mock_async_engine.return_value = MagicMock()
             mock_db_cls.return_value = MagicMock()
             mock_create_llm.return_value = MagicMock()
             mock_load_queries.return_value = []
@@ -436,6 +438,7 @@ class TestCreateAsync:
         with (
             patch("src.text_to_sql.get_settings") as mock_settings,
             patch("src.text_to_sql.create_engine") as mock_engine,
+            patch("src.text_to_sql.create_async_engine") as mock_async_engine,
             patch("src.text_to_sql.SQLDatabaseWithSchemas") as mock_db_cls,
             patch("src.text_to_sql.create_llm") as mock_create_llm,
             patch("src.text_to_sql.load_example_queries") as mock_load_queries,
@@ -452,6 +455,7 @@ class TestCreateAsync:
                 query_model_provider="openai",
             )
             mock_engine.return_value = MagicMock()
+            mock_async_engine.return_value = MagicMock()
             mock_db_cls.return_value = MagicMock()
             mock_create_llm.return_value = MagicMock()
             mock_load_queries.return_value = []
@@ -490,15 +494,18 @@ class TestAClose:
 
     async def test_aclose_calls_async_checkpointer_manager(self):
         """aclose should close the async checkpointer manager if present
-        and dispose the engine."""
+        and dispose both sync and async engines."""
         instance = AtlasTextToSQL.__new__(AtlasTextToSQL)
         instance._async_checkpointer_manager = MagicMock()
         instance._async_checkpointer_manager.close = AsyncMock()
         instance.engine = MagicMock()
+        instance.async_engine = MagicMock()
+        instance.async_engine.dispose = AsyncMock()
 
         await instance.aclose()
 
         instance._async_checkpointer_manager.close.assert_awaited_once()
+        instance.async_engine.dispose.assert_awaited_once()
         instance.engine.dispose.assert_called_once()
 
     async def test_aclose_without_async_manager_is_safe(self):

@@ -3,7 +3,8 @@ from pathlib import Path
 import logging
 import datetime
 import json
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, make_url
+from sqlalchemy.ext.asyncio import create_async_engine
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 import warnings
 from dataclasses import dataclass
@@ -197,9 +198,11 @@ class AtlasTextToSQL:
     # --- END SYNC API ---
 
     async def aclose(self) -> None:
-        """Async close — release async checkpointer and DB engine."""
+        """Async close — release async checkpointer and DB engines."""
         if hasattr(self, "_async_checkpointer_manager"):
             await self._async_checkpointer_manager.close()
+        if hasattr(self, "async_engine"):
+            await self.async_engine.dispose()
         if hasattr(self, "engine"):
             self.engine.dispose()
 
@@ -248,8 +251,24 @@ class AtlasTextToSQL:
         max_results = max_results if max_results is not None else _settings.max_results_per_query
         max_queries = max_queries if max_queries is not None else _settings.max_queries_per_question
 
+        # Sync engine: used for SQLDatabaseWithSchemas (metadata reflection)
+        # and get_table_info_node (still sync, wrapped in asyncio.to_thread)
         instance.engine = create_engine(
             db_uri,
+            execution_options={"postgresql_readonly": True},
+            connect_args={"connect_timeout": 10},
+            pool_size=5,
+            max_overflow=5,
+            pool_timeout=30,
+            pool_recycle=1800,
+            pool_pre_ping=True,
+        )
+
+        # Async engine: used for query execution and product lookups (true async I/O).
+        # Convert dialect to psycopg3 async: postgresql:// -> postgresql+psycopg://
+        async_url = make_url(db_uri).set(drivername="postgresql+psycopg")
+        instance.async_engine = create_async_engine(
+            async_url,
             execution_options={"postgresql_readonly": True},
             connect_args={"connect_timeout": 10},
             pool_size=10,
@@ -258,6 +277,7 @@ class AtlasTextToSQL:
             pool_recycle=1800,
             pool_pre_ping=True,
         )
+
         instance.db = SQLDatabaseWithSchemas(engine=instance.engine)
         instance.table_descriptions = cls._load_json_as_dict(table_descriptions_json)
         instance.table_structure = cls._load_json_as_dict(table_structure_json)
@@ -284,6 +304,7 @@ class AtlasTextToSQL:
             top_k_per_query=instance.max_results,
             max_uses=instance.max_queries,
             checkpointer=checkpointer,
+            async_engine=instance.async_engine,
         )
 
         return instance
