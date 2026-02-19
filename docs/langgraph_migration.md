@@ -733,3 +733,431 @@ Based on the research, several patterns could improve the current architecture:
 - [OpenAI: New Tools for Building Agents](https://openai.com/index/new-tools-for-building-agents/)
 - [LangWatch: Best AI Agent Frameworks 2025](https://langwatch.ai/blog/best-ai-agent-frameworks-in-2025-comparing-langgraph-dspy-crewai-agno-and-more)
 - [Microsoft Research: AutoGen v0.4](https://www.microsoft.com/en-us/research/articles/autogen-v0-4-reimagining-the-foundation-of-agentic-ai-for-scale-extensibility-and-robustness/)
+
+---
+
+## 12. Agent Paradigms: ReAct vs. CodeAct vs. ReWOO — and Why It Matters for Ask-Atlas
+
+The agent framework landscape in 2025–2026 has crystallized around several distinct paradigms for how an LLM decides *what to do next*. Our current architecture uses a hybrid: a ReAct outer loop with a deterministic inner pipeline. Understanding the alternatives is essential for evaluating whether we've chosen well.
+
+### The Three Main Paradigms
+
+**ReAct (Reasoning and Acting)** — what our outer agent loop does:
+
+The LLM follows a Thought → Action → Observation cycle. It reasons about the question, decides to call a tool (or respond directly), observes the tool result, and decides again. Each cycle is one full LLM call with the entire conversation history.
+
+- **Strength**: Exceptional adaptability. The agent can change strategy after observing errors, ask different questions, retry with modified parameters.
+- **Weakness**: High token usage and latency. Every reasoning step is a full LLM round-trip. Sequential by nature — the LLM must finish thinking before acting.
+- **Token cost**: Grows with conversation length since the full message history is re-sent every turn.
+
+**CodeAct (Code Actions)** — the paradigm from [Wang et al., ICML 2024](https://arxiv.org/html/2402.01030v4):
+
+Instead of calling named tools, the LLM generates executable Python code. The code runs in a sandbox, and the output becomes the next observation. The LLM can use loops, conditionals, variables, and compose multiple operations in a single action.
+
+- **Strength**: Up to 20% higher success rate vs. ReAct in benchmarks across 17 LLMs. Code naturally supports control flow (if/else, for loops), intermediate variable storage, and multi-step composition in a single action.
+- **Weakness**: Security risk — running arbitrary LLM-generated code requires a locked-down sandbox (Docker, E2B, Pyodide). Higher iteration costs when code fails repeatedly. The LLM must be good at coding, not just reasoning.
+- **Implementation**: HuggingFace's [smolagents](https://huggingface.co/docs/smolagents/en/index) is the leading open-source CodeAct framework. ~1000 lines, model-agnostic, with built-in sandbox options.
+
+**ReWOO (Reasoning Without Observation)** — plan-then-execute:
+
+A three-phase approach: (1) a Planner generates a complete multi-step strategy upfront, (2) Workers execute all planned tasks (potentially in parallel), (3) a Solver synthesizes the results.
+
+- **Strength**: 5–10x token savings vs. ReAct. Parallel execution of planned steps. Efficient for predictable workflows.
+- **Weakness**: Fragile. No mechanism to self-correct mid-execution. If the initial plan is wrong, the entire execution is wasted.
+
+### Could Ask-Atlas Use CodeAct?
+
+A CodeAct version of Ask-Atlas would look like this:
+
+```python
+# The LLM would generate code like this:
+schemas = extract_schemas("What did Brazil export in 2022?")  # LLM-generated call
+codes = lookup_product_codes(schemas.products, engine)
+table_info = get_table_info(schemas.classification_schemas)
+sql = generate_sql(question, codes, table_info)
+result = execute_query(sql, engine)
+print(format_results(result))
+```
+
+The LLM writes Python that calls our pipeline functions directly, with full control over ordering, error handling, and data flow. This is essentially what smolagents' [`CodeAgent` does for text-to-SQL](https://huggingface.co/learn/cookbook/agent_text_to_sql).
+
+**Arguments for CodeAct in Ask-Atlas**:
+
+1. **Self-correction is native**: If a SQL query returns an error, the LLM can catch the exception and rewrite the query in the same code block — no round-trip through the full agent loop.
+2. **Flexible composition**: The LLM could skip product lookup for questions that don't mention products, or run multiple queries and join results in pandas — all in one code generation step.
+3. **Variable reuse**: Intermediate results are Python variables, naturally composable. No need for `pipeline_*` state fields in a shared TypedDict.
+4. **Benchmark superiority**: CodeAct outperforms tool-calling ReAct in general benchmarks.
+
+**Arguments against CodeAct for Ask-Atlas**:
+
+1. **Our pipeline order is not negotiable**. Product extraction *must* happen before code lookup, which *must* happen before SQL generation. In a CodeAct setup, the LLM *could* decide to skip product lookup or generate SQL without table info. Our current graph edges enforce this ordering mechanically — the LLM cannot bypass it. With CodeAct, correctness depends on the LLM generating the right code every time.
+
+2. **Security surface**. CodeAct requires executing arbitrary LLM-generated Python against our production database. Even with a sandbox, the attack surface is fundamentally larger than a schema-only tool where the LLM can only emit a `question` string. Our current pipeline controls exactly what SQL reaches the database; CodeAct would need to defend against arbitrary code paths.
+
+3. **Streaming granularity lost**. Our 8-node pipeline emits per-node updates via `stream_mode="updates"`, letting the UI show "Extracting products...", "Generating SQL...", etc. In CodeAct, the entire pipeline is one code execution block — the UI sees "Running code..." until it's done.
+
+4. **Testability regression**. Each pipeline node is individually testable with mocked dependencies. CodeAct collapses the pipeline into generated code that varies between runs — you'd need to test the *code generation* behavior rather than the *pipeline logic*.
+
+5. **Benchmarks mislead for structured tasks**. CodeAct's 20% improvement comes from *general-purpose* benchmarks (API-Bank) where the flexibility of code composition matters. For our fixed-order pipeline, that flexibility is a liability, not an asset.
+
+**Verdict**: CodeAct is the wrong paradigm for our *inner pipeline* but could be interesting as an *alternative execution mode* for power users. Imagine a "data analyst mode" where the agent writes and executes Python/pandas code directly for complex analytical questions that don't fit our standard pipeline (e.g., "Compare the export growth rates of the top 10 products between Brazil and Mexico over the last decade and plot the trends"). This would be a separate tool alongside `query_tool`, not a replacement.
+
+### Could Ask-Atlas Use ReWOO?
+
+ReWOO's plan-then-execute model maps poorly to Ask-Atlas because:
+
+1. Our pipeline steps have strict sequential dependencies — product extraction must complete before code lookup can start. ReWOO's parallel execution only helps when steps are independent.
+2. Our agent often needs multiple rounds (query → observe results → refine query), which requires the adaptive reasoning that ReWOO explicitly eliminates.
+3. The token savings are irrelevant — our bottleneck is LLM latency and database query time, not token consumption.
+
+ReWOO would be relevant if Ask-Atlas needed to answer questions requiring *multiple independent queries* simultaneously (e.g., "Compare Brazil's exports to China vs. India" → two parallel pipeline runs). But even then, LangGraph's fan-out/fan-in handles this natively without adopting a different agent paradigm.
+
+### The Hybrid Is Right — But the Labels Matter
+
+Our architecture is actually not pure ReAct. It's:
+
+- **Outer loop**: ReAct (LLM decides whether to query or respond)
+- **Inner pipeline**: Deterministic workflow (fixed node sequence enforced by graph edges)
+
+This is closer to what Anthropic's ["Building Effective Agents"](https://www.anthropic.com/research/building-effective-agents) guide calls a **workflow with an agentic outer layer** — the agent delegates to a structured process rather than improvising each step. The guide explicitly recommends this pattern: "Workflows are appropriate when the task can be decomposed into fixed subtasks... agents are better when flexibility is needed at the task level."
+
+We use agent reasoning where it matters (deciding *what* to query, interpreting *results*) and deterministic control where reliability matters (the SQL generation pipeline). This is the right split.
+
+---
+
+## 13. The Anthropic Agent SDK: Why Not Use It?
+
+The [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview) (released May 2025 as "Claude Code SDK", renamed September 2025) provides the same infrastructure powering Claude Code as a programmable library. It includes built-in tools (file read/write/edit, bash execution, web search), automatic context management, session persistence, and MCP extensibility.
+
+### What the Agent SDK Does Well
+
+The SDK excels at **general-purpose autonomous agents** that operate like a human at a computer:
+
+- **SRE agents** that read logs, analyze metrics, execute diagnostic scripts, and propose fixes
+- **Code migration agents** that read source files, understand patterns, and rewrite code
+- **Research agents** that search the web, read documents, and synthesize findings
+
+The core loop is: **gather context → take action → verify work → repeat**. The SDK manages the agent loop, context window, tool execution, and retries automatically. You provide tools (via MCP servers or custom definitions) and the agent decides how to use them.
+
+### Why the Agent SDK Is Wrong for Ask-Atlas
+
+**1. No workflow graph control.** The Agent SDK is a ReAct loop — Claude decides what to do next at every step. There is no mechanism to define deterministic node sequences, conditional edges, or fan-out/fan-in parallelism. Our 8-node pipeline *must* execute in a specific order; the Agent SDK would require Claude to learn and reliably follow that order via prompt instructions alone.
+
+**2. Claude-only.** The Agent SDK is tightly coupled to Anthropic's Claude models. Ask-Atlas uses OpenAI models for SQL generation (`settings.query_model`) and metadata extraction (`settings.metadata_model`). Our pipeline needs model-agnostic orchestration — different steps may benefit from different models (e.g., a smaller model for product extraction, a larger model for complex SQL generation, potentially a specialized fine-tuned model for code lookup).
+
+**3. No typed state management.** LangGraph's `TypedDict` state with reducers gives us compile-time visibility into what each node reads and writes. The Agent SDK's state is the conversation context — an opaque message stream managed internally by the SDK. There's no equivalent to `pipeline_codes`, `pipeline_sql`, or `queries_executed` as first-class typed fields.
+
+**4. Pipeline as a single tool.** To use the Agent SDK, we'd need to collapse our pipeline into a single MCP tool. The SDK [shows this pattern for database queries](https://platform.claude.com/docs/en/agent-sdk/mcp) — connect a Postgres MCP server and let Claude write SQL directly:
+
+```python
+async for message in query(
+    prompt="How many users signed up last week?",
+    options=ClaudeAgentOptions(
+        mcp_servers={"postgres": {"command": "npx", "args": [...]}},
+        allowed_tools=["mcp__postgres__query"]
+    )
+):
+    print(message.result)
+```
+
+This is a CodeAct-like approach where Claude writes SQL directly. It works for simple queries but completely bypasses our product code lookup, schema-aware table selection, and few-shot prompt engineering — the components that make Ask-Atlas work on the Harvard Growth Lab's trade data with its complex multi-schema classification system.
+
+**5. No per-step streaming.** Our Streamlit UI shows pipeline progress: "Extracting products...", "Looking up codes...", "Generating SQL...", "Executing query...". The Agent SDK streams at the message level (Claude's text output and tool calls), but a collapsed pipeline tool would be a single opaque step.
+
+**6. No conditional routing.** Our `route_after_agent` implements a 3-way branch: END (respond to user), pipeline (run query), or max_queries_exceeded (rate limit). The Agent SDK provides no equivalent — you'd need to embed rate limiting in tool execution logic, losing the clean graph-level visibility.
+
+### Where the Agent SDK *Would* Make Sense
+
+The Agent SDK would be appropriate for Ask-Atlas if:
+
+- **We wanted a "give it a database and let it figure it out" approach** — Claude explores the schema, writes queries, iterates on errors. This is viable for simpler databases but unreliable for our multi-schema trade data with implicit classification hierarchies.
+- **We were building a Claude-only product** — if we committed to Claude as the sole LLM provider and didn't need the model flexibility.
+- **The pipeline were truly simple** — if text-to-SQL were just "generate SQL, execute, return results" without product code lookup, schema selection, or few-shot prompting.
+- **We wanted rapid prototyping** — the Agent SDK gets you to a working demo in minutes. For production with our specific requirements, LangGraph's explicitness pays for itself.
+
+### The Deeper Issue: Agent SDKs vs. Orchestration Frameworks
+
+The [LangChain blog](https://blog.langchain.com/how-to-think-about-agent-frameworks/) frames this well: the hard thing about building reliable agents is making sure the agent has the right context at the right time. Agent SDKs (Anthropic's, OpenAI's) *obfuscate* context management — they handle it for you, which is great when it works but opaque when it doesn't. Orchestration frameworks like LangGraph *expose* it — more work upfront, but full visibility and control.
+
+For Ask-Atlas, where the pipeline has been carefully engineered to provide exactly the right context at each step (product codes for SQL generation, schema-specific table DDL, curated few-shot examples), we need that control. An Agent SDK's automatic context management would likely inject too much or too little context at each step.
+
+---
+
+## 14. Optimal Workflow Design: Parallelism, Sequencing, and Latency
+
+### Current Latency Profile
+
+Our pipeline's critical path per tool invocation:
+
+```
+Step                     | Nature        | Estimated Latency
+─────────────────────────┼───────────────┼──────────────────
+agent_node (LLM)         | I/O (LLM)    | 1–10s
+extract_tool_question    | CPU           | ~0ms
+extract_products_node    | I/O (LLM)    | 0.5–3s
+lookup_codes_node        | I/O (DB+LLM) | 2–5s
+get_table_info_node      | CPU (memory)  | ~10ms
+generate_sql_node        | I/O (LLM)    | 2–15s
+execute_sql_node         | I/O (DB)      | 0.1–10s
+format_results_node      | CPU           | ~0ms
+agent_node (LLM, final)  | I/O (LLM)    | 1–10s
+─────────────────────────┴───────────────┴──────────────────
+Total wall clock (happy path): ~7–50s
+```
+
+The three LLM calls dominate: `extract_products` (metadata model, ~1–3s), `lookup_codes`'s final selection (metadata model, ~1–2s), and `generate_sql` (primary model, ~2–15s). The database calls (`lookup_codes`'s candidate search + `execute_sql`) add 0.1–15s depending on query complexity.
+
+### Data Dependency Graph
+
+```
+                    extract_tool_question
+                            │
+                    extract_products_node
+                       ╱           ╲
+              lookup_codes    get_table_info    ← can run in parallel
+                       ╲           ╱
+                    generate_sql_node
+                            │
+                     execute_sql_node
+                            │
+                    format_results_node
+```
+
+True dependencies:
+- `extract_products` needs only `pipeline_question` → no upstream pipeline dependency
+- `lookup_codes` needs `pipeline_products` and `pipeline_question`
+- `get_table_info` needs `pipeline_products.classification_schemas`
+- `generate_sql` needs `pipeline_codes` AND `pipeline_table_info` → must wait for both
+- `execute_sql` needs `pipeline_sql`
+- `format_results` needs `pipeline_result` and `last_error`
+
+### Optimization 1: Parallelize lookup_codes and get_table_info
+
+**Savings: Minimal (~10ms).** `get_table_info` is already fast (in-memory metadata lookup). Parallelizing it with `lookup_codes` saves only the time `get_table_info` spends waiting in the sequential queue. Worth doing for correctness of the dependency graph, but not a meaningful latency win.
+
+```python
+# LangGraph fan-out from extract_products:
+builder.add_edge("extract_products", "lookup_codes")
+builder.add_edge("extract_products", "get_table_info")
+# Fan-in at generate_sql:
+builder.add_edge("lookup_codes", "generate_sql")
+builder.add_edge("get_table_info", "generate_sql")
+```
+
+### Optimization 2: Pre-compute Table Info for All Schemas
+
+**Savings: Decouples `get_table_info` from `extract_products` entirely.**
+
+Currently, `get_table_info_node` reads `pipeline_products.classification_schemas` to know *which* schemas to fetch DDL for. But the DDL is already in memory (reflected at startup). If we pre-computed DDL strings for all schemas at startup and stored them in a dict, `get_table_info` would become a simple dict lookup from the question — or we could pass *all* schema DDL to `generate_sql` and let the LLM ignore irrelevant tables.
+
+**Trade-off**: Passing all schemas increases the SQL generation prompt size. With 4–6 schemas × 5–10 tables each, the DDL could grow to 3,000–5,000 tokens. With prompt caching (supported by both OpenAI and Anthropic as of 2025), this constant prefix is cached across calls and adds negligible latency. Without caching, the extra tokens increase `generate_sql` latency by 0.5–2s.
+
+**Implementation**:
+```python
+# At startup:
+all_table_info = {schema: get_table_info_for_schemas(db, table_desc, [schema])
+                  for schema in ALL_SCHEMAS}
+
+# At pipeline time: skip get_table_info_node entirely, OR:
+def get_table_info_node(state, *, precomputed_info):
+    schemas = state["pipeline_products"].classification_schemas
+    return {"pipeline_table_info": "\n".join(precomputed_info[s] for s in schemas)}
+```
+
+This is a low-effort, low-risk optimization.
+
+### Optimization 3: Parallelize Per-Product Database Lookups
+
+**Savings: Significant when multiple products are mentioned (2–4x for 2–4 products).**
+
+Inside `lookup_codes_node`, the current code calls `get_candidate_codes(products)`, which iterates over products sequentially. Each product triggers 2–4 database queries (exact code match + text search + trigram fallback). With 3 products, that's 6–12 sequential DB round-trips at 5–50ms each = 30–600ms total.
+
+These are independent — product A's code lookup doesn't depend on product B's results. With `asyncio.gather()` or LangGraph's `Send` API for dynamic fan-out:
+
+```python
+# Current: sequential
+for product in products:
+    candidates = get_candidate_codes(product, engine)
+
+# Optimized: parallel
+import asyncio
+candidates = await asyncio.gather(
+    *[get_candidate_codes_async(product, engine) for product in products]
+)
+```
+
+This requires making the DB lookup functions async (or using `concurrent.futures.ThreadPoolExecutor` for sync code). The final LLM call in `lookup_codes` (selecting among all candidates) must still wait for all lookups to complete.
+
+### Optimization 4: Prompt Caching for generate_sql
+
+**Savings: 1–5s reduction on the largest bottleneck.**
+
+The `generate_sql` prompt consists of:
+1. System instructions + SQL dialect rules (~500 tokens, static)
+2. Table DDL for selected schemas (~1,000–3,000 tokens, varies by schema but repeats across queries in the same schema)
+3. Few-shot example queries (~2,000–5,000 tokens, static)
+4. The actual question + product codes (~100–300 tokens, varies)
+
+Parts 1–3 are highly cacheable. OpenAI's [prompt caching](https://platform.openai.com/docs/guides/prompt-caching) (automatic for prompts >1,024 tokens) and Anthropic's [explicit cache control](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching) both reduce time-to-first-token for repeated prefixes by 50–80%. For our use case, where users often ask multiple questions about the same schema, this is a significant win.
+
+**Implementation**: Ensure the prompt template puts static content first (system prompt → few-shot examples → table DDL → question). This maximizes cache hit rate since the prefix stays constant across queries.
+
+### Optimization 5: SQL Error Recovery Shortcut
+
+**Savings: Eliminates one full agent LLM round-trip (~2–10s) on retry.**
+
+Currently, if `execute_sql` fails:
+1. `format_results` packages the error as a `ToolMessage`
+2. The agent receives the error, reasons about it (~2–10s LLM call)
+3. The agent calls `query_tool` again with a modified question
+4. The entire pipeline runs again (~5–30s)
+
+An alternative: add a conditional edge from `execute_sql` directly back to `generate_sql`, with the error in state:
+
+```python
+def route_after_execute(state):
+    if state["last_error"] and state.get("retry_count", 0) < MAX_RETRIES:
+        return "generate_sql"  # Retry SQL generation with error context
+    return "format_results"  # Proceed normally (success or max retries)
+
+builder.add_conditional_edges("execute_sql", route_after_execute,
+                               ["generate_sql", "format_results"])
+```
+
+The `generate_sql` node would check `last_error` and include it in the prompt: "The previous query failed with: {error}. Rewrite the query to avoid this error."
+
+**Trade-off**: Faster retry (~2–15s for just SQL regeneration vs. ~7–40s for a full agent loop), but the agent loses the ability to fundamentally rethink the approach (e.g., querying a different schema, asking a clarifying question). Best used for syntax errors and timeout errors, not semantic failures.
+
+### Optimization 6: Speculative Schema Pre-fetch
+
+**Savings: Up to 1–3s by overlapping extract_products with early DB work.**
+
+Some questions contain explicit schema hints: "HS92 exports from Brazil" clearly refers to the hs92 schema. A lightweight regex/keyword matcher could identify likely schemas *before* the LLM extraction completes, and speculatively start code lookup for mentioned products:
+
+```python
+def speculative_prefetch(state):
+    question = state["pipeline_question"]
+    likely_schemas = regex_detect_schemas(question)  # ~0ms
+    likely_products = regex_detect_products(question)  # ~0ms
+    if likely_schemas and likely_products:
+        # Start DB lookups speculatively
+        return {"speculative_candidates": fetch_candidates(likely_products, likely_schemas)}
+    return {}
+```
+
+This would run in parallel with `extract_products_node`. If the LLM's extraction matches the speculative results, `lookup_codes` can skip its DB calls entirely. If they differ, the speculative results are discarded.
+
+**Trade-off**: Complexity for marginal gain. Only helps when the question has explicit schema/product references, which is common for experienced users but rare for natural language questions like "What did Brazil export last year?"
+
+### The Optimal Pipeline (Proposed)
+
+Combining the most impactful optimizations:
+
+```
+extract_tool_question
+        │
+        ├── extract_products_node          (LLM, 0.5–3s)
+        │       │
+        │       ├── lookup_codes_node      (DB parallel per product + LLM, 1–3s)
+        │       └── get_table_info_node    (memory, ~0ms)
+        │               │
+        │               └──┬── [both fan in]
+        │                  │
+        │           generate_sql_node      (LLM w/ prompt cache, 1–10s)
+        │                  │
+        │            execute_sql_node      (DB, 0.1–10s)
+        │               ╱       ╲
+        │     [error + retry<3]  [success or max retries]
+        │         ↓                    ↓
+        │   generate_sql_node    format_results_node
+        │                              │
+        └──────────────────────────────→ agent
+```
+
+**Estimated savings**:
+- Prompt caching on `generate_sql`: −1–5s (most impactful)
+- Parallel per-product DB lookups: −0.1–0.5s (modest)
+- SQL error recovery shortcut: −5–15s per retry (significant when errors occur)
+- Pre-computed table info: −10ms (negligible, but simplifies the graph)
+
+**Estimated optimized wall clock**: ~5–25s (down from ~7–50s), with the largest gains from prompt caching and the error recovery shortcut.
+
+### Why Not Parallelize More Aggressively?
+
+The fundamental constraint is that our pipeline is a *chain of transformations* where each step produces the input for the next. The only true independence is between `lookup_codes` and `get_table_info` (both consume `pipeline_products`, produce separate outputs for `generate_sql`).
+
+Proposals to parallelize further break down:
+- **Run `extract_products` in parallel with something**: Nothing else can start until we know what products and schemas the question refers to. This is the pipeline's serial bottleneck.
+- **Run `generate_sql` before `lookup_codes` completes**: SQL generation needs the product codes to generate correct WHERE clauses. Without codes, the SQL would be wrong.
+- **Run `execute_sql` speculatively with partial SQL**: Executing incomplete SQL wastes database resources and could return misleading results.
+
+The honest conclusion: **most of our latency is irreducible** because it's spent on sequential LLM calls that each need the previous step's output. The biggest wins come not from parallelism but from **making each LLM call faster** (prompt caching, smaller prompts, faster models) and **reducing the number of LLM round-trips** (error recovery shortcut, pre-computed table info eliminating a dependency).
+
+---
+
+## 15. Framework Verdict: LangGraph Remains the Right Choice
+
+### Decision Matrix
+
+| Criterion | LangGraph | Anthropic Agent SDK | smolagents (CodeAct) | Raw Anthropic/OpenAI SDK |
+|-----------|-----------|--------------------|--------------------|------------------------|
+| **Deterministic pipeline control** | Native (graph edges) | None (ReAct loop only) | None (code generation) | Manual implementation |
+| **Per-step streaming** | Native (`stream_mode="updates"`) | Message-level only | None (single code block) | Manual implementation |
+| **Model agnostic** | Yes (any LangChain-compatible) | Claude only | Yes (via LiteLLM) | Provider-specific |
+| **Typed state management** | `TypedDict` + reducers | Opaque context window | Python variables | Manual implementation |
+| **Parallelism (fan-out/fan-in)** | Native (supersteps) | Via subagents only | Code-level (`asyncio`) | Manual implementation |
+| **Checkpointing/resume** | Built-in (`MemorySaver`, Postgres) | Built-in (sessions) | None | Manual implementation |
+| **Conditional routing** | `add_conditional_edges` | LLM decides | Code-level (`if/else`) | Manual implementation |
+| **Error recovery** | Conditional edges + `RetryPolicy` | LLM self-corrects | Code-level (`try/except`) | Manual implementation |
+| **Testability** | Per-node unit tests | End-to-end only | Code output testing | Per-function unit tests |
+| **Community/maturity** | High (largest ecosystem) | Growing (released 2025) | Moderate (HuggingFace) | Highest (raw API) |
+
+### Why LangGraph Wins for Ask-Atlas
+
+1. **The pipeline is a workflow, not an agent task.** Our 8-node SQL generation pipeline has a fixed order, deterministic transitions, and no need for LLM-driven routing. LangGraph's graph edges enforce this mechanically. Neither the Agent SDK (pure ReAct) nor CodeAct (LLM-generated control flow) offer this guarantee.
+
+2. **Model diversity is a feature.** We use different models for different steps (metadata model for product extraction, primary model for SQL generation). LangGraph is model-agnostic; the Agent SDK locks us to Claude.
+
+3. **Streaming granularity matters for UX.** Our Streamlit UI shows real-time progress through the pipeline. LangGraph's per-node streaming enables this. The Agent SDK and CodeAct would collapse the pipeline into opaque steps.
+
+4. **The outer loop IS a ReAct agent — and LangGraph implements it.** LangGraph's conditional edges give us a ReAct outer loop (agent decides to query or respond) without sacrificing pipeline control. We get the best of both worlds in one framework.
+
+5. **Parallelism has a clear upgrade path.** LangGraph's fan-out/fan-in is the natural way to parallelize `lookup_codes` and `get_table_info`, and its `Send` API handles dynamic per-product fan-out. No other framework makes this as clean.
+
+### When to Reconsider
+
+- **If we move to Claude as the sole LLM provider** and want rapid iteration over production reliability, the Agent SDK becomes viable. But we'd still need to handle the pipeline-as-single-tool limitation.
+- **If we add a "data analyst mode"** for power users, a CodeAct approach (smolagents or direct code execution) would complement the existing pipeline rather than replace it.
+- **If LangGraph's complexity becomes a maintenance burden** and the pipeline stabilizes to the point where we rarely modify it, a raw SDK implementation with manual orchestration could be simpler.
+
+---
+
+## Appendix: Additional Sources (Section 12–15)
+
+### Agent Paradigms
+- [Capabl: Agentic AI Design Patterns — ReAct, ReWOO, CodeAct, and Beyond](https://capabl.in/blog/agentic-ai-design-patterns-react-rewoo-codeact-and-beyond)
+- [Wang et al.: Executable Code Actions Elicit Better LLM Agents (ICML 2024)](https://arxiv.org/html/2402.01030v4)
+- [Apple ML Research: CodeAct](https://machinelearning.apple.com/research/codeact)
+- [HuggingFace: smolagents](https://huggingface.co/docs/smolagents/en/index)
+- [HuggingFace: Agent for text-to-SQL with automatic error correction](https://huggingface.co/learn/cookbook/agent_text_to_sql)
+- [HuggingFace: CodeAgents + Structure](https://huggingface.co/blog/structured-codeagent)
+- [Medium: CodeAgent — The Evolution Beyond Tool-Calling](https://medium.com/@barunsaha/codeagent-the-evolution-beyond-tool-calling-7792781e19f4)
+
+### Anthropic Agent SDK
+- [Claude Agent SDK Documentation](https://platform.claude.com/docs/en/agent-sdk/overview)
+- [Anthropic: Building Agents with the Claude Agent SDK](https://claude.com/blog/building-agents-with-the-claude-agent-sdk)
+- [Medium: The Definitive Guide to the Claude Agent SDK (Feb 2026)](https://datapoetica.medium.com/the-definitive-guide-to-the-claude-agent-sdk-building-the-next-generation-of-ai-69fda0a0530f)
+- [SkyWork: Claude Agent SDK Best Practices (2025)](https://skywork.ai/blog/claude-agent-sdk-best-practices-ai-agents-2025/)
+
+### Framework Comparisons
+- [LangChain: How to Think About Agent Frameworks](https://blog.langchain.com/how-to-think-about-agent-frameworks/)
+- [Langfuse: Comparing Open-Source AI Agent Frameworks](https://langfuse.com/blog/2025-03-19-ai-agent-comparison)
+- [Enhancial: AI Framework Comparison 2025 — OpenAI vs Claude vs LangGraph](https://enhancial.substack.com/p/choosing-the-right-ai-framework-a)
+- [Softcery: 14 AI Agent Frameworks Compared](https://softcery.com/lab/top-14-ai-agent-frameworks-of-2025-a-founders-guide-to-building-smarter-systems)
+- [AI Multiple: Top 5 Open-Source Agentic AI Frameworks in 2026](https://aimultiple.com/agentic-frameworks)
+- [Chatbase: LLM Agent Frameworks 2026 Guide](https://www.chatbase.co/blog/llm-agent-framework-guide)
+
+### LangGraph Parallelism
+- [AI Practitioner: Scaling LangGraph Agents — Parallelization, Subgraphs, and Map-Reduce Trade-Offs](https://aipractitioner.substack.com/p/scaling-langgraph-agents-parallelization)
+- [LangChain Changelog: Deferred Nodes in LangGraph](https://changelog.langchain.com/announcements/deferred-nodes-in-langgraph)
+- [GitHub Discussion: Branches for parallel node execution](https://github.com/langchain-ai/langgraph/discussions/2931)
