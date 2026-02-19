@@ -535,42 +535,27 @@ class TestAClose:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.db
 @pytest.mark.integration
 class TestIntegrationAtlasTextToSQL:
-    """Integration tests that require a real LLM and/or database.
+    """Integration tests that require a real LLM and database.
 
-    These are skipped in CI unless the appropriate environment variables
-    are set.  They exist to define the test structure for manual or
-    staging-environment testing.
+    Redundant tests (covered by test_text_to_sql.py and
+    test_query_tool_integration.py) have been removed.  Only the
+    multi-turn streaming test remains — it is the sole test that
+    exercises aanswer_question_stream across multiple turns on the
+    same thread_id.
     """
 
-    @pytest.mark.skip(reason="Requires LLM API key and Atlas DB")
-    async def test_end_to_end_question_answer(self):
-        """Full round-trip: real LLM processes a question and returns an
-        answer string via aanswer_question."""
-        async with await AtlasTextToSQL.create_async() as agent:
-            answer = await agent.aanswer_question("What did Brazil export in 2020?")
-            assert isinstance(answer, str)
-            assert len(answer) > 0
-
-    @pytest.mark.skip(reason="Requires LLM API key and Atlas DB")
-    async def test_end_to_end_streaming(self):
-        """Full round-trip streaming: real LLM streams StreamData objects
-        via aanswer_question_stream."""
-        async with await AtlasTextToSQL.create_async() as agent:
-            items = []
-            async for data in agent.aanswer_question_stream(
-                "Top 5 exports from Germany?"
-            ):
-                assert isinstance(data, StreamData)
-                items.append(data)
-            assert len(items) > 0
-
-    @pytest.mark.skip(reason="Requires LLM API key and Atlas DB")
-    async def test_multi_turn_streaming(self):
+    async def test_multi_turn_streaming(self, base_dir):
         """Multi-turn conversation with streaming: second question should
         be informed by context from the first."""
-        async with await AtlasTextToSQL.create_async() as agent:
+        async with await AtlasTextToSQL.create_async(
+            table_descriptions_json=base_dir / "db_table_descriptions.json",
+            table_structure_json=base_dir / "db_table_structure.json",
+            queries_json=base_dir / "src/example_queries/queries.json",
+            example_queries_dir=base_dir / "src/example_queries",
+        ) as agent:
             thread = "integration-multi"
             items1 = []
             async for data in agent.aanswer_question_stream(
