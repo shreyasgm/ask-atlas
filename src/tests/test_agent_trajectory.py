@@ -66,11 +66,11 @@ def make_agent(dummy_query_tool):
         model = FakeToolCallingModel(responses=responses)
         memory = MemorySaver()
 
-        def agent_node(state: AtlasAgentState) -> dict:
+        async def agent_node(state: AtlasAgentState) -> dict:
             model_with_tools = model.bind_tools([dummy_query_tool])
-            return {"messages": [model_with_tools.invoke(state["messages"])]}
+            return {"messages": [await model_with_tools.ainvoke(state["messages"])]}
 
-        def pipeline_stub(state: AtlasAgentState) -> dict:
+        async def pipeline_stub(state: AtlasAgentState) -> dict:
             """Simulate the full pipeline: extract question, run tool, return ToolMessage.
 
             Mirrors production: responds to ALL tool_calls so that OpenAI
@@ -122,7 +122,7 @@ def make_agent(dummy_query_tool):
 class TestAgentToolCalling:
     """Verify that the agent invokes (or skips) the tool based on model output."""
 
-    def test_agent_calls_tool_when_instructed(self, make_agent):
+    async def test_agent_calls_tool_when_instructed(self, make_agent):
         """Model emitting tool_calls → ToolMessage appears with dummy output."""
         responses = [
             AIMessage(
@@ -134,7 +134,7 @@ class TestAgentToolCalling:
         agent, _ = make_agent(responses)
         config = {"configurable": {"thread_id": "tool-call-1"}}
 
-        result = agent.invoke(
+        result = await agent.ainvoke(
             {"messages": [HumanMessage(content="US machinery exports")]},
             config=config,
         )
@@ -144,7 +144,7 @@ class TestAgentToolCalling:
         assert len(tool_msgs) == 1
         assert "500B" in tool_msgs[0].content
 
-    def test_agent_terminates_without_tool_calls(self, make_agent):
+    async def test_agent_terminates_without_tool_calls(self, make_agent):
         """Model without tool_calls → only HumanMessage + AIMessage, no ToolMessage."""
         responses = [
             AIMessage(content="I can answer that directly: 42."),
@@ -152,7 +152,7 @@ class TestAgentToolCalling:
         agent, _ = make_agent(responses)
         config = {"configurable": {"thread_id": "no-tool-1"}}
 
-        result = agent.invoke(
+        result = await agent.ainvoke(
             {"messages": [HumanMessage(content="What is the answer?")]},
             config=config,
         )
@@ -169,7 +169,7 @@ class TestAgentToolCalling:
 class TestAgentMessageSequence:
     """Verify the exact shape of the message trajectory."""
 
-    def test_full_trajectory_shape(self, make_agent):
+    async def test_full_trajectory_shape(self, make_agent):
         """Tool-call trajectory: Human → AI(tool_call) → Tool → AI(answer)."""
         responses = [
             AIMessage(
@@ -181,7 +181,7 @@ class TestAgentMessageSequence:
         agent, _ = make_agent(responses)
         config = {"configurable": {"thread_id": "shape-1"}}
 
-        result = agent.invoke(
+        result = await agent.ainvoke(
             {"messages": [HumanMessage(content="Tell me about exports")]},
             config=config,
         )
@@ -200,7 +200,7 @@ class TestAgentMessageSequence:
 class TestAgentPersistence:
     """Verify multi-turn memory within and across threads."""
 
-    def test_multi_turn_persistence(self, make_agent):
+    async def test_multi_turn_persistence(self, make_agent):
         """Two invocations on the same thread accumulate messages."""
         responses = [
             # Turn 1: direct answer (no tool call)
@@ -216,13 +216,13 @@ class TestAgentPersistence:
         config = {"configurable": {"thread_id": "multi-turn-1"}}
 
         # Turn 1
-        agent.invoke(
+        await agent.ainvoke(
             {"messages": [HumanMessage(content="Hi")]},
             config=config,
         )
 
         # Turn 2
-        result = agent.invoke(
+        result = await agent.ainvoke(
             {"messages": [HumanMessage(content="Now query machinery")]},
             config=config,
         )
@@ -238,7 +238,7 @@ class TestAgentPersistence:
         assert isinstance(msgs[4], ToolMessage)
         assert isinstance(msgs[5], AIMessage)
 
-    def test_different_threads_are_independent(self, make_agent):
+    async def test_different_threads_are_independent(self, make_agent):
         """Thread A and Thread B don't share state."""
         responses = [
             AIMessage(content="Answer for thread A."),
@@ -246,11 +246,11 @@ class TestAgentPersistence:
         ]
         agent, _ = make_agent(responses)
 
-        result_a = agent.invoke(
+        result_a = await agent.ainvoke(
             {"messages": [HumanMessage(content="Question A")]},
             config={"configurable": {"thread_id": "thread-A"}},
         )
-        result_b = agent.invoke(
+        result_b = await agent.ainvoke(
             {"messages": [HumanMessage(content="Question B")]},
             config={"configurable": {"thread_id": "thread-B"}},
         )
