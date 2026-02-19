@@ -18,7 +18,7 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 
 
 @pytest.fixture(scope="module")
-def real_atlas_sql():
+async def real_atlas_sql():
     """Shared AtlasTextToSQL instance backed by real DB and LLM."""
     settings = get_settings()
     if not settings.atlas_db_url:
@@ -26,7 +26,7 @@ def real_atlas_sql():
     if not (settings.openai_api_key or settings.anthropic_api_key or settings.google_api_key):
         pytest.skip("No LLM API key configured")
 
-    instance = AtlasTextToSQL(
+    instance = await AtlasTextToSQL.create_async(
         db_uri=settings.atlas_db_url,
         table_descriptions_json=BASE_DIR / "db_table_descriptions.json",
         table_structure_json=BASE_DIR / "db_table_structure.json",
@@ -35,39 +35,37 @@ def real_atlas_sql():
         max_results=settings.max_results_per_query,
     )
     yield instance
-    instance.close()
+    await instance.aclose()
 
 
 @pytest.mark.db
 @pytest.mark.integration
+@pytest.mark.asyncio(loop_scope="module")
 class TestQueryToolE2E:
     """Full pipeline tests: question → product lookup → SQL → answer."""
 
-    def test_simple_country_query(self, real_atlas_sql):
+    async def test_simple_country_query(self, real_atlas_sql):
         """Basic country export question returns a non-empty, error-free answer."""
-        answer = real_atlas_sql.answer_question(
+        answer = await real_atlas_sql.aanswer_question(
             "Top 3 products exported by Bolivia in 2020",
-            stream_response=False,
         )
         assert isinstance(answer, str)
         assert len(answer) > 0
         assert "error" not in answer.lower()
 
-    def test_product_mention_query(self, real_atlas_sql):
+    async def test_product_mention_query(self, real_atlas_sql):
         """Question mentioning a specific product triggers product lookup."""
-        answer = real_atlas_sql.answer_question(
+        answer = await real_atlas_sql.aanswer_question(
             "How much cotton did India export in 2019?",
-            stream_response=False,
         )
         assert isinstance(answer, str)
         assert len(answer) > 0
         assert "error" not in answer.lower()
 
-    def test_bilateral_trade_query(self, real_atlas_sql):
+    async def test_bilateral_trade_query(self, real_atlas_sql):
         """Bilateral trade question returns a meaningful answer."""
-        answer = real_atlas_sql.answer_question(
+        answer = await real_atlas_sql.aanswer_question(
             "What did Germany export to France in 2020?",
-            stream_response=False,
         )
         assert isinstance(answer, str)
         assert len(answer) > 0
