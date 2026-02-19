@@ -1,16 +1,17 @@
-import streamlit as st
-from pathlib import Path
+import json
 import logging
 import sys
-from src.text_to_sql import AtlasTextToSQL
 import uuid
+
+import httpx
+import streamlit as st
 
 # Set up logging
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
 
-# Define BASE_DIR (assuming it's the directory where the script is located)
-BASE_DIR = Path(__file__).resolve().parent
+# API base URL — configurable via Streamlit secrets or env
+API_BASE_URL = st.secrets.get("API_BASE_URL", "http://localhost:8000")
 
 # Set Streamlit page configuration
 st.set_page_config(
@@ -52,7 +53,49 @@ with st.expander("📝 Example Questions You Can Ask"):
         - Show me Germany's main trading partners in the automotive sector
     """)
 
+
+# ---------------------------------------------------------------------------
+# SSE helpers
+# ---------------------------------------------------------------------------
+
+
+def _stream_sse(question: str, thread_id: str):
+    """POST to /chat/stream and yield (text_chunk, is_tools_block) tuples.
+
+    Parses the SSE event stream from the FastAPI backend and translates
+    events into the same (str, bool) contract that write_stream() expects.
+    """
+    with httpx.Client(timeout=httpx.Timeout(300.0)) as client:
+        with client.stream(
+            "POST",
+            f"{API_BASE_URL}/chat/stream",
+            json={"question": question, "thread_id": thread_id},
+        ) as response:
+            response.raise_for_status()
+            event_type = None
+            for line in response.iter_lines():
+                if line.startswith("event:"):
+                    event_type = line.split(":", 1)[1].strip()
+                elif line.startswith("data:"):
+                    data_str = line.split(":", 1)[1].strip()
+                    if event_type in ("agent_talk", "tool_output", "tool_call"):
+                        payload = json.loads(data_str)
+                        content = payload.get("content", "")
+                        is_tools = payload.get("source") == "tool"
+                        if content:
+                            yield content, is_tools
+                    elif event_type == "thread_id":
+                        # Update thread_id from server if it was auto-generated
+                        payload = json.loads(data_str)
+                        st.session_state["thread_id"] = payload["thread_id"]
+                    event_type = None
+
+
+# ---------------------------------------------------------------------------
 # Writing stream with tool blocks separated into an expander
+# ---------------------------------------------------------------------------
+
+
 def write_stream(response_gen):
     """Stream response text with typewriter effect, handling sequential blocks of text and tool blocks.
 
@@ -130,37 +173,10 @@ def write_stream(response_gen):
 
     return full_response
 
-# Initialize the AtlasTextToSQL instance
-def init_atlas_sql():
-    try:
-        with st.spinner("Connecting to Atlas Database..."):
-            atlas_sql = AtlasTextToSQL(
-                db_uri=st.secrets["ATLAS_DB_URL"],
-                table_descriptions_json=BASE_DIR / "db_table_descriptions.json",
-                table_structure_json=BASE_DIR / "db_table_structure.json",
-                queries_json=BASE_DIR / "src/example_queries/queries.json",
-                example_queries_dir=BASE_DIR / "src/example_queries",
-                max_results=15,
-            )
 
-            # Register cleanup when the resource is cleared from cache
-            def cleanup():
-                atlas_sql.close()
-
-            st.cache_resource.clear()
-            return atlas_sql
-    except ConnectionError:
-        st.error("⚠️ Unable to connect to the database.")
-        st.stop()
-    except Exception as e:
-        st.error("Unable to connect to the Atlas Database.")
-        logging.error(f"Failed to connect to Atlas Database: {e}", exc_info=True)
-        st.stop()
-
-
-# Initialize the AtlasTextToSQL instance
-if "atlas_sql" not in st.session_state:
-    st.session_state.atlas_sql = init_atlas_sql()
+# ---------------------------------------------------------------------------
+# Session state
+# ---------------------------------------------------------------------------
 
 # Initialize the thread ID
 if "thread_id" not in st.session_state:
@@ -190,29 +206,28 @@ for message in st.session_state["messages"]:
 if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant"):
         try:
-            response_gen, _agent_messages = st.session_state.atlas_sql.answer_question(
-                prompt,
-                stream_response=True,
-                thread_id=st.session_state["thread_id"],
-            )
+            response_gen = _stream_sse(prompt, st.session_state["thread_id"])
             full_response = write_stream(response_gen)
 
-        except ConnectionError:
-            error_message = "⚠️ Lost connection to the database."
+        except httpx.ConnectError:
+            error_message = "⚠️ Unable to connect to the API server. Is it running?"
             st.error(error_message)
-            logging.error("Database connection error", exc_info=True)
+            logging.error("API connection error", exc_info=True)
             full_response = error_message
 
-        except ValueError as e:
-            error_message = f"⚠️ Invalid query: {str(e)}"
-            st.warning(error_message)
-            logging.warning(f"Invalid query: {e}")
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 503:
+                error_message = "⚠️ The backend service is not ready yet. Please try again shortly."
+            else:
+                error_message = f"⚠️ API error: {e.response.status_code}"
+            st.error(error_message)
+            logging.error(f"HTTP error: {e}", exc_info=True)
             full_response = error_message
 
         except Exception as e:
             error_message = "Sorry, an unexpected error occurred while processing your request. Please report this query to Shreyas through Slack."
             st.error(error_message)
-            logging.error(f"Error in answer_question: {e}", exc_info=True)
+            logging.error(f"Error in chat: {e}", exc_info=True)
             full_response = error_message
 
         # Add the assistant's response to the message history
@@ -221,14 +236,11 @@ if st.session_state.messages[-1]["role"] != "assistant":
         )
 
 
-# Add a clear chat button in the second column
+# Add a clear chat button
 def reset_chat():
-    # Close database connection before clearing state
-    if "atlas_sql" in st.session_state:
-        st.session_state.atlas_sql.close()
-    # Delete all the items in Session state
-    for key in st.session_state.keys():
+    for key in list(st.session_state.keys()):
         del st.session_state[key]
+
 
 # Add buttons in a compact horizontal layout
 button_cols = st.columns([0.2, 0.2, 0.2, 0.4])
