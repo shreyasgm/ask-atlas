@@ -1,6 +1,6 @@
 """End-to-end integration tests for the query tool pipeline.
 
-Requires a live Atlas database and OpenAI API key.
+Requires a live Atlas database and an LLM API key (OpenAI, Anthropic, or Google).
 Markers: @pytest.mark.db, @pytest.mark.integration
 
 NOTE: This file was generated with LLM assistance and needs human review.
@@ -10,8 +10,6 @@ these may pass even when the answer is incorrect.
 
 import pytest
 from pathlib import Path
-from langchain_openai import ChatOpenAI
-from sqlalchemy import create_engine
 
 from src.config import get_settings
 from src.text_to_sql import AtlasTextToSQL
@@ -25,8 +23,8 @@ def real_atlas_sql():
     settings = get_settings()
     if not settings.atlas_db_url:
         pytest.skip("ATLAS_DB_URL not configured")
-    if not settings.openai_api_key:
-        pytest.skip("OPENAI_API_KEY not configured")
+    if not (settings.openai_api_key or settings.anthropic_api_key or settings.google_api_key):
+        pytest.skip("No LLM API key configured")
 
     instance = AtlasTextToSQL(
         db_uri=settings.atlas_db_url,
