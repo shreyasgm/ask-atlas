@@ -1,0 +1,34 @@
+import { useNavigate } from 'react-router';
+import { Card, CardContent } from '@/components/ui/card';
+import { QUICK_START_TILES } from '@/constants/landing-data';
+
+export default function QuickStartSection() {
+  const navigate = useNavigate();
+
+  return (
+    <section className="flex w-full flex-col items-center gap-6 px-8 py-10 lg:px-32">
+      <span className="text-xs font-semibold tracking-widest text-muted-foreground">
+        QUICK START
+      </span>
+      <div className="grid w-full max-w-[1200px] grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {QUICK_START_TILES.map((tile) => (
+          <Card
+            className="cursor-pointer transition-shadow hover:shadow-md"
+            key={tile.title}
+            onClick={() => navigate('/chat?' + new URLSearchParams({ q: tile.query }).toString())}
+            role="button"
+            tabIndex={0}
+          >
+            <CardContent className="flex flex-col gap-2 p-5">
+              <tile.icon className="h-5 w-5 text-primary" />
+              <h3 className="text-[15px] font-semibold text-foreground">{tile.title}</h3>
+              <p className="text-[13px] leading-relaxed text-muted-foreground">
+                {tile.description}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </section>
+  );
+}
