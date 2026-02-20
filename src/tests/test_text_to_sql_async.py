@@ -10,7 +10,7 @@ control over agent responses.
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, ToolMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 

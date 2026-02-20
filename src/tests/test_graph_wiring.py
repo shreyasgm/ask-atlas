@@ -7,8 +7,6 @@ that replaces the full pipeline nodes with stubs while preserving routing logic.
 All tests are unit tests -- no database or external LLM required.
 """
 
-import pytest
-
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import tool
 from langgraph.checkpoint.memory import MemorySaver

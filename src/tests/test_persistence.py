@@ -3,7 +3,6 @@
 Tests behavioral contracts only — no third-party API exercising (MemorySaver put/get/list).
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
 
 from langgraph.checkpoint.memory import MemorySaver
