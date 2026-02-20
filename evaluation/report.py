@@ -19,7 +19,14 @@ from utils import get_timestamp, logging
 def _aggregate_scores(verdicts: list[dict]) -> dict[str, Any]:
     """Compute aggregate statistics over a list of judge verdicts."""
     if not verdicts:
-        return {"count": 0, "avg_weighted_score": 0, "pass_rate": 0}
+        return {
+            "count": 0,
+            "avg_weighted_score": 0,
+            "pass_rate": 0,
+            "pass_count": 0,
+            "partial_count": 0,
+            "fail_count": 0,
+        }
 
     scores = [v["weighted_score"] for v in verdicts if "weighted_score" in v]
     pass_count = sum(1 for v in verdicts if v.get("verdict") == "pass")

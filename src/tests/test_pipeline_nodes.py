@@ -91,6 +91,9 @@ def _base_state(**overrides) -> dict:
         "pipeline_table_info": "",
         "pipeline_sql": "",
         "pipeline_result": "",
+        "pipeline_result_columns": [],
+        "pipeline_result_rows": [],
+        "pipeline_execution_time_ms": 0,
     }
     state.update(overrides)
     return state
@@ -687,6 +690,88 @@ class TestExecuteSqlNode:
         # The formatting is str(dict(zip(columns, row)))
         assert "'iso3_code': 'BRA'" in result["pipeline_result"]
         assert "'export_value': 500" in result["pipeline_result"]
+
+
+# ---------------------------------------------------------------------------
+# 6b. execute_sql_node — structured data
+# ---------------------------------------------------------------------------
+
+
+class TestExecuteSqlNodeStructuredData:
+    """Tests for structured columns/rows/timing returned by execute_sql_node."""
+
+    @staticmethod
+    def _mock_engine(rows, columns, returns_rows=True):
+        """Build a mock SQLAlchemy engine with a canned result set."""
+        mock_engine = MagicMock()
+        mock_conn = MagicMock()
+        mock_result = MagicMock()
+        mock_result.returns_rows = returns_rows
+        mock_result.keys.return_value = columns
+        mock_result.fetchall.return_value = rows
+        mock_conn.execute.return_value = mock_result
+        mock_engine.connect.return_value.__enter__ = MagicMock(
+            return_value=mock_conn
+        )
+        mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
+        return mock_engine
+
+    async def test_successful_query_returns_columns_and_rows(self):
+        engine = self._mock_engine(
+            rows=[("USA", 1000), ("CHN", 800)],
+            columns=["country", "value"],
+        )
+        state = _base_state(
+            pipeline_sql="SELECT country, value FROM t LIMIT 2"
+        )
+
+        with patch("src.generate_query.execute_with_retry", side_effect=lambda fn, *a, **kw: fn()):
+            result = await execute_sql_node(state, async_engine=engine)
+
+        assert result["pipeline_result_columns"] == ["country", "value"]
+        assert result["pipeline_result_rows"] == [["USA", 1000], ["CHN", 800]]
+        assert isinstance(result["pipeline_execution_time_ms"], int)
+        assert result["pipeline_execution_time_ms"] >= 0
+        # Existing pipeline_result string still populated
+        assert "USA" in result["pipeline_result"]
+
+    async def test_empty_result_preserves_column_names(self):
+        engine = self._mock_engine(
+            rows=[], columns=["country", "value"]
+        )
+        state = _base_state(pipeline_sql="SELECT * FROM t WHERE 1=0")
+
+        with patch("src.generate_query.execute_with_retry", side_effect=lambda fn, *a, **kw: fn()):
+            result = await execute_sql_node(state, async_engine=engine)
+
+        assert result["pipeline_result_columns"] == ["country", "value"]
+        assert result["pipeline_result_rows"] == []
+        assert result["pipeline_execution_time_ms"] >= 0
+
+    async def test_error_returns_empty_structured_fields(self):
+        mock_engine = MagicMock()
+        state = _base_state(pipeline_sql="SELECT bad")
+
+        with patch(
+            "src.generate_query.execute_with_retry",
+            side_effect=QueryExecutionError("syntax error"),
+        ):
+            result = await execute_sql_node(state, async_engine=mock_engine)
+
+        assert result["pipeline_result_columns"] == []
+        assert result["pipeline_result_rows"] == []
+        assert result["pipeline_execution_time_ms"] == 0
+        assert result["last_error"] != ""
+
+    async def test_no_returns_rows_query(self):
+        engine = self._mock_engine(rows=[], columns=[], returns_rows=False)
+        state = _base_state(pipeline_sql="INSERT INTO t VALUES (1)")
+
+        with patch("src.generate_query.execute_with_retry", side_effect=lambda fn, *a, **kw: fn()):
+            result = await execute_sql_node(state, async_engine=engine)
+
+        assert result["pipeline_result_columns"] == []
+        assert result["pipeline_result_rows"] == []
 
 
 # ---------------------------------------------------------------------------
