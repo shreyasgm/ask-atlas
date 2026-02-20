@@ -254,3 +254,6 @@ technical_overview.md
 
 # Generated test seed data (regenerate with: uv run python src/tests/fixtures/generate_seed_sql.py)
 src/tests/fixtures/seed.sql
+
+# Frontend
+node_modules/
