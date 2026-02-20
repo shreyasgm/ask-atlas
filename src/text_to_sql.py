@@ -8,7 +8,10 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 import warnings
 from dataclasses import dataclass
+from decimal import Decimal
 from sqlalchemy import exc as sa_exc
+import sqlglot
+from sqlglot import exp
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 from src.generate_query import (
     load_example_queries,
@@ -48,16 +51,156 @@ warnings.filterwarnings(
 settings = get_settings()
 
 
+# ---------------------------------------------------------------------------
+# Pipeline topology constants (used for emitting node_start/pipeline_state)
+# ---------------------------------------------------------------------------
+
+PIPELINE_SEQUENCE = [
+    "extract_tool_question",
+    "extract_products",
+    "lookup_codes",
+    "get_table_info",
+    "generate_sql",
+    "validate_sql",
+    "execute_sql",
+    "format_results",
+]
+
+NODE_LABELS = {
+    "extract_tool_question": "Extracting question",
+    "extract_products": "Identifying products",
+    "lookup_codes": "Looking up product codes",
+    "get_table_info": "Loading table metadata",
+    "generate_sql": "Generating SQL query",
+    "validate_sql": "Validating SQL",
+    "execute_sql": "Executing query",
+    "format_results": "Formatting results",
+    "max_queries_exceeded": "Query limit reached",
+}
+
+
+def _json_safe(value: object) -> object:
+    """Convert non-JSON-serializable values to strings."""
+    if isinstance(value, Decimal):
+        return str(value)
+    if isinstance(value, (datetime.datetime, datetime.date)):
+        return value.isoformat()
+    return value
+
+
+def _json_safe_deep(obj: object) -> object:
+    """Recursively make an object JSON-safe."""
+    if isinstance(obj, dict):
+        return {k: _json_safe_deep(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_json_safe_deep(v) for v in obj]
+    return _json_safe(obj)
+
+
+def _extract_tables_from_sql(sql: str) -> list[str]:
+    """Extract schema-qualified table names from a SQL string.
+
+    Args:
+        sql: The SQL query string.
+
+    Returns:
+        Sorted list of unique table names found (e.g. ``["hs92.country_year"]``).
+    """
+    if not sql or not sql.strip():
+        return []
+    try:
+        parsed = sqlglot.parse_one(sql, dialect="postgres")
+        tables: set[str] = set()
+        for table_node in parsed.find_all(exp.Table):
+            db = table_node.db  # schema in sqlglot terms
+            name = table_node.name
+            if db:
+                tables.add(f"{db}.{name}")
+            elif name:
+                tables.add(name)
+        return sorted(tables)
+    except Exception:
+        return []
+
+
+def _extract_pipeline_state(node_name: str, state_snapshot: dict) -> dict:
+    """Extract structured payload for a pipeline_state event.
+
+    Args:
+        node_name: The pipeline node that just completed.
+        state_snapshot: Accumulated state updates from the pipeline.
+
+    Returns:
+        A dict with "stage" and node-specific keys.
+    """
+    base = {"stage": node_name}
+
+    if node_name == "extract_tool_question":
+        base["question"] = state_snapshot.get("pipeline_question", "")
+
+    elif node_name == "extract_products":
+        products = state_snapshot.get("pipeline_products")
+        if products:
+            base["schemas"] = products.classification_schemas
+            base["products"] = [
+                {"name": p.name, "codes": p.codes, "schema": p.classification_schema}
+                for p in (products.products or [])
+            ]
+            base["requires_lookup"] = products.requires_product_lookup
+        else:
+            base["schemas"] = []
+            base["products"] = []
+            base["requires_lookup"] = False
+
+    elif node_name == "lookup_codes":
+        codes = state_snapshot.get("pipeline_codes", "")
+        base["codes"] = codes
+        base["has_codes"] = bool(codes)
+
+    elif node_name == "get_table_info":
+        products = state_snapshot.get("pipeline_products")
+        base["schemas"] = products.classification_schemas if products else []
+
+    elif node_name == "generate_sql":
+        base["sql"] = state_snapshot.get("pipeline_sql", "")
+        base["question"] = state_snapshot.get("pipeline_question", "")
+
+    elif node_name == "validate_sql":
+        error = state_snapshot.get("last_error", "")
+        base["sql"] = state_snapshot.get("pipeline_sql", "")
+        base["is_valid"] = not bool(error)
+        if error:
+            base["error"] = error
+
+    elif node_name == "execute_sql":
+        sql = state_snapshot.get("pipeline_sql", "")
+        base["sql"] = sql
+        base["columns"] = state_snapshot.get("pipeline_result_columns", [])
+        base["rows"] = _json_safe_deep(state_snapshot.get("pipeline_result_rows", []))
+        base["row_count"] = len(base["rows"])
+        base["execution_time_ms"] = state_snapshot.get("pipeline_execution_time_ms", 0)
+        base["tables"] = _extract_tables_from_sql(sql)
+        products = state_snapshot.get("pipeline_products")
+        if products and products.classification_schemas:
+            base["schema"] = products.classification_schemas[0]
+
+    elif node_name == "format_results":
+        base["query_index"] = state_snapshot.get("_query_index", 0)
+
+    return base
+
+
 @dataclass
 class StreamData:
     """Data structure for normalized stream output from agent or tool"""
 
     source: str  # 'agent' or 'tool'
     content: str
-    message_type: str  # 'tool_call', 'tool_output', 'agent_talk', etc.
+    message_type: str  # 'tool_call', 'tool_output', 'agent_talk', 'node_start', 'pipeline_state'
     name: Optional[str] = None  # name of the message if applicable
     tool_call: Optional[str] = None  # Tool call name if applicable
     message_id: Optional[str] = None  # ID of the original message for tracking
+    payload: Optional[Dict] = None  # Structured data for new event types
 
 
 class AtlasTextToSQL:
@@ -147,6 +290,9 @@ class AtlasTextToSQL:
             "queries_executed": 0,
             "last_error": "",
             "retry_count": 0,
+            "pipeline_result_columns": [],
+            "pipeline_result_rows": [],
+            "pipeline_execution_time_ms": 0,
         }
 
     @staticmethod
@@ -342,8 +488,17 @@ class AtlasTextToSQL:
     ) -> AsyncGenerator[Tuple[str, StreamData], None]:
         """Async variant of ``stream_agent_response()``.
 
-        Same buffering / ordering logic but uses ``async for`` over
-        ``self.agent.astream()``.
+        Yields ``(stream_mode, StreamData)`` tuples. In addition to the
+        original ``agent_talk``, ``tool_call``, and ``tool_output`` events,
+        this now emits:
+
+        - **node_start**: when a pipeline node begins execution
+        - **pipeline_state**: when a pipeline node completes, carrying
+          structured data about what that node produced
+
+        Uses ``stream_mode=["messages", "updates"]`` and infers node
+        transitions from ``updates`` chunks whose keys are pipeline
+        node names.
 
         Args:
             question: The user's question.
@@ -355,6 +510,47 @@ class AtlasTextToSQL:
         tool_buffers: Dict[str, list[StreamData]] = {}
         current_tool_id: str | None = None
         in_tool_stream = False
+
+        # Pipeline tracking
+        query_index = 0
+        pipeline_snapshot: dict = {}  # accumulated state across pipeline nodes
+        pipeline_started = False  # True after first pipeline node seen in a cycle
+
+        def _make_node_start(node: str) -> StreamData:
+            return StreamData(
+                source="pipeline",
+                content="",
+                message_type="node_start",
+                payload={
+                    "node": node,
+                    "label": NODE_LABELS.get(node, node),
+                    "query_index": query_index,
+                },
+            )
+
+        def _make_pipeline_state(node: str) -> StreamData:
+            pipeline_snapshot["_query_index"] = query_index
+            return StreamData(
+                source="pipeline",
+                content="",
+                message_type="pipeline_state",
+                payload=_extract_pipeline_state(node, pipeline_snapshot),
+            )
+
+        def _next_pipeline_node(current_node: str) -> str | None:
+            """Return the next node in PIPELINE_SEQUENCE, respecting routing."""
+            if current_node == "validate_sql":
+                # Check if validation failed → skip execute_sql
+                if pipeline_snapshot.get("last_error"):
+                    return "format_results"
+                return "execute_sql"
+            try:
+                idx = PIPELINE_SEQUENCE.index(current_node)
+                if idx + 1 < len(PIPELINE_SEQUENCE):
+                    return PIPELINE_SEQUENCE[idx + 1]
+            except ValueError:
+                pass
+            return None
 
         async for stream_mode, stream_data in self.agent.astream(
             self._turn_input(question),
@@ -372,16 +568,20 @@ class AtlasTextToSQL:
                         current_tool_id = None
 
                     for msg in stream_data["agent"].get("messages", []):
-                        if isinstance(msg, AIMessage) and msg.content:
+                        if isinstance(msg, AIMessage):
                             tool_calls = getattr(msg, "tool_calls", [])
                             if tool_calls:
-                                for tool_call in tool_calls:
-                                    yield stream_mode, StreamData(
-                                        source="agent",
-                                        content=msg.content or "",
-                                        message_type="tool_call",
-                                        tool_call=tool_call.get("name"),
-                                    )
+                                # Agent issued tool_call → new pipeline cycle
+                                query_index += 1
+                                pipeline_snapshot = {}
+                                pipeline_started = False
+
+                                yield stream_mode, StreamData(
+                                    source="agent",
+                                    content=msg.content or "",
+                                    message_type="tool_call",
+                                    tool_call=tool_calls[0].get("name"),
+                                )
                             elif msg.content:
                                 yield stream_mode, StreamData(
                                     source="agent",
@@ -393,7 +593,34 @@ class AtlasTextToSQL:
                     if pipeline_keys:
                         in_tool_stream = True
                         for node_name in pipeline_keys:
-                            for msg in stream_data[node_name].get("messages", []):
+                            node_update = stream_data[node_name]
+
+                            # Emit node_start for this node (first time in cycle)
+                            if not pipeline_started:
+                                yield stream_mode, _make_node_start(node_name)
+                                pipeline_started = True
+
+                            # Accumulate state from this node's update
+                            for key, value in node_update.items():
+                                if key != "messages":
+                                    pipeline_snapshot[key] = value
+
+                            # Emit pipeline_state for the completed node
+                            yield stream_mode, _make_pipeline_state(node_name)
+
+                            # Emit node_start for the NEXT node (if applicable)
+                            next_node = _next_pipeline_node(node_name)
+                            if next_node and next_node != "format_results":
+                                # format_results will emit its own node_start
+                                # when it appears in the updates stream
+                                yield stream_mode, _make_node_start(next_node)
+                            elif next_node == "format_results":
+                                # We need format_results node_start now since
+                                # it produces a ToolMessage
+                                yield stream_mode, _make_node_start("format_results")
+
+                            # Emit ToolMessages from this node (existing behavior)
+                            for msg in node_update.get("messages", []):
                                 if isinstance(msg, ToolMessage) and msg.content:
                                     yield stream_mode, StreamData(
                                         source="tool",

@@ -17,6 +17,7 @@ from langgraph.graph import END, START, StateGraph
 from src.state import AtlasAgentState
 from src.text_to_sql import AtlasTextToSQL, StreamData
 from src.tests.fake_model import FakeToolCallingModel
+from src.product_and_schema_lookup import SchemasAndProductsFound, ProductDetails
 
 
 # ---------------------------------------------------------------------------
@@ -535,6 +536,409 @@ class TestAClose:
             pass  # aclose should be called on exit
 
         instance._async_checkpointer_manager.close.assert_awaited_once()
+
+
+# ---------------------------------------------------------------------------
+# Pipeline stub helper for node_start / pipeline_state tests
+# ---------------------------------------------------------------------------
+
+
+def _build_pipeline_stub_instance(
+    responses: list[AIMessage],
+    *,
+    validation_error: bool = False,
+    max_queries: int = 3,
+) -> AtlasTextToSQL:
+    """Create an AtlasTextToSQL with a full pipeline stub graph.
+
+    Unlike ``_build_stub_instance`` which has only 2 nodes (agent +
+    format_results), this graph has all PIPELINE_SEQUENCE nodes so that
+    the streaming logic can emit ``node_start`` / ``pipeline_state``
+    events for each pipeline step.
+
+    Args:
+        responses: Scripted AIMessage responses for the agent.
+        validation_error: If True, validate_sql sets last_error to skip execute_sql.
+        max_queries: Max queries before routing to max_queries_exceeded.
+    """
+    from langchain_core.tools import tool
+    from src.generate_query import QueryToolInput
+
+    @tool("query_tool", args_schema=QueryToolInput)
+    def dummy_tool(question: str) -> str:
+        """A trade data query tool."""
+        return "stub result"
+
+    model = FakeToolCallingModel(responses=responses)
+
+    async def agent_node(state: AtlasAgentState) -> dict:
+        model_with_tools = model.bind_tools([dummy_tool])
+        return {"messages": [await model_with_tools.ainvoke(state["messages"])]}
+
+    async def extract_tool_question(state: AtlasAgentState) -> dict:
+        last_msg = state["messages"][-1]
+        question = last_msg.tool_calls[0]["args"]["question"]
+        return {"pipeline_question": question}
+
+    async def extract_products(state: AtlasAgentState) -> dict:
+        return {
+            "pipeline_products": SchemasAndProductsFound(
+                classification_schemas=["hs92"],
+                products=[
+                    ProductDetails(name="coffee", classification_schema="hs92", codes=["0901"])
+                ],
+                requires_product_lookup=True,
+            )
+        }
+
+    async def lookup_codes(state: AtlasAgentState) -> dict:
+        return {"pipeline_codes": "- coffee (Schema: hs92): 0901"}
+
+    async def get_table_info(state: AtlasAgentState) -> dict:
+        return {"pipeline_table_info": "Table: hs92.country_product_year_4"}
+
+    async def generate_sql(state: AtlasAgentState) -> dict:
+        return {"pipeline_sql": "SELECT * FROM hs92.country_product_year_4 LIMIT 5"}
+
+    async def validate_sql(state: AtlasAgentState) -> dict:
+        if validation_error:
+            return {
+                "pipeline_sql": state.get("pipeline_sql", ""),
+                "pipeline_result": "",
+                "last_error": "SQL validation failed: unknown table",
+            }
+        return {"pipeline_sql": state.get("pipeline_sql", ""), "last_error": ""}
+
+    async def execute_sql(state: AtlasAgentState) -> dict:
+        return {
+            "pipeline_result": "{'country': 'USA', 'value': 1000}\n{'country': 'CHN', 'value': 800}",
+            "pipeline_result_columns": ["country", "value"],
+            "pipeline_result_rows": [["USA", 1000], ["CHN", 800]],
+            "pipeline_execution_time_ms": 42,
+            "last_error": "",
+        }
+
+    async def format_results(state: AtlasAgentState) -> dict:
+        last_msg = state["messages"][-1]
+        tool_calls = last_msg.tool_calls
+        tc = tool_calls[0]
+
+        if state.get("last_error"):
+            content = f"Error: {state['last_error']}"
+        else:
+            content = state.get("pipeline_result", "No results.")
+
+        messages = [ToolMessage(content=content, tool_call_id=tc["id"])]
+        for extra_tc in tool_calls[1:]:
+            messages.append(
+                ToolMessage(
+                    content="Only one query at a time.",
+                    tool_call_id=extra_tc["id"],
+                )
+            )
+        return {
+            "messages": messages,
+            "queries_executed": state.get("queries_executed", 0) + 1,
+        }
+
+    async def max_queries_exceeded(state: AtlasAgentState) -> dict:
+        last_msg = state["messages"][-1]
+        return {
+            "messages": [
+                ToolMessage(
+                    content="Max queries exceeded.",
+                    tool_call_id=tc["id"],
+                )
+                for tc in last_msg.tool_calls
+            ]
+        }
+
+    def route_after_agent(state: AtlasAgentState) -> str:
+        last_msg = state["messages"][-1]
+        if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
+            if state.get("queries_executed", 0) >= max_queries:
+                return "max_queries_exceeded"
+            return "extract_tool_question"
+        return END
+
+    def route_after_validation(state: AtlasAgentState) -> str:
+        if state.get("last_error"):
+            return "format_results"
+        return "execute_sql"
+
+    builder = StateGraph(AtlasAgentState)
+    builder.add_node("agent", agent_node)
+    builder.add_node("extract_tool_question", extract_tool_question)
+    builder.add_node("extract_products", extract_products)
+    builder.add_node("lookup_codes", lookup_codes)
+    builder.add_node("get_table_info", get_table_info)
+    builder.add_node("generate_sql", generate_sql)
+    builder.add_node("validate_sql", validate_sql)
+    builder.add_node("execute_sql", execute_sql)
+    builder.add_node("format_results", format_results)
+    builder.add_node("max_queries_exceeded", max_queries_exceeded)
+
+    builder.add_edge(START, "agent")
+    builder.add_conditional_edges("agent", route_after_agent)
+    builder.add_edge("extract_tool_question", "extract_products")
+    builder.add_edge("extract_products", "lookup_codes")
+    builder.add_edge("lookup_codes", "get_table_info")
+    builder.add_edge("get_table_info", "generate_sql")
+    builder.add_edge("generate_sql", "validate_sql")
+    builder.add_conditional_edges("validate_sql", route_after_validation)
+    builder.add_edge("execute_sql", "format_results")
+    builder.add_edge("format_results", "agent")
+    builder.add_edge("max_queries_exceeded", "agent")
+
+    instance = AtlasTextToSQL.__new__(AtlasTextToSQL)
+    instance.agent = builder.compile(checkpointer=MemorySaver())
+    return instance
+
+
+# ---------------------------------------------------------------------------
+# Tests -- node_start events
+# ---------------------------------------------------------------------------
+
+
+class TestNodeStartEvents:
+    """Tests for node_start event emission during pipeline execution."""
+
+    async def test_tool_call_triggers_node_start_events(self):
+        """When the agent calls a tool, node_start events should be emitted."""
+        responses = [
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("query_tool", "US exports", "c1")],
+            ),
+            AIMessage(content="Done."),
+        ]
+        instance = _build_pipeline_stub_instance(responses)
+        config = {"configurable": {"thread_id": "ns-1"}}
+
+        node_starts = []
+        async for _mode, data in instance.astream_agent_response("US exports?", config):
+            if data.message_type == "node_start":
+                node_starts.append(data)
+
+        assert len(node_starts) >= 1
+        assert node_starts[0].payload["node"] == "extract_tool_question"
+
+    async def test_node_start_has_required_payload_fields(self):
+        """Every node_start event must have node, label, query_index."""
+        responses = [
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("query_tool", "exports", "c1")],
+            ),
+            AIMessage(content="Done."),
+        ]
+        instance = _build_pipeline_stub_instance(responses)
+        config = {"configurable": {"thread_id": "ns-2"}}
+
+        async for _mode, data in instance.astream_agent_response("exports?", config):
+            if data.message_type == "node_start":
+                assert "node" in data.payload
+                assert "label" in data.payload
+                assert "query_index" in data.payload
+                assert data.payload["query_index"] >= 1
+                assert isinstance(data.payload["label"], str)
+                assert len(data.payload["label"]) > 0
+
+    async def test_no_node_start_for_direct_answer(self):
+        """When the agent responds without tool calls, no node_start events."""
+        responses = [AIMessage(content="Direct answer.")]
+        instance = _build_pipeline_stub_instance(responses)
+        config = {"configurable": {"thread_id": "ns-3"}}
+
+        node_starts = []
+        async for _mode, data in instance.astream_agent_response("hello", config):
+            if data.message_type == "node_start":
+                node_starts.append(data)
+
+        assert len(node_starts) == 0
+
+    async def test_multiple_queries_increment_query_index(self):
+        """Two tool calls in the same turn should have query_index 1 and 2."""
+        responses = [
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("query_tool", "Q1", "c1")],
+            ),
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("query_tool", "Q2", "c2")],
+            ),
+            AIMessage(content="Both done."),
+        ]
+        instance = _build_pipeline_stub_instance(responses)
+        config = {"configurable": {"thread_id": "ns-4"}}
+
+        node_starts = []
+        async for _mode, data in instance.astream_agent_response("both?", config):
+            if data.message_type == "node_start":
+                node_starts.append(data)
+
+        q1_indices = {ns.payload["query_index"] for ns in node_starts
+                      if ns.payload["query_index"] == 1}
+        q2_indices = {ns.payload["query_index"] for ns in node_starts
+                      if ns.payload["query_index"] == 2}
+        assert len(q1_indices) == 1, "Expected query_index=1 in first pipeline cycle"
+        assert len(q2_indices) == 1, "Expected query_index=2 in second pipeline cycle"
+
+
+# ---------------------------------------------------------------------------
+# Tests -- pipeline_state events
+# ---------------------------------------------------------------------------
+
+
+class TestPipelineStateEvents:
+    """Tests for pipeline_state event emission with structured data."""
+
+    async def test_pipeline_state_emitted_for_completed_nodes(self):
+        """At least one pipeline_state event should be emitted."""
+        responses = [
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("query_tool", "exports", "c1")],
+            ),
+            AIMessage(content="Done."),
+        ]
+        instance = _build_pipeline_stub_instance(responses)
+        config = {"configurable": {"thread_id": "ps-1"}}
+
+        pipeline_states = []
+        async for _mode, data in instance.astream_agent_response("exports?", config):
+            if data.message_type == "pipeline_state":
+                pipeline_states.append(data)
+
+        assert len(pipeline_states) >= 1
+        for ps in pipeline_states:
+            assert "stage" in ps.payload
+
+    async def test_pipeline_state_extract_products_payload(self):
+        """pipeline_state for extract_products has schemas and products."""
+        responses = [
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("query_tool", "coffee exports", "c1")],
+            ),
+            AIMessage(content="Done."),
+        ]
+        instance = _build_pipeline_stub_instance(responses)
+        config = {"configurable": {"thread_id": "ps-2"}}
+
+        extract_products_states = []
+        async for _mode, data in instance.astream_agent_response("coffee?", config):
+            if (data.message_type == "pipeline_state"
+                    and data.payload.get("stage") == "extract_products"):
+                extract_products_states.append(data)
+
+        assert len(extract_products_states) == 1
+        payload = extract_products_states[0].payload
+        assert "schemas" in payload
+        assert "products" in payload
+
+    async def test_pipeline_state_execute_sql_payload(self):
+        """pipeline_state for execute_sql has columns, rows, row_count, execution_time_ms."""
+        responses = [
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("query_tool", "trade data", "c1")],
+            ),
+            AIMessage(content="Done."),
+        ]
+        instance = _build_pipeline_stub_instance(responses)
+        config = {"configurable": {"thread_id": "ps-3"}}
+
+        execute_sql_states = []
+        async for _mode, data in instance.astream_agent_response("data?", config):
+            if (data.message_type == "pipeline_state"
+                    and data.payload.get("stage") == "execute_sql"):
+                execute_sql_states.append(data)
+
+        assert len(execute_sql_states) == 1
+        payload = execute_sql_states[0].payload
+        assert "columns" in payload
+        assert "rows" in payload
+        assert "row_count" in payload
+        assert "execution_time_ms" in payload
+        assert "tables" in payload
+        assert isinstance(payload["tables"], list)
+        assert "hs92.country_product_year_4" in payload["tables"]
+
+    async def test_no_pipeline_state_for_direct_answer(self):
+        """No pipeline_state events when agent answers directly."""
+        responses = [AIMessage(content="Just a direct answer.")]
+        instance = _build_pipeline_stub_instance(responses)
+        config = {"configurable": {"thread_id": "ps-4"}}
+
+        pipeline_states = []
+        async for _mode, data in instance.astream_agent_response("hello", config):
+            if data.message_type == "pipeline_state":
+                pipeline_states.append(data)
+
+        assert len(pipeline_states) == 0
+
+
+# ---------------------------------------------------------------------------
+# Tests -- validation failure routing
+# ---------------------------------------------------------------------------
+
+
+class TestValidationFailureRouting:
+    """Tests for correct node_start routing when validation fails."""
+
+    async def test_validation_error_skips_execute_sql_node_start(self):
+        """When validate_sql fails, execute_sql should NOT appear in node_starts."""
+        responses = [
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("query_tool", "bad query", "c1")],
+            ),
+            AIMessage(content="Error reported."),
+        ]
+        instance = _build_pipeline_stub_instance(responses, validation_error=True)
+        config = {"configurable": {"thread_id": "vf-1"}}
+
+        node_start_names = []
+        async for _mode, data in instance.astream_agent_response("bad?", config):
+            if data.message_type == "node_start":
+                node_start_names.append(data.payload["node"])
+
+        assert "execute_sql" not in node_start_names
+        assert "format_results" in node_start_names
+
+
+# ---------------------------------------------------------------------------
+# Tests -- backward compatibility of new streaming
+# ---------------------------------------------------------------------------
+
+
+class TestBackwardCompatibility:
+    """Ensure existing event types still work alongside new ones."""
+
+    async def test_existing_event_types_still_present(self):
+        """agent_talk and tool_output should still appear in the stream."""
+        responses = [
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("query_tool", "exports", "c1")],
+            ),
+            AIMessage(content="Here are results."),
+        ]
+        instance = _build_pipeline_stub_instance(responses)
+        config = {"configurable": {"thread_id": "bc-1"}}
+
+        message_types = set()
+        async for _mode, data in instance.astream_agent_response("exports?", config):
+            message_types.add(data.message_type)
+
+        assert "agent_talk" in message_types, (
+            "Expected 'agent_talk' in stream but got: " + str(message_types)
+        )
+        assert "tool_output" in message_types, (
+            "Expected 'tool_output' in stream but got: " + str(message_types)
+        )
 
 
 # ---------------------------------------------------------------------------

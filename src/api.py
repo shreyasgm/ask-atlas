@@ -2,12 +2,14 @@
 
 import json
 import logging
+import time
 import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import AsyncGenerator
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
@@ -71,6 +73,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(title="Ask-Atlas API", version="0.1.0", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:4173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # ---------------------------------------------------------------------------
@@ -144,16 +154,25 @@ async def chat_stream(body: ChatRequest) -> EventSourceResponse:
     """SSE streaming chat endpoint.
 
     Event types:
-        thread_id   – the conversation thread ID (sent first)
-        agent_talk  – text chunks from the agent
-        tool_output – output from tool execution
-        tool_call   – notification that a tool is being called
-        done        – final event with thread_id
+        thread_id      – the conversation thread ID (sent first)
+        agent_talk     – text chunks from the agent
+        tool_output    – output from tool execution
+        tool_call      – notification that a tool is being called
+        node_start     – pipeline node begins (payload emitted directly)
+        pipeline_state – pipeline node completed (payload emitted directly)
+        done           – final event with aggregate stats
     """
     atlas_sql = _get_atlas_sql()
     thread_id = body.thread_id or str(uuid.uuid4())
 
     async def _event_generator() -> AsyncGenerator[dict, None]:
+        t_start = time.monotonic()
+
+        # Aggregate stats for the done event
+        total_queries = 0
+        total_rows = 0
+        total_execution_time_ms = 0
+
         # First event: thread_id
         yield {
             "event": "thread_id",
@@ -163,19 +182,46 @@ async def chat_stream(body: ChatRequest) -> EventSourceResponse:
         async for stream_data in atlas_sql.aanswer_question_stream(
             body.question, thread_id=thread_id
         ):
-            yield {
-                "event": stream_data.message_type,
-                "data": json.dumps({
-                    "source": stream_data.source,
-                    "content": stream_data.content,
-                    "message_type": stream_data.message_type,
-                }),
-            }
+            if stream_data.message_type in ("node_start", "pipeline_state"):
+                # New event types: emit payload directly (no wrapper)
+                yield {
+                    "event": stream_data.message_type,
+                    "data": json.dumps(stream_data.payload or {}),
+                }
 
-        # Final event: done
+                # Track aggregates from execute_sql pipeline_state
+                if (
+                    stream_data.message_type == "pipeline_state"
+                    and stream_data.payload
+                    and stream_data.payload.get("stage") == "execute_sql"
+                ):
+                    total_queries += 1
+                    total_rows += stream_data.payload.get("row_count", 0)
+                    total_execution_time_ms += stream_data.payload.get(
+                        "execution_time_ms", 0
+                    )
+            else:
+                # Existing event types: wrap in {source, content, message_type}
+                yield {
+                    "event": stream_data.message_type,
+                    "data": json.dumps({
+                        "source": stream_data.source,
+                        "content": stream_data.content,
+                        "message_type": stream_data.message_type,
+                    }),
+                }
+
+        # Final event: done with aggregate stats
+        total_time_ms = int((time.monotonic() - t_start) * 1000)
         yield {
             "event": "done",
-            "data": json.dumps({"thread_id": thread_id}),
+            "data": json.dumps({
+                "thread_id": thread_id,
+                "total_queries": total_queries,
+                "total_rows": total_rows,
+                "total_execution_time_ms": total_execution_time_ms,
+                "total_time_ms": total_time_ms,
+            }),
         }
 
     return EventSourceResponse(_event_generator())

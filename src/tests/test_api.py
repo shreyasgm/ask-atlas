@@ -406,6 +406,159 @@ class TestChatStreamMixedTypes:
 
 
 # ---------------------------------------------------------------------------
+# POST /chat/stream — enhanced events (node_start, pipeline_state, done stats)
+# ---------------------------------------------------------------------------
+
+
+class TestChatStreamEnhancedEvents:
+    """Tests for new SSE event types: node_start, pipeline_state, enhanced done."""
+
+    @pytest.fixture(autouse=True)
+    def _inject_pipeline_stream(self):
+        """Mock stream that yields pipeline events alongside existing types."""
+        mock = MagicMock(spec=AtlasTextToSQL)
+        mock.aanswer_question = AsyncMock(return_value="unused")
+
+        async def _pipeline_stream(question: str, thread_id: str | None = None):
+            yield StreamData(
+                source="agent",
+                content="",
+                message_type="tool_call",
+                tool_call="query_tool",
+            )
+            yield StreamData(
+                source="pipeline",
+                content="",
+                message_type="node_start",
+                payload={"node": "extract_tool_question", "label": "Extracting question", "query_index": 1},
+            )
+            yield StreamData(
+                source="pipeline",
+                content="",
+                message_type="pipeline_state",
+                payload={"stage": "extract_tool_question", "question": "test?"},
+            )
+            yield StreamData(
+                source="pipeline",
+                content="",
+                message_type="node_start",
+                payload={"node": "execute_sql", "label": "Executing query", "query_index": 1},
+            )
+            yield StreamData(
+                source="pipeline",
+                content="",
+                message_type="pipeline_state",
+                payload={
+                    "stage": "execute_sql",
+                    "columns": ["country", "value"],
+                    "rows": [["USA", 1000], ["CHN", 800]],
+                    "row_count": 2,
+                    "execution_time_ms": 150,
+                    "sql": "SELECT * FROM t",
+                    "tables": ["t"],
+                },
+            )
+            yield StreamData(
+                source="tool",
+                content="{'country': 'USA'}",
+                message_type="tool_output",
+                name="query_tool",
+            )
+            yield StreamData(
+                source="agent",
+                content="Here are the results.",
+                message_type="agent_talk",
+            )
+
+        mock.aanswer_question_stream = _pipeline_stream
+        _state.atlas_sql = mock
+        yield
+        _state.atlas_sql = None
+
+    def test_node_start_in_sse_stream(self, client: TestClient) -> None:
+        """node_start events should appear in the SSE stream."""
+        response = client.post("/chat/stream", json={"question": "test?"})
+        events = _parse_sse(response.text)
+        node_starts = [e for e in events if e.get("event") == "node_start"]
+        assert len(node_starts) >= 1
+        data = json.loads(node_starts[0]["data"])
+        assert "node" in data
+
+    def test_pipeline_state_in_sse_stream(self, client: TestClient) -> None:
+        """pipeline_state events should appear in the SSE stream."""
+        response = client.post("/chat/stream", json={"question": "test?"})
+        events = _parse_sse(response.text)
+        pipeline_states = [e for e in events if e.get("event") == "pipeline_state"]
+        assert len(pipeline_states) >= 1
+        data = json.loads(pipeline_states[0]["data"])
+        assert "stage" in data
+
+    def test_done_event_has_aggregate_stats(self, client: TestClient) -> None:
+        """done event should include total_queries, total_rows, etc."""
+        response = client.post("/chat/stream", json={"question": "test?"})
+        events = _parse_sse(response.text)
+        done_data = json.loads(events[-1]["data"])
+        assert done_data["total_queries"] == 1
+        assert done_data["total_rows"] == 2
+        assert done_data["total_execution_time_ms"] == 150
+        assert "total_time_ms" in done_data
+        assert done_data["total_time_ms"] >= 0
+
+    def test_done_with_no_pipeline_has_zero_stats(self, client: TestClient) -> None:
+        """When no pipeline runs, done stats should all be 0."""
+        # Override with simple stream (no pipeline events)
+        mock = MagicMock(spec=AtlasTextToSQL)
+
+        async def _simple_stream(question: str, thread_id: str | None = None):
+            yield StreamData(
+                source="agent", content="Direct answer.", message_type="agent_talk"
+            )
+
+        mock.aanswer_question_stream = _simple_stream
+        _state.atlas_sql = mock
+
+        response = client.post("/chat/stream", json={"question": "hi"})
+        events = _parse_sse(response.text)
+        done_data = json.loads(events[-1]["data"])
+        assert done_data["total_queries"] == 0
+        assert done_data["total_rows"] == 0
+        assert done_data["total_execution_time_ms"] == 0
+
+    def test_pipeline_state_payload_not_wrapped(self, client: TestClient) -> None:
+        """pipeline_state SSE data should NOT have source/message_type wrapper."""
+        response = client.post("/chat/stream", json={"question": "test?"})
+        events = _parse_sse(response.text)
+        pipeline_states = [e for e in events if e.get("event") == "pipeline_state"]
+        assert len(pipeline_states) >= 1
+        data = json.loads(pipeline_states[0]["data"])
+        assert "source" not in data
+        assert "message_type" not in data
+        assert "stage" in data
+
+    def test_node_start_payload_not_wrapped(self, client: TestClient) -> None:
+        """node_start SSE data should NOT have source/message_type wrapper."""
+        response = client.post("/chat/stream", json={"question": "test?"})
+        events = _parse_sse(response.text)
+        node_starts = [e for e in events if e.get("event") == "node_start"]
+        assert len(node_starts) >= 1
+        data = json.loads(node_starts[0]["data"])
+        assert "source" not in data
+        assert "message_type" not in data
+        assert "node" in data
+
+    def test_backward_compatible_event_format(self, client: TestClient) -> None:
+        """Existing event types (agent_talk, tool_output) still use the wrapper."""
+        response = client.post("/chat/stream", json={"question": "test?"})
+        events = _parse_sse(response.text)
+        agent_talks = [e for e in events if e.get("event") == "agent_talk"]
+        assert len(agent_talks) >= 1
+        data = json.loads(agent_talks[0]["data"])
+        assert "source" in data
+        assert "content" in data
+        assert "message_type" in data
+
+
+# ---------------------------------------------------------------------------
 # Service unavailable (503)
 # ---------------------------------------------------------------------------
 

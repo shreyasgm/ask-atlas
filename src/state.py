@@ -27,6 +27,9 @@ class AtlasAgentState(TypedDict):
         pipeline_table_info: Table DDL/descriptions for identified schemas.
         pipeline_sql: Generated SQL query string.
         pipeline_result: Formatted query result string.
+        pipeline_result_columns: Column names from the last executed query.
+        pipeline_result_rows: Row data from the last executed query.
+        pipeline_execution_time_ms: Query execution time in milliseconds.
     """
 
     messages: Annotated[list[BaseMessage], add_messages]
@@ -40,3 +43,6 @@ class AtlasAgentState(TypedDict):
     pipeline_table_info: str
     pipeline_sql: str
     pipeline_result: str
+    pipeline_result_columns: list[str]
+    pipeline_result_rows: list[list]
+    pipeline_execution_time_ms: int

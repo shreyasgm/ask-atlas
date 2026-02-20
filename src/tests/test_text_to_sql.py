@@ -77,7 +77,11 @@ async def test_answer_question_stream(atlas_sql, logger):
 
 
 async def test_stream_contract(atlas_sql):
-    """Verify the async streaming API contract: yields StreamData objects."""
+    """Verify the async streaming API contract: yields StreamData objects.
+
+    The stream includes both legacy event types (agent_talk, tool_output,
+    tool_call) and new pipeline visibility events (node_start, pipeline_state).
+    """
     items = []
     async for stream_data in atlas_sql.aanswer_question_stream(
         "What is the ECI of Japan in 2019?"
@@ -85,11 +89,22 @@ async def test_stream_contract(atlas_sql):
         items.append(stream_data)
 
     assert len(items) > 0
+
+    valid_sources = {"agent", "tool", "pipeline"}
+    valid_types = {"agent_talk", "tool_output", "tool_call", "node_start", "pipeline_state"}
+
     for item in items:
         assert isinstance(item, StreamData)
-        assert isinstance(item.content, str) and len(item.content) > 0
-        assert item.source in ("agent", "tool")
-        assert item.message_type in ("agent_talk", "tool_output", "tool_call")
+        assert isinstance(item.content, str)
+        assert item.source in valid_sources
+        assert item.message_type in valid_types
+        # Legacy events should have content (except tool_call which may be empty)
+        if item.message_type in ("agent_talk", "tool_output"):
+            assert len(item.content) > 0
+        # Pipeline events carry data in payload, not content
+        if item.message_type in ("node_start", "pipeline_state"):
+            assert item.payload is not None
+            assert isinstance(item.payload, dict)
 
 
 @pytest.mark.filterwarnings("ignore::pytest.PytestWarning")

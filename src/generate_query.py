@@ -1,7 +1,8 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
 import asyncio
 import json
 import logging
+import time
 from functools import partial
 from pathlib import Path
 
@@ -398,57 +399,87 @@ async def execute_sql_node(
 
     Uses true async DB I/O when given an AsyncEngine (production path).
     Falls back to asyncio.to_thread with a sync Engine (test/legacy path).
+
+    Returns structured columns/rows alongside the existing string representation
+    and query execution timing in milliseconds.
     """
     sql = state["pipeline_sql"]
     use_async = isinstance(async_engine, AsyncEngine)
+    _empty_structured = {
+        "pipeline_result_columns": [],
+        "pipeline_result_rows": [],
+        "pipeline_execution_time_ms": 0,
+    }
 
     if use_async:
-        async def _run_query() -> str:
+        async def _run_query() -> Tuple[str, list[str], list[list]]:
             async with async_engine.connect() as conn:
                 result = await conn.execute(text(sql))
                 if not result.returns_rows:
-                    return ""
+                    return "", [], []
                 columns = list(result.keys())
                 rows = result.fetchall()
+                rows_as_lists = [list(row) for row in rows]
                 if not rows:
-                    return ""
-                return "\n".join(str(dict(zip(columns, row))) for row in rows)
+                    return "", columns, []
+                result_str = "\n".join(
+                    str(dict(zip(columns, row))) for row in rows
+                )
+                return result_str, columns, rows_as_lists
 
         try:
-            result_str = await async_execute_with_retry(_run_query)
+            t0 = time.monotonic()
+            result_str, columns, rows = await async_execute_with_retry(
+                _run_query
+            )
+            elapsed_ms = int((time.monotonic() - t0) * 1000)
         except QueryExecutionError as e:
             logger.error("Query execution failed: %s", e)
-            return {"pipeline_result": "", "last_error": str(e)}
+            return {"pipeline_result": "", "last_error": str(e), **_empty_structured}
         except Exception as e:
             logger.error("Unexpected error executing SQL: %s", e)
-            return {"pipeline_result": "", "last_error": str(e)}
+            return {"pipeline_result": "", "last_error": str(e), **_empty_structured}
     else:
         # Sync fallback (for tests or when async_engine is a sync Engine)
         engine = async_engine
 
-        def _run_query_sync() -> str:
+        def _run_query_sync() -> Tuple[str, list[str], list[list]]:
             with engine.connect() as conn:
                 result = conn.execute(text(sql))
                 if not result.returns_rows:
-                    return ""
+                    return "", [], []
                 columns = list(result.keys())
                 rows = result.fetchall()
+                rows_as_lists = [list(row) for row in rows]
                 if not rows:
-                    return ""
-                return "\n".join(str(dict(zip(columns, row))) for row in rows)
+                    return "", columns, []
+                result_str = "\n".join(
+                    str(dict(zip(columns, row))) for row in rows
+                )
+                return result_str, columns, rows_as_lists
 
         try:
-            result_str = await asyncio.to_thread(execute_with_retry, _run_query_sync)
+            t0 = time.monotonic()
+            result_str, columns, rows = await asyncio.to_thread(
+                execute_with_retry, _run_query_sync
+            )
+            elapsed_ms = int((time.monotonic() - t0) * 1000)
         except QueryExecutionError as e:
             logger.error("Query execution failed: %s", e)
-            return {"pipeline_result": "", "last_error": str(e)}
+            return {"pipeline_result": "", "last_error": str(e), **_empty_structured}
         except Exception as e:
             logger.error("Unexpected error executing SQL: %s", e)
-            return {"pipeline_result": "", "last_error": str(e)}
+            return {"pipeline_result": "", "last_error": str(e), **_empty_structured}
 
     if not result_str or not result_str.strip():
         result_str = "SQL query returned no results."
-    return {"pipeline_result": result_str, "last_error": ""}
+    return {
+        "pipeline_result": result_str,
+        "last_error": "",
+        "pipeline_result_columns": columns,
+        "pipeline_result_rows": rows,
+        "pipeline_execution_time_ms": elapsed_ms,
+    }
 
 
 async def format_results_node(state: AtlasAgentState) -> dict:
