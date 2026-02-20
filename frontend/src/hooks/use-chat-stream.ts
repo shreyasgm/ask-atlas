@@ -26,7 +26,7 @@ async function* parseSSE(
       if (done) {
         break;
       }
-      buffer += decoder.decode(value, { stream: true });
+      buffer += decoder.decode(value, { stream: true }).replaceAll('\r\n', '\n');
 
       const parts = buffer.split('\n\n');
       // Keep last part as potential incomplete chunk
