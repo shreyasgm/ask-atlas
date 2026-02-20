@@ -6,6 +6,7 @@ tables/
 logs/
 CLAUDE.md
 .claude/
+.agents/
 *.csv
 *.parquet
 .config
