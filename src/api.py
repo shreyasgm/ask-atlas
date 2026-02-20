@@ -9,6 +9,8 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import AsyncGenerator
 
+from typing import Literal
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -41,6 +43,9 @@ class ChatRequest(BaseModel):
 
     question: str
     thread_id: str | None = None
+    override_schema: Literal["hs92", "hs12", "sitc"] | None = None
+    override_direction: Literal["exports", "imports"] | None = None
+    override_mode: Literal["goods", "services"] | None = None
 
 
 class ChatResponse(BaseModel):
@@ -208,7 +213,13 @@ async def chat(body: ChatRequest) -> ChatResponse:
     """Non-streaming chat endpoint."""
     atlas_sql = _get_atlas_sql()
     thread_id = body.thread_id or str(uuid.uuid4())
-    answer = await atlas_sql.aanswer_question(body.question, thread_id=thread_id)
+    answer = await atlas_sql.aanswer_question(
+        body.question,
+        thread_id=thread_id,
+        override_schema=body.override_schema,
+        override_direction=body.override_direction,
+        override_mode=body.override_mode,
+    )
     return ChatResponse(answer=answer, thread_id=thread_id)
 
 
@@ -253,7 +264,11 @@ async def chat_stream(body: ChatRequest) -> EventSourceResponse:
 
         try:
             async for stream_data in atlas_sql.aanswer_question_stream(
-                body.question, thread_id=thread_id
+                body.question,
+                thread_id=thread_id,
+                override_schema=body.override_schema,
+                override_direction=body.override_direction,
+                override_mode=body.override_mode,
             ):
                 event_count += 1
                 if stream_data.message_type in ("node_start", "pipeline_state"):

@@ -277,12 +277,24 @@ class AtlasTextToSQL:
     # --- END SYNC __init__ ---
 
     @staticmethod
-    def _turn_input(question: str) -> dict:
+    def _turn_input(
+        question: str,
+        *,
+        override_schema: str | None = None,
+        override_direction: str | None = None,
+        override_mode: str | None = None,
+    ) -> dict:
         """Build the input dict for a new conversational turn.
 
         Resets per-turn counters so that Turn N doesn't inherit
         Turn N-1's ``queries_executed`` / ``last_error`` / ``retry_count``
         from the checkpoint.
+
+        Args:
+            question: The user's question.
+            override_schema: Optional schema override (hs92/hs12/sitc).
+            override_direction: Optional direction override (exports/imports).
+            override_mode: Optional mode override (goods/services).
         """
         return {
             "messages": [HumanMessage(content=question)],
@@ -292,6 +304,9 @@ class AtlasTextToSQL:
             "pipeline_result_columns": [],
             "pipeline_result_rows": [],
             "pipeline_execution_time_ms": 0,
+            "override_schema": override_schema,
+            "override_direction": override_direction,
+            "override_mode": override_mode,
         }
 
     @staticmethod
@@ -458,12 +473,19 @@ class AtlasTextToSQL:
         self,
         question: str,
         thread_id: str | None = None,
+        *,
+        override_schema: str | None = None,
+        override_direction: str | None = None,
+        override_mode: str | None = None,
     ) -> str:
         """Non-streaming async answer.
 
         Args:
             question: The user's question about the trade data.
             thread_id: Conversation thread ID (generated if not provided).
+            override_schema: Optional schema override (hs92/hs12/sitc).
+            override_direction: Optional direction override (exports/imports).
+            override_mode: Optional mode override (goods/services).
 
         Returns:
             The agent's final text answer.
@@ -471,9 +493,15 @@ class AtlasTextToSQL:
         config = {
             "configurable": {"thread_id": thread_id or str(uuid.uuid4())}
         }
+        turn_input = self._turn_input(
+            question,
+            override_schema=override_schema,
+            override_direction=override_direction,
+            override_mode=override_mode,
+        )
         message = None
         async for step in self.agent.astream(
-            self._turn_input(question),
+            turn_input,
             stream_mode="values",
             config=config,
         ):
@@ -484,6 +512,10 @@ class AtlasTextToSQL:
         self,
         question: str,
         config: Dict,
+        *,
+        override_schema: str | None = None,
+        override_direction: str | None = None,
+        override_mode: str | None = None,
     ) -> AsyncGenerator[Tuple[str, StreamData], None]:
         """Async variant of ``stream_agent_response()``.
 
@@ -502,6 +534,9 @@ class AtlasTextToSQL:
         Args:
             question: The user's question.
             config: Configuration dictionary for the agent.
+            override_schema: Optional schema override (hs92/hs12/sitc).
+            override_direction: Optional direction override (exports/imports).
+            override_mode: Optional mode override (goods/services).
 
         Yields:
             Tuples of (stream_mode, StreamData).
@@ -551,8 +586,15 @@ class AtlasTextToSQL:
                 pass
             return None
 
+        turn_input = self._turn_input(
+            question,
+            override_schema=override_schema,
+            override_direction=override_direction,
+            override_mode=override_mode,
+        )
+
         async for stream_mode, stream_data in self.agent.astream(
-            self._turn_input(question),
+            turn_input,
             stream_mode=["messages", "updates"],
             config=config,
         ):
@@ -693,6 +735,10 @@ class AtlasTextToSQL:
         self,
         question: str,
         thread_id: str | None = None,
+        *,
+        override_schema: str | None = None,
+        override_direction: str | None = None,
+        override_mode: str | None = None,
     ) -> AsyncGenerator[StreamData, None]:
         """High-level async streaming that yields ``StreamData`` objects.
 
@@ -702,6 +748,9 @@ class AtlasTextToSQL:
         Args:
             question: The user's question.
             thread_id: Conversation thread ID (generated if not provided).
+            override_schema: Optional schema override (hs92/hs12/sitc).
+            override_direction: Optional direction override (exports/imports).
+            override_mode: Optional mode override (goods/services).
 
         Yields:
             StreamData objects for each piece of streamed content.
@@ -710,7 +759,11 @@ class AtlasTextToSQL:
             "configurable": {"thread_id": thread_id or str(uuid.uuid4())}
         }
         async for _stream_mode, stream_data in self.astream_agent_response(
-            question, config
+            question,
+            config,
+            override_schema=override_schema,
+            override_direction=override_direction,
+            override_mode=override_mode,
         ):
             yield stream_data
 

@@ -79,7 +79,7 @@ def _inject_mock_atlas():
     mock = MagicMock(spec=AtlasTextToSQL)
     mock.aanswer_question = AsyncMock(return_value="Mocked answer")
 
-    async def _fake_stream(question: str, thread_id: str | None = None):
+    async def _fake_stream(question: str, thread_id: str | None = None, **kwargs):
         yield StreamData(
             source="agent", content="streamed ", message_type="agent_talk"
         )
@@ -323,7 +323,7 @@ class TestChatStreamMixedTypes:
         mock = MagicMock(spec=AtlasTextToSQL)
         mock.aanswer_question = AsyncMock(return_value="unused")
 
-        async def _mixed_stream(question: str, thread_id: str | None = None):
+        async def _mixed_stream(question: str, thread_id: str | None = None, **kwargs):
             yield StreamData(
                 source="agent",
                 content="Let me look that up.",
@@ -419,7 +419,7 @@ class TestChatStreamEnhancedEvents:
         mock = MagicMock(spec=AtlasTextToSQL)
         mock.aanswer_question = AsyncMock(return_value="unused")
 
-        async def _pipeline_stream(question: str, thread_id: str | None = None):
+        async def _pipeline_stream(question: str, thread_id: str | None = None, **kwargs):
             yield StreamData(
                 source="agent",
                 content="",
@@ -509,7 +509,7 @@ class TestChatStreamEnhancedEvents:
         # Override with simple stream (no pipeline events)
         mock = MagicMock(spec=AtlasTextToSQL)
 
-        async def _simple_stream(question: str, thread_id: str | None = None):
+        async def _simple_stream(question: str, thread_id: str | None = None, **kwargs):
             yield StreamData(
                 source="agent", content="Direct answer.", message_type="agent_talk"
             )
@@ -609,7 +609,7 @@ class TestTimeoutMiddleware:
         import asyncio
         from unittest.mock import patch
 
-        async def _slow_answer(question, thread_id=None):
+        async def _slow_answer(question, thread_id=None, **kwargs):
             await asyncio.sleep(0.5)
             return "late answer"
 
@@ -641,7 +641,7 @@ class TestConcurrentRequests:
             "thread-B": "Answer for B",
         }
 
-        async def _answer_by_thread(question, thread_id=None):
+        async def _answer_by_thread(question, thread_id=None, **kwargs):
             await asyncio.sleep(0.05)
             return answer_map.get(thread_id, "default")
 
@@ -730,3 +730,120 @@ class TestEndToEndFlow:
         """Non-streaming /chat should return application/json."""
         response = client.post("/chat", json={"question": "hello"})
         assert "application/json" in response.headers.get("content-type", "")
+
+
+# ---------------------------------------------------------------------------
+# POST /chat/stream — trade toggle overrides
+# ---------------------------------------------------------------------------
+
+
+class TestChatStreamWithOverrides:
+    """Tests that trade toggle overrides are forwarded and validated."""
+
+    @pytest.fixture(autouse=True)
+    def _inject_override_capturing_mock(self):
+        """Mock that captures kwargs passed to aanswer_question_stream."""
+        mock = MagicMock(spec=AtlasTextToSQL)
+        mock.aanswer_question = AsyncMock(return_value="Mocked answer")
+        self.captured_kwargs: dict = {}
+
+        parent = self
+
+        async def _capturing_stream(question: str, thread_id=None, **kwargs):
+            parent.captured_kwargs = kwargs
+            yield StreamData(
+                source="agent", content="ok", message_type="agent_talk"
+            )
+
+        mock.aanswer_question_stream = _capturing_stream
+        _state.atlas_sql = mock
+        yield
+        _state.atlas_sql = None
+
+    def test_overrides_forwarded_to_stream(self, client: TestClient) -> None:
+        """Override kwargs should reach aanswer_question_stream."""
+        client.post(
+            "/chat/stream",
+            json={
+                "question": "Brazil exports?",
+                "override_schema": "hs12",
+                "override_direction": "imports",
+                "override_mode": "goods",
+            },
+        )
+        assert self.captured_kwargs.get("override_schema") == "hs12"
+        assert self.captured_kwargs.get("override_direction") == "imports"
+        assert self.captured_kwargs.get("override_mode") == "goods"
+
+    def test_no_overrides_sends_none(self, client: TestClient) -> None:
+        """When no overrides are sent, kwargs should have None values."""
+        client.post(
+            "/chat/stream",
+            json={"question": "Brazil exports?"},
+        )
+        assert self.captured_kwargs.get("override_schema") is None
+        assert self.captured_kwargs.get("override_direction") is None
+        assert self.captured_kwargs.get("override_mode") is None
+
+    def test_invalid_schema_returns_422(self, client: TestClient) -> None:
+        response = client.post(
+            "/chat/stream",
+            json={"question": "q", "override_schema": "invalid"},
+        )
+        assert response.status_code == 422
+
+    def test_invalid_direction_returns_422(self, client: TestClient) -> None:
+        response = client.post(
+            "/chat/stream",
+            json={"question": "q", "override_direction": "re-exports"},
+        )
+        assert response.status_code == 422
+
+    def test_invalid_mode_returns_422(self, client: TestClient) -> None:
+        response = client.post(
+            "/chat/stream",
+            json={"question": "q", "override_mode": "digital"},
+        )
+        assert response.status_code == 422
+
+
+class TestChatNonStreamWithOverrides:
+    """Tests that trade toggle overrides are forwarded via /chat endpoint."""
+
+    @pytest.fixture(autouse=True)
+    def _inject_override_capturing_mock(self):
+        """Mock that captures kwargs passed to aanswer_question."""
+        mock = MagicMock(spec=AtlasTextToSQL)
+        self.captured_kwargs: dict = {}
+
+        parent = self
+
+        async def _capturing_answer(question: str, thread_id=None, **kwargs):
+            parent.captured_kwargs = kwargs
+            return "Mocked answer"
+
+        mock.aanswer_question = _capturing_answer
+
+        async def _fake_stream(question: str, thread_id=None, **kwargs):
+            yield StreamData(
+                source="agent", content="ok", message_type="agent_talk"
+            )
+
+        mock.aanswer_question_stream = _fake_stream
+        _state.atlas_sql = mock
+        yield
+        _state.atlas_sql = None
+
+    def test_overrides_forwarded_to_answer(self, client: TestClient) -> None:
+        client.post(
+            "/chat",
+            json={
+                "question": "Brazil exports?",
+                "override_schema": "sitc",
+                "override_direction": "exports",
+                "override_mode": "services",
+            },
+        )
+        assert self.captured_kwargs.get("override_schema") == "sitc"
+        assert self.captured_kwargs.get("override_direction") == "exports"
+        assert self.captured_kwargs.get("override_mode") == "services"
