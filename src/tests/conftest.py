@@ -5,7 +5,6 @@ import logging
 
 # Define BASE_DIR
 BASE_DIR = Path(__file__).resolve().parents[2]
-print(f"BASE_DIR: {BASE_DIR}")
 load_dotenv(BASE_DIR / ".env")
 
 def pytest_configure(config):
