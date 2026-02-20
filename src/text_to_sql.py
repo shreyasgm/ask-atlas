@@ -24,7 +24,6 @@ import uuid
 
 # Define BASE_DIR
 BASE_DIR = Path(__file__).resolve().parents[1]
-print(f"BASE_DIR: {BASE_DIR}")
 
 # Create logs directory if it doesn't exist
 log_dir = BASE_DIR / "logs"
@@ -368,10 +367,10 @@ class AtlasTextToSQL:
     async def create_async(
         cls,
         db_uri: str | None = None,
-        table_descriptions_json: str = "db_table_descriptions.json",
-        table_structure_json: str = "db_table_structure.json",
-        queries_json: str = "queries.json",
-        example_queries_dir: str = "example_queries",
+        table_descriptions_json: str | Path = BASE_DIR / "db_table_descriptions.json",
+        table_structure_json: str | Path = BASE_DIR / "db_table_structure.json",
+        queries_json: str | Path = BASE_DIR / "src" / "example_queries" / "queries.json",
+        example_queries_dir: str | Path = BASE_DIR / "src" / "example_queries",
         max_results: int | None = None,
         max_queries: int | None = None,
     ) -> "AtlasTextToSQL":
@@ -720,12 +719,7 @@ if __name__ == "__main__":
     import asyncio
 
     async def main():
-        async with await AtlasTextToSQL.create_async(
-            table_descriptions_json=BASE_DIR / "db_table_descriptions.json",
-            table_structure_json=BASE_DIR / "db_table_structure.json",
-            queries_json=BASE_DIR / "src/example_queries/queries.json",
-            example_queries_dir=BASE_DIR / "src/example_queries",
-        ) as atlas_sql:
+        async with await AtlasTextToSQL.create_async() as atlas_sql:
             question = "What were the top 5 products exported by the US to China in 2020?"
             config = {"configurable": {"thread_id": "debug_thread"}}
             async for stream_mode, stream_data in atlas_sql.astream_agent_response(
