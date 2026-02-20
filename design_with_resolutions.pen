@@ -665,6 +665,60 @@
                       "fontWeight": "normal"
                     }
                   ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "Y2QSu",
+                  "name": "divider3",
+                  "fill": "#1E293B",
+                  "width": 1,
+                  "height": 16
+                },
+                {
+                  "type": "frame",
+                  "id": "PJNvo",
+                  "name": "tg8",
+                  "opacity": 0.4,
+                  "cornerRadius": 4,
+                  "padding": [
+                    4,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "n9ZHl",
+                      "name": "tg8txt",
+                      "fill": "#475569",
+                      "content": "SvcU",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "k4YCc",
+                  "name": "tg9",
+                  "opacity": 0.4,
+                  "cornerRadius": 4,
+                  "padding": [
+                    4,
+                    10
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "juLAA",
+                      "name": "tg9txt",
+                      "fill": "#475569",
+                      "content": "SvcB",
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
                 }
               ]
             },
@@ -1740,7 +1794,7 @@
                           "id": "6xA6j",
                           "name": "s1text",
                           "fill": "#94A3B8",
-                          "content": "Validate request",
+                          "content": "Parse question",
                           "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -1808,7 +1862,7 @@
                           "id": "faKYY",
                           "name": "s2text",
                           "fill": "#94A3B8",
-                          "content": "Identify entities",
+                          "content": "Extract products & schemas",
                           "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -1876,7 +1930,7 @@
                           "id": "63tYV",
                           "name": "s3text",
                           "fill": "#94A3B8",
-                          "content": "Resolve codes + schema",
+                          "content": "Resolve product codes",
                           "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -1944,7 +1998,7 @@
                           "id": "G3Yps",
                           "name": "s4text",
                           "fill": "#94A3B8",
-                          "content": "Generate SQL",
+                          "content": "Load table metadata",
                           "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -2012,7 +2066,7 @@
                           "id": "RM1WR",
                           "name": "s5text",
                           "fill": "#94A3B8",
-                          "content": "Execute query",
+                          "content": "Generate SQL",
                           "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -2080,7 +2134,7 @@
                           "id": "u2HSD",
                           "name": "s6text",
                           "fill": "#94A3B8",
-                          "content": "Summarize results",
+                          "content": "Execute query",
                           "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -2155,7 +2209,7 @@
                           "id": "PBKWA",
                           "name": "s7text",
                           "fill": "#475569",
-                          "content": "Suggest follow-ups",
+                          "content": "Format results",
                           "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -4262,7 +4316,7 @@
                       "id": "yCfmX",
                       "name": "s1text",
                       "fill": "#94A3B8",
-                      "content": "Validate request",
+                      "content": "Parse question",
                       "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "normal"
@@ -4340,7 +4394,7 @@
                       "id": "10Nf7",
                       "name": "s2text",
                       "fill": "#94A3B8",
-                      "content": "Identify entities",
+                      "content": "Extract products & schemas",
                       "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "normal"
@@ -4425,7 +4479,7 @@
                           "id": "qbA6b",
                           "name": "s3text",
                           "fill": "#FFFFFF",
-                          "content": "Resolve codes + schema",
+                          "content": "Resolve product codes",
                           "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "semibold"
@@ -4463,7 +4517,7 @@
                           "id": "8SwMo",
                           "name": "s3d1",
                           "fill": "#94A3B8",
-                          "content": "Resolved to HS92 classification",
+                          "content": "Matched 'semiconductors' in HS92 product list",
                           "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "normal"
@@ -4483,7 +4537,7 @@
                           "id": "soNmv",
                           "name": "s3d3",
                           "fill": "#64748B",
-                          "content": "Schema: country_product_year_4",
+                          "content": "Codes: 8541, 8542, 8543",
                           "fontFamily": "JetBrains Mono",
                           "fontSize": 10,
                           "fontWeight": "normal"
@@ -4500,34 +4554,6 @@
                             0
                           ],
                           "children": [
-                            {
-                              "type": "frame",
-                              "id": "dqRdg",
-                              "name": "ob1",
-                              "cornerRadius": 4,
-                              "stroke": {
-                                "thickness": 1,
-                                "fill": "#22D3EE"
-                              },
-                              "gap": 4,
-                              "padding": [
-                                3,
-                                8
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "H8DuV",
-                                  "name": "ob1t",
-                                  "fill": "#22D3EE",
-                                  "content": "Use HS12 instead",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 10,
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            },
                             {
                               "type": "frame",
                               "id": "zN7WS",
@@ -4550,34 +4576,6 @@
                                   "name": "ob2t",
                                   "fill": "#22D3EE",
                                   "content": "Change products",
-                                  "fontFamily": "Inter",
-                                  "fontSize": 10,
-                                  "fontWeight": "normal"
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "lVZli",
-                              "name": "ob3",
-                              "cornerRadius": 4,
-                              "stroke": {
-                                "thickness": 1,
-                                "fill": "#22D3EE"
-                              },
-                              "gap": 4,
-                              "padding": [
-                                3,
-                                8
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "T5cNb",
-                                  "name": "ob3t",
-                                  "fill": "#22D3EE",
-                                  "content": "Use SITC",
                                   "fontFamily": "Inter",
                                   "fontSize": 10,
                                   "fontWeight": "normal"
@@ -4651,7 +4649,7 @@
                       "id": "H76ty",
                       "name": "s4text",
                       "fill": "#94A3B8",
-                      "content": "Generate SQL",
+                      "content": "Load table metadata",
                       "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "normal"
@@ -4661,7 +4659,7 @@
                       "id": "kx4MH",
                       "name": "s4time",
                       "fill": "#475569",
-                      "content": "1.2s",
+                      "content": "0.2s",
                       "fontFamily": "JetBrains Mono",
                       "fontSize": 9,
                       "fontWeight": "normal"
@@ -4735,169 +4733,21 @@
                           "type": "text",
                           "id": "dXVH0",
                           "name": "s5text",
-                          "fill": "#FFFFFF",
-                          "content": "Execute query",
+                          "fill": "#94A3B8",
+                          "content": "Generate SQL",
                           "fontFamily": "Inter",
                           "fontSize": 12,
-                          "fontWeight": "semibold"
-                        },
-                        {
-                          "type": "icon_font",
-                          "id": "5o0QF",
-                          "name": "s5chev",
-                          "width": 14,
-                          "height": 14,
-                          "iconFontName": "chevron-down",
-                          "iconFontFamily": "lucide",
-                          "fill": "#64748B"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "ONErn",
-                      "name": "step5detail",
-                      "width": "fill_container",
-                      "fill": "#0A0F1C",
-                      "cornerRadius": 6,
-                      "layout": "vertical",
-                      "gap": 8,
-                      "padding": [
-                        8,
-                        10,
-                        8,
-                        22
-                      ],
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "51zGg",
-                          "name": "s5d1",
-                          "fill": "#94A3B8",
-                          "content": "Returned 5 rows in 0.23s",
-                          "fontFamily": "Inter",
-                          "fontSize": 11,
                           "fontWeight": "normal"
                         },
                         {
                           "type": "text",
-                          "id": "SpUF6",
-                          "name": "s5d2",
-                          "fill": "#64748B",
-                          "content": "Row limit: 15 (5 used)",
+                          "id": "jQWNv",
+                          "name": "s5time",
+                          "fill": "#475569",
+                          "content": "1.2s",
                           "fontFamily": "JetBrains Mono",
-                          "fontSize": 10,
+                          "fontSize": 9,
                           "fontWeight": "normal"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "KtbJe",
-                          "name": "s5overrides",
-                          "width": "fill_container",
-                          "layout": "vertical",
-                          "gap": 6,
-                          "padding": [
-                            4,
-                            0,
-                            0,
-                            0
-                          ],
-                          "children": [
-                            {
-                              "type": "frame",
-                              "id": "rFNir",
-                              "name": "btnRow1",
-                              "gap": 6,
-                              "children": [
-                                {
-                                  "type": "frame",
-                                  "id": "HFTvb",
-                                  "name": "s5ob1",
-                                  "cornerRadius": 4,
-                                  "stroke": {
-                                    "thickness": 1,
-                                    "fill": "#22D3EE"
-                                  },
-                                  "padding": [
-                                    3,
-                                    8
-                                  ],
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "GZ9ZW",
-                                      "name": "s5ob1t",
-                                      "fill": "#22D3EE",
-                                      "content": "Limit to top 10",
-                                      "fontFamily": "Inter",
-                                      "fontSize": 10,
-                                      "fontWeight": "normal"
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "G8Uod",
-                                  "name": "s5ob2",
-                                  "cornerRadius": 4,
-                                  "stroke": {
-                                    "thickness": 1,
-                                    "fill": "#22D3EE"
-                                  },
-                                  "padding": [
-                                    3,
-                                    8
-                                  ],
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "fAnCu",
-                                      "name": "s5ob2t",
-                                      "fill": "#22D3EE",
-                                      "content": "Switch exports ↔ imports",
-                                      "fontFamily": "Inter",
-                                      "fontSize": 10,
-                                      "fontWeight": "normal"
-                                    }
-                                  ]
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "lsUUs",
-                              "name": "btnRow2",
-                              "gap": 6,
-                              "children": [
-                                {
-                                  "type": "frame",
-                                  "id": "YIdR0",
-                                  "name": "s5ob3",
-                                  "cornerRadius": 4,
-                                  "stroke": {
-                                    "thickness": 1,
-                                    "fill": "#22D3EE"
-                                  },
-                                  "padding": [
-                                    3,
-                                    8
-                                  ],
-                                  "children": [
-                                    {
-                                      "type": "text",
-                                      "id": "ndfYg",
-                                      "name": "s5ob3t",
-                                      "fill": "#22D3EE",
-                                      "content": "Re-run query",
-                                      "fontFamily": "Inter",
-                                      "fontSize": 10,
-                                      "fontWeight": "normal"
-                                    }
-                                  ]
-                                }
-                              ]
-                            }
-                          ]
                         }
                       ]
                     }
@@ -4926,58 +4776,215 @@
                 },
                 {
                   "type": "frame",
-                  "id": "OplFr",
-                  "name": "step6",
+                  "id": "TtIrN",
+                  "name": "step6row",
                   "width": "fill_container",
-                  "gap": 10,
-                  "padding": [
-                    8,
-                    0
-                  ],
-                  "alignItems": "center",
+                  "layout": "vertical",
                   "children": [
                     {
                       "type": "frame",
-                      "id": "LJaKi",
-                      "name": "s6dot",
-                      "width": 22,
-                      "height": 22,
-                      "fill": "#34D399",
-                      "cornerRadius": 11,
-                      "justifyContent": "center",
+                      "id": "lJVL1",
+                      "name": "step6hdr",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "padding": [
+                        8,
+                        0
+                      ],
                       "alignItems": "center",
                       "children": [
                         {
+                          "type": "frame",
+                          "id": "Hm4CV",
+                          "name": "s6dot",
+                          "width": 22,
+                          "height": 22,
+                          "fill": "#34D399",
+                          "cornerRadius": 11,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon_font",
+                              "id": "HtcEw",
+                              "name": "s6check",
+                              "width": 12,
+                              "height": 12,
+                              "iconFontName": "check",
+                              "iconFontFamily": "lucide",
+                              "fill": "#0A0F1C"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "tbz33",
+                          "name": "s6text",
+                          "fill": "#FFFFFF",
+                          "content": "Execute query",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "semibold"
+                        },
+                        {
                           "type": "icon_font",
-                          "id": "flEqW",
-                          "name": "s6check",
-                          "width": 12,
-                          "height": 12,
-                          "iconFontName": "check",
+                          "id": "SKC3S",
+                          "name": "s6chev",
+                          "width": 14,
+                          "height": 14,
+                          "iconFontName": "chevron-down",
                           "iconFontFamily": "lucide",
-                          "fill": "#0A0F1C"
+                          "fill": "#64748B"
                         }
                       ]
                     },
                     {
-                      "type": "text",
-                      "id": "M3To6",
-                      "name": "s6text",
-                      "fill": "#94A3B8",
-                      "content": "Summarize results",
-                      "fontFamily": "Inter",
-                      "fontSize": 12,
-                      "fontWeight": "normal"
-                    },
-                    {
-                      "type": "text",
-                      "id": "FWpzy",
-                      "name": "s6time",
-                      "fill": "#475569",
-                      "content": "0.8s",
-                      "fontFamily": "JetBrains Mono",
-                      "fontSize": 9,
-                      "fontWeight": "normal"
+                      "type": "frame",
+                      "id": "fUGdX",
+                      "name": "step6detail",
+                      "width": "fill_container",
+                      "fill": "#0A0F1C",
+                      "cornerRadius": 6,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": [
+                        8,
+                        10,
+                        8,
+                        22
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "UjMkb",
+                          "name": "s6d1",
+                          "fill": "#94A3B8",
+                          "content": "Returned 5 rows in 0.23s",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "WayAG",
+                          "name": "s6d2",
+                          "fill": "#64748B",
+                          "content": "Row limit: 15 (5 used)",
+                          "fontFamily": "JetBrains Mono",
+                          "fontSize": 10,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "6jvzF",
+                          "name": "s6overrides",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 6,
+                          "padding": [
+                            4,
+                            0,
+                            0,
+                            0
+                          ],
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "JoeyN",
+                              "name": "btnRow1",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "lcGwB",
+                                  "name": "s6ob1",
+                                  "cornerRadius": 4,
+                                  "stroke": {
+                                    "thickness": 1,
+                                    "fill": "#22D3EE"
+                                  },
+                                  "padding": [
+                                    3,
+                                    8
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "ZRN2Q",
+                                      "name": "s6ob1t",
+                                      "fill": "#22D3EE",
+                                      "content": "Limit to top 10",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 10,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "Q6S0o",
+                                  "name": "s6ob2",
+                                  "cornerRadius": 4,
+                                  "stroke": {
+                                    "thickness": 1,
+                                    "fill": "#22D3EE"
+                                  },
+                                  "padding": [
+                                    3,
+                                    8
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "yjkoJ",
+                                      "name": "s6ob2t",
+                                      "fill": "#22D3EE",
+                                      "content": "Switch exports ↔ imports",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 10,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "X91on",
+                              "name": "btnRow2",
+                              "gap": 6,
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "DYwds",
+                                  "name": "s6ob3",
+                                  "cornerRadius": 4,
+                                  "stroke": {
+                                    "thickness": 1,
+                                    "fill": "#22D3EE"
+                                  },
+                                  "padding": [
+                                    3,
+                                    8
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "4ufSJ",
+                                      "name": "s6ob3t",
+                                      "fill": "#22D3EE",
+                                      "content": "Re-run query",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 10,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
                     }
                   ]
                 },
@@ -5049,7 +5056,7 @@
                       "id": "PJqea",
                       "name": "s7text",
                       "fill": "#475569",
-                      "content": "Suggest follow-ups",
+                      "content": "Format results",
                       "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "normal"
