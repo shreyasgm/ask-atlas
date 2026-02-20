@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
-from src.text_to_sql import AtlasTextToSQL, StreamData
+from src.text_to_sql import AtlasTextToSQL
 
 logger = logging.getLogger(__name__)
 

@@ -126,8 +126,8 @@ def report_to_markdown(report: dict[str, Any]) -> str:
 
     # Aggregate summary
     lines.append("## Summary\n")
-    lines.append(f"| Metric | Value |")
-    lines.append(f"|--------|-------|")
+    lines.append("| Metric | Value |")
+    lines.append("|--------|-------|")
     lines.append(f"| Questions evaluated | {agg['count']} |")
     lines.append(f"| Avg weighted score | {agg['avg_weighted_score']} / 5.0 |")
     lines.append(f"| Pass rate | {agg['pass_rate']}% |")

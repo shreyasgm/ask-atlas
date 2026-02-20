@@ -26,7 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 BASE_DIR = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(BASE_DIR))
 
-from src.text_to_sql import AtlasTextToSQL, StreamData  # noqa: E402
+from src.text_to_sql import AtlasTextToSQL  # noqa: E402
 
 # ── Logging setup ────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -56,7 +56,7 @@ def verify_engine_config(atlas: AtlasTextToSQL) -> None:
     sync_url = str(atlas.engine.url)
     sync_driver = atlas.engine.url.drivername
     sync_pool = atlas.engine.pool
-    print(f"\n  Sync engine:")
+    print("\n  Sync engine:")
     print(f"    Driver:    {sync_driver}")
     print(f"    URL:       {sync_url[:60]}...")
     print(f"    Pool size: {sync_pool.size()}")
@@ -72,7 +72,7 @@ def verify_engine_config(atlas: AtlasTextToSQL) -> None:
     )
     async_driver = atlas.async_engine.url.drivername
     async_pool = atlas.async_engine.pool
-    print(f"\n  Async engine:")
+    print("\n  Async engine:")
     print(f"    Driver:    {async_driver}")
     print(f"    Type:      {type(atlas.async_engine).__name__}")
     print(f"    Pool size: {async_pool.size()}")
@@ -200,11 +200,11 @@ async def run_e2e_query(
     sync_hits = [e for e in engine_log if e["engine"] == "SYNC_ENGINE"]
     print(f"\n    Engine usage: {len(async_hits)} ASYNC_ENGINE, {len(sync_hits)} SYNC_ENGINE")
     if async_hits:
-        print(f"    ASYNC queries:")
+        print("    ASYNC queries:")
         for h in async_hits:
             print(f"      → {h['sql'][:100]}")
     if sync_hits:
-        print(f"    SYNC queries (metadata/table_info):")
+        print("    SYNC queries (metadata/table_info):")
         for h in sync_hits:
             print(f"      → {h['sql'][:100]}")
 
