@@ -6,7 +6,6 @@ dependencies so that no LLM, database, or network access is required.
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 from langchain_core.messages import AIMessage, ToolMessage
 
 from src.error_handling import QueryExecutionError
@@ -19,6 +18,7 @@ from src.generate_query import (
     get_table_info_node,
     lookup_codes_node,
     max_queries_exceeded_node,
+    validate_sql_node,
 )
 from src.product_and_schema_lookup import (
     ProductCodesMapping,
@@ -910,3 +910,112 @@ class TestMaxQueriesExceededNode:
             assert "Maximum number of queries exceeded" in tm.content
         assert result["messages"][0].tool_call_id == "call_m1"
         assert result["messages"][1].tool_call_id == "call_m2"
+
+
+# ---------------------------------------------------------------------------
+# 9. validate_sql_node
+# ---------------------------------------------------------------------------
+
+
+class TestValidateSqlNode:
+    """Tests for validate_sql_node node."""
+
+    TABLE_DESCRIPTIONS = {
+        "hs92": [
+            {"table_name": "country_year", "context_str": "Year-level data"},
+            {"table_name": "country_product_year_4", "context_str": "4-digit product data"},
+        ],
+    }
+
+    TABLE_INFO_DDL = (
+        "Table: hs92.country_year\nDescription: Year-level data\n"
+        "CREATE TABLE hs92.country_year (\n  country_id integer\n);\n\n"
+        "Table: hs92.country_product_year_4\nDescription: 4-digit product data\n"
+        "CREATE TABLE hs92.country_product_year_4 (\n  product_id integer\n);\n"
+    )
+
+    async def test_valid_sql_passes_through(self):
+        state = _base_state(
+            pipeline_sql="SELECT country_id FROM hs92.country_year",
+            pipeline_table_info=self.TABLE_INFO_DDL,
+            pipeline_products=SchemasAndProductsFound(
+                classification_schemas=["hs92"],
+                products=[],
+                requires_product_lookup=False,
+            ),
+        )
+
+        result = await validate_sql_node(
+            state, table_descriptions=self.TABLE_DESCRIPTIONS
+        )
+
+        assert result["last_error"] == ""
+        assert result["pipeline_sql"] == "SELECT country_id FROM hs92.country_year"
+
+    async def test_syntax_error_sets_last_error(self):
+        state = _base_state(
+            pipeline_sql="SELEC country FORM table",
+            pipeline_table_info=self.TABLE_INFO_DDL,
+            pipeline_products=SchemasAndProductsFound(
+                classification_schemas=["hs92"],
+                products=[],
+                requires_product_lookup=False,
+            ),
+        )
+
+        result = await validate_sql_node(
+            state, table_descriptions=self.TABLE_DESCRIPTIONS
+        )
+
+        assert result["last_error"] != ""
+        assert "SQL validation failed" in result["last_error"]
+
+    async def test_unknown_table_sets_last_error(self):
+        state = _base_state(
+            pipeline_sql="SELECT * FROM nonexistent.bad_table",
+            pipeline_table_info=self.TABLE_INFO_DDL,
+            pipeline_products=SchemasAndProductsFound(
+                classification_schemas=["hs92"],
+                products=[],
+                requires_product_lookup=False,
+            ),
+        )
+
+        result = await validate_sql_node(
+            state, table_descriptions=self.TABLE_DESCRIPTIONS
+        )
+
+        assert result["last_error"] != ""
+        assert "nonexistent.bad_table" in result["last_error"].lower()
+
+    async def test_warnings_dont_block(self):
+        """SELECT * produces a warning but should still pass validation."""
+        state = _base_state(
+            pipeline_sql="SELECT * FROM hs92.country_year",
+            pipeline_table_info=self.TABLE_INFO_DDL,
+            pipeline_products=SchemasAndProductsFound(
+                classification_schemas=["hs92"],
+                products=[],
+                requires_product_lookup=False,
+            ),
+        )
+
+        result = await validate_sql_node(
+            state, table_descriptions=self.TABLE_DESCRIPTIONS
+        )
+
+        assert result["last_error"] == ""
+
+    async def test_no_pipeline_products_still_uses_ddl_tables(self):
+        """When pipeline_products is None, valid tables from DDL should still work."""
+        state = _base_state(
+            pipeline_sql="SELECT country_id FROM hs92.country_year",
+            pipeline_table_info=self.TABLE_INFO_DDL,
+            pipeline_products=None,
+        )
+
+        result = await validate_sql_node(
+            state, table_descriptions=self.TABLE_DESCRIPTIONS
+        )
+
+        assert result["last_error"] == ""

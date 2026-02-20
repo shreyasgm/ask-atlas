@@ -465,7 +465,7 @@ Modern text-to-SQL systems in 2025 follow a **Decomposition-Retrieval-Generation
 3. **Generation Agent** -- Writes SQL (our `generate_sql`)
 4. **Validation/Correction Agent** -- Executes, checks results, retries on error (our `execute_sql` + the agent's ability to re-call the tool)
 
-Our pipeline maps closely to DRGC but lacks an explicit **SQL validation step** between generation and execution. We have `create_query_validation_chain` in the codebase but it's not wired into the pipeline. Adding a `validate_sql` node between `generate_sql` and `execute_sql` would align with industry best practices.
+Our pipeline maps closely to DRGC. A `validate_sql` node was added between `generate_sql` and `execute_sql` (see issue #17) to catch syntax errors and unknown tables before hitting the database. The previously unused `create_query_validation_chain` was removed as dead code (issue #11) and replaced by this structural validation approach using `sqlglot`.
 
 The other gap is **explicit error recovery routing**: if `execute_sql` fails, our pipeline reports the error via `format_results` and the agent decides whether to retry. An alternative is a conditional edge from `execute_sql` directly back to `generate_sql` (with `last_error` in state as context), which would be faster than going through the full agent loop.
 
@@ -666,7 +666,7 @@ Based on the research, several patterns could improve the current architecture:
 
 ### Near-Term (Low Effort, High Value)
 
-1. **Wire in SQL validation node**: We have `create_query_validation_chain` but it's unused. Adding a `validate_sql` node between `generate_sql` and `execute_sql` would catch syntax errors before hitting the database, aligning with the DRGC industry pattern.
+1. ~~**Wire in SQL validation node**~~: **Done** (issue #17). A `validate_sql` node using `sqlglot` was added between `generate_sql` and `execute_sql`. The dead `create_query_validation_chain` was removed (issue #11).
 
 2. **Migrate from `partial()` to `Runtime` + `context_schema`**: Gives typed dependency injection and cleaner invocation. Wait for the API to stabilize post-LangGraph v1.0.
 

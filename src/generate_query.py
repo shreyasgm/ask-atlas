@@ -11,6 +11,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import FewShotPromptTemplate, PromptTemplate
 from langchain_core.runnables import Runnable
 from langchain_core.tools import tool
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
@@ -24,6 +25,7 @@ from src.product_and_schema_lookup import (
     format_product_codes_for_prompt,
 )
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
+from src.sql_validation import extract_table_names_from_ddl, validate_sql
 from src.state import AtlasAgentState
 
 logger = logging.getLogger(__name__)
@@ -184,23 +186,6 @@ Always use these product codes provided, and do not try to search for products b
 
     return prompt | llm | StrOutputParser() | _strip
 
-
-def create_query_validation_chain(llm: BaseLanguageModel) -> Runnable:
-    """
-    Creates a chain that validates an SQL query.
-    """
-    prompt_message = """
-    You are checking a SQL query meant to be run on a postgres database containing international trade data. Double check that the postgresql query is syntactically and logically correct. Common mistakes include:
-    - Querying the wrong table for the product digit level. For example, if the product codes are 4-digit codes, then the query should be querying the 4-digit product table, not the 6-digit product table.
-    - Not using exact product codes in the WHERE clause. For example, if the query is about a specific product, then the WHERE clause should use the exact product code, not product codes with the LIKE operator.
-    - Syntax errors
-
-    Check for mistakes and correct them. Only correct mistakes that you are sure are mistakes. If you are not sure, do not change the query.
-
-    Output the final SQL query, and nothing else.
-    """
-    prompt = PromptTemplate.from_template("User question: {question}\nSQL query to review: {query}\nFinal revised SQL query:{revised_query}")
-    return llm | StrOutputParser()
 
 
 # ---------------------------------------------------------------------------
@@ -367,6 +352,45 @@ async def generate_sql_node(
     return {"pipeline_sql": sql}
 
 
+async def validate_sql_node(
+    state: AtlasAgentState,
+    *,
+    table_descriptions: Dict,
+) -> dict:
+    """Validate generated SQL before execution.
+
+    Extracts valid table names from the DDL in ``pipeline_table_info`` and
+    from ``table_descriptions`` + ``pipeline_products.classification_schemas``,
+    then runs structural validation checks (syntax, table existence, etc.).
+
+    On validation failure, short-circuits by setting ``last_error`` so that
+    the graph routes to ``format_results`` instead of ``execute_sql``.
+    """
+    sql = state.get("pipeline_sql", "")
+    table_info = state.get("pipeline_table_info", "")
+
+    # Build the set of valid table names from two sources:
+    # 1. DDL in pipeline_table_info
+    valid_tables = extract_table_names_from_ddl(table_info)
+
+    # 2. table_descriptions + classification_schemas from pipeline_products
+    products = state.get("pipeline_products")
+    if products and hasattr(products, "classification_schemas"):
+        for schema in products.classification_schemas:
+            if schema in table_descriptions:
+                for table in table_descriptions[schema]:
+                    valid_tables.add(f"{schema}.{table['table_name']}")
+
+    result = validate_sql(sql, valid_tables)
+
+    if not result.is_valid:
+        error_msg = "SQL validation failed: " + "; ".join(result.errors)
+        logger.warning(error_msg)
+        return {"pipeline_sql": sql, "pipeline_result": "", "last_error": error_msg}
+
+    return {"pipeline_sql": result.sql, "last_error": ""}
+
+
 async def execute_sql_node(
     state: AtlasAgentState, *, async_engine: AsyncEngine | Engine
 ) -> dict:
@@ -482,6 +506,7 @@ PIPELINE_NODES = frozenset({
     "lookup_codes",
     "get_table_info",
     "generate_sql",
+    "validate_sql",
     "execute_sql",
     "format_results",
     "max_queries_exceeded",
@@ -501,7 +526,7 @@ def create_sql_agent(
     example_queries: List[Dict[str, str]] = [],
     top_k_per_query: int = 15,
     max_uses: int = 3,
-    checkpointer: "BaseCheckpointSaver | None" = None,
+    checkpointer: BaseCheckpointSaver | None = None,
     async_engine: AsyncEngine | None = None,
 ):
     """
@@ -650,11 +675,21 @@ If a user asks a normative policy question, such as what products a country shou
         ),
     )
     builder.add_node(
+        "validate_sql",
+        partial(validate_sql_node, table_descriptions=table_descriptions),
+    )
+    builder.add_node(
         "execute_sql",
         partial(execute_sql_node, async_engine=async_engine if async_engine is not None else engine),
     )
     builder.add_node("format_results", format_results_node)
     builder.add_node("max_queries_exceeded", max_queries_exceeded_node)
+
+    # Routing after SQL validation
+    def route_after_validation(state: AtlasAgentState) -> str:
+        if state.get("last_error"):
+            return "format_results"
+        return "execute_sql"
 
     # Edges
     builder.add_edge(START, "agent")
@@ -663,7 +698,8 @@ If a user asks a normative policy question, such as what products a country shou
     builder.add_edge("extract_products", "lookup_codes")
     builder.add_edge("lookup_codes", "get_table_info")
     builder.add_edge("get_table_info", "generate_sql")
-    builder.add_edge("generate_sql", "execute_sql")
+    builder.add_edge("generate_sql", "validate_sql")
+    builder.add_conditional_edges("validate_sql", route_after_validation)
     builder.add_edge("execute_sql", "format_results")
     builder.add_edge("format_results", "agent")
     builder.add_edge("max_queries_exceeded", "agent")
