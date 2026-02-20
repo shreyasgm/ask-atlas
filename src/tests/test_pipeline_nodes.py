@@ -94,6 +94,9 @@ def _base_state(**overrides) -> dict:
         "pipeline_result_columns": [],
         "pipeline_result_rows": [],
         "pipeline_execution_time_ms": 0,
+        "override_schema": None,
+        "override_direction": None,
+        "override_mode": None,
     }
     state.update(overrides)
     return state
@@ -504,6 +507,8 @@ class TestGenerateSqlNode:
             top_k=15,
             table_info="Table: hs92.country_year",
             example_queries=[],
+            direction_constraint=None,
+            mode_constraint=None,
         )
         mock_chain.ainvoke.assert_awaited_once_with(
             {"question": "Brazil exports?"}
@@ -536,6 +541,8 @@ class TestGenerateSqlNode:
             top_k=10,
             table_info="some table info",
             example_queries=[],
+            direction_constraint=None,
+            mode_constraint=None,
         )
         assert "pipeline_sql" in result
 
@@ -564,6 +571,8 @@ class TestGenerateSqlNode:
             top_k=15,
             table_info="",
             example_queries=[],
+            direction_constraint=None,
+            mode_constraint=None,
         )
 
     async def test_example_queries_forwarded(self):

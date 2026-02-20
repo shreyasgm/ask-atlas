@@ -23,6 +23,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from src.error_handling import QueryExecutionError, async_execute_with_retry, execute_with_retry
 from src.product_and_schema_lookup import (
     ProductAndSchemaLookup,
+    ProductDetails,
+    SchemasAndProductsFound,
     format_product_codes_for_prompt,
 )
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
@@ -97,6 +99,8 @@ def create_query_generation_chain(
     top_k: int = 15,
     table_info: str = "",
     example_queries: List[Dict[str, str]] = [],
+    direction_constraint: str | None = None,
+    mode_constraint: str | None = None,
 ) -> Runnable:
     """
     Creates a chain that generates SQL queries based on the user's question.
@@ -107,6 +111,8 @@ def create_query_generation_chain(
         top_k: Maximum rows to return per query
         table_info: Information about database tables
         example_queries: List of example SQL queries for reference
+        direction_constraint: Optional trade direction constraint (exports/imports)
+        mode_constraint: Optional trade mode constraint (goods/services)
 
     Returns:
         A chain that generates SQL queries
@@ -169,6 +175,16 @@ Below are some examples of user questions and their corresponding SQL queries.
 Product codes for reference:
 {codes}
 Always use these product codes provided, and do not try to search for products based on their names from the database."""
+
+    if direction_constraint:
+        prefix += f"""
+
+**User override — trade direction:** The user has specified **{direction_constraint}** only. Use {direction_constraint} data columns. If the question mentions the opposite direction, follow this constraint and use {direction_constraint} data."""
+
+    if mode_constraint:
+        prefix += f"""
+
+**User override — trade mode:** The user has specified **{mode_constraint}** trade data only. Use only {mode_constraint} tables. Do not include tables for the other trade mode."""
 
     example_prompt = PromptTemplate.from_template(
         "User question: {question}\nSQL query: {query}"
@@ -282,11 +298,46 @@ async def extract_tool_question(state: AtlasAgentState) -> dict:
 async def extract_products_node(
     state: AtlasAgentState, *, llm: BaseLanguageModel, engine: Engine
 ) -> dict:
-    """Run product/schema extraction LLM chain."""
+    """Run product/schema extraction LLM chain, then apply overrides."""
     lookup = ProductAndSchemaLookup(llm=llm, connection=engine)
     products = await lookup.aextract_schemas_and_product_mentions_direct(
         state["pipeline_question"]
     )
+
+    override_schema = state.get("override_schema")
+    override_mode = state.get("override_mode")
+
+    if override_schema:
+        # Schema override: force classification_schemas and rebind products
+        products = SchemasAndProductsFound(
+            classification_schemas=[override_schema],
+            products=[
+                ProductDetails(
+                    name=p.name,
+                    classification_schema=override_schema,
+                    codes=p.codes,
+                )
+                for p in (products.products or [])
+            ],
+            requires_product_lookup=products.requires_product_lookup,
+        )
+    elif override_mode:
+        # Mode override (only when no schema override): filter schemas
+        schemas = products.classification_schemas
+        if override_mode == "goods":
+            schemas = [s for s in schemas if not s.startswith("services_")]
+            if not schemas:
+                schemas = ["hs92"]
+        elif override_mode == "services":
+            schemas = [s for s in schemas if s.startswith("services_")]
+            if not schemas:
+                schemas = ["services_unilateral"]
+        products = SchemasAndProductsFound(
+            classification_schemas=schemas,
+            products=products.products,
+            requires_product_lookup=products.requires_product_lookup,
+        )
+
     return {"pipeline_products": products}
 
 
@@ -348,6 +399,8 @@ async def generate_sql_node(
         top_k=max_results,
         table_info=state.get("pipeline_table_info", ""),
         example_queries=example_queries,
+        direction_constraint=state.get("override_direction"),
+        mode_constraint=state.get("override_mode"),
     )
     sql = await chain.ainvoke({"question": state["pipeline_question"]})
     return {"pipeline_sql": sql}
@@ -656,9 +709,22 @@ If a user asks a normative policy question, such as what products a country shou
 - When responding to the user, your responses should be in markdown format, capable of rendering mathjax. Escape dollar signs properly to avoid rendering errors (e.g., `\\$`).
 """
 
-    system_prompt = SystemMessage(content=AGENT_PREFIX)
-
     async def agent_node(state: AtlasAgentState) -> dict:
+        # Build system prompt dynamically to include any active overrides
+        prompt_text = AGENT_PREFIX
+        overrides_parts: list[str] = []
+        if state.get("override_schema"):
+            overrides_parts.append(f"- Classification schema: **{state['override_schema']}**")
+        if state.get("override_direction"):
+            overrides_parts.append(f"- Trade direction: **{state['override_direction']}**")
+        if state.get("override_mode"):
+            overrides_parts.append(f"- Trade mode: **{state['override_mode']}**")
+
+        if overrides_parts:
+            prompt_text += "\n\n**Active User Overrides:**\n" + "\n".join(overrides_parts)
+            prompt_text += "\n\nThese overrides take precedence over what the question implies. If the question contradicts an override, briefly note the conflict but follow the override."
+
+        system_prompt = SystemMessage(content=prompt_text)
         model_with_tools = llm.bind_tools([_query_tool_schema])
         response = await model_with_tools.ainvoke(
             [system_prompt] + state["messages"]

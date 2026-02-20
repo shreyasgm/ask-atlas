@@ -30,6 +30,9 @@ class AtlasAgentState(TypedDict):
         pipeline_result_columns: Column names from the last executed query.
         pipeline_result_rows: Row data from the last executed query.
         pipeline_execution_time_ms: Query execution time in milliseconds.
+        override_schema: User-specified classification schema override.
+        override_direction: User-specified trade direction override.
+        override_mode: User-specified trade mode override (goods/services).
     """
 
     messages: Annotated[list[BaseMessage], add_messages]
@@ -46,3 +49,7 @@ class AtlasAgentState(TypedDict):
     pipeline_result_columns: list[str]
     pipeline_result_rows: list[list]
     pipeline_execution_time_ms: int
+    # Trade toggle overrides (None = auto-detect)
+    override_schema: Optional[str]
+    override_direction: Optional[str]
+    override_mode: Optional[str]
