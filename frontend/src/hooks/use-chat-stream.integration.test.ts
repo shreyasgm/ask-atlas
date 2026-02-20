@@ -282,6 +282,42 @@ describe('useChatStream integration (async SSE)', () => {
     });
   });
 
+  it('parses CRLF line endings from sse_starlette', async () => {
+    const { close, pushRaw, stream } = createControllableStream();
+    global.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+
+    const { result } = renderHook(() => useChatStream());
+
+    act(() => {
+      result.current.sendMessage('hello');
+    });
+
+    // sse_starlette sends \r\n line endings and \r\n\r\n event boundaries
+    pushRaw(`event: thread_id\r\ndata: ${JSON.stringify({ thread_id: THREAD_ID })}\r\n\r\n`);
+
+    await waitFor(() => {
+      expect(result.current.threadId).toBe(THREAD_ID);
+    });
+
+    pushRaw(
+      `event: agent_talk\r\ndata: ${JSON.stringify({ content: 'crlf-works', message_type: 'agent_talk', source: 'agent' })}\r\n\r\n`,
+    );
+
+    await waitFor(() => {
+      const assistant = result.current.messages.find((m) => m.role === 'assistant');
+      expect(assistant?.content).toBe('crlf-works');
+    });
+
+    pushRaw(
+      `event: done\r\ndata: ${JSON.stringify({ thread_id: THREAD_ID, total_execution_time_ms: 0, total_queries: 0, total_rows: 0, total_time_ms: 0 })}\r\n\r\n`,
+    );
+    close();
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+    });
+  });
+
   it('auto-submit from ?q= works with StrictMode double-mount', async () => {
     const events = [makeThreadIdEvent(), makeAgentTalkEvent('auto-response'), makeDoneEvent()];
     global.fetch = vi.fn().mockResolvedValue({
