@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import type { ChatMessage, PipelineStep } from '@/types/chat';
+import type { ChatMessage, EntitiesData, PipelineStep, QueryAggregateStats } from '@/types/chat';
 
 interface UseChatStreamReturn {
   clearChat: () => void;
+  entitiesData: EntitiesData | null;
   error: null | string;
   isStreaming: boolean;
   messages: Array<ChatMessage>;
   pipelineSteps: Array<PipelineStep>;
+  queryStats: QueryAggregateStats | null;
   sendMessage: (question: string) => void;
   threadId: null | string;
 }
@@ -82,6 +84,8 @@ export function useChatStream(): UseChatStreamReturn {
   const [threadId, setThreadId] = useState<null | string>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<null | string>(null);
+  const [entitiesData, setEntitiesData] = useState<EntitiesData | null>(null);
+  const [queryStats, setQueryStats] = useState<QueryAggregateStats | null>(null);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const initialQuerySent = useRef(false);
@@ -195,6 +199,14 @@ export function useChatStream(): UseChatStreamReturn {
                       : m,
                   ),
                 );
+                if (parsed.total_queries != null) {
+                  setQueryStats({
+                    totalExecutionTimeMs: parsed.total_execution_time_ms ?? 0,
+                    totalQueries: parsed.total_queries,
+                    totalRows: parsed.total_rows ?? 0,
+                    totalTimeMs: parsed.total_time_ms ?? 0,
+                  });
+                }
                 break;
 
               case 'node_start':
@@ -203,6 +215,7 @@ export function useChatStream(): UseChatStreamReturn {
                   {
                     label: parsed.label,
                     node: parsed.node,
+                    startedAt: Date.now(),
                     status: 'active' as const,
                   },
                 ]);
@@ -211,9 +224,30 @@ export function useChatStream(): UseChatStreamReturn {
               case 'pipeline_state':
                 setPipelineSteps((prev) =>
                   prev.map((step) =>
-                    step.node === parsed.stage ? { ...step, status: 'completed' as const } : step,
+                    step.node === parsed.stage
+                      ? {
+                          ...step,
+                          completedAt: Date.now(),
+                          detail: parsed,
+                          status: 'completed' as const,
+                        }
+                      : step,
                   ),
                 );
+
+                if (parsed.stage === 'extract_products' && parsed.products) {
+                  setEntitiesData((prev) => ({
+                    lookupCodes: prev?.lookupCodes ?? '',
+                    products: parsed.products,
+                    schemas: parsed.schemas ?? [],
+                  }));
+                } else if (parsed.stage === 'lookup_codes' && parsed.lookup_codes) {
+                  setEntitiesData((prev) =>
+                    prev
+                      ? { ...prev, lookupCodes: parsed.lookup_codes }
+                      : { lookupCodes: parsed.lookup_codes, products: [], schemas: [] },
+                  );
+                }
 
                 if (parsed.stage === 'generate_sql' && parsed.sql) {
                   setMessages((prev) =>
@@ -315,10 +349,12 @@ export function useChatStream(): UseChatStreamReturn {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
+    setEntitiesData(null);
     setError(null);
     setIsStreaming(false);
     setMessages([]);
     setPipelineSteps([]);
+    setQueryStats(null);
     setThreadId(null);
   }, []);
 
@@ -354,10 +390,12 @@ export function useChatStream(): UseChatStreamReturn {
 
   return {
     clearChat,
+    entitiesData,
     error,
     isStreaming,
     messages,
     pipelineSteps,
+    queryStats,
     sendMessage,
     threadId,
   };

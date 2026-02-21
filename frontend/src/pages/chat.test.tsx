@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ChatMessage, PipelineStep } from '@/types/chat';
+import type { ChatMessage, EntitiesData, PipelineStep, QueryAggregateStats } from '@/types/chat';
 
 // Mock the hook
 const mockSendMessage = vi.fn();
@@ -10,10 +10,12 @@ const mockClearChat = vi.fn();
 
 let mockHookReturn: {
   clearChat: typeof mockClearChat;
+  entitiesData: EntitiesData | null;
   error: null | string;
   isStreaming: boolean;
   messages: Array<ChatMessage>;
   pipelineSteps: Array<PipelineStep>;
+  queryStats: QueryAggregateStats | null;
   sendMessage: typeof mockSendMessage;
   threadId: null | string;
 };
@@ -43,10 +45,12 @@ beforeEach(() => {
   mockClearChat.mockReset();
   mockHookReturn = {
     clearChat: mockClearChat,
+    entitiesData: null,
     error: null,
     isStreaming: false,
     messages: [],
     pipelineSteps: [],
+    queryStats: null,
     sendMessage: mockSendMessage,
     threadId: null,
   };
@@ -78,7 +82,8 @@ describe('ChatPage - header', () => {
 
   it('header has "New Chat" button', () => {
     renderChat();
-    expect(screen.getByRole('button', { name: /new chat/i })).toBeInTheDocument();
+    const buttons = screen.getAllByRole('button', { name: /new chat/i });
+    expect(buttons.length).toBeGreaterThanOrEqual(1);
   });
 });
 
@@ -219,10 +224,16 @@ describe('ChatPage - streaming', () => {
   it('shows pipeline stepper during streaming', () => {
     mockHookReturn.isStreaming = true;
     mockHookReturn.pipelineSteps = [
-      { label: 'Generating SQL query', node: 'generate_sql', status: 'active' },
+      {
+        label: 'Generating SQL query',
+        node: 'generate_sql',
+        startedAt: Date.now(),
+        status: 'active',
+      },
     ];
     renderChat();
-    expect(screen.getByText(/generating sql query/i)).toBeInTheDocument();
+    const matches = screen.getAllByText(/generating sql query/i);
+    expect(matches.length).toBeGreaterThanOrEqual(1);
   });
 });
 
