@@ -33,8 +33,10 @@ export default function CenterPanel({
         onSend={onSend}
         pipelineSteps={pipelineSteps}
       />
-      <div className="mx-auto w-full max-w-2xl px-4 pb-4">
-        <ChatInput disabled={isStreaming} onSend={onSend} />
+      <div className="border-t border-border">
+        <div className="mx-auto w-full max-w-2xl px-4 py-4">
+          <ChatInput disabled={isStreaming} onSend={onSend} />
+        </div>
       </div>
     </div>
   );

@@ -37,7 +37,7 @@ export default function RightPanel({
 
   if (!expanded) {
     return (
-      <div className="flex w-12 shrink-0 flex-col items-center gap-3 border-l border-border bg-secondary py-3">
+      <div className="flex h-full w-12 shrink-0 flex-col items-center gap-3 border-l border-border bg-secondary py-3">
         <button
           aria-label="Expand panel"
           className="rounded p-1.5 text-muted-foreground hover:bg-background hover:text-foreground"
@@ -65,7 +65,7 @@ export default function RightPanel({
   }
 
   return (
-    <div className="flex w-[340px] shrink-0 flex-col border-l border-border bg-secondary">
+    <div className="flex h-full w-[340px] shrink-0 flex-col border-l border-border bg-secondary">
       <div className="flex shrink-0 items-center border-b border-border" role="tablist">
         <button
           aria-label="Collapse panel"
