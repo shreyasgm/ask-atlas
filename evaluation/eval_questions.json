@@ -44,6 +44,101 @@
       "id": "data_boundaries",
       "name": "Data Availability Boundaries",
       "description": "Questions probing the limits of available data coverage"
+    },
+    {
+      "id": "country_profile_overview",
+      "name": "Country Profile Overview",
+      "description": "Questions about GDP, population, income classification, and growth projections from Atlas country pages"
+    },
+    {
+      "id": "cp_total_export_values",
+      "name": "Total Export Values (Country Page)",
+      "description": "Questions about total export/import values and trade balance from Atlas country pages"
+    },
+    {
+      "id": "cp_sectoral_composition",
+      "name": "Sectoral Export Composition (Country Page)",
+      "description": "Questions about top products, export shares, and HS codes from Atlas country page treemaps"
+    },
+    {
+      "id": "cp_trade_partners",
+      "name": "Trade Partners and Market Position (Country Page)",
+      "description": "Questions about export destinations and market share sectors from Atlas country pages"
+    },
+    {
+      "id": "cp_growth_performance",
+      "name": "Growth and Performance (Country Page)",
+      "description": "Questions about ECI values and product export values from Atlas country pages"
+    },
+    {
+      "id": "cp_economic_complexity",
+      "name": "Economic Complexity (Country Page)",
+      "description": "Questions about ECI rankings and product complexity from Atlas country pages"
+    },
+    {
+      "id": "cp_diversification",
+      "name": "Diversification Strategies (Country Page)",
+      "description": "Questions about diversification grades, new products, and peer comparisons from Atlas country pages"
+    },
+    {
+      "id": "cp_product_space",
+      "name": "Product Space and Strategic Approach (Country Page)",
+      "description": "Questions about RCA counts, COI rankings, and recommended strategies from Atlas country pages"
+    },
+    {
+      "id": "cp_growth_opportunities",
+      "name": "Growth Opportunities (Country Page)",
+      "description": "Questions about product opportunities and strategies from Atlas country pages (non-frontier only)"
+    },
+    {
+      "id": "cp_frontier_edge_cases",
+      "name": "Frontier Edge Cases (Country Page)",
+      "description": "Questions verifying data unavailability for highest-complexity frontier countries"
+    },
+    {
+      "id": "cp_summary",
+      "name": "Summary Page Cross-Check (Country Page)",
+      "description": "Questions cross-checking summary page stats against detail pages"
+    },
+    {
+      "id": "explore_product_complexity",
+      "name": "Product-Level Complexity (Explore Page)",
+      "description": "Product-level RCA, PCI, distance, COG from Atlas Explore pages"
+    },
+    {
+      "id": "explore_global_product_stats",
+      "name": "Global Product Statistics (Explore Page)",
+      "description": "Global export values, growth rates, and complexity for specific products"
+    },
+    {
+      "id": "explore_bilateral_trade",
+      "name": "Bilateral Trade (Explore Page)",
+      "description": "Country-to-country trade flows, total and by product"
+    },
+    {
+      "id": "explore_import_composition",
+      "name": "Import Composition (Explore Page)",
+      "description": "Product-level import breakdown for countries"
+    },
+    {
+      "id": "explore_trade_time_series",
+      "name": "Trade Time Series (Explore Page)",
+      "description": "Year-by-year trade data, GDP, ECI time series"
+    },
+    {
+      "id": "explore_feasibility",
+      "name": "Growth Opportunities (Explore Page)",
+      "description": "Feasibility metrics: opportunity gain, distance, global size, growth"
+    },
+    {
+      "id": "explore_regional_aggregates",
+      "name": "Regional Aggregates (Explore Page)",
+      "description": "Regional and group-level trade data and growth rates"
+    },
+    {
+      "id": "explore_product_metadata",
+      "name": "Product Classification & Metadata (Explore Page)",
+      "description": "Product catalog details, natural resource flags, classification conversion"
     }
   ],
   "questions": [
@@ -415,6 +510,1494 @@
       "difficulty": "medium",
       "text": "What is the total import value of services for Germany in 2021?",
       "expected_behavior": "Should clarify whether import data is available or if the system focuses on exports, and answer accordingly."
+    },
+    {
+      "id": 61,
+      "category_id": "country_profile_overview",
+      "difficulty": "easy",
+      "text": "What is the GDP per capita of Kenya?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+    },
+    {
+      "id": 62,
+      "category_id": "country_profile_overview",
+      "difficulty": "easy",
+      "text": "What is the GDP per capita (PPP) of Kenya?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+    },
+    {
+      "id": 63,
+      "category_id": "country_profile_overview",
+      "difficulty": "easy",
+      "text": "What is the GDP per capita rank of Kenya?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+    },
+    {
+      "id": 64,
+      "category_id": "country_profile_overview",
+      "difficulty": "easy",
+      "text": "What income classification does Kenya have on the Atlas?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+    },
+    {
+      "id": 65,
+      "category_id": "country_profile_overview",
+      "difficulty": "easy",
+      "text": "What is the population of Kenya?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+    },
+    {
+      "id": 66,
+      "category_id": "country_profile_overview",
+      "difficulty": "easy",
+      "text": "What is the projected GDP per capita growth rate of Kenya over the next decade?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+    },
+    {
+      "id": 67,
+      "category_id": "country_profile_overview",
+      "difficulty": "easy",
+      "text": "What is Kenya's growth projection rank?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+    },
+    {
+      "id": 68,
+      "category_id": "country_profile_overview",
+      "difficulty": "easy",
+      "text": "What is the GDP per capita of Spain?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+    },
+    {
+      "id": 69,
+      "category_id": "country_profile_overview",
+      "difficulty": "easy",
+      "text": "What is the GDP per capita (PPP) of Spain?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+    },
+    {
+      "id": 70,
+      "category_id": "country_profile_overview",
+      "difficulty": "easy",
+      "text": "What is the GDP per capita rank of Spain?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+    },
+    {
+      "id": 71,
+      "category_id": "country_profile_overview",
+      "difficulty": "easy",
+      "text": "What income classification does Spain have on the Atlas?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+    },
+    {
+      "id": 72,
+      "category_id": "country_profile_overview",
+      "difficulty": "easy",
+      "text": "What is the population of Spain?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+    },
+    {
+      "id": 73,
+      "category_id": "country_profile_overview",
+      "difficulty": "easy",
+      "text": "What is the projected GDP per capita growth rate of Spain over the next decade?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+    },
+    {
+      "id": 74,
+      "category_id": "country_profile_overview",
+      "difficulty": "easy",
+      "text": "What is Spain's growth projection rank?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+    },
+    {
+      "id": 75,
+      "category_id": "cp_total_export_values",
+      "difficulty": "easy",
+      "text": "What is the total value of exports for Brazil according to the Atlas country page?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket"
+    },
+    {
+      "id": 76,
+      "category_id": "cp_total_export_values",
+      "difficulty": "easy",
+      "text": "What is Brazil's exporter rank?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket"
+    },
+    {
+      "id": 77,
+      "category_id": "cp_total_export_values",
+      "difficulty": "easy",
+      "text": "What is Brazil's current account balance?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket"
+    },
+    {
+      "id": 78,
+      "category_id": "cp_total_export_values",
+      "difficulty": "easy",
+      "text": "What is the total value of imports for Brazil according to the Atlas?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket"
+    },
+    {
+      "id": 79,
+      "category_id": "cp_total_export_values",
+      "difficulty": "easy",
+      "text": "Does Brazil have a trade surplus or trade deficit?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket"
+    },
+    {
+      "id": 80,
+      "category_id": "cp_total_export_values",
+      "difficulty": "easy",
+      "text": "What is the total value of exports for Germany according to the Atlas country page?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket"
+    },
+    {
+      "id": 81,
+      "category_id": "cp_total_export_values",
+      "difficulty": "easy",
+      "text": "What is Germany's exporter rank?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket"
+    },
+    {
+      "id": 82,
+      "category_id": "cp_total_export_values",
+      "difficulty": "easy",
+      "text": "What is Germany's current account balance?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket"
+    },
+    {
+      "id": 83,
+      "category_id": "cp_total_export_values",
+      "difficulty": "easy",
+      "text": "What is the total value of imports for Germany according to the Atlas?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket"
+    },
+    {
+      "id": 84,
+      "category_id": "cp_total_export_values",
+      "difficulty": "easy",
+      "text": "Does Germany have a trade surplus or trade deficit?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket"
+    },
+    {
+      "id": 85,
+      "category_id": "cp_sectoral_composition",
+      "difficulty": "easy",
+      "text": "What is the top product in India's export basket and what share does it represent?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/export-basket"
+    },
+    {
+      "id": 86,
+      "category_id": "cp_sectoral_composition",
+      "difficulty": "medium",
+      "text": "What are the top 3 products in India's export basket by share?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/export-basket"
+    },
+    {
+      "id": 87,
+      "category_id": "cp_sectoral_composition",
+      "difficulty": "medium",
+      "text": "What is the gross export value of Business from India?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/export-basket"
+    },
+    {
+      "id": 88,
+      "category_id": "cp_sectoral_composition",
+      "difficulty": "hard",
+      "text": "What is the HS92 code for Business exported by India?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/export-basket"
+    },
+    {
+      "id": 89,
+      "category_id": "cp_sectoral_composition",
+      "difficulty": "easy",
+      "text": "What is the top product in USA's export basket and what share does it represent?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/840/export-basket"
+    },
+    {
+      "id": 90,
+      "category_id": "cp_sectoral_composition",
+      "difficulty": "medium",
+      "text": "What are the top 3 products in USA's export basket by share?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/840/export-basket"
+    },
+    {
+      "id": 91,
+      "category_id": "cp_sectoral_composition",
+      "difficulty": "medium",
+      "text": "What is the gross export value of Business from USA?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/840/export-basket"
+    },
+    {
+      "id": 92,
+      "category_id": "cp_sectoral_composition",
+      "difficulty": "hard",
+      "text": "What is the HS92 code for Business exported by USA?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/840/export-basket"
+    },
+    {
+      "id": 93,
+      "category_id": "cp_trade_partners",
+      "difficulty": "medium",
+      "text": "What are the top 3 export destination countries for Turkiye?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/export-basket"
+    },
+    {
+      "id": 94,
+      "category_id": "cp_trade_partners",
+      "difficulty": "easy",
+      "text": "In which sector does Turkiye have the largest global market share?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/market-share"
+    },
+    {
+      "id": 95,
+      "category_id": "cp_trade_partners",
+      "difficulty": "medium",
+      "text": "What are the top 3 export destination countries for Ethiopia?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/export-basket"
+    },
+    {
+      "id": 96,
+      "category_id": "cp_trade_partners",
+      "difficulty": "easy",
+      "text": "In which sector does Ethiopia have the largest global market share?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/market-share"
+    },
+    {
+      "id": 97,
+      "category_id": "cp_growth_performance",
+      "difficulty": "medium",
+      "text": "What is Spain's ECI value according to the growth dynamics chart?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724/growth-dynamics"
+    },
+    {
+      "id": 98,
+      "category_id": "cp_growth_performance",
+      "difficulty": "hard",
+      "text": "What is the gross country export value of Travel & tourism from Spain?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724/export-basket"
+    },
+    {
+      "id": 99,
+      "category_id": "cp_growth_performance",
+      "difficulty": "medium",
+      "text": "What is India's ECI value according to the growth dynamics chart?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/growth-dynamics"
+    },
+    {
+      "id": 100,
+      "category_id": "cp_growth_performance",
+      "difficulty": "hard",
+      "text": "What is the gross country export value of Business from India?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/export-basket"
+    },
+    {
+      "id": 101,
+      "category_id": "cp_economic_complexity",
+      "difficulty": "easy",
+      "text": "What is Brazil's Economic Complexity Index (ECI) ranking?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76"
+    },
+    {
+      "id": 102,
+      "category_id": "cp_economic_complexity",
+      "difficulty": "easy",
+      "text": "What is Brazil's ECI ranking according to the export complexity page?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-complexity"
+    },
+    {
+      "id": 103,
+      "category_id": "cp_economic_complexity",
+      "difficulty": "hard",
+      "text": "What is the Product Complexity Index (PCI) of Petroleum oils, crude exported by Brazil?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-complexity"
+    },
+    {
+      "id": 104,
+      "category_id": "cp_economic_complexity",
+      "difficulty": "easy",
+      "text": "What is Turkiye's Economic Complexity Index (ECI) ranking?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792"
+    },
+    {
+      "id": 105,
+      "category_id": "cp_economic_complexity",
+      "difficulty": "easy",
+      "text": "What is Turkiye's ECI ranking according to the export complexity page?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/export-complexity"
+    },
+    {
+      "id": 106,
+      "category_id": "cp_economic_complexity",
+      "difficulty": "hard",
+      "text": "What is the Product Complexity Index (PCI) of Travel & tourism exported by Turkiye?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/export-complexity"
+    },
+    {
+      "id": 107,
+      "category_id": "cp_diversification",
+      "difficulty": "easy",
+      "text": "What is Kenya's economic diversification grade?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products"
+    },
+    {
+      "id": 108,
+      "category_id": "cp_diversification",
+      "difficulty": "easy",
+      "text": "What is Kenya's diversity rank?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products"
+    },
+    {
+      "id": 109,
+      "category_id": "cp_diversification",
+      "difficulty": "easy",
+      "text": "How many new products has Kenya started exporting in the last 15 years?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products"
+    },
+    {
+      "id": 110,
+      "category_id": "cp_diversification",
+      "difficulty": "medium",
+      "text": "What is the per-capita income contribution of Kenya's new products?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products"
+    },
+    {
+      "id": 111,
+      "category_id": "cp_diversification",
+      "difficulty": "medium",
+      "text": "What is the total value of Kenya's new export products?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products"
+    },
+    {
+      "id": 112,
+      "category_id": "cp_diversification",
+      "difficulty": "medium",
+      "text": "What share of Kenya's export basket is made up of new products?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products"
+    },
+    {
+      "id": 113,
+      "category_id": "cp_diversification",
+      "difficulty": "hard",
+      "text": "How does Kenya's new product count compare to peer countries?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products"
+    },
+    {
+      "id": 114,
+      "category_id": "cp_diversification",
+      "difficulty": "easy",
+      "text": "What is Ethiopia's economic diversification grade?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products"
+    },
+    {
+      "id": 115,
+      "category_id": "cp_diversification",
+      "difficulty": "easy",
+      "text": "What is Ethiopia's diversity rank?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products"
+    },
+    {
+      "id": 116,
+      "category_id": "cp_diversification",
+      "difficulty": "easy",
+      "text": "How many new products has Ethiopia started exporting in the last 15 years?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products"
+    },
+    {
+      "id": 117,
+      "category_id": "cp_diversification",
+      "difficulty": "medium",
+      "text": "What is the per-capita income contribution of Ethiopia's new products?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products"
+    },
+    {
+      "id": 118,
+      "category_id": "cp_diversification",
+      "difficulty": "medium",
+      "text": "What is the total value of Ethiopia's new export products?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products"
+    },
+    {
+      "id": 119,
+      "category_id": "cp_diversification",
+      "difficulty": "medium",
+      "text": "What share of Ethiopia's export basket is made up of new products?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products"
+    },
+    {
+      "id": 120,
+      "category_id": "cp_diversification",
+      "difficulty": "hard",
+      "text": "How does Ethiopia's new product count compare to peer countries?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products"
+    },
+    {
+      "id": 121,
+      "category_id": "cp_product_space",
+      "difficulty": "easy",
+      "text": "How many products does Kenya export with a revealed comparative advantage (RCA > 1)?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/paths"
+    },
+    {
+      "id": 122,
+      "category_id": "cp_product_space",
+      "difficulty": "easy",
+      "text": "What is Kenya's Complexity Outlook Index rank?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/paths"
+    },
+    {
+      "id": 123,
+      "category_id": "cp_product_space",
+      "difficulty": "easy",
+      "text": "What strategic approach does the Atlas recommend for Kenya?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/strategic-approach"
+    },
+    {
+      "id": 124,
+      "category_id": "cp_product_space",
+      "difficulty": "easy",
+      "text": "How many products does Turkiye export with a revealed comparative advantage (RCA > 1)?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/paths"
+    },
+    {
+      "id": 125,
+      "category_id": "cp_product_space",
+      "difficulty": "easy",
+      "text": "What is Turkiye's Complexity Outlook Index rank?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/paths"
+    },
+    {
+      "id": 126,
+      "category_id": "cp_product_space",
+      "difficulty": "easy",
+      "text": "What strategic approach does the Atlas recommend for Turkiye?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/strategic-approach"
+    },
+    {
+      "id": 127,
+      "category_id": "cp_growth_opportunities",
+      "difficulty": "easy",
+      "text": "What product selection strategy is shown by default for Kenya's growth opportunities?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/growth-opportunities"
+    },
+    {
+      "id": 128,
+      "category_id": "cp_growth_opportunities",
+      "difficulty": "easy",
+      "text": "What product selection strategy is shown by default for India's growth opportunities?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/growth-opportunities"
+    },
+    {
+      "id": 129,
+      "category_id": "cp_frontier_edge_cases",
+      "difficulty": "easy",
+      "text": "Does the Atlas show growth opportunity products for USA?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/840/growth-opportunities"
+    },
+    {
+      "id": 130,
+      "category_id": "cp_frontier_edge_cases",
+      "difficulty": "easy",
+      "text": "Does the Atlas show a product opportunities table for USA?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/840/product-table"
+    },
+    {
+      "id": 131,
+      "category_id": "cp_frontier_edge_cases",
+      "difficulty": "easy",
+      "text": "Does the Atlas show growth opportunity products for Germany?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/growth-opportunities"
+    },
+    {
+      "id": 132,
+      "category_id": "cp_frontier_edge_cases",
+      "difficulty": "easy",
+      "text": "Does the Atlas show a product opportunities table for Germany?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/product-table"
+    },
+    {
+      "id": 133,
+      "category_id": "cp_summary",
+      "difficulty": "easy",
+      "text": "How many new products are shown on Turkiye's summary page?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/summary"
+    },
+    {
+      "id": 134,
+      "category_id": "cp_summary",
+      "difficulty": "easy",
+      "text": "What growth projection is shown on Turkiye's summary page?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/summary"
+    },
+    {
+      "id": 135,
+      "category_id": "cp_summary",
+      "difficulty": "medium",
+      "text": "What strategic approach is described on Turkiye's summary page?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/summary"
+    },
+    {
+      "id": 136,
+      "category_id": "cp_summary",
+      "difficulty": "easy",
+      "text": "How many new products are shown on Brazil's summary page?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/summary"
+    },
+    {
+      "id": 137,
+      "category_id": "cp_summary",
+      "difficulty": "easy",
+      "text": "What growth projection is shown on Brazil's summary page?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/summary"
+    },
+    {
+      "id": 138,
+      "category_id": "cp_summary",
+      "difficulty": "medium",
+      "text": "What strategic approach is described on Brazil's summary page?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/summary"
+    },
+    {
+      "id": 139,
+      "category_id": "country_profile_overview",
+      "difficulty": "medium",
+      "text": "What is the average GDP per capita growth rate of Kenya over the past five years?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+    },
+    {
+      "id": 140,
+      "category_id": "country_profile_overview",
+      "difficulty": "medium",
+      "text": "How does Kenya's GDP per capita growth compare to its regional average?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+    },
+    {
+      "id": 141,
+      "category_id": "country_profile_overview",
+      "difficulty": "medium",
+      "text": "Is Kenya more or less complex than expected for its income level?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+    },
+    {
+      "id": 142,
+      "category_id": "country_profile_overview",
+      "difficulty": "easy",
+      "text": "How fast is Kenya projected to grow according to the Atlas?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+    },
+    {
+      "id": 143,
+      "category_id": "country_profile_overview",
+      "difficulty": "medium",
+      "text": "What is the average GDP per capita growth rate of Spain over the past five years?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+    },
+    {
+      "id": 144,
+      "category_id": "country_profile_overview",
+      "difficulty": "medium",
+      "text": "How does Spain's GDP per capita growth compare to its regional average?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+    },
+    {
+      "id": 145,
+      "category_id": "country_profile_overview",
+      "difficulty": "medium",
+      "text": "Is Spain more or less complex than expected for its income level?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+    },
+    {
+      "id": 146,
+      "category_id": "country_profile_overview",
+      "difficulty": "easy",
+      "text": "How fast is Spain projected to grow according to the Atlas?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+    },
+    {
+      "id": 147,
+      "category_id": "cp_economic_complexity",
+      "difficulty": "medium",
+      "text": "How has Brazil's ECI ranking changed over the past decade?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76"
+    },
+    {
+      "id": 148,
+      "category_id": "cp_economic_complexity",
+      "difficulty": "medium",
+      "text": "What is driving Brazil's complexity trend?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76"
+    },
+    {
+      "id": 149,
+      "category_id": "cp_economic_complexity",
+      "difficulty": "medium",
+      "text": "How has Turkiye's ECI ranking changed over the past decade?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792"
+    },
+    {
+      "id": 150,
+      "category_id": "cp_economic_complexity",
+      "difficulty": "medium",
+      "text": "What is driving Turkiye's complexity trend?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792"
+    },
+    {
+      "id": 151,
+      "category_id": "cp_total_export_values",
+      "difficulty": "medium",
+      "text": "What is the 5-year average export growth rate for Brazil?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket"
+    },
+    {
+      "id": 152,
+      "category_id": "cp_total_export_values",
+      "difficulty": "medium",
+      "text": "What is the non-oil export growth rate for Brazil?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket"
+    },
+    {
+      "id": 153,
+      "category_id": "cp_total_export_values",
+      "difficulty": "medium",
+      "text": "What is the 5-year average export growth rate for Germany?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket"
+    },
+    {
+      "id": 154,
+      "category_id": "cp_total_export_values",
+      "difficulty": "medium",
+      "text": "What is the non-oil export growth rate for Germany?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket"
+    },
+    {
+      "id": 155,
+      "category_id": "cp_growth_performance",
+      "difficulty": "medium",
+      "text": "How would you describe Spain's export growth pattern?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724/growth-dynamics"
+    },
+    {
+      "id": 156,
+      "category_id": "cp_growth_performance",
+      "difficulty": "medium",
+      "text": "Which sectors or products are driving Spain's export growth?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724/growth-dynamics"
+    },
+    {
+      "id": 157,
+      "category_id": "cp_growth_performance",
+      "difficulty": "medium",
+      "text": "How would you describe India's export growth pattern?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/growth-dynamics"
+    },
+    {
+      "id": 158,
+      "category_id": "cp_growth_performance",
+      "difficulty": "medium",
+      "text": "Which sectors or products are driving India's export growth?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/growth-dynamics"
+    },
+    {
+      "id": 159,
+      "category_id": "cp_trade_partners",
+      "difficulty": "medium",
+      "text": "Has Turkiye completed its structural transformation according to the Atlas?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/market-share"
+    },
+    {
+      "id": 160,
+      "category_id": "cp_trade_partners",
+      "difficulty": "hard",
+      "text": "Is Turkiye's export growth driven by expanding global market share or by concentrating in a growing sector?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/market-share"
+    },
+    {
+      "id": 161,
+      "category_id": "cp_trade_partners",
+      "difficulty": "medium",
+      "text": "Has Ethiopia completed its structural transformation according to the Atlas?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/market-share"
+    },
+    {
+      "id": 162,
+      "category_id": "cp_growth_performance",
+      "difficulty": "medium",
+      "text": "Which sectors are driving Spain's export growth according to the market share page?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724/market-share"
+    },
+    {
+      "id": 163,
+      "category_id": "cp_growth_performance",
+      "difficulty": "medium",
+      "text": "Which sectors are driving India's export growth according to the market share page?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/market-share"
+    },
+    {
+      "id": 164,
+      "category_id": "cp_economic_complexity",
+      "difficulty": "medium",
+      "text": "Which sectors contain Brazil's largest exports by complexity level?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-complexity"
+    },
+    {
+      "id": 165,
+      "category_id": "cp_economic_complexity",
+      "difficulty": "medium",
+      "text": "Which sectors contain Turkiye's largest exports by complexity level?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/export-complexity"
+    },
+    {
+      "id": 166,
+      "category_id": "cp_product_space",
+      "difficulty": "medium",
+      "text": "What does the Atlas's recommended strategic approach for Kenya entail?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/strategic-approach"
+    },
+    {
+      "id": 167,
+      "category_id": "cp_product_space",
+      "difficulty": "medium",
+      "text": "What does the Atlas's recommended strategic approach for Turkiye entail?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/strategic-approach"
+    },
+    {
+      "id": 168,
+      "category_id": "cp_growth_opportunities",
+      "difficulty": "medium",
+      "text": "Which sectors are identified as high-potential for Kenya's diversification?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/product-table"
+    },
+    {
+      "id": 169,
+      "category_id": "cp_growth_opportunities",
+      "difficulty": "medium",
+      "text": "Which sectors are identified as high-potential for India's diversification?",
+      "source": "atlas_country_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/product-table"
+    },
+    {
+      "id": 170,
+      "category_id": "explore_product_complexity",
+      "difficulty": "easy",
+      "text": "What is Kenya's Revealed Comparative Advantage (RCA) in Coffee?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-404"
+    },
+    {
+      "id": 171,
+      "category_id": "explore_product_complexity",
+      "difficulty": "easy",
+      "text": "What is India's Revealed Comparative Advantage (RCA) in T-shirts, knit?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-356"
+    },
+    {
+      "id": 172,
+      "category_id": "explore_product_complexity",
+      "difficulty": "easy",
+      "text": "What is India's Revealed Comparative Advantage (RCA) in Electronic integrated circuits?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-356"
+    },
+    {
+      "id": 173,
+      "category_id": "explore_product_complexity",
+      "difficulty": "medium",
+      "text": "What is Kenya's distance to Coffee in the product space?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-404"
+    },
+    {
+      "id": 174,
+      "category_id": "explore_product_complexity",
+      "difficulty": "medium",
+      "text": "What is India's distance to T-shirts, knit in the product space?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-356"
+    },
+    {
+      "id": 175,
+      "category_id": "explore_product_complexity",
+      "difficulty": "medium",
+      "text": "What is Kenya's distance to Electronic integrated circuits in the product space?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-404"
+    },
+    {
+      "id": 176,
+      "category_id": "explore_product_complexity",
+      "difficulty": "easy",
+      "text": "What is the Product Complexity Index (PCI) of Coffee?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 177,
+      "category_id": "explore_product_complexity",
+      "difficulty": "easy",
+      "text": "What is the Product Complexity Index (PCI) of T-shirts, knit?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 178,
+      "category_id": "explore_product_complexity",
+      "difficulty": "easy",
+      "text": "What is the Product Complexity Index (PCI) of Electronic integrated circuits?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 179,
+      "category_id": "explore_product_complexity",
+      "difficulty": "medium",
+      "text": "What is Kenya's Complexity Outlook Gain (COG) for Coffee?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility?year=2024&exporter=country-404"
+    },
+    {
+      "id": 180,
+      "category_id": "explore_product_complexity",
+      "difficulty": "medium",
+      "text": "What is India's Complexity Outlook Gain (COG) for Electronic integrated circuits?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility?year=2024&exporter=country-356"
+    },
+    {
+      "id": 181,
+      "category_id": "explore_product_complexity",
+      "difficulty": "medium",
+      "text": "What is Kenya's Complexity Outlook Gain (COG) for T-shirts, knit?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility?year=2024&exporter=country-404"
+    },
+    {
+      "id": 182,
+      "category_id": "explore_product_complexity",
+      "difficulty": "medium",
+      "text": "What is India's global market share in Coffee?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-356"
+    },
+    {
+      "id": 183,
+      "category_id": "explore_product_complexity",
+      "difficulty": "medium",
+      "text": "What is Kenya's global market share in Electronic integrated circuits?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-404"
+    },
+    {
+      "id": 184,
+      "category_id": "explore_product_complexity",
+      "difficulty": "medium",
+      "text": "What is India's global market share in T-shirts, knit?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-356"
+    },
+    {
+      "id": 185,
+      "category_id": "explore_global_product_stats",
+      "difficulty": "easy",
+      "text": "What is the total global export value of Cars?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 186,
+      "category_id": "explore_global_product_stats",
+      "difficulty": "easy",
+      "text": "What is the total global export value of Electronic integrated circuits?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 187,
+      "category_id": "explore_global_product_stats",
+      "difficulty": "easy",
+      "text": "What is the total global export value of Medicaments, packaged?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 188,
+      "category_id": "explore_global_product_stats",
+      "difficulty": "easy",
+      "text": "What is the total global export value of Coffee?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 189,
+      "category_id": "explore_global_product_stats",
+      "difficulty": "easy",
+      "text": "What is the total global export value of Iron ores and concentrates?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 190,
+      "category_id": "explore_global_product_stats",
+      "difficulty": "medium",
+      "text": "What is the 5-year export growth rate (CAGR) for Cars globally?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4"
+    },
+    {
+      "id": 191,
+      "category_id": "explore_global_product_stats",
+      "difficulty": "medium",
+      "text": "What is the 5-year export growth rate (CAGR) for Electronic integrated circuits globally?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4"
+    },
+    {
+      "id": 192,
+      "category_id": "explore_global_product_stats",
+      "difficulty": "medium",
+      "text": "What is the 5-year export growth rate (CAGR) for Coffee globally?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4"
+    },
+    {
+      "id": 193,
+      "category_id": "explore_global_product_stats",
+      "difficulty": "medium",
+      "text": "Which country is the largest exporter of Coffee?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&product=product-HS92-726"
+    },
+    {
+      "id": 194,
+      "category_id": "explore_global_product_stats",
+      "difficulty": "medium",
+      "text": "What are the top 3 exporters of Electronic integrated circuits by value?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&product=product-HS92-1745"
+    },
+    {
+      "id": 195,
+      "category_id": "explore_bilateral_trade",
+      "difficulty": "easy",
+      "text": "What is the total export value from Brazil to China?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&exporter=country-76&importer=country-156"
+    },
+    {
+      "id": 196,
+      "category_id": "explore_bilateral_trade",
+      "difficulty": "easy",
+      "text": "What is the total export value from Kenya to USA?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&exporter=country-404&importer=country-840"
+    },
+    {
+      "id": 197,
+      "category_id": "explore_bilateral_trade",
+      "difficulty": "easy",
+      "text": "What is the total export value from Germany to USA?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&exporter=country-276&importer=country-840"
+    },
+    {
+      "id": 198,
+      "category_id": "explore_bilateral_trade",
+      "difficulty": "easy",
+      "text": "What is the total export value from India to China?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&exporter=country-356&importer=country-156"
+    },
+    {
+      "id": 199,
+      "category_id": "explore_bilateral_trade",
+      "difficulty": "easy",
+      "text": "What is the total export value from Turkiye to Germany?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&exporter=country-792&importer=country-276"
+    },
+    {
+      "id": 200,
+      "category_id": "explore_bilateral_trade",
+      "difficulty": "easy",
+      "text": "What is the total import value of Brazil from China?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&exporter=country-76&importer=country-156&tradeDirection=imports"
+    },
+    {
+      "id": 201,
+      "category_id": "explore_bilateral_trade",
+      "difficulty": "easy",
+      "text": "What is the total import value of India from China?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&exporter=country-356&importer=country-156&tradeDirection=imports"
+    },
+    {
+      "id": 202,
+      "category_id": "explore_bilateral_trade",
+      "difficulty": "medium",
+      "text": "What is the trade balance between Germany and USA?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&exporter=country-276&importer=country-840"
+    },
+    {
+      "id": 203,
+      "category_id": "explore_bilateral_trade",
+      "difficulty": "medium",
+      "text": "What is the trade balance between Turkiye and Germany?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&exporter=country-792&importer=country-276"
+    },
+    {
+      "id": 204,
+      "category_id": "explore_bilateral_trade",
+      "difficulty": "medium",
+      "text": "What is the value of Coffee exports from Kenya to USA?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-404&importer=country-840&product=product-HS92-726"
+    },
+    {
+      "id": 205,
+      "category_id": "explore_bilateral_trade",
+      "difficulty": "medium",
+      "text": "What is the value of Iron ores and concentrates exports from Brazil to China?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-76&importer=country-156&product=product-HS92-881"
+    },
+    {
+      "id": 206,
+      "category_id": "explore_bilateral_trade",
+      "difficulty": "hard",
+      "text": "What are the top 3 products Germany exports to USA?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-276&importer=country-840"
+    },
+    {
+      "id": 207,
+      "category_id": "explore_bilateral_trade",
+      "difficulty": "hard",
+      "text": "What are the top 3 products India exports to China?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-356&importer=country-156"
+    },
+    {
+      "id": 208,
+      "category_id": "explore_import_composition",
+      "difficulty": "easy",
+      "text": "What is the top imported product for USA?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-840&tradeDirection=imports"
+    },
+    {
+      "id": 209,
+      "category_id": "explore_import_composition",
+      "difficulty": "easy",
+      "text": "What is the top imported product for Ethiopia?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-231&tradeDirection=imports"
+    },
+    {
+      "id": 210,
+      "category_id": "explore_import_composition",
+      "difficulty": "medium",
+      "text": "What are the top 3 imported products for the USA by value?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-840&tradeDirection=imports"
+    },
+    {
+      "id": 211,
+      "category_id": "explore_import_composition",
+      "difficulty": "easy",
+      "text": "What is USA's import value for Petroleum oils, refined?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-840&tradeDirection=imports"
+    },
+    {
+      "id": 212,
+      "category_id": "explore_import_composition",
+      "difficulty": "easy",
+      "text": "What is Ethiopia's import value for Medicaments, packaged?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-231&tradeDirection=imports"
+    },
+    {
+      "id": 213,
+      "category_id": "explore_import_composition",
+      "difficulty": "hard",
+      "text": "From which country does the USA import the most Petroleum oils, refined?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-840&tradeDirection=imports&product=product-HS92-911"
+    },
+    {
+      "id": 214,
+      "category_id": "explore_trade_time_series",
+      "difficulty": "easy",
+      "text": "What was Brazil's total export value in 2020?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?year=2020&exporter=country-76&startYear=2000&endYear=2024"
+    },
+    {
+      "id": 215,
+      "category_id": "explore_trade_time_series",
+      "difficulty": "easy",
+      "text": "What was Turkiye's total export value in 2015?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?year=2015&exporter=country-792&startYear=2000&endYear=2024"
+    },
+    {
+      "id": 216,
+      "category_id": "explore_trade_time_series",
+      "difficulty": "easy",
+      "text": "What was Kenya's total export value in 2020?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?year=2020&exporter=country-404&startYear=2000&endYear=2024"
+    },
+    {
+      "id": 217,
+      "category_id": "explore_trade_time_series",
+      "difficulty": "medium",
+      "text": "How have Brazil's exports changed from 2015 to 2024?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-76&startYear=2015&endYear=2024&year=2024"
+    },
+    {
+      "id": 218,
+      "category_id": "explore_trade_time_series",
+      "difficulty": "medium",
+      "text": "How have Kenya's exports changed from 2010 to 2024?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-404&startYear=2010&endYear=2024&year=2024"
+    },
+    {
+      "id": 219,
+      "category_id": "explore_trade_time_series",
+      "difficulty": "easy",
+      "text": "What was Turkiye's GDP per capita in 2024?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?year=2024&exporter=country-792&startYear=2000&endYear=2024"
+    },
+    {
+      "id": 220,
+      "category_id": "explore_trade_time_series",
+      "difficulty": "easy",
+      "text": "What was Kenya's GDP per capita in 2024?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?year=2024&exporter=country-404&startYear=2000&endYear=2024"
+    },
+    {
+      "id": 221,
+      "category_id": "explore_trade_time_series",
+      "difficulty": "easy",
+      "text": "What was Brazil's ECI in 2024?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?year=2024&exporter=country-76&startYear=2000&endYear=2024"
+    },
+    {
+      "id": 222,
+      "category_id": "explore_trade_time_series",
+      "difficulty": "medium",
+      "text": "How has Turkiye's ECI changed from 2015 to 2024?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-792&startYear=2015&endYear=2024&year=2024"
+    },
+    {
+      "id": 223,
+      "category_id": "explore_trade_time_series",
+      "difficulty": "medium",
+      "text": "How has Kenya's ECI changed from 2010 to 2024?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-404&startYear=2010&endYear=2024&year=2024"
+    },
+    {
+      "id": 224,
+      "category_id": "explore_feasibility",
+      "difficulty": "hard",
+      "text": "What are the top 5 growth opportunity products for Kenya ranked by opportunity gain?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4&exporter=country-404"
+    },
+    {
+      "id": 225,
+      "category_id": "explore_feasibility",
+      "difficulty": "medium",
+      "text": "What is the global market size of Kenya's top growth opportunity product?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4&exporter=country-404"
+    },
+    {
+      "id": 226,
+      "category_id": "explore_feasibility",
+      "difficulty": "medium",
+      "text": "What is the 5-year growth rate of Kenya's top growth opportunity product globally?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4&exporter=country-404"
+    },
+    {
+      "id": 227,
+      "category_id": "explore_feasibility",
+      "difficulty": "hard",
+      "text": "What are the top 5 growth opportunity products for Turkiye ranked by opportunity gain?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4&exporter=country-792"
+    },
+    {
+      "id": 228,
+      "category_id": "explore_feasibility",
+      "difficulty": "medium",
+      "text": "What is the global market size of Turkiye's top growth opportunity product?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4&exporter=country-792"
+    },
+    {
+      "id": 229,
+      "category_id": "explore_feasibility",
+      "difficulty": "medium",
+      "text": "What is the 5-year growth rate of Turkiye's top growth opportunity product globally?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4&exporter=country-792"
+    },
+    {
+      "id": 230,
+      "category_id": "explore_regional_aggregates",
+      "difficulty": "medium",
+      "text": "What is the total export value of Sub-Saharan Africa according to the Atlas?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 231,
+      "category_id": "explore_regional_aggregates",
+      "difficulty": "medium",
+      "text": "What is the total export value of East Asia & Pacific according to the Atlas?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 232,
+      "category_id": "explore_regional_aggregates",
+      "difficulty": "medium",
+      "text": "What is the total export value of the European Union according to the Atlas?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 233,
+      "category_id": "explore_regional_aggregates",
+      "difficulty": "medium",
+      "text": "What is the total export value of Low Income countries according to the Atlas?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 234,
+      "category_id": "explore_regional_aggregates",
+      "difficulty": "medium",
+      "text": "What is the 5-year export growth rate for Sub-Saharan Africa?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 235,
+      "category_id": "explore_regional_aggregates",
+      "difficulty": "medium",
+      "text": "What is the 5-year export growth rate for East Asia & Pacific?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 236,
+      "category_id": "explore_regional_aggregates",
+      "difficulty": "medium",
+      "text": "What is the 5-year export growth rate for the European Union?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 237,
+      "category_id": "explore_regional_aggregates",
+      "difficulty": "medium",
+      "text": "What is the 5-year export growth rate for Low Income countries?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 238,
+      "category_id": "explore_regional_aggregates",
+      "difficulty": "easy",
+      "text": "Which countries belong to the the European Union group according to the Atlas?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 239,
+      "category_id": "explore_regional_aggregates",
+      "difficulty": "easy",
+      "text": "Which countries belong to the Low Income countries group according to the Atlas?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 240,
+      "category_id": "explore_product_metadata",
+      "difficulty": "easy",
+      "text": "Is Iron ores and concentrates classified as a natural resource on the Atlas?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 241,
+      "category_id": "explore_product_metadata",
+      "difficulty": "easy",
+      "text": "Is Coffee classified as a natural resource on the Atlas?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 242,
+      "category_id": "explore_product_metadata",
+      "difficulty": "easy",
+      "text": "Is Cars classified as a green product on the Atlas?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 243,
+      "category_id": "explore_product_metadata",
+      "difficulty": "easy",
+      "text": "Is Petroleum oils, refined classified as a green product on the Atlas?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 244,
+      "category_id": "explore_product_metadata",
+      "difficulty": "hard",
+      "text": "What HS 2012 code corresponds to Coffee (HS 1992 code 0901)?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 245,
+      "category_id": "explore_product_metadata",
+      "difficulty": "easy",
+      "text": "How many 4-digit HS92 products does the Atlas track?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 246,
+      "category_id": "explore_product_metadata",
+      "difficulty": "easy",
+      "text": "What years of trade data are available for HS 1992 on the Atlas?",
+      "source": "atlas_explore_page",
+      "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
     }
   ]
 }
