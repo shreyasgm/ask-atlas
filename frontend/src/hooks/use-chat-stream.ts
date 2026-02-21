@@ -179,6 +179,9 @@ export function useChatStream(): UseChatStreamReturn {
 
             switch (event) {
               case 'agent_talk':
+                if (!contentAcc) {
+                  setPipelineSteps([]);
+                }
                 contentAcc += parsed.content ?? '';
                 break;
 
