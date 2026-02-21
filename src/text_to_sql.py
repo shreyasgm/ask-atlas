@@ -545,6 +545,11 @@ class AtlasTextToSQL:
         current_tool_id: str | None = None
         in_tool_stream = False
 
+        # Dedup tracking: messages mode emits token-by-token agent_talk;
+        # updates mode emits the same content as one big agent_talk.
+        # Prefer messages mode (incremental) and skip the updates duplicate.
+        agent_talk_emitted_from_messages = False
+
         # Pipeline tracking
         query_index = 0
         pipeline_snapshot: dict = {}  # accumulated state across pipeline nodes
@@ -624,11 +629,14 @@ class AtlasTextToSQL:
                                     tool_call=tool_calls[0].get("name"),
                                 )
                             elif msg.content:
-                                yield stream_mode, StreamData(
-                                    source="agent",
-                                    content=msg.content,
-                                    message_type="agent_talk",
-                                )
+                                if not agent_talk_emitted_from_messages:
+                                    yield stream_mode, StreamData(
+                                        source="agent",
+                                        content=msg.content,
+                                        message_type="agent_talk",
+                                    )
+                                # Reset for next agent turn
+                                agent_talk_emitted_from_messages = False
                 else:
                     pipeline_keys = set(stream_data.keys()) & PIPELINE_NODES
                     if pipeline_keys:
@@ -687,6 +695,7 @@ class AtlasTextToSQL:
                         in_tool_stream = False
                         current_tool_id = None
 
+                    agent_talk_emitted_from_messages = True
                     yield stream_mode, StreamData(
                         source="agent",
                         content=msg.content,
