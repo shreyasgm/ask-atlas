@@ -16,6 +16,10 @@ def pytest_configure(config):
         "markers",
         "db: marks tests that require a live database connection",
     )
+    config.addinivalue_line(
+        "markers",
+        "eval: marks eval-based integration tests (real LLM + production DB + LLM-as-judge)",
+    )
 
     # Set up logging configuration for stdout only
     logging.basicConfig(
