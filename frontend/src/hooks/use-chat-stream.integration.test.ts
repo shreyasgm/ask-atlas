@@ -399,8 +399,8 @@ describe('useChatStream integration (async SSE)', () => {
     });
   });
 
-  it('tool_output events do not populate toolOutputs', async () => {
-    const { close, pushEvent, stream } = createControllableStream();
+  it('accumulates content from multiple agent_talk events in a single chunk', async () => {
+    const { close, pushRaw, stream } = createControllableStream();
     global.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
 
     const { result } = renderHook(() => useChatStream());
@@ -409,23 +409,31 @@ describe('useChatStream integration (async SSE)', () => {
       result.current.sendMessage('hello');
     });
 
-    pushEvent(makeThreadIdEvent());
-    pushEvent({
-      data: JSON.stringify({ content: 'SELECT', name: 'sql' }),
-      event: 'tool_output',
+    // Deliver thread_id first
+    pushRaw(`event: thread_id\ndata: ${JSON.stringify({ thread_id: THREAD_ID })}\n\n`);
+
+    await waitFor(() => {
+      expect(result.current.threadId).toBe(THREAD_ID);
     });
-    pushEvent({
-      data: JSON.stringify({ content: ' FROM', name: 'sql' }),
-      event: 'tool_output',
+
+    // Deliver TWO agent_talk events in one raw chunk (simulates batched arrival)
+    pushRaw(
+      `event: agent_talk\ndata: ${JSON.stringify({ content: 'Hello ', message_type: 'agent_talk', source: 'agent' })}\n\n` +
+        `event: agent_talk\ndata: ${JSON.stringify({ content: 'world', message_type: 'agent_talk', source: 'agent' })}\n\n`,
+    );
+
+    await waitFor(() => {
+      const assistant = result.current.messages.find((m) => m.role === 'assistant');
+      expect(assistant?.content).toBe('Hello world');
     });
-    pushEvent(makeAgentTalkEvent('done'));
-    pushEvent(makeDoneEvent());
+
+    pushRaw(
+      `event: done\ndata: ${JSON.stringify({ thread_id: THREAD_ID, total_execution_time_ms: 0, total_queries: 0, total_rows: 0, total_time_ms: 0 })}\n\n`,
+    );
     close();
 
     await waitFor(() => {
       expect(result.current.isStreaming).toBe(false);
-      const assistant = result.current.messages.find((m) => m.role === 'assistant');
-      expect(assistant?.toolOutputs).toEqual([]);
     });
   });
 

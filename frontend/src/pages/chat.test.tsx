@@ -78,7 +78,7 @@ describe('ChatPage - header', () => {
 
   it('header has "New Chat" button', () => {
     renderChat();
-    expect(screen.getByRole('link', { name: /new chat/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /new chat/i })).toBeInTheDocument();
   });
 });
 
@@ -91,8 +91,6 @@ describe('ChatPage - messages', () => {
         isStreaming: false,
         queryResults: [],
         role: 'user',
-        toolCalls: [],
-        toolOutputs: [],
       },
     ];
     renderChat();
@@ -109,8 +107,6 @@ describe('ChatPage - messages', () => {
         isStreaming: false,
         queryResults: [],
         role: 'assistant',
-        toolCalls: [],
-        toolOutputs: [],
       },
     ];
     renderChat();
@@ -125,8 +121,6 @@ describe('ChatPage - messages', () => {
         isStreaming: false,
         queryResults: [],
         role: 'assistant',
-        toolCalls: [],
-        toolOutputs: [],
       },
     ];
     renderChat();
@@ -153,8 +147,6 @@ describe('ChatPage - messages', () => {
           },
         ],
         role: 'assistant',
-        toolCalls: [],
-        toolOutputs: [],
       },
     ];
     renderChat();
@@ -180,8 +172,6 @@ describe('ChatPage - messages', () => {
           },
         ],
         role: 'assistant',
-        toolCalls: [],
-        toolOutputs: [],
       },
     ];
     renderChat();
@@ -206,8 +196,6 @@ describe('ChatPage - messages', () => {
           },
         ],
         role: 'assistant',
-        toolCalls: [],
-        toolOutputs: [],
       },
     ];
     renderChat();
@@ -262,8 +250,6 @@ describe('ChatPage - interactions', () => {
         isStreaming: false,
         queryResults: [],
         role: 'assistant',
-        toolCalls: [],
-        toolOutputs: [],
       },
     ];
     renderChat();
@@ -281,8 +267,6 @@ describe('ChatPage - interactions', () => {
         isStreaming: false,
         queryResults: [],
         role: 'assistant',
-        toolCalls: [],
-        toolOutputs: [],
       },
     ];
     renderChat();
@@ -300,8 +284,6 @@ describe('ChatPage - interactions', () => {
         isStreaming: false,
         queryResults: [],
         role: 'user',
-        toolCalls: [],
-        toolOutputs: [],
       },
     ];
     renderChat();
@@ -309,6 +291,22 @@ describe('ChatPage - interactions', () => {
     const clearButton = screen.getByRole('button', { name: /clear/i });
     await user.click(clearButton);
     expect(mockClearChat).toHaveBeenCalled();
+  });
+});
+
+describe('ChatPage - error display', () => {
+  it('renders error with alert role inside message area', () => {
+    mockHookReturn.error = 'Server error: 500 Internal Server Error';
+    renderChat();
+    const alert = screen.getByRole('alert');
+    expect(alert).toBeInTheDocument();
+    expect(alert).toHaveTextContent('Server error: 500 Internal Server Error');
+  });
+
+  it('does not render error when error is null', () => {
+    mockHookReturn.error = null;
+    renderChat();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
 

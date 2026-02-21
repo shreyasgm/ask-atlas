@@ -1,3 +1,4 @@
+import { AlertCircle } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import type { ChatMessage, PipelineStep } from '@/types/chat';
 import AssistantMessage from './assistant-message';
@@ -6,6 +7,7 @@ import UserMessage from './user-message';
 import WelcomeMessage from './welcome-message';
 
 interface MessageListProps {
+  error?: null | string;
   isStreaming: boolean;
   messages: Array<ChatMessage>;
   onSend: (text: string) => void;
@@ -13,6 +15,7 @@ interface MessageListProps {
 }
 
 export default function MessageList({
+  error,
   isStreaming,
   messages,
   onSend,
@@ -53,6 +56,15 @@ export default function MessageList({
         {isStreaming && pipelineSteps.length > 0 && (
           <div className="ml-4">
             <PipelineStepper steps={pipelineSteps} />
+          </div>
+        )}
+        {error && (
+          <div
+            className="flex items-start gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3"
+            role="alert"
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+            <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
         <div ref={bottomRef} />

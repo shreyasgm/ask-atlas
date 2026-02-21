@@ -12,19 +12,15 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
-      <ChatHeader />
+      <ChatHeader onNewChat={clearChat} />
       {messages.length > 0 && <ChatTopBar onClear={clearChat} title={chatTitle} />}
       <MessageList
+        error={error}
         isStreaming={isStreaming}
         messages={messages}
         onSend={sendMessage}
         pipelineSteps={pipelineSteps}
       />
-      {error && (
-        <div className="px-4 pb-2">
-          <p className="text-center text-sm text-destructive">{error}</p>
-        </div>
-      )}
       <div className="mx-auto w-full max-w-2xl px-4 pb-4">
         <ChatInput disabled={isStreaming} onSend={sendMessage} />
       </div>
