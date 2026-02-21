@@ -162,7 +162,7 @@ describe('useChatStream', () => {
     });
   });
 
-  it('appends tool_call to assistant toolCalls', async () => {
+  it('ignores tool_call events (no-op)', async () => {
     global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
 
     const { result } = renderHook(() => useChatStream());
@@ -173,12 +173,11 @@ describe('useChatStream', () => {
 
     await waitFor(() => {
       const assistant = result.current.messages.find((m) => m.role === 'assistant');
-      expect(assistant?.toolCalls).toHaveLength(1);
-      expect(assistant?.toolCalls[0].content).toBe('SELECT * FROM trade');
+      expect(assistant?.toolCalls).toHaveLength(0);
     });
   });
 
-  it('appends tool_output to assistant toolOutputs', async () => {
+  it('ignores tool_output events (no-op)', async () => {
     global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
 
     const { result } = renderHook(() => useChatStream());
@@ -189,8 +188,7 @@ describe('useChatStream', () => {
 
     await waitFor(() => {
       const assistant = result.current.messages.find((m) => m.role === 'assistant');
-      expect(assistant?.toolOutputs).toHaveLength(1);
-      expect(assistant?.toolOutputs[0].content).toBe('rows: 10');
+      expect(assistant?.toolOutputs).toHaveLength(0);
     });
   });
 

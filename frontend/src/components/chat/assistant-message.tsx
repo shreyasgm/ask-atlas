@@ -1,6 +1,18 @@
+import type { Components } from 'react-markdown';
+import Markdown from 'react-markdown';
 import type { ChatMessage } from '@/types/chat';
+import QueryResultTable from './query-result-table';
 import SqlBlock from './sql-block';
 import SuggestionPills from './suggestion-pills';
+
+const MARKDOWN_COMPONENTS: Components = {
+  h3: (props) => <h3 className="text-sm font-bold" {...props} />,
+  li: (props) => <li className="ml-4 text-sm" {...props} />,
+  ol: (props) => <ol className="ml-4 list-decimal space-y-1 text-sm" {...props} />,
+  p: (props) => <p className="text-sm" {...props} />,
+  strong: (props) => <strong className="font-bold" {...props} />,
+  ul: (props) => <ul className="ml-4 list-disc space-y-1 text-sm" {...props} />,
+};
 
 interface AssistantMessageProps {
   isLast: boolean;
@@ -14,25 +26,25 @@ export default function AssistantMessage({ isLast, message, onSend }: AssistantM
       {message.content && (
         <div className="flex items-start gap-2">
           <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-green-500" />
-          <p className="text-sm font-medium">{message.content}</p>
+          <div className="flex flex-col gap-1">
+            <Markdown components={MARKDOWN_COMPONENTS}>{message.content}</Markdown>
+          </div>
         </div>
       )}
 
-      {message.toolCalls.map((tc, i) => (
-        <div className="ml-4" key={`tc-${i}`}>
-          <SqlBlock sql={tc.content} />
+      {message.queryResults.map((qr, i) => (
+        <div className="ml-4 flex flex-col gap-2" key={`qr-${i}`}>
+          <SqlBlock sql={qr.sql} />
+          {qr.rowCount > 0 && <QueryResultTable columns={qr.columns} rows={qr.rows} />}
+          {qr.rowCount > 0 && (
+            <p className="font-mono text-xs text-muted-foreground">
+              {qr.rowCount} rows in {qr.executionTimeMs}ms
+            </p>
+          )}
         </div>
       ))}
 
-      {message.toolOutputs.map((to, i) => (
-        <div className="ml-4" key={`to-${i}`}>
-          <pre className="overflow-x-auto rounded-lg bg-muted p-3 font-mono text-xs">
-            {to.content}
-          </pre>
-        </div>
-      ))}
-
-      {(message.toolCalls.length > 0 || message.toolOutputs.length > 0) && (
+      {message.queryResults.length > 0 && (
         <p className="ml-4 font-mono text-xs text-muted-foreground">
           Source: Atlas of Economic Complexity
         </p>
