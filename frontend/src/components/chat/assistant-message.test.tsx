@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { ChatMessage } from '@/types/chat';
 import AssistantMessage from './assistant-message';
@@ -33,5 +34,33 @@ describe('AssistantMessage', () => {
     render(<AssistantMessage isLast={false} message={msg} onSend={vi.fn()} />);
     expect(screen.getByText('bold text')).toBeInTheDocument();
     expect(screen.getByText('item one')).toBeInTheDocument();
+  });
+
+  it('hides query result table until SQL collapsible is expanded', async () => {
+    const user = userEvent.setup();
+    const msg = makeMessage({
+      queryResults: [
+        {
+          columns: ['country', 'value'],
+          executionTimeMs: 42,
+          rowCount: 1,
+          rows: [['Brazil', 100]],
+          sql: 'SELECT country, value FROM trade',
+        },
+      ],
+    });
+    render(<AssistantMessage isLast={false} message={msg} onSend={vi.fn()} />);
+
+    // Table should not be visible before expanding
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.queryByText('Brazil')).not.toBeInTheDocument();
+
+    // Click the SQL Query trigger to expand
+    await user.click(screen.getByText('SQL Query'));
+
+    // Now table and row count should be visible
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByText('Brazil')).toBeInTheDocument();
+    expect(screen.getByText('1 rows in 42ms')).toBeInTheDocument();
   });
 });

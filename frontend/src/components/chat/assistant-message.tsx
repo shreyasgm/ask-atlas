@@ -49,13 +49,16 @@ export default function AssistantMessage({ isLast, message, onSend }: AssistantM
 
       {message.queryResults.map((qr, i) => (
         <div className="ml-4 flex flex-col gap-2" key={`qr-${i}`}>
-          <SqlBlock sql={qr.sql} />
-          {qr.rowCount > 0 && <QueryResultTable columns={qr.columns} rows={qr.rows} />}
-          {qr.rowCount > 0 && (
-            <p className="font-mono text-xs text-muted-foreground">
-              {qr.rowCount} rows in {qr.executionTimeMs}ms
-            </p>
-          )}
+          <SqlBlock sql={qr.sql}>
+            {qr.rowCount > 0 && (
+              <div className="mt-2 flex flex-col gap-1">
+                <QueryResultTable columns={qr.columns} rows={qr.rows} />
+                <p className="font-mono text-xs text-muted-foreground">
+                  {qr.rowCount} rows in {qr.executionTimeMs}ms
+                </p>
+              </div>
+            )}
+          </SqlBlock>
         </div>
       ))}
 
