@@ -171,7 +171,8 @@ describe('ChatPage integration (real hook + real components)', () => {
     pushEvent(makeNodeStartEvent('generate_sql', 'Generating SQL query'));
 
     await waitFor(() => {
-      expect(screen.getByText(/generating sql query/i)).toBeInTheDocument();
+      const matches = screen.getAllByText(/generating sql query/i);
+      expect(matches.length).toBeGreaterThanOrEqual(1);
     });
 
     pushEvent(makePipelineStateEvent('generate_sql'));

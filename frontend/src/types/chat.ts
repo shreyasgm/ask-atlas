@@ -15,7 +15,29 @@ export interface ChatMessage {
 }
 
 export interface PipelineStep {
+  completedAt?: number;
+  detail?: Record<string, unknown>;
   label: string;
   node: string;
+  startedAt: number;
   status: 'active' | 'completed';
+}
+
+export interface ResolvedProduct {
+  codes: Array<string>;
+  name: string;
+  schema: string;
+}
+
+export interface EntitiesData {
+  lookupCodes: string;
+  products: Array<ResolvedProduct>;
+  schemas: Array<string>;
+}
+
+export interface QueryAggregateStats {
+  totalExecutionTimeMs: number;
+  totalQueries: number;
+  totalRows: number;
+  totalTimeMs: number;
 }

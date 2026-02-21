@@ -109,17 +109,36 @@ export function makePipelineStateEvent(stage: string, extra?: Record<string, unk
   return { data: JSON.stringify({ stage, ...extra }), event: 'pipeline_state' };
 }
 
-export function makeDoneEvent(threadId = THREAD_ID) {
+export function makeDoneEvent(
+  threadId = THREAD_ID,
+  stats?: Partial<{
+    total_execution_time_ms: number;
+    total_queries: number;
+    total_rows: number;
+    total_time_ms: number;
+  }>,
+) {
   return {
     data: JSON.stringify({
       thread_id: threadId,
-      total_execution_time_ms: 100,
-      total_queries: 1,
-      total_rows: 10,
-      total_time_ms: 500,
+      total_execution_time_ms: stats?.total_execution_time_ms ?? 100,
+      total_queries: stats?.total_queries ?? 1,
+      total_rows: stats?.total_rows ?? 10,
+      total_time_ms: stats?.total_time_ms ?? 500,
     }),
     event: 'done',
   };
+}
+
+export function makeExtractProductsEvent(
+  products: Array<{ codes: Array<string>; name: string; schema: string }>,
+  schemas: Array<string>,
+) {
+  return makePipelineStateEvent('extract_products', { products, schemas });
+}
+
+export function makeLookupCodesEvent(lookupCodes: string) {
+  return makePipelineStateEvent('lookup_codes', { lookup_codes: lookupCodes });
 }
 
 export const STANDARD_EVENTS = [

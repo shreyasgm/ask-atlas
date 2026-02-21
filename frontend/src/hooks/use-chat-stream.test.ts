@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import type { EntitiesData, QueryAggregateStats } from '@/types/chat';
 import { useChatStream } from './use-chat-stream';
 
 /** Encode SSE events into a ReadableStream that fetch() can return. */
@@ -99,10 +100,12 @@ describe('useChatStream', () => {
     global.fetch = vi.fn();
     const { result } = renderHook(() => useChatStream());
 
+    expect(result.current.entitiesData).toBeNull();
     expect(result.current.error).toBeNull();
     expect(result.current.isStreaming).toBe(false);
     expect(result.current.messages).toEqual([]);
     expect(result.current.pipelineSteps).toEqual([]);
+    expect(result.current.queryStats).toBeNull();
     expect(result.current.threadId).toBeNull();
   });
 
@@ -341,10 +344,185 @@ describe('useChatStream', () => {
       result.current.clearChat();
     });
 
+    expect(result.current.entitiesData).toBeNull();
     expect(result.current.error).toBeNull();
     expect(result.current.isStreaming).toBe(false);
     expect(result.current.messages).toEqual([]);
     expect(result.current.pipelineSteps).toEqual([]);
+    expect(result.current.queryStats).toBeNull();
     expect(result.current.threadId).toBeNull();
+  });
+
+  it('populates entitiesData from extract_products pipeline_state', async () => {
+    const events = [
+      { data: JSON.stringify({ thread_id: THREAD_ID }), event: 'thread_id' },
+      {
+        data: JSON.stringify({ label: 'Extracting products', node: 'extract_products' }),
+        event: 'node_start',
+      },
+      {
+        data: JSON.stringify({
+          products: [{ codes: ['8541', '8542'], name: 'Semiconductors', schema: 'hs92' }],
+          schemas: ['hs92'],
+          stage: 'extract_products',
+        }),
+        event: 'pipeline_state',
+      },
+      {
+        data: JSON.stringify({
+          thread_id: THREAD_ID,
+          total_execution_time_ms: 0,
+          total_queries: 0,
+          total_rows: 0,
+          total_time_ms: 0,
+        }),
+        event: 'done',
+      },
+    ];
+    global.fetch = mockFetchWithEvents(events);
+
+    const { result } = renderHook(() => useChatStream());
+
+    act(() => {
+      result.current.sendMessage('hello');
+    });
+
+    await waitFor(() => {
+      expect(result.current.entitiesData).not.toBeNull();
+      const data = result.current.entitiesData as EntitiesData;
+      expect(data.products).toHaveLength(1);
+      expect(data.products[0].name).toBe('Semiconductors');
+      expect(data.products[0].codes).toEqual(['8541', '8542']);
+      expect(data.schemas).toEqual(['hs92']);
+    });
+  });
+
+  it('updates entitiesData.lookupCodes from lookup_codes pipeline_state', async () => {
+    const events = [
+      { data: JSON.stringify({ thread_id: THREAD_ID }), event: 'thread_id' },
+      {
+        data: JSON.stringify({ label: 'Extracting products', node: 'extract_products' }),
+        event: 'node_start',
+      },
+      {
+        data: JSON.stringify({
+          products: [{ codes: ['8541'], name: 'Semiconductors', schema: 'hs92' }],
+          schemas: ['hs92'],
+          stage: 'extract_products',
+        }),
+        event: 'pipeline_state',
+      },
+      {
+        data: JSON.stringify({ label: 'Looking up codes', node: 'lookup_codes' }),
+        event: 'node_start',
+      },
+      {
+        data: JSON.stringify({
+          lookup_codes: '8541,8542',
+          stage: 'lookup_codes',
+        }),
+        event: 'pipeline_state',
+      },
+      {
+        data: JSON.stringify({
+          thread_id: THREAD_ID,
+          total_execution_time_ms: 0,
+          total_queries: 0,
+          total_rows: 0,
+          total_time_ms: 0,
+        }),
+        event: 'done',
+      },
+    ];
+    global.fetch = mockFetchWithEvents(events);
+
+    const { result } = renderHook(() => useChatStream());
+
+    act(() => {
+      result.current.sendMessage('hello');
+    });
+
+    await waitFor(() => {
+      expect(result.current.entitiesData?.lookupCodes).toBe('8541,8542');
+    });
+  });
+
+  it('populates queryStats from done event', async () => {
+    const events = [
+      { data: JSON.stringify({ thread_id: THREAD_ID }), event: 'thread_id' },
+      {
+        data: JSON.stringify({
+          content: 'result',
+          message_type: 'agent_talk',
+          source: 'agent',
+        }),
+        event: 'agent_talk',
+      },
+      {
+        data: JSON.stringify({
+          thread_id: THREAD_ID,
+          total_execution_time_ms: 150,
+          total_queries: 3,
+          total_rows: 42,
+          total_time_ms: 2100,
+        }),
+        event: 'done',
+      },
+    ];
+    global.fetch = mockFetchWithEvents(events);
+
+    const { result } = renderHook(() => useChatStream());
+
+    act(() => {
+      result.current.sendMessage('hello');
+    });
+
+    await waitFor(() => {
+      expect(result.current.queryStats).not.toBeNull();
+      const stats = result.current.queryStats as QueryAggregateStats;
+      expect(stats.totalQueries).toBe(3);
+      expect(stats.totalRows).toBe(42);
+      expect(stats.totalExecutionTimeMs).toBe(150);
+      expect(stats.totalTimeMs).toBe(2100);
+    });
+  });
+
+  it('sets startedAt on node_start and completedAt+detail on pipeline_state', async () => {
+    const events = [
+      { data: JSON.stringify({ thread_id: THREAD_ID }), event: 'thread_id' },
+      {
+        data: JSON.stringify({ label: 'Generating SQL', node: 'generate_sql', query_index: 1 }),
+        event: 'node_start',
+      },
+      {
+        data: JSON.stringify({ sql: 'SELECT 1', stage: 'generate_sql' }),
+        event: 'pipeline_state',
+      },
+      {
+        data: JSON.stringify({
+          thread_id: THREAD_ID,
+          total_execution_time_ms: 0,
+          total_queries: 0,
+          total_rows: 0,
+          total_time_ms: 0,
+        }),
+        event: 'done',
+      },
+    ];
+    global.fetch = mockFetchWithEvents(events);
+
+    const { result } = renderHook(() => useChatStream());
+
+    act(() => {
+      result.current.sendMessage('hello');
+    });
+
+    await waitFor(() => {
+      const step = result.current.pipelineSteps.find((s) => s.node === 'generate_sql');
+      expect(step).toBeDefined();
+      expect(step?.startedAt).toEqual(expect.any(Number));
+      expect(step?.completedAt).toEqual(expect.any(Number));
+      expect(step?.detail).toEqual(expect.objectContaining({ sql: 'SELECT 1' }));
+    });
   });
 });

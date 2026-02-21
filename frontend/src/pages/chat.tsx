@@ -1,29 +1,32 @@
 import ChatHeader from '@/components/chat/chat-header';
-import ChatInput from '@/components/chat/chat-input';
-import ChatTopBar from '@/components/chat/chat-top-bar';
-import MessageList from '@/components/chat/message-list';
+import ChatWorkspace from '@/components/workspace/chat-workspace';
 import { useChatStream } from '@/hooks/use-chat-stream';
 
 export default function ChatPage() {
-  const { clearChat, error, isStreaming, messages, pipelineSteps, sendMessage } = useChatStream();
-
-  const firstUserMessage = messages.find((m) => m.role === 'user');
-  const chatTitle = firstUserMessage ? firstUserMessage.content.slice(0, 60) : '';
+  const {
+    clearChat,
+    entitiesData,
+    error,
+    isStreaming,
+    messages,
+    pipelineSteps,
+    queryStats,
+    sendMessage,
+  } = useChatStream();
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
       <ChatHeader onNewChat={clearChat} />
-      {messages.length > 0 && <ChatTopBar onClear={clearChat} title={chatTitle} />}
-      <MessageList
+      <ChatWorkspace
+        entitiesData={entitiesData}
         error={error}
         isStreaming={isStreaming}
         messages={messages}
+        onClear={clearChat}
         onSend={sendMessage}
         pipelineSteps={pipelineSteps}
+        queryStats={queryStats}
       />
-      <div className="mx-auto w-full max-w-2xl px-4 pb-4">
-        <ChatInput disabled={isStreaming} onSend={sendMessage} />
-      </div>
     </div>
   );
 }
