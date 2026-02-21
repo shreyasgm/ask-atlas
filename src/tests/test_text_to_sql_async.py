@@ -942,6 +942,74 @@ class TestBackwardCompatibility:
 
 
 # ---------------------------------------------------------------------------
+# Tests -- no duplicate agent_talk events
+# ---------------------------------------------------------------------------
+
+
+class TestNoDuplicateAgentTalk:
+    """Verify that agent_talk content is NOT emitted twice.
+
+    LangGraph's dual stream modes ('messages' + 'updates') both produce
+    agent_talk events for the same content. The streaming logic must
+    deduplicate so the frontend doesn't see doubled text.
+    """
+
+    async def test_direct_answer_not_doubled(self):
+        """A simple direct answer should yield agent_talk content exactly once."""
+        responses = [AIMessage(content="Hello world!")]
+        instance = _build_stub_instance(responses)
+        config = {"configurable": {"thread_id": "dedup-1"}}
+
+        agent_talks = []
+        async for _mode, data in instance.astream_agent_response("hi", config):
+            if data.message_type == "agent_talk":
+                agent_talks.append(data)
+
+        combined = "".join(d.content for d in agent_talks)
+        # Content must appear exactly once, not doubled
+        assert combined.count("Hello world!") == 1, (
+            f"Expected 'Hello world!' exactly once but got: {combined!r}"
+        )
+
+    async def test_post_tool_answer_not_doubled(self):
+        """After a tool call round-trip, the final answer should not be doubled."""
+        responses = [
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("query_tool", "exports", "c1")],
+            ),
+            AIMessage(content="Here are the results."),
+        ]
+        instance = _build_pipeline_stub_instance(responses)
+        config = {"configurable": {"thread_id": "dedup-2"}}
+
+        agent_talks = []
+        async for _mode, data in instance.astream_agent_response("exports?", config):
+            if data.message_type == "agent_talk":
+                agent_talks.append(data)
+
+        combined = "".join(d.content for d in agent_talks)
+        assert combined.count("Here are the results.") == 1, (
+            f"Expected answer exactly once but got: {combined!r}"
+        )
+
+    async def test_aanswer_question_stream_not_doubled(self):
+        """High-level streaming API should also not duplicate agent_talk."""
+        responses = [AIMessage(content="No duplication please.")]
+        instance = _build_stub_instance(responses)
+
+        agent_talks = []
+        async for data in instance.aanswer_question_stream("test", thread_id="dedup-3"):
+            if data.message_type == "agent_talk":
+                agent_talks.append(data)
+
+        combined = "".join(d.content for d in agent_talks)
+        assert combined.count("No duplication please.") == 1, (
+            f"Expected content exactly once but got: {combined!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
 # Integration tests (require external services)
 # ---------------------------------------------------------------------------
 
