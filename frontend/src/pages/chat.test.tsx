@@ -153,7 +153,8 @@ describe('ChatPage - messages', () => {
     expect(screen.getByText(/sql query/i)).toBeInTheDocument();
   });
 
-  it('renders query result table with data', () => {
+  it('renders query result table with data after expanding SQL block', async () => {
+    const user = userEvent.setup();
     mockHookReturn.messages = [
       {
         content: 'Results below.',
@@ -175,6 +176,11 @@ describe('ChatPage - messages', () => {
       },
     ];
     renderChat();
+
+    // Table hidden until SQL block expanded
+    expect(screen.queryByText('soybeans')).not.toBeInTheDocument();
+    await user.click(screen.getByText('SQL Query'));
+
     expect(screen.getByText('product')).toBeInTheDocument();
     expect(screen.getByText('soybeans')).toBeInTheDocument();
     expect(screen.getByText('2 rows in 42ms')).toBeInTheDocument();

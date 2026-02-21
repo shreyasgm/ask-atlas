@@ -213,12 +213,16 @@ describe('ChatPage integration (real hook + real components)', () => {
     pushEvent(makeDoneEvent());
     close();
 
-    // SQL block appears
+    // SQL block appears (collapsed)
     await waitFor(() => {
       expect(screen.getByText(/sql query/i)).toBeInTheDocument();
     });
 
-    // Result table with data
+    // Table hidden until expanded
+    expect(screen.queryByText('soybeans')).not.toBeInTheDocument();
+    await user.click(screen.getByText(/sql query/i));
+
+    // Result table with data now visible
     expect(screen.getByText('product')).toBeInTheDocument();
     expect(screen.getByText('soybeans')).toBeInTheDocument();
     expect(screen.getByText('coffee')).toBeInTheDocument();

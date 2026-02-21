@@ -4,10 +4,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { cn } from '@/lib/utils';
 
 interface SqlBlockProps {
+  children?: React.ReactNode;
   sql: string;
 }
 
-export default function SqlBlock({ sql }: SqlBlockProps) {
+export default function SqlBlock({ children, sql }: SqlBlockProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -19,6 +20,7 @@ export default function SqlBlock({ sql }: SqlBlockProps) {
       </CollapsibleTrigger>
       <CollapsibleContent>
         <pre className="mt-2 overflow-x-auto rounded-lg bg-muted p-3 font-mono text-xs">{sql}</pre>
+        {children}
       </CollapsibleContent>
     </Collapsible>
   );
