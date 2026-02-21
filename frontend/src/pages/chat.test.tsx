@@ -73,14 +73,14 @@ describe('ChatPage - empty state', () => {
   });
 });
 
-describe('ChatPage - header', () => {
-  it('header logo links to /', () => {
+describe('ChatPage - sidebar branding', () => {
+  it('sidebar logo links to /', () => {
     renderChat();
     const logo = screen.getByRole('link', { name: /ask atlas/i });
     expect(logo).toHaveAttribute('href', '/');
   });
 
-  it('header has "New Chat" button', () => {
+  it('sidebar has "New Chat" button', () => {
     renderChat();
     const buttons = screen.getAllByRole('button', { name: /new chat/i });
     expect(buttons.length).toBeGreaterThanOrEqual(1);

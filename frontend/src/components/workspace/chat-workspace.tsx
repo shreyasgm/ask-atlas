@@ -54,7 +54,7 @@ export default function ChatWorkspace({
   const currentQueries = lastAssistant?.queryResults ?? [];
 
   return (
-    <div className="relative flex min-h-0 flex-1 overflow-hidden">
+    <div className="relative flex h-full overflow-hidden">
       {/* Left sidebar — overlays on mobile */}
       <div className={!isDesktop && sidebarExpanded ? 'absolute inset-y-0 left-0 z-20' : undefined}>
         <LeftSidebar

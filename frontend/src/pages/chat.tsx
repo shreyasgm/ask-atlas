@@ -1,4 +1,3 @@
-import ChatHeader from '@/components/chat/chat-header';
 import ChatWorkspace from '@/components/workspace/chat-workspace';
 import { useChatStream } from '@/hooks/use-chat-stream';
 
@@ -15,8 +14,7 @@ export default function ChatPage() {
   } = useChatStream();
 
   return (
-    <div className="flex h-screen flex-col bg-background text-foreground">
-      <ChatHeader onNewChat={clearChat} />
+    <div className="h-screen bg-background text-foreground">
       <ChatWorkspace
         entitiesData={entitiesData}
         error={error}
