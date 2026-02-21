@@ -28,27 +28,13 @@ function mockFetchWithEvents(events: Array<{ data: string; event: string }>) {
 
 const THREAD_ID = 'abc-123';
 
+// Matches real backend event ordering: node_start → tool_call → tool_output →
+// pipeline_state (completed) → agent_talk (response text) → done
 const STANDARD_EVENTS: Array<{ data: string; event: string }> = [
   { data: JSON.stringify({ thread_id: THREAD_ID }), event: 'thread_id' },
   {
     data: JSON.stringify({ label: 'Generating SQL query', node: 'generate_sql', query_index: 1 }),
     event: 'node_start',
-  },
-  {
-    data: JSON.stringify({
-      content: 'Hello ',
-      message_type: 'agent_talk',
-      source: 'agent',
-    }),
-    event: 'agent_talk',
-  },
-  {
-    data: JSON.stringify({
-      content: 'world',
-      message_type: 'agent_talk',
-      source: 'agent',
-    }),
-    event: 'agent_talk',
   },
   {
     data: JSON.stringify({
@@ -71,6 +57,22 @@ const STANDARD_EVENTS: Array<{ data: string; event: string }> = [
   {
     data: JSON.stringify({ stage: 'generate_sql' }),
     event: 'pipeline_state',
+  },
+  {
+    data: JSON.stringify({
+      content: 'Hello ',
+      message_type: 'agent_talk',
+      source: 'agent',
+    }),
+    event: 'agent_talk',
+  },
+  {
+    data: JSON.stringify({
+      content: 'world',
+      message_type: 'agent_talk',
+      source: 'agent',
+    }),
+    event: 'agent_talk',
   },
   {
     data: JSON.stringify({
@@ -163,6 +165,7 @@ describe('useChatStream', () => {
   });
 
   it('tracks node_start as active pipeline step', async () => {
+    // No agent_talk — steps persist until stream ends so waitFor can observe them
     global.fetch = mockFetchWithEvents([
       { data: JSON.stringify({ thread_id: THREAD_ID }), event: 'thread_id' },
       {
@@ -172,10 +175,6 @@ describe('useChatStream', () => {
           query_index: 1,
         }),
         event: 'node_start',
-      },
-      {
-        data: JSON.stringify({ content: 'hi', message_type: 'agent_talk', source: 'agent' }),
-        event: 'agent_talk',
       },
       {
         data: JSON.stringify({
@@ -204,7 +203,32 @@ describe('useChatStream', () => {
   });
 
   it('marks pipeline step completed on pipeline_state', async () => {
-    global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
+    // No agent_talk — steps persist until stream ends so waitFor can observe completed status
+    global.fetch = mockFetchWithEvents([
+      { data: JSON.stringify({ thread_id: THREAD_ID }), event: 'thread_id' },
+      {
+        data: JSON.stringify({
+          label: 'Generating SQL query',
+          node: 'generate_sql',
+          query_index: 1,
+        }),
+        event: 'node_start',
+      },
+      {
+        data: JSON.stringify({ stage: 'generate_sql' }),
+        event: 'pipeline_state',
+      },
+      {
+        data: JSON.stringify({
+          thread_id: THREAD_ID,
+          total_execution_time_ms: 0,
+          total_queries: 0,
+          total_rows: 0,
+          total_time_ms: 0,
+        }),
+        event: 'done',
+      },
+    ]);
 
     const { result } = renderHook(() => useChatStream());
 
@@ -216,6 +240,53 @@ describe('useChatStream', () => {
       const step = result.current.pipelineSteps.find((s) => s.node === 'generate_sql');
       expect(step?.status).toBe('completed');
     });
+  });
+
+  it('clears pipeline steps when first agent_talk arrives', async () => {
+    // Events: node_start → pipeline_state (completed) → agent_talk → done
+    const events = [
+      { data: JSON.stringify({ thread_id: THREAD_ID }), event: 'thread_id' },
+      {
+        data: JSON.stringify({ label: 'Generating SQL', node: 'generate_sql', query_index: 1 }),
+        event: 'node_start',
+      },
+      {
+        data: JSON.stringify({ stage: 'generate_sql' }),
+        event: 'pipeline_state',
+      },
+      {
+        data: JSON.stringify({
+          content: 'Here are results.',
+          message_type: 'agent_talk',
+          source: 'agent',
+        }),
+        event: 'agent_talk',
+      },
+      {
+        data: JSON.stringify({
+          thread_id: THREAD_ID,
+          total_execution_time_ms: 0,
+          total_queries: 0,
+          total_rows: 0,
+          total_time_ms: 0,
+        }),
+        event: 'done',
+      },
+    ];
+    global.fetch = mockFetchWithEvents(events);
+
+    const { result } = renderHook(() => useChatStream());
+
+    act(() => {
+      result.current.sendMessage('hello');
+    });
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    // Pipeline steps should have been cleared when agent_talk arrived
+    expect(result.current.pipelineSteps).toEqual([]);
   });
 
   it('sets isStreaming to false on done event', async () => {
