@@ -73,8 +73,6 @@ function createMessage(
     isStreaming,
     queryResults: [],
     role,
-    toolCalls: [],
-    toolOutputs: [],
   };
 }
 
@@ -127,6 +125,26 @@ export function useChatStream(): UseChatStreamReturn {
       }
 
       (async () => {
+        // rAF batching: accumulate tokens in a local variable and flush
+        // to React state at frame rate (~60fps) to prevent React 19's
+        // automatic batching from merging all setState calls into one render.
+        let contentAcc = '';
+        let rafId: null | number = null;
+
+        function flushContent() {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === assistantMsg.id ? { ...m, content: contentAcc } : m)),
+          );
+          rafId = requestAnimationFrame(flushContent);
+        }
+
+        function stopRaf() {
+          if (rafId !== null) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+          }
+        }
+
         try {
           const response = await fetch('/api/chat/stream', {
             body: JSON.stringify(body),
@@ -139,9 +157,7 @@ export function useChatStream(): UseChatStreamReturn {
           if (!response.ok) {
             setError(`Server error: ${response.status} ${response.statusText}`);
             setIsStreaming(false);
-            setMessages((prev) =>
-              prev.map((m) => (m.id === assistantMsg.id ? { ...m, isStreaming: false } : m)),
-            );
+            setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id));
             return;
           }
 
@@ -150,6 +166,9 @@ export function useChatStream(): UseChatStreamReturn {
             setIsStreaming(false);
             return;
           }
+
+          // Start rAF flush loop
+          rafId = requestAnimationFrame(flushContent);
 
           for await (const { data, event } of parseSSE(response.body)) {
             if (controller.signal.aborted) {
@@ -160,19 +179,18 @@ export function useChatStream(): UseChatStreamReturn {
 
             switch (event) {
               case 'agent_talk':
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantMsg.id
-                      ? { ...m, content: m.content + (parsed.content ?? '') }
-                      : m,
-                  ),
-                );
+                contentAcc += parsed.content ?? '';
                 break;
 
               case 'done':
+                stopRaf();
                 setIsStreaming(false);
                 setMessages((prev) =>
-                  prev.map((m) => (m.id === assistantMsg.id ? { ...m, isStreaming: false } : m)),
+                  prev.map((m) =>
+                    m.id === assistantMsg.id
+                      ? { ...m, content: contentAcc, isStreaming: false }
+                      : m,
+                  ),
                 );
                 break;
 
@@ -246,13 +264,15 @@ export function useChatStream(): UseChatStreamReturn {
                 break;
               }
 
-              case 'tool_call':
-              case 'tool_output':
-                // No-op: SQL and results are extracted from pipeline_state events
+              default:
                 break;
             }
           }
+
+          // Stream ended without a done event — final flush
+          stopRaf();
         } catch (error: unknown) {
+          stopRaf();
           clearTimeout(timeoutId);
 
           const isAbortError =

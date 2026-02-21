@@ -162,36 +162,6 @@ describe('useChatStream', () => {
     });
   });
 
-  it('ignores tool_call events (no-op)', async () => {
-    global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
-
-    const { result } = renderHook(() => useChatStream());
-
-    act(() => {
-      result.current.sendMessage('hello');
-    });
-
-    await waitFor(() => {
-      const assistant = result.current.messages.find((m) => m.role === 'assistant');
-      expect(assistant?.toolCalls).toHaveLength(0);
-    });
-  });
-
-  it('ignores tool_output events (no-op)', async () => {
-    global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
-
-    const { result } = renderHook(() => useChatStream());
-
-    act(() => {
-      result.current.sendMessage('hello');
-    });
-
-    await waitFor(() => {
-      const assistant = result.current.messages.find((m) => m.role === 'assistant');
-      expect(assistant?.toolOutputs).toHaveLength(0);
-    });
-  });
-
   it('tracks node_start as active pipeline step', async () => {
     global.fetch = mockFetchWithEvents([
       { data: JSON.stringify({ thread_id: THREAD_ID }), event: 'thread_id' },
