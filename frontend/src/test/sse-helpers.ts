@@ -105,8 +105,8 @@ export function makeNodeStartEvent(node: string, label: string) {
   };
 }
 
-export function makePipelineStateEvent(stage: string) {
-  return { data: JSON.stringify({ stage }), event: 'pipeline_state' };
+export function makePipelineStateEvent(stage: string, extra?: Record<string, unknown>) {
+  return { data: JSON.stringify({ stage, ...extra }), event: 'pipeline_state' };
 }
 
 export function makeDoneEvent(threadId = THREAD_ID) {

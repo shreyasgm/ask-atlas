@@ -71,6 +71,7 @@ function createMessage(
     content,
     id: `msg-${Date.now()}-${messageCounter}`,
     isStreaming,
+    queryResults: [],
     role,
     toolCalls: [],
     toolOutputs: [],
@@ -192,6 +193,50 @@ export function useChatStream(): UseChatStreamReturn {
                     step.node === parsed.stage ? { ...step, status: 'completed' as const } : step,
                   ),
                 );
+
+                if (parsed.stage === 'generate_sql' && parsed.sql) {
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantMsg.id
+                        ? {
+                            ...m,
+                            queryResults: [
+                              ...m.queryResults,
+                              {
+                                columns: [],
+                                executionTimeMs: 0,
+                                rowCount: 0,
+                                rows: [],
+                                sql: parsed.sql,
+                              },
+                            ],
+                          }
+                        : m,
+                    ),
+                  );
+                } else if (parsed.stage === 'execute_sql' && parsed.columns) {
+                  setMessages((prev) =>
+                    prev.map((m) => {
+                      if (m.id !== assistantMsg.id || m.queryResults.length === 0) {
+                        return m;
+                      }
+                      const last = m.queryResults.at(-1)!;
+                      return {
+                        ...m,
+                        queryResults: [
+                          ...m.queryResults.slice(0, -1),
+                          {
+                            ...last,
+                            columns: parsed.columns ?? [],
+                            executionTimeMs: parsed.execution_time_ms ?? 0,
+                            rowCount: parsed.row_count ?? 0,
+                            rows: parsed.rows ?? [],
+                          },
+                        ],
+                      };
+                    }),
+                  );
+                }
                 break;
 
               case 'thread_id': {
@@ -202,35 +247,8 @@ export function useChatStream(): UseChatStreamReturn {
               }
 
               case 'tool_call':
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantMsg.id
-                      ? {
-                          ...m,
-                          toolCalls: [
-                            ...m.toolCalls,
-                            { content: parsed.content, name: parsed.name },
-                          ],
-                        }
-                      : m,
-                  ),
-                );
-                break;
-
               case 'tool_output':
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantMsg.id
-                      ? {
-                          ...m,
-                          toolOutputs: [
-                            ...m.toolOutputs,
-                            { content: parsed.content, name: parsed.name },
-                          ],
-                        }
-                      : m,
-                  ),
-                );
+                // No-op: SQL and results are extracted from pipeline_state events
                 break;
             }
           }

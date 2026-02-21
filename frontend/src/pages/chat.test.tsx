@@ -89,6 +89,7 @@ describe('ChatPage - messages', () => {
         content: 'What are the top exports of Brazil?',
         id: '1',
         isStreaming: false,
+        queryResults: [],
         role: 'user',
         toolCalls: [],
         toolOutputs: [],
@@ -106,6 +107,7 @@ describe('ChatPage - messages', () => {
         content: 'Top exports of Brazil include soybeans.',
         id: '2',
         isStreaming: false,
+        queryResults: [],
         role: 'assistant',
         toolCalls: [],
         toolOutputs: [],
@@ -115,34 +117,101 @@ describe('ChatPage - messages', () => {
     expect(screen.getByText(/soybeans/)).toBeInTheDocument();
   });
 
-  it('renders tool output as preformatted text', () => {
+  it('renders markdown in assistant message', () => {
     mockHookReturn.messages = [
       {
-        content: 'Here are the results.',
+        content: 'Results include **soybeans** and *iron ore*.',
         id: '2',
         isStreaming: false,
+        queryResults: [],
         role: 'assistant',
         toolCalls: [],
-        toolOutputs: [{ content: 'product | value\nsoybeans | 100B', name: 'execute_sql' }],
+        toolOutputs: [],
       },
     ];
     renderChat();
-    expect(screen.getByText(/product \| value/)).toBeInTheDocument();
+    const strong = screen.getByText('soybeans');
+    expect(strong.tagName).toBe('STRONG');
   });
 
-  it('renders SQL block that is collapsible', () => {
+  it('renders SQL block from queryResults', () => {
     mockHookReturn.messages = [
       {
         content: 'Results below.',
         id: '2',
         isStreaming: false,
+        queryResults: [
+          {
+            columns: ['product', 'value'],
+            executionTimeMs: 42,
+            rowCount: 2,
+            rows: [
+              ['soybeans', 100],
+              ['iron ore', 80],
+            ],
+            sql: 'SELECT * FROM hs92_trade',
+          },
+        ],
         role: 'assistant',
-        toolCalls: [{ content: 'SELECT * FROM hs92_trade', name: 'execute_sql' }],
+        toolCalls: [],
         toolOutputs: [],
       },
     ];
     renderChat();
     expect(screen.getByText(/sql query/i)).toBeInTheDocument();
+  });
+
+  it('renders query result table with data', () => {
+    mockHookReturn.messages = [
+      {
+        content: 'Results below.',
+        id: '2',
+        isStreaming: false,
+        queryResults: [
+          {
+            columns: ['product', 'value'],
+            executionTimeMs: 42,
+            rowCount: 2,
+            rows: [
+              ['soybeans', 100],
+              ['iron ore', 80],
+            ],
+            sql: 'SELECT * FROM hs92_trade',
+          },
+        ],
+        role: 'assistant',
+        toolCalls: [],
+        toolOutputs: [],
+      },
+    ];
+    renderChat();
+    expect(screen.getByText('product')).toBeInTheDocument();
+    expect(screen.getByText('soybeans')).toBeInTheDocument();
+    expect(screen.getByText('2 rows in 42ms')).toBeInTheDocument();
+  });
+
+  it('renders source attribution when queryResults present', () => {
+    mockHookReturn.messages = [
+      {
+        content: 'Results below.',
+        id: '2',
+        isStreaming: false,
+        queryResults: [
+          {
+            columns: [],
+            executionTimeMs: 0,
+            rowCount: 0,
+            rows: [],
+            sql: 'SELECT 1',
+          },
+        ],
+        role: 'assistant',
+        toolCalls: [],
+        toolOutputs: [],
+      },
+    ];
+    renderChat();
+    expect(screen.getByText(/source: atlas of economic complexity/i)).toBeInTheDocument();
   });
 });
 
@@ -191,6 +260,7 @@ describe('ChatPage - interactions', () => {
         content: 'Here are the results.',
         id: '2',
         isStreaming: false,
+        queryResults: [],
         role: 'assistant',
         toolCalls: [],
         toolOutputs: [],
@@ -209,6 +279,7 @@ describe('ChatPage - interactions', () => {
         content: 'Here are the results.',
         id: '2',
         isStreaming: false,
+        queryResults: [],
         role: 'assistant',
         toolCalls: [],
         toolOutputs: [],
@@ -227,6 +298,7 @@ describe('ChatPage - interactions', () => {
         content: 'test',
         id: '1',
         isStreaming: false,
+        queryResults: [],
         role: 'user',
         toolCalls: [],
         toolOutputs: [],

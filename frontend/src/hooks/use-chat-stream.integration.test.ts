@@ -318,6 +318,117 @@ describe('useChatStream integration (async SSE)', () => {
     });
   });
 
+  it('pipeline_state generate_sql populates queryResults with SQL', async () => {
+    const { close, pushEvent, stream } = createControllableStream();
+    global.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+
+    const { result } = renderHook(() => useChatStream());
+
+    act(() => {
+      result.current.sendMessage('hello');
+    });
+
+    pushEvent(makeThreadIdEvent());
+    pushEvent(makeNodeStartEvent('generate_sql', 'Generating SQL query'));
+    pushEvent(
+      makePipelineStateEvent('generate_sql', {
+        sql: 'SELECT * FROM hs92_trade LIMIT 10',
+      }),
+    );
+
+    await waitFor(() => {
+      const assistant = result.current.messages.find((m) => m.role === 'assistant');
+      expect(assistant?.queryResults).toHaveLength(1);
+      expect(assistant?.queryResults[0].sql).toBe('SELECT * FROM hs92_trade LIMIT 10');
+      expect(assistant?.queryResults[0].rowCount).toBe(0);
+    });
+
+    pushEvent(makeDoneEvent());
+    close();
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+    });
+  });
+
+  it('pipeline_state execute_sql updates last queryResult with data', async () => {
+    const { close, pushEvent, stream } = createControllableStream();
+    global.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+
+    const { result } = renderHook(() => useChatStream());
+
+    act(() => {
+      result.current.sendMessage('hello');
+    });
+
+    pushEvent(makeThreadIdEvent());
+    pushEvent(
+      makePipelineStateEvent('generate_sql', {
+        sql: 'SELECT product FROM trade',
+      }),
+    );
+    pushEvent(
+      makePipelineStateEvent('execute_sql', {
+        columns: ['product', 'value'],
+        execution_time_ms: 42,
+        row_count: 2,
+        rows: [
+          ['soybeans', 100],
+          ['iron ore', 80],
+        ],
+      }),
+    );
+
+    await waitFor(() => {
+      const assistant = result.current.messages.find((m) => m.role === 'assistant');
+      expect(assistant?.queryResults).toHaveLength(1);
+      expect(assistant?.queryResults[0].columns).toEqual(['product', 'value']);
+      expect(assistant?.queryResults[0].rowCount).toBe(2);
+      expect(assistant?.queryResults[0].executionTimeMs).toBe(42);
+      expect(assistant?.queryResults[0].rows).toEqual([
+        ['soybeans', 100],
+        ['iron ore', 80],
+      ]);
+    });
+
+    pushEvent(makeDoneEvent());
+    close();
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+    });
+  });
+
+  it('tool_output events do not populate toolOutputs', async () => {
+    const { close, pushEvent, stream } = createControllableStream();
+    global.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+
+    const { result } = renderHook(() => useChatStream());
+
+    act(() => {
+      result.current.sendMessage('hello');
+    });
+
+    pushEvent(makeThreadIdEvent());
+    pushEvent({
+      data: JSON.stringify({ content: 'SELECT', name: 'sql' }),
+      event: 'tool_output',
+    });
+    pushEvent({
+      data: JSON.stringify({ content: ' FROM', name: 'sql' }),
+      event: 'tool_output',
+    });
+    pushEvent(makeAgentTalkEvent('done'));
+    pushEvent(makeDoneEvent());
+    close();
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+      const assistant = result.current.messages.find((m) => m.role === 'assistant');
+      expect(assistant?.toolOutputs).toEqual([]);
+    });
+  });
+
   it('auto-submit from ?q= works with StrictMode double-mount', async () => {
     const events = [makeThreadIdEvent(), makeAgentTalkEvent('auto-response'), makeDoneEvent()];
     global.fetch = vi.fn().mockResolvedValue({

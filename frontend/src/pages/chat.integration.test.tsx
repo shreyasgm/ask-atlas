@@ -183,6 +183,55 @@ describe('ChatPage integration (real hook + real components)', () => {
     });
   });
 
+  it('SQL block and result table appear from pipeline_state events', async () => {
+    const user = userEvent.setup();
+    const { close, pushEvent, stream } = createControllableStream();
+    global.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+
+    renderChat();
+
+    const input = screen.getByPlaceholderText(/ask about trade data/i);
+    await user.type(input, 'top exports');
+    await user.click(screen.getByRole('button', { name: /send/i }));
+
+    pushEvent(makeThreadIdEvent());
+    pushEvent(makeNodeStartEvent('generate_sql', 'Generating SQL query'));
+    pushEvent(
+      makePipelineStateEvent('generate_sql', {
+        sql: 'SELECT product FROM trade LIMIT 2',
+      }),
+    );
+    pushEvent(
+      makePipelineStateEvent('execute_sql', {
+        columns: ['product'],
+        execution_time_ms: 15,
+        row_count: 2,
+        rows: [['soybeans'], ['coffee']],
+      }),
+    );
+    pushEvent(makeAgentTalkEvent('Here are the **top exports**.'));
+    pushEvent(makeDoneEvent());
+    close();
+
+    // SQL block appears
+    await waitFor(() => {
+      expect(screen.getByText(/sql query/i)).toBeInTheDocument();
+    });
+
+    // Result table with data
+    expect(screen.getByText('product')).toBeInTheDocument();
+    expect(screen.getByText('soybeans')).toBeInTheDocument();
+    expect(screen.getByText('coffee')).toBeInTheDocument();
+    expect(screen.getByText('2 rows in 15ms')).toBeInTheDocument();
+
+    // Markdown bold renders
+    const strongElements = screen.getAllByText('top exports');
+    expect(strongElements.some((el) => el.tagName === 'STRONG')).toBe(true);
+
+    // Source attribution
+    expect(screen.getByText(/source: atlas of economic complexity/i)).toBeInTheDocument();
+  });
+
   it('clear button resets messages', async () => {
     const user = userEvent.setup();
     const { close, pushEvent, stream } = createControllableStream();
