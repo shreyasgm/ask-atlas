@@ -1019,6 +1019,11 @@ class TestValidateSqlNode:
             {"table_name": "country_year", "context_str": "Year-level data"},
             {"table_name": "country_product_year_4", "context_str": "4-digit product data"},
         ],
+        "classification": [
+            {"table_name": "location_country", "context_str": "Country-level data with names, ISO codes, and hierarchical information."},
+            {"table_name": "product_hs92", "context_str": "HS92 product classification data."},
+            {"table_name": "product_hs12", "context_str": "HS12 product classification data."},
+        ],
     }
 
     TABLE_INFO_DDL = (
@@ -1106,6 +1111,53 @@ class TestValidateSqlNode:
             pipeline_sql="SELECT country_id FROM hs92.country_year",
             pipeline_table_info=self.TABLE_INFO_DDL,
             pipeline_products=None,
+        )
+
+        result = await validate_sql_node(
+            state, table_descriptions=self.TABLE_DESCRIPTIONS
+        )
+
+        assert result["last_error"] == ""
+
+    async def test_classification_join_tables_are_valid(self):
+        """SQL using classification.location_country and classification.product_hs92 JOINs must pass."""
+        sql = (
+            "SELECT cy.country_id, lc.name_en, ph.name_short_en "
+            "FROM hs92.country_product_year_4 cy "
+            "JOIN classification.location_country lc ON cy.country_id = lc.country_id "
+            "JOIN classification.product_hs92 ph ON cy.product_id = ph.product_id"
+        )
+        state = _base_state(
+            pipeline_sql=sql,
+            pipeline_table_info=self.TABLE_INFO_DDL,
+            pipeline_products=SchemasAndProductsFound(
+                classification_schemas=["hs92"],
+                products=[],
+                requires_product_lookup=False,
+            ),
+        )
+
+        result = await validate_sql_node(
+            state, table_descriptions=self.TABLE_DESCRIPTIONS
+        )
+
+        assert result["last_error"] == "", f"Expected no error, got: {result['last_error']}"
+
+    async def test_classification_location_country_always_valid(self):
+        """classification.location_country should be valid even without product tables."""
+        sql = (
+            "SELECT cy.country_id, lc.name_en "
+            "FROM hs92.country_year cy "
+            "JOIN classification.location_country lc ON cy.country_id = lc.country_id"
+        )
+        state = _base_state(
+            pipeline_sql=sql,
+            pipeline_table_info=self.TABLE_INFO_DDL,
+            pipeline_products=SchemasAndProductsFound(
+                classification_schemas=["hs92"],
+                products=[],
+                requires_product_lookup=False,
+            ),
         )
 
         result = await validate_sql_node(

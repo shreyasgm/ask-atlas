@@ -4,6 +4,7 @@ import json
 import tempfile
 from unittest.mock import Mock
 from src.generate_query import (
+    _classification_tables_for_schemas,
     load_example_queries,
     load_table_descriptions,
     get_table_info_for_schemas,
@@ -133,6 +134,56 @@ class TestLoadFiles:
         assert result["schema1"][0]["context_str"] == "Description of table1"
 
 
+class TestClassificationTablesForSchemas:
+    """Tests for the _classification_tables_for_schemas helper."""
+
+    TABLE_DESCRIPTIONS = {
+        "hs92": [
+            {"table_name": "country_year", "context_str": "Year-level data"},
+        ],
+        "classification": [
+            {"table_name": "location_country", "context_str": "Country-level data."},
+            {"table_name": "product_hs92", "context_str": "HS92 products."},
+            {"table_name": "product_hs12", "context_str": "HS12 products."},
+            {"table_name": "product_sitc", "context_str": "SITC products."},
+        ],
+    }
+
+    def test_hs92_returns_location_and_product_table(self):
+        result = _classification_tables_for_schemas(["hs92"], self.TABLE_DESCRIPTIONS)
+        names = {t["table_name"] for t in result}
+        assert "classification.location_country" in names
+        assert "classification.product_hs92" in names
+
+    def test_always_includes_location_country(self):
+        result = _classification_tables_for_schemas(["hs92"], self.TABLE_DESCRIPTIONS)
+        names = {t["table_name"] for t in result}
+        assert "classification.location_country" in names
+
+    def test_no_duplicate_location_country_for_multiple_schemas(self):
+        result = _classification_tables_for_schemas(["hs92", "hs12"], self.TABLE_DESCRIPTIONS)
+        location_count = sum(1 for t in result if t["table_name"] == "classification.location_country")
+        assert location_count == 1
+
+    def test_multiple_schemas_get_respective_product_tables(self):
+        result = _classification_tables_for_schemas(["hs92", "sitc"], self.TABLE_DESCRIPTIONS)
+        names = {t["table_name"] for t in result}
+        assert "classification.product_hs92" in names
+        assert "classification.product_sitc" in names
+
+    def test_empty_schemas_still_includes_location_country(self):
+        result = _classification_tables_for_schemas([], self.TABLE_DESCRIPTIONS)
+        names = {t["table_name"] for t in result}
+        assert "classification.location_country" in names
+        assert len(result) == 1
+
+    def test_unknown_schema_only_includes_location(self):
+        result = _classification_tables_for_schemas(["nonexistent"], self.TABLE_DESCRIPTIONS)
+        names = {t["table_name"] for t in result}
+        assert "classification.location_country" in names
+        assert len(result) == 1
+
+
 class TestGetTableInfoForSchemas:
     def test_get_table_info_for_schemas(self, mock_db, project_paths):
         """Test if table information can be retrieved for given schemas"""
@@ -143,20 +194,35 @@ class TestGetTableInfoForSchemas:
         mock_db.get_table_info.return_value = "Mock table info with columns: id, name, value"
 
         # Test with sample schemas
-        sample_schemas = ["hs92", "classification"]
+        sample_schemas = ["hs92"]
         table_info = get_table_info_for_schemas(
             db=mock_db,
             table_descriptions=table_descriptions,
             classification_schemas=sample_schemas
         )
-        
+
         assert isinstance(table_info, str)
         assert len(table_info) > 0
         # Check if it properly filters out tables with 'group' in the name
         assert "group" not in table_info.lower()
         # Check if schema-qualified table names are present
-        assert "hs92.product" in table_info
-        assert "classification.product_services_bilateral" in table_info
+        assert "hs92." in table_info
+
+    def test_includes_classification_tables_for_hs92(self, mock_db, project_paths):
+        """Passing only hs92 should auto-include classification.location_country and classification.product_hs92."""
+        table_descriptions = load_table_descriptions(
+            project_paths["table_descriptions_json"]
+        )
+        mock_db.get_table_info.return_value = "CREATE TABLE placeholder (\n  id integer\n);\n"
+
+        table_info = get_table_info_for_schemas(
+            db=mock_db,
+            table_descriptions=table_descriptions,
+            classification_schemas=["hs92"],
+        )
+
+        assert "classification.location_country" in table_info
+        assert "classification.product_hs92" in table_info
 
 
 

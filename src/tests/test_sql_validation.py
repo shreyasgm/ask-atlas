@@ -131,3 +131,35 @@ class TestValidateSql:
         result = validate_sql(sql, set())
         assert result.is_valid is False
         assert any("hs92.country_year" in e.lower() for e in result.errors)
+
+    def test_classification_tables_accepted_when_in_valid_set(self):
+        """Classification tables should pass validation when included in valid_tables."""
+        valid = {
+            "hs92.country_year",
+            "hs92.country_product_year_4",
+            "classification.location_country",
+            "classification.product_hs92",
+        }
+        sql = (
+            "SELECT cy.country_id, lc.name_en "
+            "FROM hs92.country_year cy "
+            "JOIN classification.location_country lc ON cy.country_id = lc.country_id"
+        )
+        result = validate_sql(sql, valid)
+        assert result.is_valid is True
+        assert result.errors == []
+
+    def test_classification_product_table_in_join(self):
+        """Joining classification.product_hs92 should pass when it's in valid_tables."""
+        valid = {
+            "hs92.country_product_year_4",
+            "classification.product_hs92",
+        }
+        sql = (
+            "SELECT p.name_short_en, cy.export_value "
+            "FROM hs92.country_product_year_4 cy "
+            "JOIN classification.product_hs92 p ON cy.product_id = p.product_id"
+        )
+        result = validate_sql(sql, valid)
+        assert result.is_valid is True
+        assert result.errors == []

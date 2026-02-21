@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from src.error_handling import QueryExecutionError, async_execute_with_retry, execute_with_retry
 from src.product_and_schema_lookup import (
+    SCHEMA_TO_PRODUCTS_TABLE_MAP,
     ProductAndSchemaLookup,
     ProductDetails,
     SchemasAndProductsFound,
@@ -226,6 +227,45 @@ def _query_tool_schema(question: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _classification_tables_for_schemas(
+    classification_schemas: List[str],
+    table_descriptions: Dict,
+) -> List[Dict]:
+    """Return the specific classification lookup tables needed for the given data schemas.
+
+    For each data schema (e.g. hs92), includes:
+    - classification.location_country (always — needed for country lookups)
+    - The matching product table (e.g. classification.product_hs92)
+    """
+    tables: List[Dict] = []
+    seen: set[str] = set()
+
+    # Always include location_country
+    tables.append({
+        "table_name": "classification.location_country",
+        "context_str": "Country-level data with names, ISO codes, and hierarchical information.",
+    })
+    seen.add("classification.location_country")
+
+    # Include the matching product classification table for each data schema
+    classification_entries = table_descriptions.get("classification", [])
+    classification_by_name = {t["table_name"]: t for t in classification_entries}
+
+    for schema in classification_schemas:
+        product_table_full = SCHEMA_TO_PRODUCTS_TABLE_MAP.get(schema)  # e.g. "classification.product_hs92"
+        if product_table_full and product_table_full not in seen:
+            table_name = product_table_full.split(".", 1)[1]  # "product_hs92"
+            entry = classification_by_name.get(table_name)
+            if entry:
+                tables.append({
+                    "table_name": product_table_full,
+                    "context_str": entry["context_str"],
+                })
+                seen.add(product_table_full)
+
+    return tables
+
+
 def get_tables_in_schemas(
     table_descriptions: Dict, classification_schemas: List[str]
 ) -> List[Dict]:
@@ -258,18 +298,23 @@ def get_table_info_for_schemas(
     classification_schemas: List[str],
 ) -> str:
     """Get table information for a list of schemas."""
-    table_descriptions = get_tables_in_schemas(
+    # Get data schema tables (e.g. hs92.country_year, hs92.country_product_year_4, ...)
+    tables = get_tables_in_schemas(
         table_descriptions=table_descriptions,
         classification_schemas=classification_schemas,
     )
-    # Temporarily, remove any tables that have the word "group" in the table name
-    table_descriptions = [
+
+    # Add the specific classification lookup tables needed for JOINs
+    tables.extend(_classification_tables_for_schemas(classification_schemas, table_descriptions))
+
+    # Remove any tables that have the word "group" in the table name
+    tables = [
         table
-        for table in table_descriptions
+        for table in tables
         if "group" not in table["table_name"].lower()
     ]
     table_info = ""
-    for table in table_descriptions:
+    for table in tables:
         table_info += (
             f"Table: {table['table_name']}\nDescription: {table['context_str']}\n"
         )
@@ -434,6 +479,11 @@ async def validate_sql_node(
             if schema in table_descriptions:
                 for table in table_descriptions[schema]:
                     valid_tables.add(f"{schema}.{table['table_name']}")
+
+    # 3. Add the specific classification lookup tables needed for JOINs
+    schemas = products.classification_schemas if (products and hasattr(products, "classification_schemas")) else []
+    for ct in _classification_tables_for_schemas(schemas, table_descriptions):
+        valid_tables.add(ct["table_name"])
 
     result = validate_sql(sql, valid_tables)
 
