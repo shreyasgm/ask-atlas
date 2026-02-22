@@ -4,6 +4,28 @@
 > **Status:** Research complete, implementation pending
 > **Related issue:** See GitHub issue linked at bottom
 
+> ### ADDITIONAL API AVAILABLE (2026-02-21)
+>
+> This document was written against the **production GraphQL API** at `https://atlas.hks.harvard.edu/api/countries/graphql`. That API remains fully available and is the public-facing endpoint.
+>
+> A **staging GraphQL API** is also available to Growth Lab members at:
+>
+> ```
+> POST http://staging.atlas.growthlab-dev.com/api/graphql
+> ```
+>
+> The staging API is a redesigned, data-oriented interface that **complements** the production API:
+> - **Fixes all broken endpoints** documented in section 3.7 (CPY_P, groups, SITC, year ranges)
+> - **Adds new capabilities** — data dictionary, classification crosswalks (HS92/HS12/HS22/SITC), group-level trade, 6-digit products, data through 2024
+> - Uses integer IDs (`countryId: 404`) and explicit product classes (`HS92`, `HS12`, `HS22`)
+> - **Does NOT have `countryProfile`** or its derived metrics (diversification grades, policy recommendations, etc.) — for those, use the production API
+>
+> **The staging API is preferred for new backend development** because it has more capabilities and no broken endpoints. The production API remains available as a fallback for the ~12 derived metrics (diversification grades, policy recs, structural transformation, lookback growth classifications) that only it provides.
+>
+> **Rate limiting:** Per the Atlas `llms.txt`, automated systems must limit to **≤ 120 requests per minute** (2 req/sec) on any API endpoint. Include a **`User-Agent` header** identifying the system (e.g., `User-Agent: ask-atlas/1.0`). Prefer small, targeted queries — request only needed fields. Cache and reuse results. These rules apply to both the production and staging APIs.
+>
+> **For the updated architecture design, see `evaluation/backend_redesign_analysis.md`.**
+
 This document contains a comprehensive analysis of the Atlas GraphQL API capabilities vs. the existing text-to-SQL backend, a question-by-question eval mapping, and a proposed hybrid architecture where simple questions use the GraphQL API and complex analytical questions use the SQL backend. An implementing agent should be able to take this document and execute the refactoring without additional context.
 
 ---
@@ -1206,7 +1228,7 @@ The GraphQL tool should handle:
 1. **Broken queries:** If a query hits a broken endpoint, fall back to SQL tool with a message to the agent.
 2. **Missing data:** If a country/product is not found, return a clear error.
 3. **Network errors:** Timeout/connection errors should suggest SQL fallback.
-4. **Rate limiting:** If rate limited (unknown thresholds), queue and retry or fall back.
+4. **Rate limiting:** The Atlas `llms.txt` specifies ≤ 120 req/min. If rate limited, queue and retry or fall back to SQL.
 
 ### 6.6 Caching Strategy
 

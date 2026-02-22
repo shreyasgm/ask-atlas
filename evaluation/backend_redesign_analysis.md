@@ -10,21 +10,22 @@
 
 1. [Current State Assessment](#1-current-state-assessment)
 2. [Design Goals](#2-design-goals)
-3. [Core Architectural Idea: Two-Tool ReAct Agent](#3-core-architectural-idea-two-tool-react-agent)
-4. [The Two Tools](#4-the-two-tools)
-5. [Graph Structure](#5-graph-structure)
-6. [GraphQL Pipeline Design](#6-graphql-pipeline-design)
-7. [SQL Pipeline (Existing, Minor Changes)](#7-sql-pipeline-existing-minor-changes)
-8. [Agent System Prompt Design](#8-agent-system-prompt-design)
-9. [Atlas Link Generation](#9-atlas-link-generation)
-10. [State Schema Changes](#10-state-schema-changes)
-11. [Streaming and Frontend](#11-streaming-and-frontend)
-12. [Caching Architecture](#12-caching-architecture)
-13. [Error Handling and Fallback](#13-error-handling-and-fallback)
-14. [Worked Examples](#14-worked-examples)
-15. [Design Decisions and Alternatives Considered](#15-design-decisions-and-alternatives-considered)
-16. [Implementation Phases](#16-implementation-phases)
-17. [What This Means for Atlas Decoupling](#17-what-this-means-for-atlas-decoupling)
+3. [The New Staging GraphQL API](#3-the-new-staging-graphql-api)
+4. [Core Architectural Idea: Two-Tool ReAct Agent](#4-core-architectural-idea-two-tool-react-agent)
+5. [The Two Tools](#5-the-two-tools)
+6. [Graph Structure](#6-graph-structure)
+7. [GraphQL Pipeline Design](#7-graphql-pipeline-design)
+8. [SQL Pipeline (Existing, Minor Changes)](#8-sql-pipeline-existing-minor-changes)
+9. [Agent System Prompt Design](#9-agent-system-prompt-design)
+10. [Atlas Link Generation](#10-atlas-link-generation)
+11. [State Schema Changes](#11-state-schema-changes)
+12. [Streaming and Frontend](#12-streaming-and-frontend)
+13. [Caching Architecture](#13-caching-architecture)
+14. [Error Handling and Fallback](#14-error-handling-and-fallback)
+15. [Worked Examples](#15-worked-examples)
+16. [Design Decisions and Alternatives Considered](#16-design-decisions-and-alternatives-considered)
+17. [Implementation Phases](#17-implementation-phases)
+18. [What This Means for Atlas Decoupling](#18-what-this-means-for-atlas-decoupling)
 
 ---
 
@@ -55,11 +56,10 @@ Every question, regardless of complexity, goes through the same expensive pipeli
 
 ### What the analysis in `hybrid_backend_analysis.md` showed
 
-- **~62% of eval questions** (37 of 60) can be answered by the GraphQL API alone or with richer data.
+- **~62% of eval questions** (37 of 60) can be answered by GraphQL APIs alone or with richer data.
 - These questions burn $0.01-0.05 in LLM tokens and take 3-8s, but could be answered in 200-500ms at zero LLM cost via a deterministic GraphQL call.
-- **~25% of questions** (15 of 60) require SQL for complex analytical queries (cross-country comparisons, regional aggregations, custom time ranges, derived calculations).
-- **~13% of questions** are out-of-scope or need no data access.
-- The GraphQL API also provides **~12 derived metrics not in the database** (policy recommendations, diversification grades, structural transformation status, growth projections, etc.).
+- **~25% of questions** (15 of 60) require SQL for complex analytical queries.
+- The production GraphQL API provides **~12 derived metrics not in the database** (policy recommendations, diversification grades, etc.). The staging API does not have these but fixes all broken endpoints and adds new capabilities. Together, both APIs cover more ground than either alone (see section 3).
 
 ---
 
@@ -67,7 +67,7 @@ Every question, regardless of complexity, goes through the same expensive pipeli
 
 ### A. Dual data source with dynamic routing
 
-Rather than a static router that sends the entire question down one path (GraphQL OR SQL), the **agent itself** decides which tool to call for each sub-question. Complex questions get decomposed naturally, with some sub-questions going to GraphQL and others to SQL.
+The **agent itself** decides which tool to call for each sub-question. Complex questions get decomposed naturally, with some sub-questions going to GraphQL and others to SQL.
 
 ### B. Atlas website links for trust and verification
 
@@ -79,26 +79,187 @@ By referencing the Atlas website for simple data lookups, we position this tool 
 
 ### D. Decoupling from Atlas DB for simple questions
 
-For the ~62% of questions that GraphQL can handle, no database is needed at all. This enables a lightweight deployment mode and reduces infrastructure costs.
+For questions that GraphQL can handle, no database is needed at all. This enables a lightweight deployment mode and reduces infrastructure costs.
 
 ---
 
-## 3. Core Architectural Idea: Two-Tool ReAct Agent
+## 3. Two Complementary GraphQL APIs
+
+Our backend has access to **two** GraphQL APIs that complement each other. The staging API is preferred for most queries (more capable, all endpoints working), while the production API remains available as a fallback — especially for the ~12 derived narrative metrics that only it provides.
+
+### Endpoints
+
+**Staging API** (preferred for new development):
+```
+POST http://staging.atlas.growthlab-dev.com/api/graphql
+Content-Type: application/json
+```
+This is an internal Growth Lab API. It is data-oriented (raw tables), has all endpoints working, and offers additional capabilities like data dictionaries, group-level trade, 6-digit products, HS22, and data through 2024.
+
+**Production API** (public, always available as fallback):
+```
+POST https://atlas.hks.harvard.edu/api/countries/graphql
+Content-Type: application/json
+```
+This is the main public-facing API that serves the Atlas website. It is page-oriented (pre-computed derived types) and uniquely provides `countryProfile` with 46 derived fields including narrative classifications. However, it has ~8 broken endpoints (see hybrid_backend_analysis.md for details).
+
+### Rate Limiting and Usage Guidelines (IMPORTANT)
+
+The Atlas website publishes an `llms.txt` file with official guidance for automated/LLM access. The key rules (which apply equally to all three endpoints — production Explore `/api/graphql`, production Country Pages `/api/countries/graphql`, and staging):
+
+> - **Rate limit: ≤ 120 requests per minute** (= 2 req/sec). All GraphQL client code must implement rate limiting (e.g., via `asyncio.Lock` + minimum delay between requests).
+> - **Include a `User-Agent` header** identifying our system (e.g., `User-Agent: ask-atlas/1.0`).
+> - **Prefer small, targeted queries** — request only the fields you need. Do not fetch all subfields recursively or run exhaustive introspection queries.
+> - **Cache and reuse results** when possible (see section 13).
+> - No authentication is required.
+
+This means:
+- No rapid parallel GraphQL calls — requests must be serialized or throttled
+- The agent should prefer fewer, broader queries over many narrow ones
+- Caching is critical to minimize API load (see section 13)
+- Every HTTP request must include a `User-Agent` header
+
+### How the Two APIs Differ
+
+The **production API** is **high-level and page-oriented** — it has pre-computed derived types like `countryProfile` with 46 fields including narrative classifications (diversification grades, policy recommendations, structural transformation). It was designed to serve the Atlas website's specific page layouts.
+
+The **staging API** is **low-level and data-oriented** — it exposes the raw data tables directly (`countryYear`, `countryProductYear`, `countryCountryYear`, etc.) with flexible filtering via `yearMin`/`yearMax`, `countryId`, `productId`. There are no pre-computed narrative fields.
+
+### Metrics Only Available on the Production API
+
+The production API's `countryProfile` query provides ~12 derived narrative metrics that have no equivalent on the staging API:
+
+| Metric | Description |
+|---|---|
+| `diversificationGrade` | A+ through D- grade |
+| `policyRecommendation` | ParsimoniousIndustrial, StrategicBets, LightTouch, TechFrontier |
+| `structuralTransformationStep` | NotStarted through Completed |
+| `structuralTransformationDirection` | risen, fallen, stagnated |
+| `growthProjectionClassification` | rapid, moderate, slow |
+| `growthProjectionRelativeToIncome` | More, Less, Same, etc. |
+| `growthProjectionPercentileClassification` | TopDecile through BottomHalf |
+| `coiClassification` | low, medium, high |
+| `marketShareMainSector` / `Direction` | Main export sector trend |
+| `comparisonLocations` | Peer country recommendations |
+| `newProductsComments` | Narrative interpretations |
+| `exportValueGrowthClassification` | Troubling, Mixed, Static, Promising |
+| `eciNatResourcesGdpControlled` | ECI controlled for natural resources |
+
+Also production-only: `countryLookback` (pre-computed CAGR, ECI changes, regional comparisons) and `newProductsComparisonCountries` (peer comparison).
+
+**Note:** The raw numeric `growthProj` field IS available on the staging API's `countryYear`, so the growth projection number itself is accessible on both — just not its narrative classification.
+
+### Additional Capabilities on the Staging API
+
+These endpoints either fix broken production-API queries or provide entirely new functionality:
+
+**Fixed endpoints** (broken on production, working on staging):
+
+| Broken Production Endpoint | Staging Equivalent |
+|---|---|
+| `treeMap(facet: CPY_P)` — null locations | `countryProductYear(productId: X)` without `countryId` returns all countries |
+| `productYearRange` — missing arg | `productYear(yearMin, yearMax)` |
+| `allCountryYearRange` — `'hs_coi'` error | `countryYear(yearMin, yearMax)` without `countryId` |
+| `group` / `allGroups` — missing model | `locationGroup(groupType)` works for all 9 group types |
+| `manyCountryProductYear` — two bugs | `countryProductYear` with flexible args |
+| SITC treeMap — unimplemented | `countryProductYear(productClass: SITC)` works |
+| Product `level` field — enum mismatch | `productLevel` is now an integer (1, 2, 4, 6) |
+
+**New capabilities** (not available on production at all):
+
+| Capability | Query | Notes |
+|---|---|---|
+| **Data dictionary** | `downloadsTable` | 70 tables with full column definitions, types, descriptions |
+| **Classification crosswalks** | `conversionWeights`, `conversionPath` | Maps codes across HS92→HS12→HS22→SITC |
+| **Group-level trade** | `groupYear`, `groupGroupProductYear` | Continental/regional/trade-bloc aggregates |
+| **Country-to-group trade** | `countryGroupProductYear` | e.g., Kenya exports to North America |
+| **Group-to-country trade** | `groupCountryProductYear` | e.g., African exports to USA |
+| **6-digit products** | `productLevel: 6` | Production API limited to 4-digit |
+| **HS 2022 classification** | `productClass: HS22` | Entirely new classification |
+| **HS 2012 as explicit class** | `productClass: HS12` | Was ambiguous "HS" on production |
+| **Data through 2024** | All queries | Production API data stops at 2022 |
+| **Country data flags** | `dataFlags` | 21 flags for data eligibility |
+| **Bilateral reported values** | `countryCountryYear` | Both adjusted AND as-reported-to-Comtrade |
+| **Constant-dollar GDP** | `countryYear` | `gdpConst`, `gdpPppConst`, `gdppcConst` |
+| **Green product flag** | Product types | `greenProduct: true/false` on products |
+| **Natural resource flag** | Product types | `naturalResource: true/false` on products |
+| **Product status** | `countryProductYear` | `productStatus: absent/lost/new/present` |
+| **Spanish names** | Location/Product types | `nameEs`, `nameShortEs` |
+
+### Staging API: ID Format
+
+| Entity | Production Format | Staging Input | Staging Output |
+|---|---|---|---|
+| Country | `"location-404"` (string) | `countryId: 404` (integer) | `"country-404"` (string) |
+| Product | `"product-HS-910"` (string) | `productId: 910` (integer) | `"product-HS92-910"` (string) |
+| Group | N/A (broken on production) | `groupType: "continent"` + filter | `"group-continent-AF"` etc. |
+
+### Staging API: Year Handling
+
+The production API has separate queries for single year vs. range (`countryYear` vs `countryYearRange`). The staging API unifies them: all queries accept optional `yearMin`/`yearMax` parameters. Omitting both returns the latest year.
+
+### Staging API: Product Classification
+
+| Production API | Staging API |
+|---|---|
+| `productClass: HS` (ambiguous) | `productClass: HS92`, `HS12`, or `HS22` (explicit) |
+| `productClass: SITC` (broken) | `productClass: SITC` (working) |
+| `productLevel: fourDigit` (enum) | `productLevel: 4` (integer) |
+
+### Impact on Eval Question Routing
+
+With both APIs available:
+- Questions needing **derived narrative metrics** (diversification grades, policy recs, structural transformation) → use the **production API** (`countryProfile`)
+- Questions that hit **broken production endpoints** (CPY_P, groups, SITC, year ranges) → use the **staging API** (all working)
+- Questions about **new capabilities** (6-digit products, HS22, group-level trade, data dictionary) → use the **staging API** (production doesn't support these)
+- **Standard lookups** (country trade data, bilateral trade, product complexity) → prefer the **staging API** (more flexible, data through 2024), with production as fallback
+- **Net effect:** The staging API handles ~60-70% of questions. The production API uniquely covers the ~12 narrative classification metrics. Together they provide comprehensive coverage.
+
+### Staging API: Complete Query Type Reference
+
+| Query | Arguments | Key Fields | Notes |
+|---|---|---|---|
+| `countryYear` | `countryId`, `yearMin`, `yearMax`, `productClass` | exportValue, importValue, gdp, gdppc, eci, eciRank, coi, coiRank, growthProj, population | Equivalent to production's countryYear + countryYearRange + allCountryYear + allCountryYearRange |
+| `countryProductYear` | `countryId`, `productId`, `productClass`, `productLevel`, `yearMin`, `yearMax` | exportValue, importValue, exportRca, globalMarketShare, distance, cog, pci, normalizedPci, normalizedCog, normalizedDistance, productStatus, isNew | Equivalent to production's treeMap(CPY_C), treeMap(CPY_P), allCountryProductYear, newProducts |
+| `countryCountryYear` | `countryId`, `partnerId`, `yearMin`, `yearMax` | exportValue, importValue, exportValueReported, importValueReported | Equivalent to production's treeMap(CCY_C) |
+| `countryCountryProductYear` | `countryId`, `partnerId`, `productClass`, `productLevel`, `yearMin`, `yearMax` | exportValue, importValue | Equivalent to production's treeMap(CPY_C + partner) |
+| `productYear` | `productId`, `productClass`, `productLevel`, `yearMin`, `yearMax` | pci, globalExportValue, complexityLevel | Equivalent to production's productYear + allProductYear + productYearRange |
+| `productProduct` | `productClass`, `productLevel`, `yearMin`, `yearMax` | strength (proximity) | Equivalent to production's productSpace connections |
+| `locationCountry` | (no required args) | id, iso3Code, iso2Code, nameEn, nameShortEn, incomeLevel, inRankings, inCp | Equivalent to production's allLocations + location |
+| `locationGroup` | `groupType` | id, name, type, members, GDP/trade aggregates, CAGR fields | Equivalent to production's group + allGroups (broken on production) |
+| `groupYear` | `groupType`, `yearMin`, `yearMax` | population, gdp, exportValue, importValue | Staging-only — group-level time series |
+| `groupGroupProductYear` | `groupId`, `partnerGroupId`, ... | exportValue, importValue | Staging-only — group-to-group bilateral |
+| `countryGroupProductYear` | `countryId`, `groupId`, ... | exportValue, importValue | Staging-only — country-to-group |
+| `groupCountryProductYear` | `groupId`, `countryId`, ... | exportValue, importValue | Staging-only — group-to-country |
+| `productHs92` | `productLevel` | id, code, nameEn, parent, topParent, greenProduct, naturalResource | Equivalent to production's allProducts(HS) |
+| `productHs12` | `productLevel` | Same as above | Staging-only — explicit HS12 dictionary |
+| `productHs22` | `productLevel` | Same as above | Staging-only — HS22 classification |
+| `productSitc` | `productLevel` | Same as above | Equivalent to production's allProducts(SITC) |
+| `downloadsTable` | (none) | 70 tables with full column definitions | Staging-only — data dictionary |
+| `dataAvailability` | (none) | productClassification, yearMin, yearMax | Staging-only — year ranges |
+| `dataFlags` | `countryId` | 21 boolean/numeric eligibility flags | Staging-only |
+| `conversionWeights` | source/target class, productLevel | Maps product codes across classifications | Staging-only |
+| `conversionPath` | source/target class | Step-by-step conversion path | Staging-only |
+| `countryYearThresholds` | `countryId`, year | Descriptive statistics for complexity variables | Staging-only |
+
+---
+
+## 4. Core Architectural Idea: Two-Tool ReAct Agent
 
 ### Why dynamic agent routing, not a static router
 
-The previous design proposed a dedicated `classify_query` router node that would send the entire question down one path. This has a fundamental limitation: **many real questions need BOTH data sources.** Consider:
+Many real questions need BOTH data sources. Consider:
 
-> "What is Kenya's diversification grade and how does it compare to other East African countries?"
+> "What is Kenya's ECI and how does it compare to other East African countries?"
 
-- "Kenya's diversification grade" → GraphQL (`countryProfile.diversificationGrade`), only available via GraphQL
-- "compare to other East African countries" → SQL (needs regional group tables, cross-country comparison)
+- "Kenya's ECI" → GraphQL (`countryYear(countryId: 404)`) — fast, deterministic
+- "compare to other East African countries" → SQL (needs regional group tables with cross-country comparison) OR GraphQL (`locationGroup` + multiple `countryYear` calls — but rate-limited to 1-2/sec)
 
 A static router must pick one path. A dynamic agent can call GraphQL for the first part, then SQL for the second, and synthesize the results.
 
 ### The approach: give the agent two tools
 
-The agent keeps its existing ReAct loop but gains access to **two tools** instead of one. The agent itself decides which tool to call for each sub-question based on its understanding of what each tool is good at. The agent system prompt describes the capabilities and limitations of each tool, and the agent makes the routing decision as part of its natural reasoning.
+The agent keeps its existing ReAct loop but gains access to **two tools** instead of one. The agent itself decides which tool to call for each sub-question based on its understanding of what each tool is good at. The agent system prompt describes the capabilities and limitations of each tool.
 
 This is the simplest possible change to the existing architecture: we add a second tool and update the routing function to dispatch to the appropriate pipeline based on which tool was called.
 
@@ -106,62 +267,68 @@ This is the simplest possible change to the existing architecture: we add a seco
 
 ```
 Agent receives question
-  → Agent thinks: "I need Kenya's diversification grade (GraphQL has this)"
-  → Agent calls atlas_graphql(query_type="country_profile", country="Kenya")
-  → GraphQL pipeline runs (~200ms), returns result + Atlas link
-  → Agent thinks: "Now I need East African comparison (need SQL for regional data)"
-  → Agent calls atlas_sql(question="Compare Kenya's diversity to other East African countries")
+  → Agent thinks: "I need Kenya's export data (GraphQL has this)"
+  → Agent calls atlas_graphql(query_type="country_year", country="Kenya", year=2022)
+  → GraphQL pipeline runs (~300ms), returns result + Atlas link
+  → Agent thinks: "Now I need East African comparison (SQL is better for this)"
+  → Agent calls atlas_sql(question="Compare Kenya's ECI to other East African countries")
   → SQL pipeline runs (~5s), returns result
   → Agent synthesizes both results into final answer with Atlas link
 ```
 
 ---
 
-## 4. The Two Tools
+## 5. The Two Tools
 
 ### Tool 1: `atlas_graphql` — Structured GraphQL lookup
 
-This tool has a **structured Pydantic schema** with explicit parameters. The agent fills in the parameters as part of its tool call, making the entire GraphQL pipeline deterministic (zero LLM calls after the agent's initial decision).
+This tool has a **structured Pydantic schema** with explicit parameters. The agent fills in the parameters as part of its tool call, making the entire GraphQL pipeline deterministic (zero LLM calls after the agent's decision).
 
 ```python
 class AtlasGraphQLInput(BaseModel):
     """Query the Atlas of Economic Complexity GraphQL API for structured data lookups.
 
     Use this tool for:
-    - Country profiles (GDP, population, exports, imports, ECI, COI, rankings)
-    - Export baskets (top sectors/products for a country in a year)
-    - Trade partners (export destinations, import origins)
-    - Bilateral trade (what country A exports to country B)
-    - Growth projections, diversification grades, policy recommendations
-    - Pre-computed growth rates (CAGR at 3/5/10/15 year windows)
-    - Time series of country-level metrics (exports, GDP, ECI over years)
-    - RCA values and product space data
-    - New products a country has started exporting
+    - Country-level metrics for a specific year or year range (GDP, exports, imports,
+      ECI, COI, growth projection, population)
+    - Export baskets (what products does country X export, with RCA, PCI, distance,
+      market share)
+    - Trade partners (who does country X trade with, aggregate by partner)
+    - Bilateral trade (what does country A export to country B, by product)
+    - Product-level global data (PCI, global export value)
+    - "Which countries export product X?" (with RCA, market share per country)
+    - Country-to-group or group-to-country trade flows
+    - Group-level aggregates (continental trade, regional GDP)
+    - Product classification lookups and crosswalks
 
     Do NOT use this tool for:
-    - Cross-country comparisons ("which countries export the most X?")
-    - Regional aggregations ("total exports of African countries")
-    - 6-digit product granularity
-    - Product-level time series across many years
-    - Custom derived metrics or complex analytical queries
+    - Complex analytical queries requiring JOINs, CTEs, or window functions
+    - Custom derived metrics or calculations not in the API
+    - Questions requiring more than ~5 API calls (use SQL instead for efficiency)
+    - Diversification grades, policy recommendations, structural transformation
+      status (these are NOT available in the API)
+
+    IMPORTANT: The API is rate-limited to 120 requests per minute (2 req/sec).
+    Prefer broader queries over many narrow ones. Request only the fields you need.
     """
     query_type: Literal[
-        "country_profile",           # 46-field country overview (GDP, trade, ECI, COI, growth, diversification, policy)
-        "country_year",              # Country metrics for a specific year
-        "country_year_range",        # Country metrics time series (min_year to max_year)
-        "all_country_year",          # All countries for one year (good for rankings)
-        "country_lookback",          # Pre-computed growth (CAGR, ECI change, etc.) over lookback period
-        "country_product_lookback",  # Per-product growth metrics over lookback period
-        "treemap_products",          # Country's export basket by product (with RCA, PCI, distance, market share)
-        "treemap_partners",          # Country's trade partners
-        "treemap_bilateral",         # What country A exports to country B, by product
-        "product_space",             # Products with RCA values and connections
-        "product_info",              # Product details (name, code, hierarchy)
-        "product_year",              # Product-level global data (PCI, global export value)
-        "all_product_year",          # All products for one year
-        "new_products",              # New products a country started exporting
-        "new_products_comparison",   # New products vs peer countries
-        "global_datum",              # Global statistics (total trade, rank counts)
+        "country_year",                # Country metrics (GDP, exports, ECI, COI, growth proj)
+        "country_product_year",        # Country's export basket with RCA, PCI, distance, market share
+        "product_exporters",           # Which countries export a product (CPY_P equivalent)
+        "country_country_year",        # Trade partners (aggregate bilateral)
+        "country_country_product_year",# Bilateral trade by product
+        "product_year",                # Product-level global data (PCI, global value)
+        "product_product",             # Product proximity/relatedness
+        "location_country",            # Country metadata (ISO codes, names, eligibility)
+        "location_group",              # Country groups (continent, trade bloc, income level)
+        "group_year",                  # Group-level time series (GDP, trade, population)
+        "country_group_product_year",  # Country-to-group trade
+        "group_country_product_year",  # Group-to-country trade
+        "product_dictionary",          # Product classification lookup (HS92, HS12, HS22, SITC)
+        "conversion_weights",          # Product code crosswalk between classifications
+        "data_availability",           # Year ranges by classification
+        "data_flags",                  # Country data eligibility flags
+        "downloads_table",             # Full data dictionary (70 tables with column definitions)
     ] = Field(description="The type of GraphQL query to execute")
 
     country: Optional[str] = Field(
@@ -178,7 +345,7 @@ class AtlasGraphQLInput(BaseModel):
     )
     year: Optional[int] = Field(
         default=None,
-        description="Year for the query (1980-2024)"
+        description="Year (1962-2024 depending on classification). If omitted, returns latest."
     )
     min_year: Optional[int] = Field(
         default=None,
@@ -188,17 +355,21 @@ class AtlasGraphQLInput(BaseModel):
         default=None,
         description="End year for range queries"
     )
-    product_level: Literal["section", "twoDigit", "fourDigit"] = Field(
-        default="fourDigit",
-        description="Product aggregation level"
+    product_class: Literal["HS92", "HS12", "HS22", "SITC"] = Field(
+        default="HS92",
+        description="Product classification system"
     )
-    lookback_years: Optional[Literal[3, 5, 10, 15]] = Field(
+    product_level: Literal[1, 2, 4, 6] = Field(
+        default=4,
+        description="Product aggregation level (1=section, 2=two-digit, 4=four-digit, 6=six-digit)"
+    )
+    group_type: Optional[str] = Field(
         default=None,
-        description="Lookback period for growth metrics"
+        description="Group type for group queries (continent, subregion, trade, wdi_income_level, etc.)"
     )
 ```
 
-**Key design choice:** The agent passes human-readable country/product names (e.g., "Kenya", "crude oil"), and the GraphQL pipeline resolves them to internal IDs (`location-404`, `product-HS-910`) using cached lookup tables. The agent never needs to know GraphQL IDs.
+**Key design choice:** The agent passes human-readable country/product names (e.g., "Kenya", "crude oil"), and the GraphQL pipeline resolves them to integer IDs (`countryId: 404`, `productId: 910`) using cached lookup tables. The agent never needs to know internal IDs.
 
 ### Tool 2: `atlas_sql` — Natural language SQL query
 
@@ -209,14 +380,10 @@ class AtlasSQLInput(BaseModel):
     """Generate and execute SQL queries on the Atlas trade database.
 
     Use this tool for:
-    - Cross-country comparisons ("which countries export the most X?")
-    - Regional aggregations ("total exports of African countries")
-    - Custom time ranges and product-level time series
-    - Complex derived metrics (custom CAGR, weighted averages, market share changes)
-    - 6-digit product granularity
-    - Specific HS revision data (HS92 vs HS12)
-    - Product proximity/relatedness analysis
-    - Multi-step analytical queries requiring JOINs, CTEs, window functions
+    - Complex analytical queries requiring JOINs, CTEs, window functions
+    - Custom derived metrics (custom CAGR, weighted averages, market share changes)
+    - Questions that would require many GraphQL API calls (>5)
+    - Multi-step analytical queries
     - Anything the GraphQL tool cannot handle
     """
     question: str = Field(
@@ -228,17 +395,17 @@ class AtlasSQLInput(BaseModel):
 
 The agent is an LLM with access to both tool schemas. The tool descriptions (docstrings) explain when to use each. The agent's system prompt reinforces this with concrete guidance. The LLM's native tool-calling capability selects the appropriate tool.
 
-This is the **standard LangGraph/LangChain pattern** for multi-tool agents: `llm.bind_tools([atlas_graphql_schema, atlas_sql_schema])`. The LLM sees both tools and picks the right one based on the question, just as it currently picks `query_tool` for every question.
+This is the standard LangGraph/LangChain pattern: `llm.bind_tools([atlas_graphql_schema, atlas_sql_schema])`.
 
 ---
 
-## 5. Graph Structure
+## 6. Graph Structure
 
 ### Detailed node and edge diagram
 
 ```
                               ┌────────────────────────────────────────────────────┐
-                              │          GRAPHQL PIPELINE (~200-500ms)              │
+                              │          GRAPHQL PIPELINE (~300-500ms)              │
                               │          Zero LLM calls, fully deterministic        │
                               │                                                    │
                               │  resolve_entities → build_graphql_query             │
@@ -264,26 +431,21 @@ START → agent → [route] ──┤
 
 ### Routing function
 
-The routing function after the agent node inspects which tool was called:
-
 ```python
 def route_after_agent(state: AtlasAgentState) -> str:
     last_msg = state["messages"][-1]
 
-    # No tool calls → agent is done, end the graph
     if not hasattr(last_msg, "tool_calls") or not last_msg.tool_calls:
         return END
 
-    # Check query limits
     if state.get("queries_executed", 0) >= max_uses:
         return "max_queries_exceeded"
 
-    # Route based on which tool was called
     tool_name = last_msg.tool_calls[0]["name"]
     if tool_name == "atlas_graphql":
-        return "resolve_entities"          # → GraphQL pipeline entry
+        return "resolve_entities"
     elif tool_name == "atlas_sql":
-        return "extract_sql_question"      # → SQL pipeline entry (existing)
+        return "extract_sql_question"
 
     return END
 ```
@@ -291,10 +453,8 @@ def route_after_agent(state: AtlasAgentState) -> str:
 ### Complete edge definitions
 
 ```python
-# Entry
 builder.add_edge(START, "agent")
 
-# Agent routing (3-way conditional)
 builder.add_conditional_edges("agent", route_after_agent, {
     "resolve_entities": "resolve_entities",
     "extract_sql_question": "extract_sql_question",
@@ -316,186 +476,132 @@ builder.add_edge("get_table_info", "generate_sql")
 builder.add_edge("generate_sql", "validate_sql")
 builder.add_conditional_edges("validate_sql", route_after_validation, {
     "execute_sql": "execute_sql",
-    "format_sql_results": "format_sql_results",  # validation failed, skip execution
+    "format_sql_results": "format_sql_results",
 })
 builder.add_edge("execute_sql", "format_sql_results")
 builder.add_edge("format_sql_results", "agent")
 
-# Max queries exceeded
 builder.add_edge("max_queries_exceeded", "agent")
 ```
 
 ### Node count
 
-- **Existing nodes:** agent, extract_sql_question (renamed from extract_tool_question), extract_products, lookup_codes, get_table_info, generate_sql, validate_sql, execute_sql, format_sql_results (renamed from format_results), max_queries_exceeded — **10 nodes**
-- **New nodes:** resolve_entities, build_graphql_query, execute_graphql, format_graphql_results — **4 nodes**
+- **Existing nodes (10):** agent, extract_sql_question, extract_products, lookup_codes, get_table_info, generate_sql, validate_sql, execute_sql, format_sql_results, max_queries_exceeded
+- **New nodes (4):** resolve_entities, build_graphql_query, execute_graphql, format_graphql_results
 - **Total: 14 nodes**
 
 ---
 
-## 6. GraphQL Pipeline Design
+## 7. GraphQL Pipeline Design
 
-The GraphQL pipeline is a 4-node linear chain. All nodes are deterministic (zero LLM calls). The entire pipeline runs in ~200-500ms.
+The GraphQL pipeline is a 4-node linear chain. All nodes are deterministic (zero LLM calls). The entire pipeline runs in ~300-500ms.
 
 ### Node 1: `resolve_entities`
 
-Maps human-readable country/product names from the tool call args to GraphQL internal IDs.
+Maps human-readable country/product names from the tool call args to integer IDs used by the staging API.
 
-**Input:** `state["graphql_params"]` (the parsed tool call args)
-**Output:** `state["graphql_resolved"]` — same params but with `country_id`, `product_id`, `partner_id` fields added
+**Entity resolver implementation:** At startup, the GraphQL client fetches `locationCountry` and `productHs92(productLevel: 4)` to build in-memory lookup tables:
 
-```python
-async def resolve_entities_node(state: AtlasAgentState, *, entity_resolver) -> dict:
-    params = state["graphql_params"]
-    resolved = {}
-
-    if params.get("country"):
-        resolved["country_id"] = entity_resolver.resolve_country(params["country"])
-        # e.g., "Kenya" → "location-404"
-
-    if params.get("partner_country"):
-        resolved["partner_id"] = entity_resolver.resolve_country(params["partner_country"])
-
-    if params.get("product"):
-        resolved["product_id"] = entity_resolver.resolve_product(params["product"])
-        # e.g., "crude oil" or "2709" → "product-HS-910"
-
-    if not resolved.get("country_id") and params.get("country"):
-        return {
-            "graphql_error": f"Could not resolve country: {params['country']}",
-            "last_error": f"Country not found: {params['country']}"
-        }
-
-    return {"graphql_resolved": {**params, **resolved}}
-```
-
-**Entity resolver implementation:** At startup, the GraphQL client fetches `allLocations(level: country)` and `allProducts(productClass: HS, productLevel: fourDigit)` to build in-memory lookup tables:
-
-- **Country lookup:** Matches by ISO3 code (exact), ISO2 code (exact), short name (fuzzy), long name (fuzzy). Returns `location-{iso_numeric}` ID.
-- **Product lookup:** Matches by HS code (exact), short name (fuzzy). Returns `product-HS-{internal_id}` ID.
+- **Country lookup:** Matches by ISO3 code (exact), ISO2 code (exact), short name (fuzzy), long name (fuzzy). Returns integer `countryId` (e.g., `404` for Kenya).
+- **Product lookup:** Matches by HS code (exact), short name (fuzzy). Returns integer `productId` (e.g., `910` for crude oil / code 2709).
 - **Fuzzy matching:** Case-insensitive, handles common variants (e.g., "South Korea" → "Korea, Republic of").
 
 ### Node 2: `build_graphql_query`
 
-Constructs the GraphQL query string from the resolved parameters. This is a pure function with no external dependencies.
+Constructs the GraphQL query string from the resolved parameters. Each `query_type` maps to a template.
 
-**Input:** `state["graphql_resolved"]`
-**Output:** `state["graphql_query"]` — the GraphQL query string
+Example for `country_year`:
+```graphql
+{
+  countryYear(countryId: 404, yearMin: 2022, yearMax: 2022, productClass: HS92) {
+    countryId year
+    exportValue importValue
+    population gdp gdppc gdpConst gdppcConst
+    eci eciRank eciFixed
+    coi coiRank
+    growthProj
+  }
+}
+```
 
-Each `query_type` maps to a template:
+Example for `country_product_year` (export basket):
+```graphql
+{
+  countryProductYear(countryId: 404, productClass: HS92, productLevel: 4,
+                     yearMin: 2022, yearMax: 2022) {
+    productId year
+    exportValue importValue
+    exportRca globalMarketShare
+    distance cog pci
+    normalizedPci normalizedCog normalizedDistance
+    productStatus isNew
+  }
+}
+```
 
-```python
-def build_graphql_query(state: AtlasAgentState) -> dict:
-    params = state["graphql_resolved"]
-    query_type = params["query_type"]
-
-    match query_type:
-        case "country_profile":
-            query = f'''{{
-              countryProfile(location: "{params['country_id']}") {{
-                location {{ shortName code }}
-                latestGdpPerCapita {{ quantity year }}
-                incomeClassification
-                exportValue importValue exportValueRank
-                latestEci latestEciRank
-                latestCoi latestCoiRank coiClassification
-                diversificationGrade
-                growthProjectionClassification growthProjection growthProjectionRank
-                policyRecommendation
-                structuralTransformationStep
-                diversity diversityRank
-                marketShareMainSector {{ shortName code }}
-                marketShareMainSectorDirection
-                comparisonLocations {{ shortName }}
-              }}
-            }}'''
-
-        case "treemap_products":
-            year_arg = f', year: {params["year"]}' if params.get("year") else ""
-            product_arg = f', product: "{params["product_id"]}"' if params.get("product_id") else ""
-            partner_arg = f', partner: "{params["partner_id"]}"' if params.get("partner_id") else ""
-            query = f'''{{
-              treeMap(facet: CPY_C, productClass: HS{year_arg},
-                      productLevel: {params.get("product_level", "fourDigit")},
-                      locationLevel: country, location: "{params['country_id']}"{product_arg}{partner_arg}) {{
-                ... on TreeMapProduct {{
-                  product {{ shortName code topLevelParent {{ shortName }} productType }}
-                  exportValue importValue rca pci distance
-                  opportunityGain globalMarketShare
-                }}
-              }}
-            }}'''
-
-        # ... (templates for all 16 query types)
-
-    return {"graphql_query": query}
+Example for `product_exporters` (which countries export product X):
+```graphql
+{
+  countryProductYear(productId: 910, productClass: HS92, productLevel: 4,
+                     yearMin: 2022, yearMax: 2022) {
+    countryId year
+    exportValue exportRca globalMarketShare
+  }
+}
 ```
 
 ### Node 3: `execute_graphql`
 
-Makes the async HTTP POST to the Atlas GraphQL API.
+Makes the async HTTP POST to `http://staging.atlas.growthlab-dev.com/api/graphql`.
 
-**Input:** `state["graphql_query"]`
-**Output:** `state["graphql_raw_response"]` or `state["graphql_error"]`
-
+**Rate limiting:** The execute node must enforce the ≤ 120 req/min (2 req/sec) limit per the Atlas `llms.txt`. Implementation:
 ```python
-async def execute_graphql_node(state: AtlasAgentState, *, graphql_client) -> dict:
-    query = state["graphql_query"]
-    try:
-        response = await graphql_client.execute(query)
-        if "errors" in response:
-            return {
-                "graphql_error": f"GraphQL error: {response['errors'][0]['message']}",
-                "last_error": response["errors"][0]["message"],
-            }
-        return {"graphql_raw_response": response["data"]}
-    except Exception as e:
-        return {
-            "graphql_error": f"GraphQL request failed: {str(e)}",
-            "last_error": str(e),
+class RateLimitedGraphQLClient:
+    def __init__(self, endpoint: str, max_requests_per_second: float = 2.0):
+        self.endpoint = endpoint
+        self.min_interval = 1.0 / max_requests_per_second
+        self._last_request_time = 0.0
+        self._lock = asyncio.Lock()
+        self._headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "ask-atlas/1.0",  # Required by Atlas llms.txt
         }
+
+    async def execute(self, query: str, variables: dict = None) -> dict:
+        async with self._lock:
+            now = time.monotonic()
+            elapsed = now - self._last_request_time
+            if elapsed < self.min_interval:
+                await asyncio.sleep(self.min_interval - elapsed)
+            self._last_request_time = time.monotonic()
+
+        async with httpx.AsyncClient(headers=self._headers) as client:
+            response = await client.post(
+                self.endpoint,
+                json={"query": query, "variables": variables or {}},
+                timeout=30.0,
+            )
+            response.raise_for_status()
+            return response.json()
 ```
 
 ### Node 4: `format_graphql_results`
 
-Formats the raw JSON response into a readable string for the agent, generates the Atlas link, and creates a `ToolMessage`.
-
-**Input:** `state["graphql_raw_response"]` or `state["graphql_error"]`, `state["graphql_params"]`
-**Output:** `state["messages"]` (appends ToolMessage), `state["queries_executed"]` (incremented), `state["atlas_link"]`
-
-If GraphQL succeeded:
-- Format the JSON response into a human-readable string
-- Generate the Atlas website link (see section 9)
-- Create a ToolMessage with the formatted result + Atlas link
-
-If GraphQL failed:
-- Create a ToolMessage with the error message
-- The agent sees the error and can decide to retry with `atlas_sql`
+Formats the raw JSON response into a readable string for the agent, generates the Atlas link, and creates a `ToolMessage`. Also enriches the response by joining product/country names from cached lookup tables (since the API returns IDs, not names).
 
 ---
 
-## 7. SQL Pipeline (Existing, Minor Changes)
+## 8. SQL Pipeline (Existing, Minor Changes)
 
 The existing SQL pipeline is preserved almost entirely. Changes:
 
-1. **Rename** `extract_tool_question` → `extract_sql_question` and `format_results` → `format_sql_results` for clarity.
-
-2. **`extract_sql_question`** now extracts from `atlas_sql` tool calls instead of `query_tool` tool calls. The logic is identical — pull the `question` arg from the tool call.
-
-3. **`format_sql_results`** keeps existing behavior but now explicitly does NOT generate Atlas links (SQL answers typically don't map to a single Atlas page).
-
-4. **All other nodes** (`extract_products`, `lookup_codes`, `get_table_info`, `generate_sql`, `validate_sql`, `execute_sql`) are completely unchanged.
+1. **Rename** `extract_tool_question` → `extract_sql_question` and `format_results` → `format_sql_results`
+2. **`extract_sql_question`** now extracts from `atlas_sql` tool calls instead of `query_tool`
+3. **All other nodes** are completely unchanged
 
 ---
 
-## 8. Agent System Prompt Design
-
-The agent system prompt is the critical piece that enables good routing decisions. It needs to:
-
-1. Describe both tools and when to use each
-2. Explain the agent can decompose complex questions into sub-questions
-3. Instruct the agent to include Atlas links in its final response
-4. Describe GraphQL capabilities and limitations concretely
+## 9. Agent System Prompt Design
 
 ### Proposed system prompt structure
 
@@ -503,180 +609,65 @@ The agent system prompt is the critical piece that enables good routing decision
 You are Ask-Atlas — an expert agent designed to answer complex questions about
 international trade data. You have access to two tools:
 
-## Tool 1: atlas_graphql — Atlas API Lookup (fast, pre-computed data)
+## Tool 1: atlas_graphql — Atlas API Lookup (fast, structured data)
 
 Use this tool for structured data lookups from the Atlas of Economic Complexity API.
-This tool is FAST (no SQL generation needed) and provides pre-computed metrics that
-are NOT available via SQL, including:
-- Policy recommendations (ParsimoniousIndustrial, StrategicBets, LightTouch, TechFrontier)
-- Diversification grades (A+ to D-)
-- Growth projections and classifications (rapid, moderate, slow)
-- Structural transformation status
-- COI classifications (low, medium, high)
-- Export growth classification (Troubling, Mixed, Static, Promising)
-- Market share main sector and direction
+This tool is FAST (~300ms, no SQL generation needed) and returns data directly from
+the Atlas database.
 
 Good for:
-- Single-country profiles, metrics, and rankings
-- Export baskets (what does country X export?)
-- Trade partners (who does country X trade with?)
-- Bilateral trade (what does country A export to country B?)
-- Time series of country-level metrics
-- RCA, distance, opportunity gain for a country's products
-- Pre-computed CAGR (3, 5, 10, 15 year lookback periods)
-- New products a country has started exporting
+- Country-level metrics: GDP, exports, imports, ECI, COI, growth projection, population
+- Export baskets: what products does a country export (with RCA, PCI, distance, market share)
+- Trade partners: who does a country trade with
+- Bilateral trade: what does country A export to country B, by product
+- "Which countries export product X?" with RCA and market share per country
+- Product-level global data: PCI, global export value
+- Group-level trade: continental, regional, trade bloc aggregates
+- Country-to-group and group-to-country trade flows
+- Product classification lookups and crosswalks (HS92, HS12, HS22, SITC)
+- Time series (specify min_year and max_year)
+- Data through 2024, including 6-digit product granularity
 
-NOT good for (use atlas_sql instead):
-- Cross-country comparisons ("which countries export the most X?")
-- Regional aggregations ("total African exports")
-- 6-digit product granularity
-- Product-level time series across many years
-- SITC classification data
-- Custom derived calculations
-- Complex multi-table analytical queries
+NOT available via this tool (use atlas_sql instead):
+- Diversification grades, policy recommendations, structural transformation status
+- Complex multi-step calculations, custom CAGR, weighted averages
+- Questions requiring many API calls (>5) — SQL is more efficient
+
+IMPORTANT: The API allows at most 120 requests per minute (2 req/sec). Prefer broader
+queries (e.g., all products for a country) over many narrow ones.
 
 ## Tool 2: atlas_sql — SQL Query Generation (powerful, flexible)
-
-Use this tool for complex analytical queries requiring SQL. Supports arbitrary JOINs,
-aggregations, window functions, CTEs, and cross-country comparisons.
-
-Good for:
-- Cross-country comparisons and rankings
-- Regional/group aggregations
-- Custom time ranges and product-level time series
-- Complex derived metrics
-- 6-digit product granularity
-- SITC and HS revision-specific data
-- Product proximity analysis
-- Any query that atlas_graphql cannot handle
-
-## Workflow
-
-1. Understand the user's question
-2. For simple questions: call the appropriate single tool
-3. For complex questions: break the question into sub-questions, call the
-   appropriate tool for each sub-question, then synthesize the results
-4. Prefer atlas_graphql when possible — it is faster and provides
-   pre-computed metrics that SQL cannot
-5. When atlas_graphql results include an Atlas link, include it in your
-   response so users can verify the data on the Atlas website
+... [same as before] ...
 
 ## Atlas Links
 
 When the atlas_graphql tool returns results, it includes a link to the
-relevant page on the Atlas of Economic Complexity website
-(atlas.hks.harvard.edu). ALWAYS include these links in your response
-using markdown format, e.g.:
-[View on Atlas of Economic Complexity](https://atlas.hks.harvard.edu/countries/404/summary)
-
-This allows users to cross-check the data and explore further.
-
-... [rest of existing prompt: data description, metrics, formatting rules] ...
+relevant page on the Atlas of Economic Complexity website. ALWAYS include
+these links in your response using markdown format.
 ```
 
 ---
 
-## 9. Atlas Link Generation
+## 10. Atlas Link Generation
 
-For every successful GraphQL query, we generate a link to the corresponding Atlas website page. This is deterministic and based on the query type and resolved parameters.
-
-### Atlas URL patterns
+Atlas links still work the same way — they're based on the Atlas website URL structure, not the API endpoint.
 
 | Query Type | Atlas URL Pattern | Example |
 |---|---|---|
-| `country_profile` | `/countries/{iso_numeric}/summary` | `/countries/404/summary` (Kenya) |
-| `country_year` | `/countries/{iso_numeric}/summary` | Same as profile |
-| `country_year_range` | `/countries/{iso_numeric}/summary` | Same as profile |
-| `all_country_year` | `/rankings/country` | Cross-country rankings |
-| `country_lookback` | `/countries/{iso_numeric}/growth-dynamics` | Growth dynamics page |
-| `country_product_lookback` | `/countries/{iso_numeric}/growth-dynamics` | Growth dynamics page |
-| `treemap_products` | `/countries/{iso_numeric}/export-basket?year={year}` | Export basket visualization |
-| `treemap_partners` | `/countries/{iso_numeric}/partners` | Trade partners page |
-| `treemap_bilateral` | `/countries/{iso_numeric}/partners?partner={partner_iso}` | Bilateral trade |
-| `product_space` | `/countries/{iso_numeric}/product-space` | Product space visualization |
-| `product_info` | `/products/{hs_code}` | Product details page |
+| `country_year` | `/countries/{iso_numeric}/summary` | `/countries/404/summary` (Kenya) |
+| `country_product_year` | `/countries/{iso_numeric}/export-basket` | Export basket visualization |
+| `product_exporters` | `/products/{hs_code}` | Product page with exporters |
+| `country_country_year` | `/countries/{iso_numeric}/partners` | Trade partners page |
+| `country_country_product_year` | `/countries/{iso_numeric}/partners?partner={partner}` | Bilateral trade |
 | `product_year` | `/products/{hs_code}` | Product details page |
-| `new_products` | `/countries/{iso_numeric}/new-products` | New products page |
-| `new_products_comparison` | `/countries/{iso_numeric}/new-products` | New products page |
-| `global_datum` | `/rankings/country` | Global rankings |
+| `location_group` | `/rankings/country` | Rankings page |
+| `group_year` | `/rankings/country` | Rankings page |
 
-### Implementation
-
-```python
-def generate_atlas_link(
-    query_type: str,
-    country_iso_numeric: int | None = None,
-    product_hs_code: str | None = None,
-    partner_iso_numeric: int | None = None,
-    year: int | None = None,
-) -> str | None:
-    """Generate a link to the Atlas of Economic Complexity website."""
-    base = "https://atlas.hks.harvard.edu"
-
-    match query_type:
-        case "country_profile" | "country_year" | "country_year_range":
-            if country_iso_numeric:
-                return f"{base}/countries/{country_iso_numeric}/summary"
-
-        case "country_lookback" | "country_product_lookback":
-            if country_iso_numeric:
-                return f"{base}/countries/{country_iso_numeric}/growth-dynamics"
-
-        case "treemap_products":
-            if country_iso_numeric:
-                url = f"{base}/countries/{country_iso_numeric}/export-basket"
-                if year:
-                    url += f"?year={year}"
-                return url
-
-        case "treemap_partners":
-            if country_iso_numeric:
-                return f"{base}/countries/{country_iso_numeric}/partners"
-
-        case "treemap_bilateral":
-            if country_iso_numeric:
-                url = f"{base}/countries/{country_iso_numeric}/partners"
-                if partner_iso_numeric:
-                    url += f"?partner={partner_iso_numeric}"
-                return url
-
-        case "product_space":
-            if country_iso_numeric:
-                return f"{base}/countries/{country_iso_numeric}/product-space"
-
-        case "product_info" | "product_year":
-            if product_hs_code:
-                return f"{base}/products/{product_hs_code}"
-
-        case "new_products" | "new_products_comparison":
-            if country_iso_numeric:
-                return f"{base}/countries/{country_iso_numeric}/new-products"
-
-        case "all_country_year" | "global_datum" | "all_product_year":
-            return f"{base}/rankings/country"
-
-    return None
-```
-
-### Where the link appears in the response
-
-The Atlas link is included in the `ToolMessage` from `format_graphql_results`:
-
-```
-Kenya's total exports in 2022: $16.2 billion (rank: 90th)
-ECI: -0.5268 (rank: 93rd)
-Diversification grade: C
-Growth projection: moderate
-Policy recommendation: Parsimonious Industrial
-
-📎 View on Atlas: https://atlas.hks.harvard.edu/countries/404/summary
-```
-
-The agent then includes this link in its final response to the user.
+The Atlas website URL uses `atlas.hks.harvard.edu` (the production site), even though the API uses the staging endpoint.
 
 ---
 
-## 10. State Schema Changes
+## 11. State Schema Changes
 
 ```python
 class AtlasAgentState(TypedDict):
@@ -687,7 +678,7 @@ class AtlasAgentState(TypedDict):
 
     # GraphQL pipeline state (NEW)
     graphql_params: Optional[dict]           # Parsed tool call args
-    graphql_resolved: Optional[dict]         # Params with resolved entity IDs
+    graphql_resolved: Optional[dict]         # Params with resolved integer IDs
     graphql_query: Optional[str]             # The GraphQL query string
     graphql_raw_response: Optional[dict]     # Raw JSON response
     graphql_error: Optional[str]             # Error message if query failed
@@ -710,554 +701,234 @@ class AtlasAgentState(TypedDict):
     override_mode: Optional[str]
 ```
 
-**Note on `queries_executed`:** This counter now counts both GraphQL and SQL tool invocations. Since GraphQL queries are cheap and fast while SQL queries are expensive, we may want to raise the default `max_uses` from 3 to something like 8-10 to give the agent room for multiple GraphQL lookups + a few SQL queries per user question.
-
 ---
 
-## 11. Streaming and Frontend
+## 12. Streaming and Frontend
 
 ### New SSE events for the GraphQL pipeline
-
-The frontend currently expects: `thread_id`, `agent_talk`, `tool_call`, `tool_output`, `node_start`, `pipeline_state`, `done`.
-
-The GraphQL pipeline emits the same event types but with different node names:
 
 | SSE Event | When | Data |
 |---|---|---|
 | `tool_call` | Agent calls `atlas_graphql` | `{"tool_name": "atlas_graphql", "args": {...}}` |
-| `node_start` | `resolve_entities` begins | `{"node": "resolve_entities", "label": "Resolving entities"}` |
-| `node_start` | `build_graphql_query` begins | `{"node": "build_graphql_query", "label": "Building API query"}` |
-| `node_start` | `execute_graphql` begins | `{"node": "execute_graphql", "label": "Querying Atlas API"}` |
+| `node_start` | Each GraphQL pipeline node begins | `{"node": "...", "label": "..."}` |
 | `pipeline_state` | GraphQL complete | `{"stage": "execute_graphql", "graphql_query": "...", "atlas_link": "..."}` |
-| `node_start` | `format_graphql_results` begins | `{"node": "format_graphql_results", "label": "Formatting results"}` |
 | `tool_output` | GraphQL result returned to agent | `{"content": "...", "atlas_link": "..."}` |
 
 ### Dynamic pipeline stepper
 
-The frontend's pipeline stepper shows different sequences based on which tool was called:
+**GraphQL sequence:** Resolving entities → Building API query → Querying Atlas API → Formatting results
 
-**GraphQL pipeline sequence:**
-```
-Resolving entities → Building API query → Querying Atlas API → Formatting results
-```
-
-**SQL pipeline sequence (existing):**
-```
-Extracting question → Identifying products → Looking up codes → Loading table metadata
-→ Generating SQL → Validating SQL → Executing query → Formatting results
-```
-
-The `PIPELINE_SEQUENCE` constant becomes tool-specific:
-
-```python
-GRAPHQL_PIPELINE_SEQUENCE = [
-    ("resolve_entities", "Resolving entities"),
-    ("build_graphql_query", "Building API query"),
-    ("execute_graphql", "Querying Atlas API"),
-    ("format_graphql_results", "Formatting results"),
-]
-
-SQL_PIPELINE_SEQUENCE = [
-    ("extract_sql_question", "Extracting question"),
-    ("extract_products", "Identifying products"),
-    ("lookup_codes", "Looking up product codes"),
-    ("get_table_info", "Loading table metadata"),
-    ("generate_sql", "Generating SQL query"),
-    ("validate_sql", "Validating SQL"),
-    ("execute_sql", "Executing query"),
-    ("format_sql_results", "Formatting results"),
-]
-```
-
-### Frontend changes
-
-The `useChatStream` hook needs to:
-1. Detect which tool was called from the `tool_call` event
-2. Use the appropriate pipeline sequence for the stepper
-3. Display Atlas links in the chat UI (clickable markdown links)
-4. Handle multiple pipeline runs per user message (the agent may call GraphQL, then SQL, then GraphQL again)
+**SQL sequence (existing):** Extracting question → Identifying products → Looking up codes → Loading metadata → Generating SQL → Validating SQL → Executing query → Formatting results
 
 ---
 
-## 12. Caching Architecture
+## 13. Caching Architecture
+
+Caching is especially important given the rate limit of 120 req/min (2 req/sec).
 
 ### Level 1: Entity lookup tables (warm at startup, refresh daily)
 
-- **`allLocations`** → country name/ISO → GraphQL ID mapping (~252 entries)
-- **`allProducts`** → HS code/name → GraphQL product ID mapping (~1,248 at fourDigit)
-- Stored in memory. Built at application startup. Refreshed on a 24-hour timer.
-- This is critical for the `resolve_entities` node to work without any API calls.
+- **`locationCountry`** → country name/ISO → integer countryId mapping (~252 entries)
+- **`productHs92(productLevel: 4)`** → HS code/name → integer productId mapping (~1,248 entries)
+- Stored in memory. Built at application startup (2 API calls). Refreshed on a 24-hour timer.
 
-### Level 2: GraphQL response cache (TTL-based)
+### Level 2: Query response cache (TTL-based)
 
-- **`countryProfile`** responses — TTL 1 hour (data changes yearly)
-- **`globalDatum`** — TTL 24 hours
-- **`treeMap` responses** — TTL 1 hour (keyed by country+year+productLevel)
-- **`allCountryYear`** — TTL 1 hour (keyed by year)
-- Use an in-memory LRU cache (e.g., `cachetools.TTLCache`) with configurable max size.
+- **`countryYear`** responses — TTL 1 hour (keyed by countryId+year+productClass)
+- **`countryProductYear`** responses — TTL 1 hour (keyed by countryId+productClass+productLevel+year)
+- **`locationGroup`** — TTL 24 hours
+- Use `cachetools.TTLCache` with configurable max size.
 
-This means the second question about Kenya in the same session returns instantly.
+### Level 3: Rate limiter
 
-### Level 3: Atlas link is deterministic (no caching needed)
-
-Atlas link generation is a pure function of query type + parameters. No caching needed.
+- Global rate limiter: max 2 requests/second (shared across all concurrent users)
+- Implementation: `asyncio.Lock` + minimum delay between requests
+- Cached responses bypass the rate limiter entirely
 
 ---
 
-## 13. Error Handling and Fallback
+## 14. Error Handling and Fallback
 
-### GraphQL errors → agent decides to fall back
-
-When the GraphQL pipeline fails, the error is returned to the agent as a `ToolMessage`. The agent then naturally decides what to do:
+When the GraphQL pipeline fails, the error is returned to the agent as a `ToolMessage`. The agent naturally decides what to do:
 
 ```
-Agent: calls atlas_graphql(query_type="treemap_products", country="Kenya", ...)
-GraphQL pipeline: → HTTP 500 error from Atlas API
-ToolMessage: "The Atlas GraphQL API returned an error for this query. You may
-             want to try the atlas_sql tool to get this data from the database."
-Agent: thinks "GraphQL failed, let me try SQL"
-Agent: calls atlas_sql(question="What are Kenya's top export products?")
-SQL pipeline: → runs normally → returns results
+Agent: calls atlas_graphql(query_type="country_year", country="Kenya", year=2022)
+GraphQL: → HTTP error or empty result
+ToolMessage: "The Atlas API returned an error. You may want to try atlas_sql."
+Agent: → decides to retry with atlas_sql
 ```
 
-This is more elegant than automatic fallback — the agent stays in control and can reason about why the failure happened.
-
-### Specific error types
-
-| Error | Response in ToolMessage | Agent likely action |
+| Error | ToolMessage | Agent likely action |
 |---|---|---|
-| Country not found | "Could not resolve country: 'Wakanda'" | Inform user, ask for clarification |
-| Product not found | "Could not resolve product: 'unobtanium'" | Try SQL with natural language |
-| Broken endpoint | "GraphQL API error: [message]" | Fall back to SQL |
-| Network timeout | "GraphQL request timed out" | Retry or fall back to SQL |
+| Country not found | "Could not resolve country: 'Wakanda'" | Inform user |
+| Network timeout | "API request timed out" | Retry or fall back to SQL |
 | Empty result | "No data found for Kenya in 1960" | Inform user about data limits |
-
-### SQL errors (unchanged)
-
-The existing SQL error handling remains: validation errors skip execution, execution errors include retry logic, and all errors are reported to the agent via ToolMessage.
+| Rate limited | "API rate limit reached, please wait" | Wait and retry, or use SQL |
 
 ---
 
-## 14. Worked Examples
+## 15. Worked Examples
 
 ### Example 1: Simple question (GraphQL only)
 
-**User:** "What are Kenya's total exports?"
+**User:** "What are Kenya's total exports in 2022?"
 
 ```
-Turn 1: Agent thinks → "Simple country metric, GraphQL can handle this"
-        Agent calls → atlas_graphql(query_type="country_profile", country="Kenya")
+Turn 1: Agent → atlas_graphql(query_type="country_year", country="Kenya", year=2022)
+GraphQL pipeline (~300ms):
+  resolve: "Kenya" → countryId=404
+  build: countryYear(countryId:404, yearMin:2022, yearMax:2022, productClass:HS92)
+  execute: HTTP POST → {exportValue: 15180082242, importValue: 28809922029, ...}
+  format: "Kenya 2022: exports $15.2B, imports $28.8B, ECI -0.457, ..."
+         + link: https://atlas.hks.harvard.edu/countries/404/summary
 
-GraphQL pipeline:
-  resolve_entities    → "Kenya" → "location-404"           (~1ms, cached)
-  build_graphql_query → countryProfile query string         (~1ms)
-  execute_graphql     → HTTP POST, get JSON response        (~300ms)
-  format_graphql_results → formatted text + Atlas link      (~1ms)
-
-ToolMessage:
-  "Kenya export value: $16,200,000,000 (rank: 90th)
-   Import value: $27,300,000,000
-   ECI: -0.5268 (rank: 93)
-   📎 https://atlas.hks.harvard.edu/countries/404/summary"
-
-Turn 2: Agent synthesizes → "Kenya's total exports in the most recent year were
-        approximately $16.2 billion, ranking 90th globally.
-        [View on Atlas](https://atlas.hks.harvard.edu/countries/404/summary)"
-        → END
+Turn 2: Agent synthesizes with Atlas link → END
 ```
 
-**Total time: ~1s. LLM calls: 2 (agent turn 1 + agent turn 2). GraphQL calls: 1. SQL calls: 0.**
+**Total: ~1s. LLM calls: 2. API calls: 1. SQL calls: 0.**
 
-### Example 2: Simple question (SQL only)
-
-**User:** "Which countries export the most crude oil?"
+### Example 2: "Which countries export the most tea?" (GraphQL — broken on production API, works on staging)
 
 ```
-Turn 1: Agent thinks → "Cross-country comparison, need SQL"
-        Agent calls → atlas_sql(question="Which countries export the most crude oil?")
+Turn 1: Agent → atlas_graphql(query_type="product_exporters",
+         product="tea", product_class="HS92", product_level=4, year=2022)
+GraphQL pipeline (~400ms):
+  resolve: "tea" → productId=727
+  build: countryProductYear(productId:727, productClass:HS92, productLevel:4,
+         yearMin:2022, yearMax:2022) → requesting countryId, exportValue, exportRca, globalMarketShare
+  execute: → 226 countries returned
+  format: top exporters by value + Atlas link
 
-SQL pipeline: (existing 8-node pipeline, ~5s)
-  → extract_products → lookup_codes("crude oil" → hs92 code 2709)
-  → generate_sql → validate → execute → format
-
-ToolMessage: "Results: Saudi Arabia $161B, Russia $120B, Iraq $85B, ..."
-
-Turn 2: Agent synthesizes → "The top crude oil exporters are: ..."
-        → END
+Turn 2: Agent synthesizes → END
 ```
 
-**Total time: ~7s. LLM calls: 4-5 (agent + extract + lookup + generate + agent). SQL calls: 1.**
+**This requires the staging API (CPY_P is broken on production). It's a single GraphQL call on the staging API.**
 
-### Example 3: Complex question (both tools)
+### Example 3: Mixed GraphQL + SQL
 
-**User:** "What is Kenya's diversification grade and how does it compare to other East African countries?"
-
-```
-Turn 1: Agent thinks → "Diversification grade is a pre-computed metric only
-         in GraphQL. But regional comparison needs SQL. I'll get Kenya's
-         grade first."
-        Agent calls → atlas_graphql(query_type="country_profile", country="Kenya")
-
-GraphQL pipeline: (~300ms)
-  → resolve → build → execute → format
-ToolMessage: "Kenya diversification grade: C, ECI: -0.5268, ..."
-             + Atlas link
-
-Turn 2: Agent thinks → "Got Kenya's grade (C). Now I need East African peers.
-         GraphQL can't do regional queries, so I'll use SQL."
-        Agent calls → atlas_sql(question="What are the ECI and diversity values
-         for East African countries (Kenya, Tanzania, Uganda, Rwanda, Ethiopia,
-         Burundi) in the most recent year?")
-
-SQL pipeline: (~5s)
-  → generates query joining country_year with location_country
-  → executes → returns ECI/diversity for 6 countries
-
-Turn 3: Agent synthesizes → "Kenya has a diversification grade of C.
-         Compared to its East African neighbors:
-         - Ethiopia: ECI -1.02 (less complex)
-         - Tanzania: ECI -0.89
-         - Kenya: ECI -0.53 (most complex in region)
-         - Uganda: ECI -0.71
-         - Rwanda: ECI -0.62
-         Kenya is the most economically complex country in East Africa.
-         [View Kenya on Atlas](https://atlas.hks.harvard.edu/countries/404/summary)"
-        → END
-```
-
-**Total time: ~8s. GraphQL calls: 1. SQL calls: 1. Agent gets the best of both worlds.**
-
-### Example 4: Complex question (multiple GraphQL calls)
-
-**User:** "Compare the growth prospects of Vietnam and Indonesia."
+**User:** "What is Kenya's ECI and how does it compare to other East African countries?"
 
 ```
-Turn 1: Agent thinks → "Growth projections are pre-computed in GraphQL.
-         I'll get both country profiles."
-        Agent calls → atlas_graphql(query_type="country_profile", country="Vietnam")
+Turn 1: Agent → atlas_graphql(query_type="country_year", country="Kenya", year=2022)
+  → Returns ECI, COI, growth projection + Atlas link
 
-GraphQL pipeline: (~300ms) → countryProfile for Vietnam
-ToolMessage: "Vietnam: growth projection 3.8%, classification: rapid,
-             diversification grade: B, ECI: 0.24 ..."
+Turn 2: Agent → atlas_sql(question="Compare ECI values for Kenya, Tanzania, Uganda,
+         Rwanda, Ethiopia, Burundi in the most recent year")
+  → SQL pipeline generates and executes cross-country comparison
 
-Turn 2: Agent calls → atlas_graphql(query_type="country_profile", country="Indonesia")
-
-GraphQL pipeline: (~300ms) → countryProfile for Indonesia
-ToolMessage: "Indonesia: growth projection 2.1%, classification: moderate,
-             diversification grade: C, ECI: -0.12 ..."
-
-Turn 3: Agent calls → atlas_graphql(query_type="country_lookback",
-         country="Vietnam", lookback_years=5)
-
-GraphQL pipeline: (~300ms) → 5-year lookback for Vietnam
-ToolMessage: "Vietnam 5yr: export CAGR 2.2%, ECI change +0.15, ..."
-
-Turn 4: Agent calls → atlas_graphql(query_type="country_lookback",
-         country="Indonesia", lookback_years=5)
-
-GraphQL pipeline: (~300ms) → 5-year lookback for Indonesia
-ToolMessage: "Indonesia 5yr: export CAGR 1.8%, ECI change -0.03, ..."
-
-Turn 5: Agent synthesizes comparison with Atlas links for both countries
-        → END
+Turn 3: Agent synthesizes both results with Atlas link → END
 ```
 
-**Total time: ~4s. All GraphQL, zero SQL, zero SQL-generation LLM calls.**
+### Example 4: Group-level trade (new capability)
 
-### Example 5: GraphQL fails, agent falls back to SQL
-
-**User:** "What countries are the biggest exporters of cars?"
+**User:** "What are the total exports of African countries?"
 
 ```
-Turn 1: Agent thinks → "Cross-country product comparison. GraphQL can't do
-         CPY_P (broken endpoint). I know this needs SQL."
-        Agent calls → atlas_sql(question="Which countries export the most cars?")
+Turn 1: Agent → atlas_graphql(query_type="group_year",
+         group_type="continent", year=2022)
+  → Returns GDP, population, trade for all continents
+  → Agent extracts Africa's row
 
-SQL pipeline: → generates, validates, executes
-ToolMessage: "Germany $147.6B, Japan $82.3B, ..."
-
-Turn 2: Agent synthesizes → "The top car exporters are: ..."
-        → END
+Turn 2: Agent synthesizes → END
 ```
 
-The agent's system prompt tells it that cross-country product comparisons need SQL, so it doesn't even try GraphQL.
+**This requires the staging API (groups are broken on production). It's a single GraphQL call on the staging API.**
 
 ---
 
-## 15. Design Decisions and Alternatives Considered
+## 16. Design Decisions and Alternatives Considered
 
 ### Decision 1: Two-tool agent vs. static router
 
 **Chosen: Two-tool agent.** The agent decides which tool to call per sub-question.
 
-*Alternative considered: Static router node* — A dedicated `classify_query` node routes the entire question to either GraphQL or SQL. Rejected because:
-- Many questions need BOTH data sources
-- The agent naturally decomposes questions as part of its ReAct reasoning
-- Adding a router is an extra LLM call for every question, even simple ones
-- The agent already has the reasoning capability to make routing decisions
+*Alternative: Static router node.* Rejected because many questions need BOTH data sources, and the agent naturally decomposes questions as part of its ReAct reasoning.
 
 ### Decision 2: Structured vs. natural-language GraphQL tool input
 
 **Chosen: Structured Pydantic schema** for the GraphQL tool.
 
-*Alternative considered: Natural language question* (like the SQL tool), with an internal LLM to classify and extract parameters. Rejected because:
-- The whole point of the GraphQL path is to be FAST — adding an LLM call defeats the purpose
-- The agent is already an LLM — it can fill in structured parameters as part of its tool call
-- Structured input means the entire GraphQL pipeline is deterministic and testable
-- The Pydantic schema serves as documentation for the agent (it sees the field descriptions)
+*Alternative: Natural language question with internal LLM classification.* Rejected because the whole point of the GraphQL path is to be fast — adding an LLM call defeats the purpose.
 
-### Decision 3: Separate format nodes vs. unified format node
+### Decision 3: Rate limiting strategy
 
-**Chosen: Separate format nodes** (`format_graphql_results` and `format_sql_results`).
+**Chosen: Global rate limiter at 2 req/sec** (per Atlas `llms.txt`: ≤ 120 req/min) with aggressive caching.
 
-*Alternative considered: Unified format node* that handles both paths. Rejected because:
-- The formatting logic is quite different (JSON response vs. SQL result rows/columns)
-- Atlas link generation only applies to GraphQL results
-- Separate nodes are easier to test independently
-- The SSE streaming events are different for each path
+This means:
+- The agent should prefer fewer, broader queries (e.g., get all products for a country in one call, then filter client-side)
+- Cached responses bypass the rate limiter
+- For questions requiring many GraphQL calls (>5), the agent should use SQL instead
+- The system prompt explicitly tells the agent about the rate limit
 
 ### Decision 4: Query limits
 
-**Chosen: Single `queries_executed` counter for both tools, with raised `max_uses`.**
-
-*Alternative considered: Separate counters* (unlimited GraphQL, limited SQL). Rejected because:
-- Simplicity — one counter is easier to reason about
-- Even though GraphQL is cheap, unbounded API calls could cause issues
-- Raising `max_uses` from 3 to ~10 gives plenty of room for mixed GraphQL+SQL workflows
-- If needed, we can add separate counters later
+**Chosen: Single `queries_executed` counter for both tools, raised to ~10.** GraphQL queries are fast but rate-limited; SQL queries are slow but unlimited. A combined counter of ~10 gives room for mixed workflows.
 
 ### Decision 5: Atlas links for SQL answers
 
-**Chosen: Atlas links only for GraphQL answers (Phase 1).**
-
-*Alternative considered: Also generating Atlas links for SQL answers.* Deferred to Phase 2 because:
-- For GraphQL queries, the link is deterministic (query type → page type, 1:1 mapping)
-- For SQL queries, the mapping is fuzzy — a complex query might touch multiple countries/products
-- Getting SQL links right requires extracting entities from the SQL question, which adds complexity
-- Better to ship the GraphQL link feature first and iterate
+**Chosen: Atlas links only for GraphQL answers (Phase 1).** For GraphQL queries, the link is deterministic (query type → page type). For SQL queries, the mapping is fuzzy. Phase 2 can add SQL link generation.
 
 ---
 
-## 16. Implementation Phases
+## 17. Implementation Phases
 
 ### Phase 1: GraphQL Client Module
 
 **New file: `src/graphql_client.py`**
 
-- Async HTTP client (httpx) for `POST https://atlas.hks.harvard.edu/api/countries/graphql`
-- `EntityResolver` class with country/product lookup tables
-- Startup initialization: fetch `allLocations` + `allProducts`, build indexes
-- Query builders for all 16 query types
-- Response parsers
+- `RateLimitedGraphQLClient` — async httpx client with 2 req/sec throttle + `User-Agent: ask-atlas/1.0` header
+- `EntityResolver` — country/product name → integer ID lookup tables
+- Query builders for all 17 query types
+- Response parsers and name enrichment (join IDs with cached names)
 - TTL cache for responses
 - Atlas link generation function
 
-**New file: `src/tests/test_graphql_client.py`**
-
-- Unit tests with mocked HTTP responses
-- Entity resolution tests (name matching, ISO codes, fuzzy matching)
-- Query builder tests (correct GraphQL syntax for each query type)
-- Atlas link generation tests
+**New file: `src/tests/test_graphql_client.py`** — unit tests with mocked HTTP
 
 ### Phase 2: GraphQL Pipeline Nodes + Graph Update
 
-**Modify: `src/generate_query.py`**
+**Modify: `src/generate_query.py`** — add GraphQL tool schema, 4 new nodes, update routing, update agent prompt
 
-- Add `AtlasGraphQLInput` and `AtlasSQLInput` tool schemas
-- Rename `_query_tool_schema` → `_atlas_sql_schema`, add `_atlas_graphql_schema`
-- Add 4 new nodes: `resolve_entities`, `build_graphql_query`, `execute_graphql`, `format_graphql_results`
-- Rename existing format nodes for clarity
-- Update `route_after_agent` to inspect tool name and route to the correct pipeline
-- Update `agent_node` to bind both tools: `llm.bind_tools([_atlas_graphql_schema, _atlas_sql_schema])`
-- Add new edges for GraphQL pipeline
+**Modify: `src/state.py`** — add GraphQL pipeline state fields
 
-**Modify: `src/state.py`**
-
-- Add GraphQL pipeline state fields
-
-**Modify: `src/generate_query.py` (agent prompt)**
-
-- Rewrite `AGENT_PREFIX` to describe both tools (see section 8)
-- Add Atlas link inclusion instructions
-
-**New file: `src/tests/test_graphql_pipeline.py`**
-
-- Test each GraphQL pipeline node independently
-- Test end-to-end GraphQL pipeline with mocked HTTP
-- Test routing: agent calls GraphQL → correct pipeline runs
+**New file: `src/tests/test_graphql_pipeline.py`** — pipeline and routing tests
 
 ### Phase 3: Streaming + Frontend
 
-**Modify: `src/text_to_sql.py`**
+**Modify: `src/text_to_sql.py`** — handle new GraphQL pipeline streaming events
 
-- Handle new GraphQL pipeline node events in `astream_agent_response`
-- Emit correct SSE events for GraphQL pipeline
-- Support dynamic pipeline sequence based on tool name
-- Include `atlas_link` in relevant SSE events
-
-**Modify: `frontend/src/hooks/use-chat-stream.ts`**
-
-- Detect tool type from `tool_call` event
-- Use appropriate pipeline sequence for stepper
-- Handle Atlas links in `tool_output` events
-
-**Modify: `frontend/src/components/chat/pipeline-stepper.tsx`**
-
-- Support dynamic pipeline sequences (short GraphQL vs. long SQL)
-
-**Modify: `frontend/src/components/chat/message-bubble.tsx` (or equivalent)**
-
-- Render Atlas links as clickable elements in the chat UI
+**Modify: frontend** — dynamic pipeline stepper, Atlas link display
 
 ### Phase 4: Evaluation + Tuning
 
-**Modify: `evaluation/eval_questions.json`**
-
-- Add routing metadata: expected tool (`graphql`, `sql`, `both`, `none`) per question
-- Add new questions for GraphQL-exclusive metrics (diversification grades, policy recs)
-
-**Modify: `evaluation/run_eval.py`**
-
-- Track which tool was used for each question
-- Report routing accuracy (did the agent pick the right tool?)
-- Report GraphQL vs. SQL usage statistics
-- Compare answer quality between tools when both can answer
-
-**New: Router accuracy evaluation**
-
-- For each eval question, check if the agent's tool choice matches the expected routing
-- Flag misroutes: agent used SQL when GraphQL would have been faster, or tried GraphQL for something SQL-only
+**Modify: `evaluation/`** — routing metadata on eval questions, track tool usage
 
 ---
 
-## 17. What This Means for Atlas Decoupling
-
-### Degraded mode: no database
+## 18. What This Means for Atlas Decoupling
 
 With the GraphQL path in place, the system can operate without any database:
+- **GraphQL-routable questions (~50-60%)** — work perfectly
+- **SQL-routable questions** — agent informs user that complex analysis requires the database
 
-- **GraphQL-routable questions (~62%)** — work perfectly
-- **SQL-routable questions (~25%)** — agent calls `atlas_sql`, gets an error, informs the user: "This question requires our analytical database, which is currently unavailable. For simpler questions about specific countries, I can still help."
+The staging API's expanded capabilities (groups, SITC, 6-digit, CPY_P) mean that MORE questions can be handled without SQL, even though the derived narrative metrics require falling back to the production API.
 
-This enables:
-- **Lightweight deployment** (GraphQL only) as a demo or low-cost tier
-- **Full deployment** (GraphQL + database) for complete capability
-- **Graceful degradation** if the database is down
-
-### Strategic positioning
-
-By generating Atlas links for every GraphQL-answered question:
-- Users are funneled to the Atlas website for verification and exploration
-- The Atlas team sees this tool as **driving traffic** to their site
-- Simple data lookups explicitly reference the authoritative source
-- Complex analytical queries (SQL path) provide value that the Atlas website can't — this is where our tool uniquely adds value
-
-This framing — "we handle the questions the Atlas website can't, and we send users TO the website for the ones it can" — makes the tool complementary rather than competitive.
+By generating Atlas links for every GraphQL-answered question, users are funneled to the Atlas website for verification and exploration. The Atlas team sees this tool as driving traffic to their site.
 
 ---
 
-## Appendix A: GraphQL Query Type Reference
-
-Summary of the 16 supported query types, their GraphQL endpoints, and key fields:
-
-| Query Type | GraphQL Endpoint | Key Fields | Status |
-|---|---|---|---|
-| `country_profile` | `countryProfile` | 46 fields: GDP, trade, ECI, COI, growth, diversification, policy | Working |
-| `country_year` | `countryYear` | population, exportValue, importValue, gdp, eci, eciRank, coi | Working |
-| `country_year_range` | `countryYearRange` | Time series arrays of the above | Working |
-| `all_country_year` | `allCountryYear` | Same as country_year, for all 145 countries | Working |
-| `country_lookback` | `countryLookback` | CAGR, ECI change, growth classification | Working |
-| `country_product_lookback` | `countryProductLookback` | Per-product CAGR, growth | Working |
-| `treemap_products` | `treeMap(CPY_C)` | exportValue, rca, pci, distance, opportunityGain, globalMarketShare | Working |
-| `treemap_partners` | `treeMap(CCY_C)` | exportValue, importValue per partner country | Working |
-| `treemap_bilateral` | `treeMap(CPY_C+partner)` | Bilateral trade by product | Working |
-| `product_space` | `productSpace` | RCA, x/y coords, connections | Working |
-| `product_info` | `product` | code, shortName, longName, parent, productType | Working |
-| `product_year` | `productYear` | pci, globalExportValue, complexityLevel | Working |
-| `all_product_year` | `allProductYear` | Same for all ~1,245 products | Working |
-| `new_products` | `newProductsCountry` | newProducts list, count, export value | Working |
-| `new_products_comparison` | `newProductsComparisonCountries` | Peer country comparison | Working |
-| `global_datum` | `globalDatum` | Global trade totals, rank counts | Working |
-
-### Known broken endpoints (NOT included as query types)
-
-| Broken Endpoint | Why | Workaround |
-|---|---|---|
-| `treeMap(CPY_P)` | Null locations | SQL only |
-| `productYearRange` | Missing positional arg | Loop `productYear` |
-| `allCountryYearRange` | `'hs_coi'` error | Use single-country or single-year variants |
-| `group` / `allGroups` | LocationGroup model missing | SQL only |
-| `manyCountryProductYear` | Two overlapping bugs | SQL only |
-| SITC treeMap | SITC not implemented | SQL only |
-
-## Appendix B: LangGraph Implementation Details
-
-### How `bind_tools` works with two tools
-
-```python
-# Current (single tool):
-model_with_tools = llm.bind_tools([_query_tool_schema])
-
-# New (two tools):
-model_with_tools = llm.bind_tools([_atlas_graphql_schema, _atlas_sql_schema])
-```
-
-LangChain converts each tool's Pydantic schema into the provider's function-calling format. The LLM receives both tool descriptions and autonomously decides which to call based on the question. This is the standard LangGraph/LangChain pattern for multi-tool agents.
-
-### How the tool call is extracted
-
-The existing `extract_tool_question` function pulls `question` from `tool_calls[0]["args"]`. For GraphQL, we need to extract the full structured args:
-
-```python
-def extract_graphql_params(state: AtlasAgentState) -> dict:
-    """Extract structured parameters from the atlas_graphql tool call."""
-    last_msg = state["messages"][-1]
-    tool_call = last_msg.tool_calls[0]
-    return {"graphql_params": tool_call["args"]}
-
-def extract_sql_question(state: AtlasAgentState) -> dict:
-    """Extract the question from the atlas_sql tool call."""
-    last_msg = state["messages"][-1]
-    tool_call = last_msg.tool_calls[0]
-    return {"pipeline_question": tool_call["args"]["question"]}
-```
-
-Note: `resolve_entities` is the entry point for the GraphQL pipeline, so `extract_graphql_params` is folded into it rather than being a separate node.
-
-### Parallel tool calls
-
-LLMs can make parallel tool calls (e.g., calling `atlas_graphql` for Kenya AND Vietnam in the same turn). Our graph processes one tool call at a time (the first in the list). If the agent makes multiple parallel calls, the second one would need to be handled in a subsequent turn. This is acceptable for now — the agent prompt can be tuned to prefer sequential calls for clarity.
-
-If parallel tool call support becomes important later, LangGraph's `Send` API can fan out to process multiple calls concurrently:
-
-```python
-# Future enhancement: parallel tool call processing
-def route_after_agent(state) -> list[Send] | str:
-    last_msg = state["messages"][-1]
-    if not last_msg.tool_calls:
-        return END
-    # Fan out: one Send per tool call
-    return [
-        Send("graphql_pipeline" if tc["name"] == "atlas_graphql" else "sql_pipeline",
-             {"tool_call": tc})
-        for tc in last_msg.tool_calls
-    ]
-```
-
-## Appendix C: Files to Create/Modify
+## Appendix A: Files to Create/Modify
 
 | File | Action | Description |
 |---|---|---|
-| `src/graphql_client.py` | **CREATE** | Async HTTP client, entity resolver, query builders, caching, Atlas link generator |
-| `src/generate_query.py` | **MODIFY** | Add GraphQL tool schema, 4 new nodes, update routing, update agent prompt |
+| `src/graphql_client.py` | **CREATE** | Rate-limited async client, entity resolver, query builders, caching, Atlas links |
+| `src/generate_query.py` | **MODIFY** | Add GraphQL tool schema, 4 nodes, routing, agent prompt |
 | `src/state.py` | **MODIFY** | Add GraphQL pipeline state fields |
 | `src/text_to_sql.py` | **MODIFY** | Handle GraphQL pipeline streaming events |
-| `src/api.py` | **MODIFY** | Minor: pass GraphQL client to agent factory |
+| `src/api.py` | **MODIFY** | Pass GraphQL client to agent factory |
 | `src/tests/test_graphql_client.py` | **CREATE** | Unit tests for GraphQL client |
-| `src/tests/test_graphql_pipeline.py` | **CREATE** | Tests for GraphQL pipeline nodes and routing |
-| `src/tests/test_pipeline_nodes.py` | **MODIFY** | Rename SQL-specific tests |
-| `src/tests/test_agent_trajectory.py` | **MODIFY** | Add trajectories testing tool routing |
-| `evaluation/eval_questions.json` | **MODIFY** | Add routing metadata, new GraphQL-only questions |
+| `src/tests/test_graphql_pipeline.py` | **CREATE** | Pipeline and routing tests |
+| `evaluation/eval_questions.json` | **MODIFY** | Add routing metadata, update for staging API capabilities |
 | `evaluation/run_eval.py` | **MODIFY** | Track tool usage per question |
 | `frontend/src/hooks/use-chat-stream.ts` | **MODIFY** | Handle new tool types and pipeline sequences |
 | `frontend/src/components/chat/pipeline-stepper.tsx` | **MODIFY** | Dynamic pipeline display |
