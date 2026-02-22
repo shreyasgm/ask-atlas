@@ -5,9 +5,12 @@ import tempfile
 from unittest.mock import Mock
 from src.generate_query import (
     _classification_tables_for_schemas,
+    _query_tool_schema,
+    get_tables_in_schemas,
     load_example_queries,
     load_table_descriptions,
     get_table_info_for_schemas,
+    QueryToolInput,
 )
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 
@@ -132,6 +135,69 @@ class TestLoadFiles:
         assert len(result["schema1"]) == 1
         assert result["schema1"][0]["table_name"] == "table1"
         assert result["schema1"][0]["context_str"] == "Description of table1"
+
+
+class TestGetTablesInSchemas:
+    """Tests for get_tables_in_schemas — maps (table_descriptions, schemas) → schema-qualified table dicts."""
+
+    TABLE_DESCRIPTIONS = {
+        "hs92": [
+            {"table_name": "country_year", "context_str": "Year-level HS92 data"},
+            {"table_name": "country_product_year_4", "context_str": "4-digit product trade"},
+        ],
+        "sitc": [
+            {"table_name": "country_year", "context_str": "Year-level SITC data"},
+        ],
+        "classification": [
+            {"table_name": "location_country", "context_str": "Countries"},
+        ],
+    }
+
+    def test_single_schema_qualifies_table_names(self):
+        """Tables should be returned with schema prefix (e.g. hs92.country_year)."""
+        result = get_tables_in_schemas(self.TABLE_DESCRIPTIONS, ["hs92"])
+        names = [t["table_name"] for t in result]
+        assert names == ["hs92.country_year", "hs92.country_product_year_4"]
+
+    def test_single_schema_preserves_context_str(self):
+        """context_str must pass through unchanged."""
+        result = get_tables_in_schemas(self.TABLE_DESCRIPTIONS, ["hs92"])
+        assert result[0]["context_str"] == "Year-level HS92 data"
+
+    def test_multiple_schemas_combined(self):
+        """Passing two schemas should return tables from both."""
+        result = get_tables_in_schemas(self.TABLE_DESCRIPTIONS, ["hs92", "sitc"])
+        names = {t["table_name"] for t in result}
+        assert "hs92.country_year" in names
+        assert "hs92.country_product_year_4" in names
+        assert "sitc.country_year" in names
+
+    def test_missing_schema_returns_nothing(self):
+        """A schema key absent from table_descriptions should produce no tables."""
+        result = get_tables_in_schemas(self.TABLE_DESCRIPTIONS, ["nonexistent"])
+        assert result == []
+
+    def test_empty_schemas_returns_empty(self):
+        result = get_tables_in_schemas(self.TABLE_DESCRIPTIONS, [])
+        assert result == []
+
+    def test_classification_schema_treated_like_any_other(self):
+        """'classification' is a valid key — its tables should be schema-qualified too."""
+        result = get_tables_in_schemas(self.TABLE_DESCRIPTIONS, ["classification"])
+        assert result == [{"table_name": "classification.location_country", "context_str": "Countries"}]
+
+
+class TestQueryToolSchema:
+    """Tests for the _query_tool_schema tool definition used by the LLM agent."""
+
+    def test_tool_name_is_query_tool(self):
+        """The agent graph routes on tool name — renaming breaks the pipeline."""
+        assert _query_tool_schema.name == "query_tool"
+
+    def test_args_schema_has_question_field(self):
+        """The pipeline extracts tool_calls[0]['args']['question']; schema must match."""
+        fields = QueryToolInput.model_fields
+        assert "question" in fields
 
 
 class TestClassificationTablesForSchemas:
