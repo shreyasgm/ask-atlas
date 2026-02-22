@@ -97,9 +97,10 @@ Hovering over a product in the treemap shows:
 ### Technical Notes
 
 - **The site is a JavaScript SPA** (React). Static HTTP fetches will not work for page content.
-- **The Explore pages use a different GraphQL API endpoint** from Country pages:
-  - Explore: `POST /api/graphql`
-  - Country pages: `POST /api/countries/graphql`
+- **The Explore pages use a different GraphQL API** from Country pages — these are two completely separate APIs with different schemas:
+  - Explore API: `POST /api/graphql` (26 query types, explicit HS revisions, bilateral trade, groups, better introspection)
+  - Country Pages API: `POST /api/countries/graphql` (25 query types, `countryProfile` with derived narrative metrics)
+  - Both are available on production (`atlas.hks.harvard.edu`) and staging (`staging.atlas.growthlab-dev.com`), with identical schemas within each type.
 - **Canvas-based visualizations**: treemap and product space are rendered on `<canvas>`, so tooltip data is not accessible via DOM queries. Use the GraphQL API.
 - **The "Growth Opportunity" table view** (`/explore/feasibility/table`) renders an HTML table that IS DOM-accessible — no canvas overlay.
 - **Product IDs in URLs** use an internal numeric format (`product-HS92-726` for Coffee/0901), not the HS code directly. The mapping comes from the `productHs92` query.
@@ -108,21 +109,15 @@ Hovering over a product in the treemap shows:
 
 ## 2. GraphQL API Reference (Explore Endpoint)
 
-> **NOTE (2026-02-21):** The Explore endpoint documented here (`/api/graphql`) uses the **same architecture** as the staging API at `http://staging.atlas.growthlab-dev.com/api/graphql`. The staging API is available to Growth Lab members and is preferred for new backend development. The production Country Pages API (`/api/countries/graphql`) remains fully available and provides unique derived metrics (`countryProfile`, lookback, etc.) not present in this API. See `docs/backend_redesign_analysis.md` for full details on how both APIs complement each other. **Rate limit (per Atlas `llms.txt`): ≤ 120 req/min (2 req/sec) for automated access. Include a `User-Agent` header.**
+> **NOTE:** The Explore API documented here (`/api/graphql`) is a separate API from the Country Pages API (`/api/countries/graphql`). Both are available on production (`atlas.hks.harvard.edu`) and staging (`staging.atlas.growthlab-dev.com`), with identical schemas within each API type. The Country Pages API provides unique derived metrics (`countryProfile`, lookback, etc.) not present in this API. See `docs/backend_redesign_analysis.md` for full details on how both APIs complement each other. **Rate limit (per Atlas `llms.txt`): ≤ 120 req/min (2 req/sec) for automated access. Include a `User-Agent` header.**
 
 ### Endpoints
 
-**Production Explore API** (public):
+**Explore API** (available on both production and staging with identical schemas):
 
 ```
 POST https://atlas.hks.harvard.edu/api/graphql
-Content-Type: application/json
-```
-
-**Staging API** (Growth Lab internal, preferred for new development):
-
-```
-POST http://staging.atlas.growthlab-dev.com/api/graphql
+POST https://staging.atlas.growthlab-dev.com/api/graphql
 Content-Type: application/json
 ```
 
@@ -134,14 +129,14 @@ No authentication headers required. Introspection enabled. Per the Atlas `llms.t
 
 ### Key Difference from Country Pages API
 
-| Aspect | Explore / Staging API (`/api/graphql`) | Country Pages API (`/api/countries/graphql`) |
+| Aspect | Explore API (`/api/graphql`) | Country Pages API (`/api/countries/graphql`) |
 |--------|------------------------------|----------------------------------------------|
 | ID format | Numeric integers (`countryId: 404`) | String IDs (`location: "location-404"`) |
 | Year params | `yearMin` / `yearMax` ranges | `year`, `minYear` / `maxYear` |
 | Product class | `HS92`, `HS12`, `HS22`, `SITC` | `HS`, `SITC` |
 | Services | `servicesClass: unilateral` param | Bundled into product class |
 | Focus | Raw trade data, bilateral flows | Analytical profiles, recommendations |
-| Unique features | All endpoints working, data dictionary, groups, 6-digit, HS22 | `countryProfile` (46 derived fields), `countryLookback`, peer comparisons |
+| Unique features | Data dictionary, groups, bilateral trade, 6-digit, HS22, argument descriptions in introspection | `countryProfile` (46 derived fields), `countryLookback`, peer comparisons |
 
 ### Available Query Types (26 total)
 
