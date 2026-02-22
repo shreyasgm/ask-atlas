@@ -1,4 +1,5 @@
 import type { Components } from 'react-markdown';
+import { memo } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { ChatMessage } from '@/types/chat';
@@ -33,7 +34,7 @@ interface AssistantMessageProps {
   onSend: (text: string) => void;
 }
 
-export default function AssistantMessage({ isLast, message, onSend }: AssistantMessageProps) {
+export default memo(function AssistantMessage({ isLast, message, onSend }: AssistantMessageProps) {
   return (
     <div className="flex flex-col gap-2">
       {message.content && (
@@ -75,4 +76,4 @@ export default function AssistantMessage({ isLast, message, onSend }: AssistantM
       )}
     </div>
   );
-}
+});

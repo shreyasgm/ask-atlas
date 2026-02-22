@@ -272,6 +272,14 @@ async def health() -> dict:
     return {"status": "ok"}
 
 
+@app.get("/debug/caches")
+async def cache_stats() -> dict:
+    """Read-only diagnostic endpoint for monitoring cache hit rates."""
+    from src.cache import registry
+
+    return registry.stats()
+
+
 @app.post("/threads")
 async def create_thread() -> dict:
     """Generate a new conversation thread ID."""

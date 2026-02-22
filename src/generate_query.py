@@ -298,6 +298,18 @@ def get_table_info_for_schemas(
     classification_schemas: List[str],
 ) -> str:
     """Get table information for a list of schemas."""
+    from src.cache import registry, table_info_cache, table_info_key
+
+    key = table_info_key(classification_schemas)
+    cached = table_info_cache.get(key)
+    if cached is not None:
+        registry.record_hit("table_info")
+        logger.debug("Cache HIT for table_info key=%s", key)
+        return cached
+
+    registry.record_miss("table_info")
+    logger.debug("Cache MISS for table_info key=%s", key)
+
     # Get data schema tables (e.g. hs92.country_year, hs92.country_product_year_4, ...)
     tables = get_tables_in_schemas(
         table_descriptions=table_descriptions,
@@ -320,6 +332,8 @@ def get_table_info_for_schemas(
         )
         table_info += db.get_table_info(table_names=[table["table_name"]])
         table_info += "\n\n"
+
+    table_info_cache[key] = table_info
     return table_info
 
 

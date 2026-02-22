@@ -564,7 +564,10 @@ class ProductAndSchemaLookup:
     async def _aget_official_product_details(
         self, codes: List[str], classification_schema: str
     ) -> List[Dict[str, Any]]:
-        """Async version: query database to verify product codes and get official names."""
+        """Async version: query database to verify product codes and get official names.
+
+        Delegates to the cached function in src/cache for deduplication and TTL caching.
+        """
         if not codes:
             return []
         if not self.async_engine:
@@ -572,108 +575,35 @@ class ProductAndSchemaLookup:
         if classification_schema not in SCHEMA_TO_PRODUCTS_TABLE_MAP:
             raise ValueError(f"Invalid classification schema: {classification_schema}")
 
-        products_table = SCHEMA_TO_PRODUCTS_TABLE_MAP[classification_schema]
-        query = text(f"""
-            SELECT DISTINCT
-                code as product_code,
-                name_short_en as product_name,
-                product_id,
-                product_level
-            FROM {products_table}
-            WHERE code = ANY(:codes)
-        """)
+        from src.cache import cached_product_details, registry
 
-        try:
-            async with self.async_engine.connect() as conn:
-                result = await conn.execute(query, {"codes": codes})
-                rows = result.fetchall()
-                return [
-                    {
-                        "product_code": str(r[0]),
-                        "product_name": str(r[1]),
-                        "product_id": str(r[2]),
-                        "product_level": str(r[3]),
-                    }
-                    for r in rows
-                ]
-        except SQLAlchemyError as e:
-            logger.error("Database error during async code verification: %s", e)
-            return []
+        result = await cached_product_details(
+            tuple(sorted(codes)), classification_schema, self.async_engine
+        )
+        # record_miss is called inside cached_product_details on actual miss;
+        # if we got here without it being called, it was a cache hit
+        registry.record_hit("product_details")
+        return result
 
     async def _adirect_text_search(
         self, product_to_search: str, classification_schema: str
     ) -> List[Dict[str, Any]]:
-        """Async version: full-text search with trigram fallback."""
+        """Async version: full-text search with trigram fallback.
+
+        Delegates to the cached function in src/cache for deduplication and TTL caching.
+        """
         if not self.async_engine:
             raise RuntimeError("async_engine not set; pass async_engine to __init__")
         if classification_schema not in SCHEMA_TO_PRODUCTS_TABLE_MAP:
             raise ValueError(f"Invalid classification schema: {classification_schema}")
 
-        products_table = SCHEMA_TO_PRODUCTS_TABLE_MAP[classification_schema]
+        from src.cache import cached_text_search, registry
 
-        ts_query = text(f"""
-            SELECT DISTINCT
-                name_short_en as product_name,
-                code as product_code,
-                product_id,
-                product_level,
-                ts_rank_cd(to_tsvector('english', name_short_en),
-                        plainto_tsquery('english', :product_to_search)) as rank
-            FROM {products_table}
-            WHERE to_tsvector('english', name_short_en) @@
-                plainto_tsquery('english', :product_to_search)
-            ORDER BY rank DESC
-            LIMIT 5
-        """)
-
-        fuzzy_query = text(f"""
-            SELECT DISTINCT
-                name_short_en as product_name,
-                code as product_code,
-                product_id,
-                product_level,
-                similarity(LOWER(name_short_en), LOWER(:product_to_search)) as sim
-            FROM {products_table}
-            WHERE similarity(LOWER(name_short_en), LOWER(:product_to_search)) > 0.3
-            ORDER BY sim DESC
-            LIMIT 5
-        """)
-
-        try:
-            async with self.async_engine.connect() as conn:
-                result = await conn.execute(
-                    ts_query, {"product_to_search": product_to_search}
-                )
-                ts_results = result.fetchall()
-
-                if ts_results:
-                    return [
-                        {
-                            "product_name": str(r[0]),
-                            "product_code": str(r[1]),
-                            "product_id": str(r[2]),
-                            "product_level": str(r[3]),
-                        }
-                        for r in ts_results
-                    ]
-
-                result = await conn.execute(
-                    fuzzy_query, {"product_to_search": product_to_search}
-                )
-                fuzzy_results = result.fetchall()
-
-                return [
-                    {
-                        "product_name": str(r[0]),
-                        "product_code": str(r[1]),
-                        "product_id": str(r[2]),
-                        "product_level": str(r[3]),
-                    }
-                    for r in fuzzy_results
-                ]
-        except SQLAlchemyError as e:
-            logger.error("Database error during async text search: %s", e)
-            return []
+        result = await cached_text_search(
+            product_to_search, classification_schema, self.async_engine
+        )
+        registry.record_hit("text_search")
+        return result
 
     async def aget_candidate_codes(
         self, products_found: SchemasAndProductsFound

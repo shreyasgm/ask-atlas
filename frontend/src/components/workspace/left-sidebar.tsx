@@ -1,5 +1,5 @@
 import { ChevronLeft, Globe, Menu, Plus, Search, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import type { ConversationSummary } from '@/types/chat';
 import { cn } from '@/lib/utils';
@@ -51,6 +51,16 @@ export default function LeftSidebar({
 }: LeftSidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
+  const filtered = useMemo(
+    () =>
+      searchQuery
+        ? conversations.filter((c) =>
+            (c.title ?? '').toLowerCase().includes(searchQuery.toLowerCase()),
+          )
+        : conversations,
+    [conversations, searchQuery],
+  );
+
   if (!expanded) {
     return (
       <div className="flex h-full w-12 shrink-0 flex-col items-center gap-3 border-r border-border bg-background py-3">
@@ -73,10 +83,6 @@ export default function LeftSidebar({
       </div>
     );
   }
-
-  const filtered = searchQuery
-    ? conversations.filter((c) => (c.title ?? '').toLowerCase().includes(searchQuery.toLowerCase()))
-    : conversations;
 
   return (
     <div className="flex h-full w-[220px] shrink-0 flex-col border-r border-border bg-background">
