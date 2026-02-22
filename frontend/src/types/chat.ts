@@ -65,6 +65,24 @@ export interface ChatApiResponse {
   totalRows: number | null;
 }
 
+export interface TurnSummary {
+  entities: {
+    products: Array<ResolvedProduct>;
+    schemas: Array<string>;
+  } | null;
+  queries: Array<{
+    columns: Array<string>;
+    execution_time_ms: number;
+    row_count: number;
+    rows: Array<Array<unknown>>;
+    schema_name: string | null;
+    sql: string;
+    tables: Array<string>;
+  }>;
+  total_execution_time_ms: number;
+  total_rows: number;
+}
+
 export interface ConversationSummary {
   createdAt: string;
   threadId: string;

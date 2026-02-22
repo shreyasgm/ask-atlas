@@ -224,6 +224,26 @@ class StreamData:
     payload: Optional[Dict] = None  # Structured data for new event types
 
 
+def _build_turn_summary(
+    queries: list[dict], resolved_products: dict | None
+) -> dict:
+    """Build a turn summary dict from pipeline results.
+
+    Args:
+        queries: List of executed query dicts from the turn.
+        resolved_products: Product resolution data, or None.
+
+    Returns:
+        A summary dict with entities, queries, total_rows, total_execution_time_ms.
+    """
+    return {
+        "entities": resolved_products,
+        "queries": queries,
+        "total_rows": sum(q.get("row_count", 0) for q in queries),
+        "total_execution_time_ms": sum(q.get("execution_time_ms", 0) for q in queries),
+    }
+
+
 class AtlasTextToSQL:
     # --- SYNC API (commented out — async-only after Phase 3) ---
     # def __init__(
@@ -566,6 +586,10 @@ class AtlasTextToSQL:
                     for p in (pipeline_products.products or [])
                 ],
             }
+
+        # Persist turn summary to checkpoint for history restoration
+        summary = _build_turn_summary(queries, resolved_products)
+        await self.agent.aupdate_state(config, {"turn_summaries": [summary]})
 
         return AnswerResult(
             answer=self._extract_text(message.content),

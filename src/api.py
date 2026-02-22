@@ -24,7 +24,7 @@ from src.conversations import (
     PostgresConversationStore,
     derive_title,
 )
-from src.text_to_sql import AnswerResult, AtlasTextToSQL
+from src.text_to_sql import AnswerResult, AtlasTextToSQL, _build_turn_summary
 
 # ---------------------------------------------------------------------------
 # Logging setup — always show timestamps, level, and logger name
@@ -103,11 +103,21 @@ class OverridesResponse(BaseModel):
     override_mode: Literal["goods", "services"] | None = None
 
 
+class TurnSummaryResponse(BaseModel):
+    """Per-turn pipeline summary returned from history."""
+
+    entities: dict | None = None
+    queries: list[dict] = []
+    total_rows: int = 0
+    total_execution_time_ms: int = 0
+
+
 class ThreadMessagesResponse(BaseModel):
     """Response for GET /threads/{id}/messages."""
 
     messages: list[MessageResponse]
     overrides: OverridesResponse
+    turn_summaries: list[TurnSummaryResponse] = []
 
 
 # ---------------------------------------------------------------------------
@@ -356,7 +366,13 @@ async def get_thread_messages(thread_id: str) -> ThreadMessagesResponse:
         override_mode=values.get("override_mode"),
     )
 
-    return ThreadMessagesResponse(messages=result, overrides=overrides)
+    turn_summaries = [
+        TurnSummaryResponse(**ts) for ts in values.get("turn_summaries", [])
+    ]
+
+    return ThreadMessagesResponse(
+        messages=result, overrides=overrides, turn_summaries=turn_summaries
+    )
 
 
 @app.delete("/threads/{thread_id}", status_code=204)
@@ -468,6 +484,10 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
         total_rows = 0
         total_execution_time_ms = 0
 
+        # Turn summary tracking for checkpoint persistence
+        stream_queries: list[dict] = []
+        stream_entities: dict | None = None
+
         # First event: thread_id
         event_count += 1
         logger.info("  SSE #%d  event=thread_id  thread=%s", event_count, thread_id)
@@ -504,17 +524,32 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                         "data": json.dumps(stream_data.payload or {}),
                     }
 
-                    # Track aggregates from execute_sql pipeline_state
+                    # Track aggregates and turn summary data from pipeline_state
                     if (
                         stream_data.message_type == "pipeline_state"
                         and stream_data.payload
-                        and stream_data.payload.get("stage") == "execute_sql"
                     ):
-                        total_queries += 1
-                        total_rows += stream_data.payload.get("row_count", 0)
-                        total_execution_time_ms += stream_data.payload.get(
-                            "execution_time_ms", 0
-                        )
+                        stage = stream_data.payload.get("stage")
+                        if stage == "extract_products":
+                            stream_entities = {
+                                "schemas": stream_data.payload.get("schemas", []),
+                                "products": stream_data.payload.get("products", []),
+                            }
+                        elif stage == "execute_sql":
+                            total_queries += 1
+                            total_rows += stream_data.payload.get("row_count", 0)
+                            total_execution_time_ms += stream_data.payload.get(
+                                "execution_time_ms", 0
+                            )
+                            stream_queries.append({
+                                "sql": stream_data.payload.get("sql", ""),
+                                "columns": stream_data.payload.get("columns", []),
+                                "rows": stream_data.payload.get("rows", []),
+                                "row_count": stream_data.payload.get("row_count", 0),
+                                "execution_time_ms": stream_data.payload.get("execution_time_ms", 0),
+                                "tables": stream_data.payload.get("tables", []),
+                                "schema_name": stream_data.payload.get("schema"),
+                            })
                 else:
                     # Log content preview for non-pipeline events
                     preview = (stream_data.content or "")[:60]
@@ -540,6 +575,18 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                 event_count,
             )
             raise
+
+        # Persist turn summary to checkpoint
+        try:
+            summary = _build_turn_summary(stream_queries, stream_entities)
+            config = {"configurable": {"thread_id": thread_id}}
+            await atlas_sql.agent.aupdate_state(config, {"turn_summaries": [summary]})
+        except Exception:
+            logger.warning(
+                "Failed to persist turn summary for thread %s",
+                thread_id,
+                exc_info=True,
+            )
 
         # Final event: done with aggregate stats
         total_time_ms = int((time.monotonic() - t_start) * 1000)

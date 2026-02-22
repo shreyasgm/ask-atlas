@@ -1103,6 +1103,88 @@ class TestNoDuplicateAgentTalk:
 
 
 # ---------------------------------------------------------------------------
+# Tests -- turn summary persistence
+# ---------------------------------------------------------------------------
+
+
+class TestTurnSummaryPersistence:
+    """Tests for persisting turn_summaries to the LangGraph checkpoint."""
+
+    async def test_aanswer_question_persists_turn_summary(self):
+        """After aanswer_question with a tool call, checkpoint state should
+        have turn_summaries with 1 entry containing query data."""
+        responses = [
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("query_tool", "US exports", "c1")],
+            ),
+            AIMessage(content="The US exported goods."),
+        ]
+        instance = _build_pipeline_stub_instance(responses)
+        thread_id = "ts-1"
+        result = await instance.aanswer_question("US exports?", thread_id=thread_id)
+
+        # Retrieve the checkpoint state
+        config = {"configurable": {"thread_id": thread_id}}
+        state = await instance.agent.aget_state(config)
+        summaries = state.values.get("turn_summaries", [])
+
+        assert len(summaries) == 1
+        summary = summaries[0]
+        assert "queries" in summary
+        assert "entities" in summary
+        assert "total_rows" in summary
+        assert "total_execution_time_ms" in summary
+        assert len(summary["queries"]) >= 1
+        assert summary["total_rows"] > 0
+
+    async def test_direct_answer_persists_empty_summary(self):
+        """Direct answer (no tool call) should persist a summary with empty queries."""
+        responses = [AIMessage(content="Just a greeting.")]
+        instance = _build_pipeline_stub_instance(responses)
+        thread_id = "ts-2"
+        await instance.aanswer_question("Hello!", thread_id=thread_id)
+
+        config = {"configurable": {"thread_id": thread_id}}
+        state = await instance.agent.aget_state(config)
+        summaries = state.values.get("turn_summaries", [])
+
+        assert len(summaries) == 1
+        summary = summaries[0]
+        assert summary["queries"] == []
+        assert summary["total_rows"] == 0
+        assert summary["total_execution_time_ms"] == 0
+
+    async def test_multi_turn_accumulates_summaries(self):
+        """Two turns on the same thread should produce 2 summaries in state."""
+        responses = [
+            # Turn 1: tool call
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("query_tool", "coffee exports", "c1")],
+            ),
+            AIMessage(content="Brazil leads in coffee."),
+            # Turn 2: direct answer
+            AIMessage(content="As I said, Brazil."),
+        ]
+        instance = _build_pipeline_stub_instance(responses)
+        thread_id = "ts-3"
+
+        await instance.aanswer_question("Coffee exports?", thread_id=thread_id)
+        await instance.aanswer_question("Remind me?", thread_id=thread_id)
+
+        config = {"configurable": {"thread_id": thread_id}}
+        state = await instance.agent.aget_state(config)
+        summaries = state.values.get("turn_summaries", [])
+
+        assert len(summaries) == 2
+        # First turn had a query
+        assert len(summaries[0]["queries"]) >= 1
+        # Second turn was direct
+        assert summaries[1]["queries"] == []
+
+
+# ---------------------------------------------------------------------------
 # Integration tests (require external services)
 # ---------------------------------------------------------------------------
 

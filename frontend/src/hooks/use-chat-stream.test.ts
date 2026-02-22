@@ -1076,3 +1076,123 @@ describe('direct thread-to-thread navigation (no clearChat)', () => {
     expect(result.current.error).toBeNull();
   });
 });
+
+describe('history hydration from turn_summaries', () => {
+  const TURN_SUMMARIES_RESPONSE = {
+    messages: [
+      { content: 'What are top US exports?', role: 'human' },
+      { content: 'The top exports include soybeans.', role: 'ai' },
+    ],
+    overrides: { override_direction: null, override_mode: null, override_schema: null },
+    turn_summaries: [
+      {
+        entities: {
+          products: [{ codes: ['1201'], name: 'Soybeans', schema: 'hs92' }],
+          schemas: ['hs92'],
+        },
+        queries: [
+          {
+            columns: ['country', 'product', 'value'],
+            execution_time_ms: 120,
+            row_count: 5,
+            rows: [
+              ['USA', 'Soybeans', 50_000],
+              ['USA', 'Corn', 40_000],
+            ],
+            schema_name: 'hs92',
+            sql: 'SELECT * FROM hs92.country_product_year_4 LIMIT 5',
+            tables: ['hs92.country_product_year_4'],
+          },
+        ],
+        total_execution_time_ms: 120,
+        total_rows: 5,
+      },
+    ],
+  };
+
+  it('hydrates queryResults on assistant messages from turn_summaries', async () => {
+    mockParams = { threadId: 'thread-with-summaries' };
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve(TURN_SUMMARIES_RESPONSE),
+      ok: true,
+    });
+
+    const { result } = renderHook(() => useChatStream());
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(2);
+    });
+
+    const assistant = result.current.messages.find((m) => m.role === 'assistant');
+    expect(assistant?.queryResults).toHaveLength(1);
+    expect(assistant?.queryResults[0].sql).toBe(
+      'SELECT * FROM hs92.country_product_year_4 LIMIT 5',
+    );
+    expect(assistant?.queryResults[0].columns).toEqual(['country', 'product', 'value']);
+    expect(assistant?.queryResults[0].rowCount).toBe(5);
+    expect(assistant?.queryResults[0].executionTimeMs).toBe(120);
+  });
+
+  it('sets entitiesData from turn_summaries', async () => {
+    mockParams = { threadId: 'thread-with-summaries-ent' };
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve(TURN_SUMMARIES_RESPONSE),
+      ok: true,
+    });
+
+    const { result } = renderHook(() => useChatStream());
+
+    await waitFor(() => {
+      expect(result.current.entitiesData).not.toBeNull();
+    });
+
+    expect(result.current.entitiesData?.products).toHaveLength(1);
+    expect(result.current.entitiesData?.products[0].name).toBe('Soybeans');
+    expect(result.current.entitiesData?.schemas).toEqual(['hs92']);
+  });
+
+  it('sets queryStats from turn_summaries', async () => {
+    mockParams = { threadId: 'thread-with-summaries-stats' };
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve(TURN_SUMMARIES_RESPONSE),
+      ok: true,
+    });
+
+    const { result } = renderHook(() => useChatStream());
+
+    await waitFor(() => {
+      expect(result.current.queryStats).not.toBeNull();
+    });
+
+    expect(result.current.queryStats?.totalQueries).toBe(1);
+    expect(result.current.queryStats?.totalRows).toBe(5);
+    expect(result.current.queryStats?.totalExecutionTimeMs).toBe(120);
+  });
+
+  it('backward compatible when turn_summaries is absent', async () => {
+    mockParams = { threadId: 'thread-no-summaries' };
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () =>
+        Promise.resolve({
+          messages: [
+            { content: 'Q', role: 'human' },
+            { content: 'A', role: 'ai' },
+          ],
+          overrides: {},
+        }),
+      ok: true,
+    });
+
+    const { result } = renderHook(() => useChatStream());
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(2);
+    });
+
+    // Right panel should be empty — same as today
+    const assistant = result.current.messages.find((m) => m.role === 'assistant');
+    expect(assistant?.queryResults).toEqual([]);
+    expect(result.current.entitiesData).toBeNull();
+    expect(result.current.queryStats).toBeNull();
+  });
+});
