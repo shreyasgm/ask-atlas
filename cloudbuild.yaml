@@ -1,0 +1,16 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-east1-docker.pkg.dev/$PROJECT_ID/ask-atlas/backend:$TAG_NAME'
+      - '-t'
+      - 'us-east1-docker.pkg.dev/$PROJECT_ID/ask-atlas/backend:latest'
+      - '.'
+
+images:
+  - 'us-east1-docker.pkg.dev/$PROJECT_ID/ask-atlas/backend:$TAG_NAME'
+  - 'us-east1-docker.pkg.dev/$PROJECT_ID/ask-atlas/backend:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

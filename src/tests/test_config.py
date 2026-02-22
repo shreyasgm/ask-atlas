@@ -4,12 +4,15 @@ Validates that Settings loads from env and has sensible defaults.
 No database or external service required.
 """
 
+import pytest
+
 from src.config import get_settings
 
 
 class TestConfigUnit:
     """Validate configuration values (no DB required)."""
 
+    @pytest.mark.integration
     def test_settings_load_from_env(self):
         """Settings loads successfully with required env vars present."""
         settings = get_settings()

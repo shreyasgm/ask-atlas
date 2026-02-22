@@ -1,0 +1,71 @@
+# VCS
+.git
+.gitignore
+
+# Python artifacts
+__pycache__
+*.py[cod]
+*.egg-info
+.eggs
+dist
+build
+
+# Virtual environments
+.venv
+venv
+env
+
+# Tests (not needed in production)
+src/tests
+src/setup
+.pytest_cache
+.coverage
+htmlcov
+
+# Frontend (deployed separately via Firebase Hosting)
+frontend
+
+# IDE / editor
+.vscode
+.idea
+
+# macOS
+.DS_Store
+._*
+
+# Docs, design, eval (not needed at runtime)
+.claude
+.agents
+docs
+evaluation
+*.pen
+*.md
+# Allow files referenced by pyproject.toml (hatchling needs them to build)
+!README.md
+!LICENSE
+
+# Data / logs
+data
+logs
+*.csv
+*.parquet
+chroma_db
+archive
+
+# Docker meta (prevent recursive context)
+Dockerfile
+docker-compose*.yml
+.dockerignore
+cloudbuild.yaml
+
+# Secrets — NEVER include
+.env
+.env.*
+
+# Streamlit legacy
+.streamlit
+app.py
+
+# Caches
+.ruff_cache
+.mypy_cache
