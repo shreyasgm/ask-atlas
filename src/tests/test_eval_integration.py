@@ -87,7 +87,8 @@ async def test_eval_nigeria_crude_oil_exports_2020(base_dir: Path, atlas_agent: 
     ground_truth = _load_ground_truth(base_dir, 2)
     assert ground_truth is not None, "Ground truth missing for question 2"
 
-    answer = await atlas_agent.aanswer_question(question_data["user_question"])
+    result = await atlas_agent.aanswer_question(question_data["user_question"])
+    answer = result.answer
     assert answer, "Agent returned an empty answer"
 
     verdict = await judge_answer(
@@ -108,7 +109,8 @@ async def test_eval_out_of_scope_refusal(base_dir: Path, atlas_agent: AtlasTextT
     expected_behavior = question_data.get("expected_behavior")
     assert expected_behavior, "expected_behavior missing for question 53"
 
-    answer = await atlas_agent.aanswer_question(question_data["user_question"])
+    result = await atlas_agent.aanswer_question(question_data["user_question"])
+    answer = result.answer
     assert answer, "Agent returned an empty answer"
 
     verdict = await judge_answer(

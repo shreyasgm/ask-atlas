@@ -15,7 +15,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
 from src.state import AtlasAgentState
-from src.text_to_sql import AtlasTextToSQL, StreamData
+from src.text_to_sql import AnswerResult, AtlasTextToSQL, StreamData
 from src.tests.fake_model import FakeToolCallingModel
 from src.product_and_schema_lookup import SchemasAndProductsFound, ProductDetails
 
@@ -132,8 +132,8 @@ class TestAAnswerQuestion:
     """Tests for the non-streaming async method ``aanswer_question``."""
 
     async def test_returns_final_answer(self):
-        """aanswer_question should return the agent's final text answer
-        after a tool call round-trip (tool_call -> tool_output -> answer)."""
+        """aanswer_question should return an AnswerResult with the agent's
+        final text answer after a tool call round-trip."""
         responses = [
             AIMessage(
                 content="",
@@ -142,25 +142,25 @@ class TestAAnswerQuestion:
             AIMessage(content="The US exported a lot."),
         ]
         instance = _build_stub_instance(responses)
-        answer = await instance.aanswer_question("US exports?", thread_id="t1")
-        assert isinstance(answer, str)
-        assert "US exported a lot" in answer
+        result = await instance.aanswer_question("US exports?", thread_id="t1")
+        assert isinstance(result, AnswerResult)
+        assert "US exported a lot" in result.answer
 
     async def test_direct_answer_no_tool(self):
         """When the LLM answers directly without calling a tool, the
-        answer string should still be returned correctly."""
+        AnswerResult.answer should still be returned correctly."""
         responses = [AIMessage(content="42 is the answer.")]
         instance = _build_stub_instance(responses)
-        answer = await instance.aanswer_question("What is 6*7?")
-        assert "42" in answer
+        result = await instance.aanswer_question("What is 6*7?")
+        assert "42" in result.answer
 
     async def test_generates_thread_id_when_none(self):
         """When thread_id is None, a UUID is auto-generated and no error
         is raised."""
         responses = [AIMessage(content="Some answer.")]
         instance = _build_stub_instance(responses)
-        answer = await instance.aanswer_question("hi", thread_id=None)
-        assert isinstance(answer, str)
+        result = await instance.aanswer_question("hi", thread_id=None)
+        assert isinstance(result, AnswerResult)
 
     async def test_multi_turn_remembers_context(self):
         """Two calls to aanswer_question with the SAME thread_id should
@@ -184,16 +184,109 @@ class TestAAnswerQuestion:
         instance = _build_stub_instance(responses)
         thread = "multi-turn-1"
 
-        answer1 = await instance.aanswer_question(
+        result1 = await instance.aanswer_question(
             "Who exports the most coffee?", thread_id=thread
         )
-        assert "Brazil" in answer1
+        assert "Brazil" in result1.answer
 
-        answer2 = await instance.aanswer_question(
+        result2 = await instance.aanswer_question(
             "Can you remind me?", thread_id=thread
         )
-        assert isinstance(answer2, str)
-        assert "Brazil" in answer2
+        assert isinstance(result2, AnswerResult)
+        assert "Brazil" in result2.answer
+
+
+# ---------------------------------------------------------------------------
+# Tests -- aanswer_question pipeline data
+# ---------------------------------------------------------------------------
+
+
+class TestAAnswerQuestionPipelineData:
+    """Tests for structured pipeline data returned by ``aanswer_question``."""
+
+    async def test_single_query_returns_answer_result(self):
+        """aanswer_question with a tool call should return AnswerResult
+        with one query in the queries list."""
+        responses = [
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("query_tool", "US exports", "c1")],
+            ),
+            AIMessage(content="The US exported goods."),
+        ]
+        instance = _build_pipeline_stub_instance(responses)
+        result = await instance.aanswer_question("US exports?", thread_id="pd-1")
+        assert isinstance(result, AnswerResult)
+        assert "US exported goods" in result.answer
+        assert len(result.queries) == 1
+
+    async def test_query_result_has_correct_fields(self):
+        """Each query dict should have sql, columns, rows, row_count,
+        execution_time_ms with the values from the pipeline stub."""
+        responses = [
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("query_tool", "trade data", "c1")],
+            ),
+            AIMessage(content="Done."),
+        ]
+        instance = _build_pipeline_stub_instance(responses)
+        result = await instance.aanswer_question("trade data?", thread_id="pd-2")
+        assert len(result.queries) == 1
+        q = result.queries[0]
+        assert "sql" in q
+        assert q["columns"] == ["country", "value"]
+        assert q["rows"] == [["USA", 1000], ["CHN", 800]]
+        assert q["row_count"] == 2
+        assert q["execution_time_ms"] == 42
+
+    async def test_resolved_products_populated(self):
+        """resolved_products should contain schemas and products from the
+        pipeline when a tool call is made."""
+        responses = [
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("query_tool", "coffee exports", "c1")],
+            ),
+            AIMessage(content="Done."),
+        ]
+        instance = _build_pipeline_stub_instance(responses)
+        result = await instance.aanswer_question("coffee?", thread_id="pd-3")
+        assert result.resolved_products is not None
+        assert "hs92" in result.resolved_products["schemas"]
+        products = result.resolved_products["products"]
+        assert len(products) >= 1
+        assert products[0]["name"] == "coffee"
+
+    async def test_direct_answer_has_empty_pipeline_data(self):
+        """Direct answer (no tool call) should have empty queries and no
+        resolved products."""
+        responses = [AIMessage(content="Just a greeting.")]
+        instance = _build_pipeline_stub_instance(responses)
+        result = await instance.aanswer_question("Hello!", thread_id="pd-4")
+        assert result.queries == []
+        assert result.resolved_products is None
+        assert result.schemas_used == []
+
+    async def test_multi_query_accumulates_results(self):
+        """Two tool calls in one turn should produce two query dicts with
+        correct aggregate stats."""
+        responses = [
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("query_tool", "Q1", "c1")],
+            ),
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("query_tool", "Q2", "c2")],
+            ),
+            AIMessage(content="Both done."),
+        ]
+        instance = _build_pipeline_stub_instance(responses)
+        result = await instance.aanswer_question("both?", thread_id="pd-5")
+        assert len(result.queries) == 2
+        assert result.total_rows == 4  # 2 rows per query * 2 queries
+        assert result.total_execution_time_ms == 84  # 42ms * 2 queries
 
 
 # ---------------------------------------------------------------------------

@@ -190,6 +190,28 @@ def _extract_pipeline_state(node_name: str, state_snapshot: dict) -> dict:
 
 
 @dataclass
+class AnswerResult:
+    """Structured result from aanswer_question().
+
+    Attributes:
+        answer: The agent's final text answer.
+        queries: List of executed query dicts, each with sql, columns, rows,
+            row_count, execution_time_ms, tables, and optional schema_name.
+        resolved_products: Product resolution data (schemas + products), or None.
+        schemas_used: List of classification schemas used in queries.
+        total_rows: Sum of row_count across all queries.
+        total_execution_time_ms: Sum of execution_time_ms across all queries.
+    """
+
+    answer: str
+    queries: list[dict]
+    resolved_products: dict | None
+    schemas_used: list[str]
+    total_rows: int
+    total_execution_time_ms: int
+
+
+@dataclass
 class StreamData:
     """Data structure for normalized stream output from agent or tool"""
 
@@ -477,8 +499,8 @@ class AtlasTextToSQL:
         override_schema: str | None = None,
         override_direction: str | None = None,
         override_mode: str | None = None,
-    ) -> str:
-        """Non-streaming async answer.
+    ) -> AnswerResult:
+        """Non-streaming async answer with structured pipeline data.
 
         Args:
             question: The user's question about the trade data.
@@ -488,7 +510,7 @@ class AtlasTextToSQL:
             override_mode: Optional mode override (goods/services).
 
         Returns:
-            The agent's final text answer.
+            AnswerResult with the answer text and pipeline data.
         """
         config = {
             "configurable": {"thread_id": thread_id or str(uuid.uuid4())}
@@ -500,13 +522,59 @@ class AtlasTextToSQL:
             override_mode=override_mode,
         )
         message = None
+        prev_queries_executed = 0
+        queries: list[dict] = []
+        last_state: dict = {}
+
         async for step in self.agent.astream(
             turn_input,
             stream_mode="values",
             config=config,
         ):
             message = step["messages"][-1]
-        return self._extract_text(message.content)
+            last_state = step
+
+            # Detect when a new query has been executed
+            current_queries_executed = step.get("queries_executed", 0)
+            if current_queries_executed > prev_queries_executed:
+                sql = step.get("pipeline_sql", "")
+                queries.append({
+                    "sql": sql,
+                    "columns": step.get("pipeline_result_columns", []),
+                    "rows": _json_safe_deep(step.get("pipeline_result_rows", [])),
+                    "row_count": len(step.get("pipeline_result_rows", [])),
+                    "execution_time_ms": step.get("pipeline_execution_time_ms", 0),
+                    "tables": _extract_tables_from_sql(sql),
+                    "schema_name": None,
+                })
+                # Set schema_name from pipeline_products if available
+                products = step.get("pipeline_products")
+                if products and products.classification_schemas:
+                    queries[-1]["schema_name"] = products.classification_schemas[0]
+                prev_queries_executed = current_queries_executed
+
+        # Extract resolved products from the final state
+        resolved_products = None
+        schemas_used: list[str] = []
+        pipeline_products = last_state.get("pipeline_products")
+        if pipeline_products and queries:
+            schemas_used = pipeline_products.classification_schemas or []
+            resolved_products = {
+                "schemas": schemas_used,
+                "products": [
+                    {"name": p.name, "codes": p.codes, "schema": p.classification_schema}
+                    for p in (pipeline_products.products or [])
+                ],
+            }
+
+        return AnswerResult(
+            answer=self._extract_text(message.content),
+            queries=queries,
+            resolved_products=resolved_products,
+            schemas_used=schemas_used,
+            total_rows=sum(q["row_count"] for q in queries),
+            total_execution_time_ms=sum(q["execution_time_ms"] for q in queries),
+        )
 
     async def astream_agent_response(
         self,
