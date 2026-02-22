@@ -19,11 +19,12 @@ import json
 from pathlib import Path
 
 import pytest
+import pytest_asyncio
 
 from evaluation.judge import judge_answer
 from src.text_to_sql import AtlasTextToSQL
 
-pytestmark = [pytest.mark.eval, pytest.mark.asyncio]
+pytestmark = [pytest.mark.eval, pytest.mark.asyncio(loop_scope="module")]
 
 
 # ---------------------------------------------------------------------------
@@ -56,7 +57,7 @@ def _load_ground_truth(base_dir: Path, question_id: int) -> list[dict] | None:
 # Shared agent fixture (expensive — created once per module)
 # ---------------------------------------------------------------------------
 
-@pytest.fixture(scope="module")
+@pytest_asyncio.fixture(scope="module", loop_scope="module")
 async def atlas_agent(base_dir: Path):
     """Create a single shared AtlasTextToSQL instance for all eval tests.
 
