@@ -901,3 +901,93 @@ describe('clearChat does not re-trigger history loading (race condition)', () =>
     expect(result.current.threadId).toBe(HISTORY_THREAD);
   });
 });
+
+describe('direct thread-to-thread navigation (no clearChat)', () => {
+  it('switching from thread A to thread B loads thread B history', async () => {
+    // Start on thread A
+    mockParams = { threadId: 'thread-a' };
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () =>
+        Promise.resolve({
+          messages: [
+            { content: 'Thread A question', role: 'human' },
+            { content: 'Thread A answer', role: 'ai' },
+          ],
+          overrides: {},
+        }),
+      ok: true,
+    });
+
+    const { rerender, result } = renderHook(() => useChatStream());
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(2);
+      expect(result.current.messages[0].content).toBe('Thread A question');
+    });
+
+    // Click thread B in sidebar — URL changes directly, no clearChat
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () =>
+        Promise.resolve({
+          messages: [
+            { content: 'Thread B question', role: 'human' },
+            { content: 'Thread B answer', role: 'ai' },
+          ],
+          overrides: {},
+        }),
+      ok: true,
+    });
+    mockParams = { threadId: 'thread-b' };
+    rerender();
+
+    await waitFor(() => {
+      expect(result.current.messages[0].content).toBe('Thread B question');
+    });
+
+    expect(result.current.messages).toHaveLength(2);
+    expect(result.current.messages[1].content).toBe('Thread B answer');
+    expect(result.current.threadId).toBe('thread-b');
+  });
+
+  it('resets pipeline steps and entities when switching threads', async () => {
+    mockParams = { threadId: 'thread-a' };
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () =>
+        Promise.resolve({
+          messages: [
+            { content: 'Q', role: 'human' },
+            { content: 'A', role: 'ai' },
+          ],
+          overrides: {},
+        }),
+      ok: true,
+    });
+
+    const { rerender, result } = renderHook(() => useChatStream());
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(2);
+    });
+
+    // Switch to thread B
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () =>
+        Promise.resolve({
+          messages: [{ content: 'B', role: 'human' }],
+          overrides: {},
+        }),
+      ok: true,
+    });
+    mockParams = { threadId: 'thread-b' };
+    rerender();
+
+    await waitFor(() => {
+      expect(result.current.messages[0].content).toBe('B');
+    });
+
+    expect(result.current.pipelineSteps).toEqual([]);
+    expect(result.current.entitiesData).toBeNull();
+    expect(result.current.queryStats).toBeNull();
+    expect(result.current.error).toBeNull();
+  });
+});
