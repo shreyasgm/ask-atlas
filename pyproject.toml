@@ -70,6 +70,7 @@ asyncio_mode = "auto"
 markers = [
     "integration: marks tests that require integration with external services (like LLM)",
     "db: marks tests that require a live database connection",
+    "eval: marks eval-based integration tests (real LLM + production DB + LLM-as-judge)",
 ]
 
 [tool.uv]
