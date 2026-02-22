@@ -7,12 +7,13 @@ No external services required, so no pytest markers needed.
 import json
 import threading
 import uuid
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
 from src.api import _state, app
+from src.conversations import InMemoryConversationStore
 from src.text_to_sql import AtlasTextToSQL, StreamData
 
 
@@ -847,3 +848,324 @@ class TestChatNonStreamWithOverrides:
         assert self.captured_kwargs.get("override_schema") == "sitc"
         assert self.captured_kwargs.get("override_direction") == "exports"
         assert self.captured_kwargs.get("override_mode") == "services"
+
+
+# ---------------------------------------------------------------------------
+# GET /threads — list conversations
+# ---------------------------------------------------------------------------
+
+
+class TestListThreads:
+    """Tests for listing conversations by session."""
+
+    @pytest.fixture(autouse=True)
+    def _setup_store(self):
+        """Inject a fresh InMemoryConversationStore into app state."""
+        _state.conversation_store = InMemoryConversationStore()
+        yield
+        _state.conversation_store = None
+
+    def test_missing_session_id_returns_400(self, client: TestClient) -> None:
+        response = client.get("/threads")
+        assert response.status_code == 400
+
+    def test_empty_session_returns_empty_list(self, client: TestClient) -> None:
+        response = client.get("/threads", headers={"X-Session-Id": "s1"})
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_returns_conversations_for_session(self, client: TestClient) -> None:
+        import asyncio
+
+        store = _state.conversation_store
+        asyncio.get_event_loop().run_until_complete(
+            store.create("t1", "s1", "First chat")
+        )
+        asyncio.get_event_loop().run_until_complete(
+            store.create("t2", "s1", "Second chat")
+        )
+        response = client.get("/threads", headers={"X-Session-Id": "s1"})
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2
+        ids = {c["thread_id"] for c in data}
+        assert ids == {"t1", "t2"}
+
+    def test_does_not_leak_other_sessions(self, client: TestClient) -> None:
+        import asyncio
+
+        store = _state.conversation_store
+        asyncio.get_event_loop().run_until_complete(
+            store.create("t1", "s1", "Mine")
+        )
+        asyncio.get_event_loop().run_until_complete(
+            store.create("t2", "s2", "Theirs")
+        )
+        response = client.get("/threads", headers={"X-Session-Id": "s1"})
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["thread_id"] == "t1"
+
+    def test_response_shape(self, client: TestClient) -> None:
+        import asyncio
+
+        store = _state.conversation_store
+        asyncio.get_event_loop().run_until_complete(
+            store.create("t1", "s1", "Chat")
+        )
+        response = client.get("/threads", headers={"X-Session-Id": "s1"})
+        item = response.json()[0]
+        assert "thread_id" in item
+        assert "title" in item
+        assert "created_at" in item
+        assert "updated_at" in item
+
+
+# ---------------------------------------------------------------------------
+# GET /threads/{thread_id}/messages — retrieve message history
+# ---------------------------------------------------------------------------
+
+
+class TestGetThreadMessages:
+    """Tests for retrieving message history from LangGraph state."""
+
+    @pytest.fixture(autouse=True)
+    def _setup_store(self):
+        _state.conversation_store = InMemoryConversationStore()
+        yield
+        _state.conversation_store = None
+
+    def test_no_checkpoint_returns_404(self, client: TestClient) -> None:
+        """A thread with no checkpoints should return 404."""
+        mock_agent = MagicMock()
+        mock_agent.aget_state = AsyncMock(return_value=MagicMock(values={}))
+        _state.atlas_sql.agent = mock_agent
+        response = client.get("/threads/nonexistent/messages")
+        assert response.status_code == 404
+
+    def test_returns_messages(self, client: TestClient) -> None:
+        """Should return human and AI messages from state."""
+        from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+
+        mock_state = MagicMock()
+        mock_state.values = {
+            "messages": [
+                HumanMessage(content="Hi"),
+                AIMessage(content="Hello!"),
+                ToolMessage(content="sql output", tool_call_id="tc1"),
+                AIMessage(content="Here are results."),
+            ]
+        }
+        mock_agent = MagicMock()
+        mock_agent.aget_state = AsyncMock(return_value=mock_state)
+        _state.atlas_sql.agent = mock_agent
+
+        response = client.get("/threads/t1/messages")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 3  # Human, AI, AI — ToolMessage filtered out
+
+    def test_filters_tool_messages(self, client: TestClient) -> None:
+        from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+
+        mock_state = MagicMock()
+        mock_state.values = {
+            "messages": [
+                HumanMessage(content="query"),
+                ToolMessage(content="raw sql", tool_call_id="tc1"),
+                AIMessage(content="result"),
+            ]
+        }
+        mock_agent = MagicMock()
+        mock_agent.aget_state = AsyncMock(return_value=mock_state)
+        _state.atlas_sql.agent = mock_agent
+
+        response = client.get("/threads/t1/messages")
+        data = response.json()
+        roles = [m["role"] for m in data]
+        assert "tool" not in roles
+
+    def test_filters_empty_ai_messages(self, client: TestClient) -> None:
+        from langchain_core.messages import AIMessage, HumanMessage
+
+        mock_state = MagicMock()
+        mock_state.values = {
+            "messages": [
+                HumanMessage(content="Hi"),
+                AIMessage(content=""),  # Empty — should be filtered
+                AIMessage(content="Real response"),
+            ]
+        }
+        mock_agent = MagicMock()
+        mock_agent.aget_state = AsyncMock(return_value=mock_state)
+        _state.atlas_sql.agent = mock_agent
+
+        response = client.get("/threads/t1/messages")
+        data = response.json()
+        assert len(data) == 2  # Human + non-empty AI
+
+    def test_message_shape(self, client: TestClient) -> None:
+        from langchain_core.messages import AIMessage, HumanMessage
+
+        mock_state = MagicMock()
+        mock_state.values = {
+            "messages": [
+                HumanMessage(content="Hi"),
+                AIMessage(content="Hello!"),
+            ]
+        }
+        mock_agent = MagicMock()
+        mock_agent.aget_state = AsyncMock(return_value=mock_state)
+        _state.atlas_sql.agent = mock_agent
+
+        response = client.get("/threads/t1/messages")
+        data = response.json()
+        assert data[0]["role"] == "human"
+        assert data[0]["content"] == "Hi"
+        assert data[1]["role"] == "ai"
+        assert data[1]["content"] == "Hello!"
+
+
+# ---------------------------------------------------------------------------
+# DELETE /threads/{thread_id} — delete conversation
+# ---------------------------------------------------------------------------
+
+
+class TestDeleteThread:
+    """Tests for deleting a conversation and its checkpoints."""
+
+    @pytest.fixture(autouse=True)
+    def _setup_store(self):
+        _state.conversation_store = InMemoryConversationStore()
+        yield
+        _state.conversation_store = None
+
+    def test_delete_returns_204(self, client: TestClient) -> None:
+        response = client.delete("/threads/any-id")
+        assert response.status_code == 204
+
+    def test_delete_nonexistent_returns_204(self, client: TestClient) -> None:
+        """Idempotent — deleting nonexistent thread is fine."""
+        response = client.delete("/threads/no-such-thread")
+        assert response.status_code == 204
+
+    def test_delete_removes_from_store(self, client: TestClient) -> None:
+        import asyncio
+
+        store = _state.conversation_store
+        asyncio.get_event_loop().run_until_complete(
+            store.create("t1", "s1", "Doomed")
+        )
+        response = client.delete("/threads/t1")
+        assert response.status_code == 204
+        row = asyncio.get_event_loop().run_until_complete(store.get("t1"))
+        assert row is None
+
+
+# ---------------------------------------------------------------------------
+# Lazy conversation creation in chat endpoints
+# ---------------------------------------------------------------------------
+
+
+class TestLazyConversationCreation:
+    """Tests that /chat and /chat/stream create conversations lazily."""
+
+    @pytest.fixture(autouse=True)
+    def _setup_store(self):
+        _state.conversation_store = InMemoryConversationStore()
+        yield
+        _state.conversation_store = None
+
+    def test_chat_creates_conversation_with_session_header(
+        self, client: TestClient
+    ) -> None:
+        import asyncio
+
+        response = client.post(
+            "/chat",
+            json={"question": "Top exports of Brazil?"},
+            headers={"X-Session-Id": "session-1"},
+        )
+        assert response.status_code == 200
+        thread_id = response.json()["thread_id"]
+
+        store = _state.conversation_store
+        row = asyncio.get_event_loop().run_until_complete(store.get(thread_id))
+        assert row is not None
+        assert row.session_id == "session-1"
+
+    def test_chat_no_session_header_skips_creation(
+        self, client: TestClient
+    ) -> None:
+        """Without X-Session-Id, no conversation row is created."""
+        import asyncio
+
+        response = client.post("/chat", json={"question": "Hello"})
+        assert response.status_code == 200
+        thread_id = response.json()["thread_id"]
+
+        store = _state.conversation_store
+        row = asyncio.get_event_loop().run_until_complete(store.get(thread_id))
+        assert row is None
+
+    def test_stream_creates_conversation_with_session_header(
+        self, client: TestClient
+    ) -> None:
+        import asyncio
+
+        response = client.post(
+            "/chat/stream",
+            json={"question": "Exports data?"},
+            headers={"X-Session-Id": "session-2"},
+        )
+        assert response.status_code == 200
+        events = _parse_sse(response.text)
+        thread_id = json.loads(events[0]["data"])["thread_id"]
+
+        store = _state.conversation_store
+        row = asyncio.get_event_loop().run_until_complete(store.get(thread_id))
+        assert row is not None
+        assert row.session_id == "session-2"
+
+    def test_chat_derives_title_from_question(
+        self, client: TestClient
+    ) -> None:
+        import asyncio
+
+        response = client.post(
+            "/chat",
+            json={"question": "What are the main exports of Germany?"},
+            headers={"X-Session-Id": "s1"},
+        )
+        thread_id = response.json()["thread_id"]
+
+        store = _state.conversation_store
+        row = asyncio.get_event_loop().run_until_complete(store.get(thread_id))
+        assert row is not None
+        assert "Germany" in row.title
+
+    def test_second_message_updates_timestamp(
+        self, client: TestClient
+    ) -> None:
+        import asyncio
+
+        # First message creates the conversation
+        r1 = client.post(
+            "/chat",
+            json={"question": "First question"},
+            headers={"X-Session-Id": "s1"},
+        )
+        thread_id = r1.json()["thread_id"]
+
+        store = _state.conversation_store
+        row1 = asyncio.get_event_loop().run_until_complete(store.get(thread_id))
+        old_updated = row1.updated_at
+
+        # Second message with same thread_id updates the timestamp
+        client.post(
+            "/chat",
+            json={"question": "Follow up", "thread_id": thread_id},
+            headers={"X-Session-Id": "s1"},
+        )
+        row2 = asyncio.get_event_loop().run_until_complete(store.get(thread_id))
+        assert row2.updated_at >= old_updated

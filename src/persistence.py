@@ -127,6 +127,11 @@ class AsyncCheckpointerManager:
         self._checkpointer: Optional[BaseCheckpointSaver] = None
         self._async_conn = None  # holds the async context manager
 
+    @property
+    def db_url(self) -> str | None:
+        """The configured database URL, if any."""
+        return self._db_url
+
     async def get_checkpointer(self) -> BaseCheckpointSaver:
         """Lazily create and return the async checkpointer instance."""
         if self._checkpointer is None:

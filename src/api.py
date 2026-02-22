@@ -11,12 +11,19 @@ from typing import AsyncGenerator
 
 from typing import Literal
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Header, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from langchain_core.messages import AIMessage, HumanMessage
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
+from src.conversations import (
+    ConversationStore,
+    InMemoryConversationStore,
+    PostgresConversationStore,
+    derive_title,
+)
 from src.text_to_sql import AtlasTextToSQL
 
 # ---------------------------------------------------------------------------
@@ -55,6 +62,22 @@ class ChatResponse(BaseModel):
     thread_id: str
 
 
+class ConversationSummary(BaseModel):
+    """A conversation in the list response."""
+
+    thread_id: str
+    title: str | None
+    created_at: str
+    updated_at: str
+
+
+class MessageResponse(BaseModel):
+    """A single message in the history response."""
+
+    role: str
+    content: str
+
+
 # ---------------------------------------------------------------------------
 # Application state
 # ---------------------------------------------------------------------------
@@ -62,9 +85,10 @@ class ChatResponse(BaseModel):
 
 @dataclass
 class _AppState:
-    """Holds the shared AtlasTextToSQL instance."""
+    """Holds the shared AtlasTextToSQL instance and conversation store."""
 
     atlas_sql: AtlasTextToSQL | None = None
+    conversation_store: ConversationStore | None = None
 
 
 _state = _AppState()
@@ -77,19 +101,34 @@ _state = _AppState()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Create AtlasTextToSQL at startup; tear down on shutdown."""
+    """Create AtlasTextToSQL and ConversationStore at startup; tear down on shutdown."""
     pid = os.getpid()
     logger.info("=" * 60)
     logger.info("Ask-Atlas API starting  (pid=%d)", pid)
     logger.info("Initialising AtlasTextToSQL (async) …")
     _state.atlas_sql = await AtlasTextToSQL.create_async()
     logger.info("AtlasTextToSQL ready — accepting requests  (pid=%d)", pid)
+
+    # Conversation store — Postgres if available, else in-memory
+    checkpoint_db_url = getattr(
+        _state.atlas_sql, "_async_checkpointer_manager", None
+    )
+    if checkpoint_db_url is not None:
+        checkpoint_db_url = checkpoint_db_url.db_url
+    if checkpoint_db_url:
+        _state.conversation_store = PostgresConversationStore(checkpoint_db_url)
+        logger.info("Using PostgresConversationStore")
+    else:
+        _state.conversation_store = InMemoryConversationStore()
+        logger.info("Using InMemoryConversationStore")
+
     logger.info("=" * 60)
     yield
     logger.info("Shutting down Ask-Atlas API  (pid=%d)", pid)
     if _state.atlas_sql is not None:
         await _state.atlas_sql.aclose()
         _state.atlas_sql = None
+    _state.conversation_store = None
 
 
 app = FastAPI(title="Ask-Atlas API", version="0.1.0", lifespan=lifespan)
@@ -191,6 +230,22 @@ async def _service_unavailable_handler(request: Request, exc: _ServiceUnavailabl
     )
 
 
+async def _track_conversation(
+    request: Request, thread_id: str, question: str
+) -> None:
+    """Create or update a conversation row if X-Session-Id is present."""
+    session_id = request.headers.get("x-session-id")
+    store = _state.conversation_store
+    if not session_id or store is None:
+        return
+    existing = await store.get(thread_id)
+    if existing is None:
+        title = derive_title(question)
+        await store.create(thread_id, session_id, title)
+    else:
+        await store.update_timestamp(thread_id)
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -208,8 +263,108 @@ async def create_thread() -> dict:
     return {"thread_id": str(uuid.uuid4())}
 
 
+@app.get("/threads")
+async def list_threads(request: Request) -> list[ConversationSummary]:
+    """List conversations for a session (requires X-Session-Id header)."""
+    session_id = request.headers.get("x-session-id")
+    if not session_id:
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "X-Session-Id header is required."},
+        )
+    store = _state.conversation_store
+    if store is None:
+        return []
+    rows = await store.list_by_session(session_id)
+    return [
+        ConversationSummary(
+            thread_id=r.id,
+            title=r.title,
+            created_at=r.created_at.isoformat(),
+            updated_at=r.updated_at.isoformat(),
+        )
+        for r in rows
+    ]
+
+
+@app.get("/threads/{thread_id}/messages")
+async def get_thread_messages(thread_id: str) -> list[MessageResponse]:
+    """Retrieve message history for a thread from LangGraph state."""
+    atlas_sql = _get_atlas_sql()
+    config = {"configurable": {"thread_id": thread_id}}
+    state = await atlas_sql.agent.aget_state(config)
+
+    messages = (state.values or {}).get("messages")
+    if not messages:
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "No messages found for this thread."},
+        )
+
+    result = []
+    for msg in messages:
+        if isinstance(msg, HumanMessage):
+            result.append(MessageResponse(role="human", content=msg.content))
+        elif isinstance(msg, AIMessage) and msg.content:
+            result.append(MessageResponse(role="ai", content=msg.content))
+        # Skip ToolMessages and empty AI messages
+
+    return result
+
+
+@app.delete("/threads/{thread_id}", status_code=204)
+async def delete_thread(thread_id: str) -> Response:
+    """Delete a conversation and its checkpoints."""
+    # Delete from conversation store
+    store = _state.conversation_store
+    if store is not None:
+        await store.delete(thread_id)
+
+    # Delete from checkpoint tables
+    atlas_sql = _state.atlas_sql
+    if atlas_sql is not None:
+        try:
+            checkpointer = getattr(
+                getattr(atlas_sql, "agent", None), "checkpointer", None
+            )
+            if checkpointer is not None:
+                from langgraph.checkpoint.memory import MemorySaver
+
+                if isinstance(checkpointer, MemorySaver):
+                    checkpointer.storage.pop(thread_id, None)
+                else:
+                    # Postgres checkpointer — delete from checkpoint tables
+                    import psycopg
+
+                    manager = getattr(atlas_sql, "_async_checkpointer_manager", None)
+                    db_url = manager.db_url if manager else None
+                    if db_url:
+                        async with await psycopg.AsyncConnection.connect(db_url) as conn:
+                            for table in (
+                                "checkpoint_writes",
+                                "checkpoint_blobs",
+                                "checkpoints",
+                            ):
+                                await conn.execute(
+                                    f"DELETE FROM {table} WHERE thread_id = %s",  # noqa: S608
+                                    (thread_id,),
+                                )
+                            await conn.commit()
+        except Exception:
+            logger.warning(
+                "Failed to delete checkpoints for thread %s",
+                thread_id,
+                exc_info=True,
+            )
+
+    return Response(status_code=204)
+
+
 @app.post("/chat", response_model=ChatResponse)
-async def chat(body: ChatRequest) -> ChatResponse:
+async def chat(
+    body: ChatRequest,
+    request: Request,
+) -> ChatResponse:
     """Non-streaming chat endpoint."""
     atlas_sql = _get_atlas_sql()
     thread_id = body.thread_id or str(uuid.uuid4())
@@ -220,11 +375,15 @@ async def chat(body: ChatRequest) -> ChatResponse:
         override_direction=body.override_direction,
         override_mode=body.override_mode,
     )
+
+    # Lazy conversation tracking
+    await _track_conversation(request, thread_id, body.question)
+
     return ChatResponse(answer=answer, thread_id=thread_id)
 
 
 @app.post("/chat/stream")
-async def chat_stream(body: ChatRequest) -> EventSourceResponse:
+async def chat_stream(body: ChatRequest, request: Request) -> EventSourceResponse:
     """SSE streaming chat endpoint.
 
     Event types:
@@ -261,6 +420,9 @@ async def chat_stream(body: ChatRequest) -> EventSourceResponse:
             "event": "thread_id",
             "data": json.dumps({"thread_id": thread_id}),
         }
+
+        # Lazy conversation tracking
+        await _track_conversation(request, thread_id, body.question)
 
         try:
             async for stream_data in atlas_sql.aanswer_question_stream(
