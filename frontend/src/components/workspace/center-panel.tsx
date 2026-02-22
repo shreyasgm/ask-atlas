@@ -2,7 +2,6 @@ import type {
   ChatMessage,
   ClassificationSchema,
   PipelineStep,
-  TradeDirection,
   TradeMode,
   TradeOverrides,
 } from '@/types/chat';
@@ -16,7 +15,6 @@ interface CenterPanelProps {
   isStreaming: boolean;
   messages: Array<ChatMessage>;
   onClear: () => void;
-  onDirectionChange: (v: TradeDirection | null) => void;
   onModeChange: (v: TradeMode | null) => void;
   onSchemaChange: (v: ClassificationSchema | null) => void;
   onSend: (text: string) => void;
@@ -29,7 +27,6 @@ export default function CenterPanel({
   isStreaming,
   messages,
   onClear,
-  onDirectionChange,
   onModeChange,
   onSchemaChange,
   onSend,
@@ -43,7 +40,6 @@ export default function CenterPanel({
     <div className="flex min-w-0 flex-1 flex-col">
       {messages.length > 0 && <ChatTopBar onClear={onClear} title={chatTitle} />}
       <TradeTogglesBar
-        onDirectionChange={onDirectionChange}
         onModeChange={onModeChange}
         onSchemaChange={onSchemaChange}
         overrides={overrides}

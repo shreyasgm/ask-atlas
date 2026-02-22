@@ -1,7 +1,6 @@
-import type { ClassificationSchema, TradeDirection, TradeMode, TradeOverrides } from '@/types/chat';
+import type { ClassificationSchema, TradeMode, TradeOverrides } from '@/types/chat';
 
 interface TradeTogglesBarProps {
-  onDirectionChange: (v: TradeDirection | null) => void;
   onModeChange: (v: TradeMode | null) => void;
   onSchemaChange: (v: ClassificationSchema | null) => void;
   overrides: TradeOverrides;
@@ -16,12 +15,6 @@ const MODE_OPTIONS: Array<ToggleOption<TradeMode>> = [
   { label: 'Auto', value: null },
   { label: 'Goods', value: 'goods' },
   { label: 'Services', value: 'services' },
-];
-
-const DIRECTION_OPTIONS: Array<ToggleOption<TradeDirection>> = [
-  { label: 'Auto', value: null },
-  { label: 'Exports', value: 'exports' },
-  { label: 'Imports', value: 'imports' },
 ];
 
 const SCHEMA_OPTIONS: Array<ToggleOption<ClassificationSchema>> = [
@@ -73,11 +66,12 @@ function ToggleGroup<T extends string>({
 }
 
 export default function TradeTogglesBar({
-  onDirectionChange,
   onModeChange,
   onSchemaChange,
   overrides,
 }: TradeTogglesBarProps) {
+  const showSchema = overrides.mode !== 'services';
+
   return (
     <div
       aria-label="Trade query constraints"
@@ -95,23 +89,18 @@ export default function TradeTogglesBar({
         variant="filled"
       />
 
-      <div className="h-4 w-px shrink-0 bg-border" data-testid="toggle-divider" />
+      {showSchema && (
+        <>
+          <div className="h-4 w-px shrink-0 bg-border" data-testid="toggle-divider" />
 
-      <ToggleGroup
-        onChange={onDirectionChange}
-        options={DIRECTION_OPTIONS}
-        value={overrides.direction}
-        variant="filled"
-      />
-
-      <div className="h-4 w-px shrink-0 bg-border" data-testid="toggle-divider" />
-
-      <ToggleGroup
-        onChange={onSchemaChange}
-        options={SCHEMA_OPTIONS}
-        value={overrides.schema}
-        variant="outlined"
-      />
+          <ToggleGroup
+            onChange={onSchemaChange}
+            options={SCHEMA_OPTIONS}
+            value={overrides.schema}
+            variant="outlined"
+          />
+        </>
+      )}
     </div>
   );
 }

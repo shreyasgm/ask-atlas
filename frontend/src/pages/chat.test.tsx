@@ -16,7 +16,6 @@ const mockClearChat = vi.fn();
 const mockDeleteConversation = vi.fn();
 const mockRefresh = vi.fn();
 const mockResetAll = vi.fn();
-const mockSetDirection = vi.fn();
 const mockSetMode = vi.fn();
 const mockSetOverrides = vi.fn();
 const mockSetSchema = vi.fn();
@@ -36,7 +35,6 @@ let mockHookReturn: {
 let mockToggleReturn: {
   overrides: TradeOverrides;
   resetAll: typeof mockResetAll;
-  setDirection: typeof mockSetDirection;
   setMode: typeof mockSetMode;
   setOverrides: typeof mockSetOverrides;
   setSchema: typeof mockSetSchema;
@@ -81,7 +79,6 @@ beforeEach(() => {
   mockDeleteConversation.mockReset();
   mockRefresh.mockReset();
   mockResetAll.mockReset();
-  mockSetDirection.mockReset();
   mockSetMode.mockReset();
   mockSetOverrides.mockReset();
   mockSetSchema.mockReset();
@@ -99,7 +96,6 @@ beforeEach(() => {
   mockToggleReturn = {
     overrides: { direction: null, mode: null, schema: null },
     resetAll: mockResetAll,
-    setDirection: mockSetDirection,
     setMode: mockSetMode,
     setOverrides: mockSetOverrides,
     setSchema: mockSetSchema,
