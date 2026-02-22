@@ -6,6 +6,7 @@ import type {
   PipelineStep,
   QueryAggregateStats,
   TradeOverrides,
+  TurnSummary,
 } from '@/types/chat';
 import { getSessionId } from '@/utils/session';
 
@@ -444,6 +445,57 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
         const loaded = messageList.map((m) =>
           createMessage(m.role === 'human' ? 'user' : 'assistant', m.content),
         );
+
+        // Hydrate right panel from turn_summaries if present
+        const turnSummaries: Array<TurnSummary> =
+          !Array.isArray(data) &&
+          Array.isArray((data as { turn_summaries?: unknown }).turn_summaries)
+            ? (data as { turn_summaries: Array<TurnSummary> }).turn_summaries
+            : [];
+
+        if (turnSummaries.length > 0) {
+          // Pair summaries with assistant messages (1:1 by index)
+          const assistantMessages = loaded.filter((m) => m.role === 'assistant');
+          for (let i = 0; i < Math.min(assistantMessages.length, turnSummaries.length); i++) {
+            const ts = turnSummaries[i];
+            if (ts.queries.length > 0) {
+              assistantMessages[i].queryResults = ts.queries.map((q) => ({
+                columns: q.columns,
+                executionTimeMs: q.execution_time_ms,
+                rowCount: q.row_count,
+                rows: q.rows,
+                sql: q.sql,
+              }));
+            }
+          }
+
+          // Set entities from the last summary that has them
+          const lastWithEntities = [...turnSummaries].reverse().find((ts) => ts.entities !== null);
+          if (lastWithEntities?.entities) {
+            setEntitiesData({
+              lookupCodes: '',
+              products: lastWithEntities.entities.products,
+              schemas: lastWithEntities.entities.schemas,
+            });
+          }
+
+          // Set query stats from totals across all summaries
+          const totalRows = turnSummaries.reduce((sum, ts) => sum + ts.total_rows, 0);
+          const totalExecMs = turnSummaries.reduce(
+            (sum, ts) => sum + ts.total_execution_time_ms,
+            0,
+          );
+          const totalQueries = turnSummaries.reduce((sum, ts) => sum + ts.queries.length, 0);
+          if (totalQueries > 0) {
+            setQueryStats({
+              totalExecutionTimeMs: totalExecMs,
+              totalQueries,
+              totalRows,
+              totalTimeMs: 0,
+            });
+          }
+        }
+
         setMessages(loaded);
         setIsRestoredThread(true);
 

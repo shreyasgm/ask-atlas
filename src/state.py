@@ -13,6 +13,23 @@ from typing_extensions import TypedDict
 from src.product_and_schema_lookup import SchemasAndProductsFound
 
 
+def add_turn_summaries(
+    existing: list[dict] | None, new: list[dict] | None
+) -> list[dict]:
+    """Reducer that accumulates turn summaries across conversation turns.
+
+    Same append-only pattern as LangGraph's ``add_messages``.
+
+    Args:
+        existing: Previously accumulated summaries (may be None on first turn).
+        new: New summaries to append (may be None if no summary produced).
+
+    Returns:
+        Combined list of all turn summaries.
+    """
+    return (existing or []) + (new or [])
+
+
 class AtlasAgentState(TypedDict):
     """State carried through each node of the Atlas agent graph.
 
@@ -30,6 +47,7 @@ class AtlasAgentState(TypedDict):
         pipeline_result_columns: Column names from the last executed query.
         pipeline_result_rows: Row data from the last executed query.
         pipeline_execution_time_ms: Query execution time in milliseconds.
+        turn_summaries: Accumulated per-turn pipeline summaries (entities, queries, stats).
         override_schema: User-specified classification schema override.
         override_direction: User-specified trade direction override.
         override_mode: User-specified trade mode override (goods/services).
@@ -49,6 +67,8 @@ class AtlasAgentState(TypedDict):
     pipeline_result_columns: list[str]
     pipeline_result_rows: list[list]
     pipeline_execution_time_ms: int
+    # Accumulated per-turn pipeline summaries (persisted in checkpoint)
+    turn_summaries: Annotated[list[dict], add_turn_summaries]
     # Trade toggle overrides (None = auto-detect)
     override_schema: Optional[str]
     override_direction: Optional[str]

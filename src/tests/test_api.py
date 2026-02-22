@@ -1186,8 +1186,8 @@ class TestGetThreadMessages:
         assert data["overrides"]["override_direction"] is None
         assert data["overrides"]["override_mode"] is None
 
-    def test_response_has_messages_and_overrides_keys(self, client: TestClient) -> None:
-        """Response should have exactly 'messages' and 'overrides' keys."""
+    def test_response_has_messages_overrides_and_turn_summaries_keys(self, client: TestClient) -> None:
+        """Response should have 'messages', 'overrides', and 'turn_summaries' keys."""
         from langchain_core.messages import AIMessage, HumanMessage
 
         mock_state = MagicMock()
@@ -1203,7 +1203,72 @@ class TestGetThreadMessages:
 
         response = client.get("/threads/t1/messages")
         data = response.json()
-        assert set(data.keys()) == {"messages", "overrides"}
+        assert set(data.keys()) == {"messages", "overrides", "turn_summaries"}
+
+    def test_response_includes_turn_summaries_when_present(self, client: TestClient) -> None:
+        """State with turn_summaries should include them in response."""
+        from langchain_core.messages import AIMessage, HumanMessage
+
+        mock_state = MagicMock()
+        mock_state.values = {
+            "messages": [
+                HumanMessage(content="Hi"),
+                AIMessage(content="Hello!"),
+            ],
+            "turn_summaries": [
+                {
+                    "entities": {
+                        "schemas": ["hs92"],
+                        "products": [{"name": "coffee", "codes": ["0901"], "schema": "hs92"}],
+                    },
+                    "queries": [
+                        {
+                            "sql": "SELECT * FROM t",
+                            "columns": ["country", "value"],
+                            "rows": [["USA", 1000]],
+                            "row_count": 1,
+                            "execution_time_ms": 42,
+                            "tables": ["hs92.country_product_year_4"],
+                            "schema_name": "hs92",
+                        }
+                    ],
+                    "total_rows": 1,
+                    "total_execution_time_ms": 42,
+                }
+            ],
+        }
+        mock_agent = MagicMock()
+        mock_agent.aget_state = AsyncMock(return_value=mock_state)
+        _state.atlas_sql.agent = mock_agent
+
+        response = client.get("/threads/t1/messages")
+        data = response.json()
+        assert len(data["turn_summaries"]) == 1
+        ts = data["turn_summaries"][0]
+        assert ts["entities"]["schemas"] == ["hs92"]
+        assert len(ts["queries"]) == 1
+        assert ts["queries"][0]["sql"] == "SELECT * FROM t"
+        assert ts["total_rows"] == 1
+        assert ts["total_execution_time_ms"] == 42
+
+    def test_response_empty_turn_summaries_when_absent(self, client: TestClient) -> None:
+        """Old checkpoints (no turn_summaries key) should return empty list."""
+        from langchain_core.messages import AIMessage, HumanMessage
+
+        mock_state = MagicMock()
+        mock_state.values = {
+            "messages": [
+                HumanMessage(content="Hi"),
+                AIMessage(content="Hello!"),
+            ]
+        }
+        mock_agent = MagicMock()
+        mock_agent.aget_state = AsyncMock(return_value=mock_state)
+        _state.atlas_sql.agent = mock_agent
+
+        response = client.get("/threads/t1/messages")
+        data = response.json()
+        assert data["turn_summaries"] == []
 
 
 # ---------------------------------------------------------------------------
