@@ -36,6 +36,13 @@ def pytest_configure(config):
 def base_dir():
     return BASE_DIR
 
+@pytest.fixture(autouse=True)
+def _clear_caches():
+    """Reset all in-process caches between tests for isolation."""
+    from src.cache import registry
+    registry.clear_all()
+
+
 @pytest.fixture
 def logger():
     """Fixture to provide a logger instance to tests."""
