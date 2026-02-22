@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { EntitiesData, QueryAggregateStats } from '@/types/chat';
+import type { EntitiesData, QueryAggregateStats, TradeOverrides } from '@/types/chat';
 import { useChatStream } from './use-chat-stream';
 
 vi.mock('@/utils/session', () => ({
@@ -577,15 +577,59 @@ describe('useChatStream', () => {
     expect(onConversationChange).toHaveBeenCalled();
   });
 
+  it('includes override fields in request body when provided', async () => {
+    global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
+
+    const overrides: TradeOverrides = { direction: 'exports', mode: 'goods', schema: 'hs12' };
+    const { result } = renderHook(() => useChatStream());
+
+    act(() => {
+      result.current.sendMessage('hello', overrides);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    const fetchCall = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const body = JSON.parse(fetchCall[1].body);
+    expect(body.override_schema).toBe('hs12');
+    expect(body.override_direction).toBe('exports');
+    expect(body.override_mode).toBe('goods');
+  });
+
+  it('omits override fields when all null', async () => {
+    global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
+
+    const { result } = renderHook(() => useChatStream());
+
+    act(() => {
+      result.current.sendMessage('hello');
+    });
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    const fetchCall = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const body = JSON.parse(fetchCall[1].body);
+    expect(body.override_schema).toBeUndefined();
+    expect(body.override_direction).toBeUndefined();
+    expect(body.override_mode).toBeUndefined();
+  });
+
   it('loads thread history when URL has threadId and no messages', async () => {
     mockParams = { threadId: 'existing-thread' };
 
     global.fetch = vi.fn().mockResolvedValue({
       json: () =>
-        Promise.resolve([
-          { content: 'What are top exports?', role: 'human' },
-          { content: 'The top exports include soybeans.', role: 'ai' },
-        ]),
+        Promise.resolve({
+          messages: [
+            { content: 'What are top exports?', role: 'human' },
+            { content: 'The top exports include soybeans.', role: 'ai' },
+          ],
+          overrides: { override_direction: null, override_mode: null, override_schema: null },
+        }),
       ok: true,
     });
 
@@ -607,6 +651,60 @@ describe('useChatStream', () => {
         headers: { 'X-Session-Id': 'test-session-id' },
       }),
     );
+  });
+
+  it('calls onOverridesLoaded when loading thread history with overrides', async () => {
+    mockParams = { threadId: 'thread-with-overrides' };
+
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () =>
+        Promise.resolve({
+          messages: [
+            { content: 'HS12 exports', role: 'human' },
+            { content: 'Here are HS12 exports.', role: 'ai' },
+          ],
+          overrides: {
+            override_direction: 'exports',
+            override_mode: 'goods',
+            override_schema: 'hs12',
+          },
+        }),
+      ok: true,
+    });
+
+    const onOverridesLoaded = vi.fn();
+    const { result } = renderHook(() => useChatStream({ onOverridesLoaded }));
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(2);
+    });
+
+    expect(onOverridesLoaded).toHaveBeenCalledWith({
+      direction: 'exports',
+      mode: 'goods',
+      schema: 'hs12',
+    });
+  });
+
+  it('handles legacy array response for backward compatibility', async () => {
+    mockParams = { threadId: 'legacy-thread' };
+
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () =>
+        Promise.resolve([
+          { content: 'Old format question', role: 'human' },
+          { content: 'Old format answer', role: 'ai' },
+        ]),
+      ok: true,
+    });
+
+    const { result } = renderHook(() => useChatStream());
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(2);
+    });
+
+    expect(result.current.messages[0].content).toBe('Old format question');
   });
 
   it('clearChat navigates to /chat', async () => {
@@ -640,14 +738,17 @@ describe('useChatStream', () => {
 // exactly the intermediate state that triggers the race in a real browser.
 describe('clearChat does not re-trigger history loading (race condition)', () => {
   const HISTORY_THREAD = 'thread-with-history';
-  const historyMessages = [
-    { content: 'What are top exports?', role: 'human' },
-    { content: 'The top exports include soybeans.', role: 'ai' },
-  ];
+  const historyResponse = {
+    messages: [
+      { content: 'What are top exports?', role: 'human' },
+      { content: 'The top exports include soybeans.', role: 'ai' },
+    ],
+    overrides: { override_direction: null, override_mode: null, override_schema: null },
+  };
 
   function mockHistoryFetch() {
     return vi.fn().mockResolvedValue({
-      json: () => Promise.resolve(historyMessages),
+      json: () => Promise.resolve(historyResponse),
       ok: true,
     });
   }
@@ -743,10 +844,13 @@ describe('clearChat does not re-trigger history loading (race condition)', () =>
     rerender();
 
     // Now navigate to a different thread
-    const newHistory = [
-      { content: 'Tell me about coffee', role: 'human' },
-      { content: 'Coffee is a major export...', role: 'ai' },
-    ];
+    const newHistory = {
+      messages: [
+        { content: 'Tell me about coffee', role: 'human' },
+        { content: 'Coffee is a major export...', role: 'ai' },
+      ],
+      overrides: { override_direction: null, override_mode: null, override_schema: null },
+    };
     global.fetch = vi.fn().mockResolvedValue({
       json: () => Promise.resolve(newHistory),
       ok: true,

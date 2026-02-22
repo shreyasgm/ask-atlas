@@ -42,6 +42,16 @@ export interface QueryAggregateStats {
   totalTimeMs: number;
 }
 
+export type ClassificationSchema = 'hs12' | 'hs92' | 'sitc';
+export type TradeDirection = 'exports' | 'imports';
+export type TradeMode = 'goods' | 'services';
+
+export interface TradeOverrides {
+  direction: TradeDirection | null;
+  mode: TradeMode | null;
+  schema: ClassificationSchema | null;
+}
+
 export interface ConversationSummary {
   createdAt: string;
   threadId: string;

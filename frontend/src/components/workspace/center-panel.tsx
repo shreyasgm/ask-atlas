@@ -1,14 +1,26 @@
-import type { ChatMessage, PipelineStep } from '@/types/chat';
+import type {
+  ChatMessage,
+  ClassificationSchema,
+  PipelineStep,
+  TradeDirection,
+  TradeMode,
+  TradeOverrides,
+} from '@/types/chat';
 import ChatInput from '@/components/chat/chat-input';
 import ChatTopBar from '@/components/chat/chat-top-bar';
 import MessageList from '@/components/chat/message-list';
+import TradeTogglesBar from '@/components/chat/trade-toggles-bar';
 
 interface CenterPanelProps {
   error: null | string;
   isStreaming: boolean;
   messages: Array<ChatMessage>;
   onClear: () => void;
+  onDirectionChange: (v: TradeDirection | null) => void;
+  onModeChange: (v: TradeMode | null) => void;
+  onSchemaChange: (v: ClassificationSchema | null) => void;
   onSend: (text: string) => void;
+  overrides: TradeOverrides;
   pipelineSteps: Array<PipelineStep>;
 }
 
@@ -17,7 +29,11 @@ export default function CenterPanel({
   isStreaming,
   messages,
   onClear,
+  onDirectionChange,
+  onModeChange,
+  onSchemaChange,
   onSend,
+  overrides,
   pipelineSteps,
 }: CenterPanelProps) {
   const firstUserMessage = messages.find((m) => m.role === 'user');
@@ -26,6 +42,12 @@ export default function CenterPanel({
   return (
     <div className="flex min-w-0 flex-1 flex-col">
       {messages.length > 0 && <ChatTopBar onClear={onClear} title={chatTitle} />}
+      <TradeTogglesBar
+        onDirectionChange={onDirectionChange}
+        onModeChange={onModeChange}
+        onSchemaChange={onSchemaChange}
+        overrides={overrides}
+      />
       <MessageList
         error={error}
         isStreaming={isStreaming}

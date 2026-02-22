@@ -963,7 +963,7 @@ class TestGetThreadMessages:
         response = client.get("/threads/t1/messages")
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 3  # Human, AI, AI — ToolMessage filtered out
+        assert len(data["messages"]) == 3  # Human, AI, AI — ToolMessage filtered out
 
     def test_filters_tool_messages(self, client: TestClient) -> None:
         from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
@@ -982,7 +982,7 @@ class TestGetThreadMessages:
 
         response = client.get("/threads/t1/messages")
         data = response.json()
-        roles = [m["role"] for m in data]
+        roles = [m["role"] for m in data["messages"]]
         assert "tool" not in roles
 
     def test_filters_empty_ai_messages(self, client: TestClient) -> None:
@@ -1002,7 +1002,7 @@ class TestGetThreadMessages:
 
         response = client.get("/threads/t1/messages")
         data = response.json()
-        assert len(data) == 2  # Human + non-empty AI
+        assert len(data["messages"]) == 2  # Human + non-empty AI
 
     def test_message_shape(self, client: TestClient) -> None:
         from langchain_core.messages import AIMessage, HumanMessage
@@ -1020,10 +1020,75 @@ class TestGetThreadMessages:
 
         response = client.get("/threads/t1/messages")
         data = response.json()
-        assert data[0]["role"] == "human"
-        assert data[0]["content"] == "Hi"
-        assert data[1]["role"] == "ai"
-        assert data[1]["content"] == "Hello!"
+        assert data["messages"][0]["role"] == "human"
+        assert data["messages"][0]["content"] == "Hi"
+        assert data["messages"][1]["role"] == "ai"
+        assert data["messages"][1]["content"] == "Hello!"
+
+    def test_response_includes_overrides(self, client: TestClient) -> None:
+        """Response should include overrides alongside messages."""
+        from langchain_core.messages import AIMessage, HumanMessage
+
+        mock_state = MagicMock()
+        mock_state.values = {
+            "messages": [
+                HumanMessage(content="Hi"),
+                AIMessage(content="Hello!"),
+            ],
+            "override_schema": "hs12",
+            "override_direction": "exports",
+            "override_mode": "goods",
+        }
+        mock_agent = MagicMock()
+        mock_agent.aget_state = AsyncMock(return_value=mock_state)
+        _state.atlas_sql.agent = mock_agent
+
+        response = client.get("/threads/t1/messages")
+        data = response.json()
+        assert "overrides" in data
+        assert data["overrides"]["override_schema"] == "hs12"
+        assert data["overrides"]["override_direction"] == "exports"
+        assert data["overrides"]["override_mode"] == "goods"
+
+    def test_response_null_overrides_when_none_set(self, client: TestClient) -> None:
+        """Overrides should be null when not present in state."""
+        from langchain_core.messages import AIMessage, HumanMessage
+
+        mock_state = MagicMock()
+        mock_state.values = {
+            "messages": [
+                HumanMessage(content="Hi"),
+                AIMessage(content="Hello!"),
+            ]
+        }
+        mock_agent = MagicMock()
+        mock_agent.aget_state = AsyncMock(return_value=mock_state)
+        _state.atlas_sql.agent = mock_agent
+
+        response = client.get("/threads/t1/messages")
+        data = response.json()
+        assert data["overrides"]["override_schema"] is None
+        assert data["overrides"]["override_direction"] is None
+        assert data["overrides"]["override_mode"] is None
+
+    def test_response_has_messages_and_overrides_keys(self, client: TestClient) -> None:
+        """Response should have exactly 'messages' and 'overrides' keys."""
+        from langchain_core.messages import AIMessage, HumanMessage
+
+        mock_state = MagicMock()
+        mock_state.values = {
+            "messages": [
+                HumanMessage(content="Hi"),
+                AIMessage(content="Hello!"),
+            ]
+        }
+        mock_agent = MagicMock()
+        mock_agent.aget_state = AsyncMock(return_value=mock_state)
+        _state.atlas_sql.agent = mock_agent
+
+        response = client.get("/threads/t1/messages")
+        data = response.json()
+        assert set(data.keys()) == {"messages", "overrides"}
 
 
 # ---------------------------------------------------------------------------

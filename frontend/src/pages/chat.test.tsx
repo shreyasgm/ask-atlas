@@ -2,13 +2,24 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ChatMessage, EntitiesData, PipelineStep, QueryAggregateStats } from '@/types/chat';
+import type {
+  ChatMessage,
+  EntitiesData,
+  PipelineStep,
+  QueryAggregateStats,
+  TradeOverrides,
+} from '@/types/chat';
 
 // Mock the hooks
 const mockSendMessage = vi.fn();
 const mockClearChat = vi.fn();
 const mockDeleteConversation = vi.fn();
 const mockRefresh = vi.fn();
+const mockResetAll = vi.fn();
+const mockSetDirection = vi.fn();
+const mockSetMode = vi.fn();
+const mockSetOverrides = vi.fn();
+const mockSetSchema = vi.fn();
 
 let mockHookReturn: {
   clearChat: typeof mockClearChat;
@@ -22,8 +33,21 @@ let mockHookReturn: {
   threadId: null | string;
 };
 
+let mockToggleReturn: {
+  overrides: TradeOverrides;
+  resetAll: typeof mockResetAll;
+  setDirection: typeof mockSetDirection;
+  setMode: typeof mockSetMode;
+  setOverrides: typeof mockSetOverrides;
+  setSchema: typeof mockSetSchema;
+};
+
 vi.mock('@/hooks/use-chat-stream', () => ({
   useChatStream: () => mockHookReturn,
+}));
+
+vi.mock('@/hooks/use-trade-toggles', () => ({
+  useTradeToggles: () => mockToggleReturn,
 }));
 
 vi.mock('@/hooks/use-conversations', () => ({
@@ -56,6 +80,11 @@ beforeEach(() => {
   mockClearChat.mockReset();
   mockDeleteConversation.mockReset();
   mockRefresh.mockReset();
+  mockResetAll.mockReset();
+  mockSetDirection.mockReset();
+  mockSetMode.mockReset();
+  mockSetOverrides.mockReset();
+  mockSetSchema.mockReset();
   mockHookReturn = {
     clearChat: mockClearChat,
     entitiesData: null,
@@ -66,6 +95,14 @@ beforeEach(() => {
     queryStats: null,
     sendMessage: mockSendMessage,
     threadId: null,
+  };
+  mockToggleReturn = {
+    overrides: { direction: null, mode: null, schema: null },
+    resetAll: mockResetAll,
+    setDirection: mockSetDirection,
+    setMode: mockSetMode,
+    setOverrides: mockSetOverrides,
+    setSchema: mockSetSchema,
   };
 });
 
@@ -251,7 +288,7 @@ describe('ChatPage - streaming', () => {
 });
 
 describe('ChatPage - interactions', () => {
-  it('calls sendMessage on form submit', async () => {
+  it('calls sendMessage with overrides on form submit', async () => {
     const user = userEvent.setup();
     renderChat();
 
@@ -259,7 +296,11 @@ describe('ChatPage - interactions', () => {
     await user.type(input, 'coffee exports');
     await user.click(screen.getByRole('button', { name: /send/i }));
 
-    expect(mockSendMessage).toHaveBeenCalledWith('coffee exports');
+    expect(mockSendMessage).toHaveBeenCalledWith('coffee exports', {
+      direction: null,
+      mode: null,
+      schema: null,
+    });
   });
 
   it('calls sendMessage on Enter key', async () => {
@@ -269,7 +310,11 @@ describe('ChatPage - interactions', () => {
     const input = screen.getByPlaceholderText(/ask about trade data/i);
     await user.type(input, 'coffee exports{Enter}');
 
-    expect(mockSendMessage).toHaveBeenCalledWith('coffee exports');
+    expect(mockSendMessage).toHaveBeenCalledWith('coffee exports', {
+      direction: null,
+      mode: null,
+      schema: null,
+    });
   });
 
   it('suggestion pills appear on completed assistant messages', () => {
@@ -302,7 +347,11 @@ describe('ChatPage - interactions', () => {
     renderChat();
 
     await user.click(screen.getByText('Break down by partner'));
-    expect(mockSendMessage).toHaveBeenCalledWith('Break down by partner');
+    expect(mockSendMessage).toHaveBeenCalledWith('Break down by partner', {
+      direction: null,
+      mode: null,
+      schema: null,
+    });
   });
 
   it('clear button calls clearChat', async () => {
@@ -321,6 +370,32 @@ describe('ChatPage - interactions', () => {
     const clearButton = screen.getByRole('button', { name: /clear/i });
     await user.click(clearButton);
     expect(mockClearChat).toHaveBeenCalled();
+  });
+});
+
+describe('ChatPage - trade toggles', () => {
+  it('renders trade toggles bar', () => {
+    renderChat();
+    expect(screen.getByRole('toolbar', { name: /trade query constraints/i })).toBeInTheDocument();
+  });
+
+  it('clearChat resets toggles', async () => {
+    const user = userEvent.setup();
+    mockHookReturn.messages = [
+      {
+        content: 'test',
+        id: '1',
+        isStreaming: false,
+        queryResults: [],
+        role: 'user',
+      },
+    ];
+    renderChat();
+
+    const clearButton = screen.getByRole('button', { name: /clear/i });
+    await user.click(clearButton);
+    expect(mockClearChat).toHaveBeenCalled();
+    expect(mockResetAll).toHaveBeenCalled();
   });
 });
 

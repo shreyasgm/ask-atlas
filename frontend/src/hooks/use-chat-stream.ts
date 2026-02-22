@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
-import type { ChatMessage, EntitiesData, PipelineStep, QueryAggregateStats } from '@/types/chat';
+import type {
+  ChatMessage,
+  EntitiesData,
+  PipelineStep,
+  QueryAggregateStats,
+  TradeOverrides,
+} from '@/types/chat';
 import { getSessionId } from '@/utils/session';
 
 interface UseChatStreamOptions {
   onConversationChange?: () => void;
+  onOverridesLoaded?: (o: TradeOverrides) => void;
 }
 
 interface UseChatStreamReturn {
@@ -15,7 +22,7 @@ interface UseChatStreamReturn {
   messages: Array<ChatMessage>;
   pipelineSteps: Array<PipelineStep>;
   queryStats: QueryAggregateStats | null;
-  sendMessage: (question: string) => void;
+  sendMessage: (question: string, overrides?: TradeOverrides) => void;
   threadId: null | string;
 }
 
@@ -99,13 +106,15 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
   messagesRef.current = messages;
   const onConversationChangeRef = useRef(options?.onConversationChange);
   onConversationChangeRef.current = options?.onConversationChange;
+  const onOverridesLoadedRef = useRef(options?.onOverridesLoaded);
+  onOverridesLoadedRef.current = options?.onOverridesLoaded;
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { threadId: urlThreadId } = useParams<{ threadId: string }>();
 
   const sendMessage = useCallback(
-    (question: string) => {
+    (question: string, overrides?: TradeOverrides) => {
       const trimmed = question.trim();
       if (!trimmed || isStreaming) {
         return;
@@ -137,6 +146,15 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
       const body: Record<string, string> = { question: trimmed };
       if (threadId) {
         body.thread_id = threadId;
+      }
+      if (overrides?.schema) {
+        body.override_schema = overrides.schema;
+      }
+      if (overrides?.direction) {
+        body.override_direction = overrides.direction;
+      }
+      if (overrides?.mode) {
+        body.override_mode = overrides.mode;
       }
 
       (async () => {
@@ -395,11 +413,27 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
         if (!response.ok) {
           return;
         }
-        const data: Array<{ content: string; role: 'ai' | 'human' }> = await response.json();
-        const loaded = data.map((m) =>
+        const data: unknown = await response.json();
+
+        // Support both new shape {messages, overrides} and legacy array shape
+        const messageList: Array<{ content: string; role: 'ai' | 'human' }> = Array.isArray(data)
+          ? data
+          : (data as { messages: Array<{ content: string; role: 'ai' | 'human' }> }).messages;
+
+        const loaded = messageList.map((m) =>
           createMessage(m.role === 'human' ? 'user' : 'assistant', m.content),
         );
         setMessages(loaded);
+
+        // Restore trade overrides from history if present
+        if (!Array.isArray(data) && (data as { overrides?: unknown }).overrides) {
+          const raw = (data as { overrides: Record<string, string | null> }).overrides;
+          onOverridesLoadedRef.current?.({
+            direction: (raw.override_direction as TradeOverrides['direction']) ?? null,
+            mode: (raw.override_mode as TradeOverrides['mode']) ?? null,
+            schema: (raw.override_schema as TradeOverrides['schema']) ?? null,
+          });
+        }
       } catch {
         // Silently fail — user can still send new messages
       }
