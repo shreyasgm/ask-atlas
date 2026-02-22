@@ -12,7 +12,7 @@ export default function ChatPage() {
     refresh,
   } = useConversations();
 
-  const { overrides, resetAll, setDirection, setMode, setOverrides, setSchema } = useTradeToggles();
+  const { overrides, resetAll, setMode, setOverrides, setSchema } = useTradeToggles();
 
   const {
     clearChat: clearChatStream,
@@ -50,7 +50,6 @@ export default function ChatPage() {
         messages={messages}
         onClear={handleClear}
         onDeleteConversation={deleteConversation}
-        onDirectionChange={setDirection}
         onModeChange={setMode}
         onSchemaChange={setSchema}
         onSend={handleSend}

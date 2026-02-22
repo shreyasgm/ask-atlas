@@ -6,7 +6,6 @@ import type {
   EntitiesData,
   PipelineStep,
   QueryAggregateStats,
-  TradeDirection,
   TradeMode,
   TradeOverrides,
 } from '@/types/chat';
@@ -24,7 +23,6 @@ interface ChatWorkspaceProps {
   messages: Array<ChatMessage>;
   onClear: () => void;
   onDeleteConversation: (threadId: string) => void;
-  onDirectionChange: (v: TradeDirection | null) => void;
   onModeChange: (v: TradeMode | null) => void;
   onSchemaChange: (v: ClassificationSchema | null) => void;
   onSend: (text: string) => void;
@@ -64,7 +62,6 @@ export default function ChatWorkspace({
   messages,
   onClear,
   onDeleteConversation,
-  onDirectionChange,
   onModeChange,
   onSchemaChange,
   onSend,
@@ -114,7 +111,6 @@ export default function ChatWorkspace({
         isStreaming={isStreaming}
         messages={messages}
         onClear={onClear}
-        onDirectionChange={onDirectionChange}
         onModeChange={onModeChange}
         onSchemaChange={onSchemaChange}
         onSend={onSend}

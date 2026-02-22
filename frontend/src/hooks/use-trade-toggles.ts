@@ -20,7 +20,11 @@ export function useTradeToggles(): UseTradeTogglesReturn {
   }, []);
 
   const setMode = useCallback((v: TradeMode | null) => {
-    setOverridesState((prev) => ({ ...prev, mode: v }));
+    setOverridesState((prev) => ({
+      ...prev,
+      mode: v,
+      schema: v === 'services' ? null : prev.schema,
+    }));
   }, []);
 
   const setSchema = useCallback((v: ClassificationSchema | null) => {
