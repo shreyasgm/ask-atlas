@@ -102,8 +102,6 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
   const abortControllerRef = useRef<AbortController | null>(null);
   const initialQuerySent = useRef(false);
   const historyLoaded = useRef<string | null>(null);
-  const messagesRef = useRef(messages);
-  messagesRef.current = messages;
   const onConversationChangeRef = useRef(options?.onConversationChange);
   onConversationChangeRef.current = options?.onConversationChange;
   const onOverridesLoadedRef = useRef(options?.onOverridesLoaded);
@@ -330,6 +328,9 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
               case 'thread_id': {
                 const id = parsed.thread_id;
                 setThreadId(id);
+                // Mark as loaded so the history effect doesn't try to fetch
+                // — messages for this thread are being streamed live.
+                historyLoaded.current = id;
                 navigate(`/chat/${id}`, { replace: true });
                 break;
               }
@@ -389,18 +390,34 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
     setPipelineSteps([]);
     setQueryStats(null);
     setThreadId(null);
-    historyLoaded.current = null;
     navigate('/chat', { replace: true });
   }, [navigate]);
 
-  // Load thread history when navigating to /chat/:threadId.
-  // Only depends on urlThreadId — using messagesRef avoids a race condition
-  // where clearChat resets messages to [] before navigate takes effect,
-  // which would re-trigger this effect and reload the thread history.
+  // Reset historyLoaded when navigating away from a thread (e.g. clearChat → /chat).
+  // This allows re-loading the same thread if the user navigates back to it.
+  // Crucially, clearChat does NOT reset historyLoaded — the old value matches
+  // urlThreadId during the intermediate render before navigate takes effect,
+  // preventing an unwanted re-fetch of the thread being cleared.
   useEffect(() => {
-    if (!urlThreadId || historyLoaded.current === urlThreadId || messagesRef.current.length > 0) {
+    if (!urlThreadId) {
+      historyLoaded.current = null;
+    }
+  }, [urlThreadId]);
+
+  // Load thread history when navigating to /chat/:threadId.
+  // Handles both initial page loads and direct thread-to-thread switches
+  // (clicking a different conversation in the sidebar without clearing first).
+  useEffect(() => {
+    if (!urlThreadId || historyLoaded.current === urlThreadId) {
       return;
     }
+
+    // Reset state from previous thread before loading new one
+    setMessages([]);
+    setPipelineSteps([]);
+    setEntitiesData(null);
+    setQueryStats(null);
+    setError(null);
 
     historyLoaded.current = urlThreadId;
     setThreadId(urlThreadId);
