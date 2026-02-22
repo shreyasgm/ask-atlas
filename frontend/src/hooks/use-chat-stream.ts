@@ -18,6 +18,7 @@ interface UseChatStreamReturn {
   clearChat: () => void;
   entitiesData: EntitiesData | null;
   error: null | string;
+  isRestoredThread: boolean;
   isStreaming: boolean;
   messages: Array<ChatMessage>;
   pipelineSteps: Array<PipelineStep>;
@@ -98,6 +99,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
   const [error, setError] = useState<null | string>(null);
   const [entitiesData, setEntitiesData] = useState<EntitiesData | null>(null);
   const [queryStats, setQueryStats] = useState<QueryAggregateStats | null>(null);
+  const [isRestoredThread, setIsRestoredThread] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const initialQuerySent = useRef(false);
@@ -139,6 +141,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
       setPipelineSteps([]);
       setIsStreaming(true);
+      setIsRestoredThread(false);
       setError(null);
 
       const body: Record<string, string> = { question: trimmed };
@@ -385,6 +388,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
     }
     setEntitiesData(null);
     setError(null);
+    setIsRestoredThread(false);
     setIsStreaming(false);
     setMessages([]);
     setPipelineSteps([]);
@@ -441,6 +445,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
           createMessage(m.role === 'human' ? 'user' : 'assistant', m.content),
         );
         setMessages(loaded);
+        setIsRestoredThread(true);
 
         // Restore trade overrides from history if present
         if (!Array.isArray(data) && (data as { overrides?: unknown }).overrides) {
@@ -491,6 +496,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
     clearChat,
     entitiesData,
     error,
+    isRestoredThread,
     isStreaming,
     messages,
     pipelineSteps,

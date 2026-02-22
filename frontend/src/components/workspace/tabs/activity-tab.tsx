@@ -3,6 +3,7 @@ import type { PipelineStep, QueryAggregateStats } from '@/types/chat';
 import { cn } from '@/lib/utils';
 
 interface ActivityTabProps {
+  isRestoredThread: boolean;
   isStreaming: boolean;
   pipelineSteps: Array<PipelineStep>;
   queryStats: QueryAggregateStats | null;
@@ -22,11 +23,18 @@ function formatDuration(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-export default function ActivityTab({ isStreaming, pipelineSteps, queryStats }: ActivityTabProps) {
+export default function ActivityTab({
+  isRestoredThread,
+  isStreaming,
+  pipelineSteps,
+  queryStats,
+}: ActivityTabProps) {
   if (pipelineSteps.length === 0 && !queryStats) {
     return (
       <p className="py-8 text-center text-xs text-muted-foreground">
-        No activity yet. Send a message to begin.
+        {isRestoredThread
+          ? 'Activity data is only available for the current session. Send a new message to see pipeline activity.'
+          : 'No activity yet. Send a message to begin.'}
       </p>
     );
   }

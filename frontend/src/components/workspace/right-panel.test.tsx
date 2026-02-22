@@ -7,6 +7,7 @@ const DEFAULT_PROPS = {
   currentQueries: [],
   entitiesData: null,
   expanded: true,
+  isRestoredThread: false,
   isStreaming: false,
   onToggle: vi.fn(),
   pipelineSteps: [],

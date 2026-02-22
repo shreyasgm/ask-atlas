@@ -2,13 +2,16 @@ import type { EntitiesData } from '@/types/chat';
 
 interface EntitiesTabProps {
   entitiesData: EntitiesData | null;
+  isRestoredThread: boolean;
 }
 
-export default function EntitiesTab({ entitiesData }: EntitiesTabProps) {
+export default function EntitiesTab({ entitiesData, isRestoredThread }: EntitiesTabProps) {
   if (!entitiesData) {
     return (
       <p className="py-8 text-center text-xs text-muted-foreground">
-        No entities resolved yet. Send a message to begin.
+        {isRestoredThread
+          ? 'Entity data is only available for the current session. Send a new message to see resolved entities.'
+          : 'No entities resolved yet. Send a message to begin.'}
       </p>
     );
   }

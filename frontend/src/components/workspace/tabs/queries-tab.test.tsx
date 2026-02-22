@@ -30,30 +30,36 @@ const STATS: QueryAggregateStats = {
 
 describe('QueriesTab', () => {
   it('shows empty state when no queries', () => {
-    render(<QueriesTab currentQueries={[]} queryStats={null} />);
+    render(<QueriesTab currentQueries={[]} isRestoredThread={false} queryStats={null} />);
     expect(screen.getByText(/no queries executed yet/i)).toBeInTheDocument();
   });
 
+  it('shows restored thread message instead of default empty state', () => {
+    render(<QueriesTab currentQueries={[]} isRestoredThread={true} queryStats={null} />);
+    expect(screen.queryByText(/no queries executed yet/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/only available for the current session/i)).toBeInTheDocument();
+  });
+
   it('renders query count badge', () => {
-    render(<QueriesTab currentQueries={QUERIES} queryStats={null} />);
+    render(<QueriesTab currentQueries={QUERIES} isRestoredThread={false} queryStats={null} />);
     expect(screen.getByText('2')).toBeInTheDocument();
   });
 
   it('renders query cards with index labels', () => {
-    render(<QueriesTab currentQueries={QUERIES} queryStats={null} />);
+    render(<QueriesTab currentQueries={QUERIES} isRestoredThread={false} queryStats={null} />);
     expect(screen.getByText('Q1')).toBeInTheDocument();
     expect(screen.getByText('Q2')).toBeInTheDocument();
   });
 
   it('shows execution time on each card', () => {
-    render(<QueriesTab currentQueries={QUERIES} queryStats={null} />);
+    render(<QueriesTab currentQueries={QUERIES} isRestoredThread={false} queryStats={null} />);
     expect(screen.getByText('42ms')).toBeInTheDocument();
     expect(screen.getByText('1.2s')).toBeInTheDocument();
   });
 
   it('shows SQL when card is expanded', async () => {
     const user = userEvent.setup();
-    render(<QueriesTab currentQueries={QUERIES} queryStats={null} />);
+    render(<QueriesTab currentQueries={QUERIES} isRestoredThread={false} queryStats={null} />);
 
     // SQL not visible initially
     expect(screen.queryByText(/SELECT product/)).not.toBeInTheDocument();
@@ -67,7 +73,7 @@ describe('QueriesTab', () => {
 
   it('Copy SQL button is present when card expanded', async () => {
     const user = userEvent.setup();
-    render(<QueriesTab currentQueries={QUERIES} queryStats={null} />);
+    render(<QueriesTab currentQueries={QUERIES} isRestoredThread={false} queryStats={null} />);
 
     // Expand first card
     await user.click(screen.getByText('Q1'));
@@ -78,7 +84,7 @@ describe('QueriesTab', () => {
   });
 
   it('renders aggregate stats footer', () => {
-    render(<QueriesTab currentQueries={QUERIES} queryStats={STATS} />);
+    render(<QueriesTab currentQueries={QUERIES} isRestoredThread={false} queryStats={STATS} />);
     expect(screen.getByText('Total rows')).toBeInTheDocument();
     expect(screen.getByText('20')).toBeInTheDocument();
     expect(screen.getByText('Total time')).toBeInTheDocument();
@@ -88,7 +94,7 @@ describe('QueriesTab', () => {
   });
 
   it('hides aggregate footer when no stats', () => {
-    render(<QueriesTab currentQueries={QUERIES} queryStats={null} />);
+    render(<QueriesTab currentQueries={QUERIES} isRestoredThread={false} queryStats={null} />);
     expect(screen.queryByText('Total rows')).not.toBeInTheDocument();
   });
 });

@@ -902,6 +902,91 @@ describe('clearChat does not re-trigger history loading (race condition)', () =>
   });
 });
 
+describe('isRestoredThread flag', () => {
+  it('is false initially', () => {
+    global.fetch = vi.fn();
+    const { result } = renderHook(() => useChatStream());
+    expect(result.current.isRestoredThread).toBe(false);
+  });
+
+  it('is true after loading thread history', async () => {
+    mockParams = { threadId: 'restored-thread' };
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () =>
+        Promise.resolve({
+          messages: [
+            { content: 'Q', role: 'human' },
+            { content: 'A', role: 'ai' },
+          ],
+          overrides: {},
+        }),
+      ok: true,
+    });
+
+    const { result } = renderHook(() => useChatStream());
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(2);
+    });
+
+    expect(result.current.isRestoredThread).toBe(true);
+  });
+
+  it('becomes false after sending a message in restored thread', async () => {
+    mockParams = { threadId: 'restored-thread' };
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () =>
+        Promise.resolve({
+          messages: [
+            { content: 'Q', role: 'human' },
+            { content: 'A', role: 'ai' },
+          ],
+          overrides: {},
+        }),
+      ok: true,
+    });
+
+    const { result } = renderHook(() => useChatStream());
+
+    await waitFor(() => {
+      expect(result.current.isRestoredThread).toBe(true);
+    });
+
+    // Now send a new message — switch fetch to SSE stream mode
+    global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
+
+    act(() => {
+      result.current.sendMessage('follow-up question');
+    });
+
+    expect(result.current.isRestoredThread).toBe(false);
+  });
+
+  it('becomes false after clearChat', async () => {
+    mockParams = { threadId: 'restored-thread' };
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () =>
+        Promise.resolve({
+          messages: [{ content: 'Q', role: 'human' }],
+          overrides: {},
+        }),
+      ok: true,
+    });
+
+    const { result } = renderHook(() => useChatStream());
+
+    await waitFor(() => {
+      expect(result.current.isRestoredThread).toBe(true);
+    });
+
+    act(() => {
+      result.current.clearChat();
+    });
+
+    expect(result.current.isRestoredThread).toBe(false);
+  });
+});
+
 describe('direct thread-to-thread navigation (no clearChat)', () => {
   it('switching from thread A to thread B loads thread B history', async () => {
     // Start on thread A

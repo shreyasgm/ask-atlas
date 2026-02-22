@@ -14,12 +14,18 @@ const ENTITIES: EntitiesData = {
 
 describe('EntitiesTab', () => {
   it('shows empty state when no entities data', () => {
-    render(<EntitiesTab entitiesData={null} />);
+    render(<EntitiesTab entitiesData={null} isRestoredThread={false} />);
     expect(screen.getByText(/no entities resolved yet/i)).toBeInTheDocument();
   });
 
+  it('shows restored thread message instead of default empty state', () => {
+    render(<EntitiesTab entitiesData={null} isRestoredThread={true} />);
+    expect(screen.queryByText(/no entities resolved yet/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/only available for the current session/i)).toBeInTheDocument();
+  });
+
   it('renders product names and code chips', () => {
-    render(<EntitiesTab entitiesData={ENTITIES} />);
+    render(<EntitiesTab entitiesData={ENTITIES} isRestoredThread={false} />);
     expect(screen.getByText('Semiconductors')).toBeInTheDocument();
     expect(screen.getByText('Crude petroleum')).toBeInTheDocument();
     expect(screen.getByText('8541')).toBeInTheDocument();
@@ -28,22 +34,22 @@ describe('EntitiesTab', () => {
   });
 
   it('renders unique product count', () => {
-    render(<EntitiesTab entitiesData={ENTITIES} />);
+    render(<EntitiesTab entitiesData={ENTITIES} isRestoredThread={false} />);
     expect(screen.getByText('2 unique products')).toBeInTheDocument();
   });
 
   it('renders schema badges', () => {
-    render(<EntitiesTab entitiesData={ENTITIES} />);
+    render(<EntitiesTab entitiesData={ENTITIES} isRestoredThread={false} />);
     expect(screen.getByText('hs92')).toBeInTheDocument();
   });
 
   it('renders resolution method', () => {
-    render(<EntitiesTab entitiesData={ENTITIES} />);
+    render(<EntitiesTab entitiesData={ENTITIES} isRestoredThread={false} />);
     expect(screen.getByText(/auto-resolved/i)).toBeInTheDocument();
   });
 
   it('shows country and partner placeholders', () => {
-    render(<EntitiesTab entitiesData={ENTITIES} />);
+    render(<EntitiesTab entitiesData={ENTITIES} isRestoredThread={false} />);
     const placeholders = screen.getAllByText('Not available yet');
     expect(placeholders).toHaveLength(2);
   });
@@ -57,7 +63,7 @@ describe('EntitiesTab', () => {
       ],
       schemas: ['hs92'],
     };
-    render(<EntitiesTab entitiesData={duped} />);
+    render(<EntitiesTab entitiesData={duped} isRestoredThread={false} />);
     expect(screen.getByText('1 unique product')).toBeInTheDocument();
     expect(screen.getByText('8541')).toBeInTheDocument();
     expect(screen.getByText('8542')).toBeInTheDocument();

@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 
 interface QueriesTabProps {
   currentQueries: Array<QueryResult>;
+  isRestoredThread: boolean;
   queryStats: QueryAggregateStats | null;
 }
 
@@ -37,10 +38,18 @@ function formatDuration(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-export default function QueriesTab({ currentQueries, queryStats }: QueriesTabProps) {
+export default function QueriesTab({
+  currentQueries,
+  isRestoredThread,
+  queryStats,
+}: QueriesTabProps) {
   if (currentQueries.length === 0) {
     return (
-      <p className="py-8 text-center text-xs text-muted-foreground">No queries executed yet.</p>
+      <p className="py-8 text-center text-xs text-muted-foreground">
+        {isRestoredThread
+          ? 'Query data is only available for the current session. Send a new message to see executed queries.'
+          : 'No queries executed yet.'}
+      </p>
     );
   }
 

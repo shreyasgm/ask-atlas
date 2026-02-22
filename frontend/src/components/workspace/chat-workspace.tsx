@@ -19,6 +19,7 @@ interface ChatWorkspaceProps {
   conversationsLoading: boolean;
   entitiesData: EntitiesData | null;
   error: null | string;
+  isRestoredThread: boolean;
   isStreaming: boolean;
   messages: Array<ChatMessage>;
   onClear: () => void;
@@ -58,6 +59,7 @@ export default function ChatWorkspace({
   conversationsLoading,
   entitiesData,
   error,
+  isRestoredThread,
   isStreaming,
   messages,
   onClear,
@@ -126,6 +128,7 @@ export default function ChatWorkspace({
           currentQueries={currentQueries}
           entitiesData={entitiesData}
           expanded={rightPanelExpanded}
+          isRestoredThread={isRestoredThread}
           isStreaming={isStreaming}
           onToggle={() => setRightPanelExpanded((prev) => !prev)}
           pipelineSteps={pipelineSteps}
