@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import type {
   ChatMessage,
+  ClassificationSchema,
   ConversationSummary,
   EntitiesData,
   PipelineStep,
   QueryAggregateStats,
+  TradeDirection,
+  TradeMode,
+  TradeOverrides,
 } from '@/types/chat';
 import CenterPanel from './center-panel';
 import LeftSidebar from './left-sidebar';
@@ -20,7 +24,11 @@ interface ChatWorkspaceProps {
   messages: Array<ChatMessage>;
   onClear: () => void;
   onDeleteConversation: (threadId: string) => void;
+  onDirectionChange: (v: TradeDirection | null) => void;
+  onModeChange: (v: TradeMode | null) => void;
+  onSchemaChange: (v: ClassificationSchema | null) => void;
   onSend: (text: string) => void;
+  overrides: TradeOverrides;
   pipelineSteps: Array<PipelineStep>;
   queryStats: QueryAggregateStats | null;
 }
@@ -56,7 +64,11 @@ export default function ChatWorkspace({
   messages,
   onClear,
   onDeleteConversation,
+  onDirectionChange,
+  onModeChange,
+  onSchemaChange,
   onSend,
+  overrides,
   pipelineSteps,
   queryStats,
 }: ChatWorkspaceProps) {
@@ -102,7 +114,11 @@ export default function ChatWorkspace({
         isStreaming={isStreaming}
         messages={messages}
         onClear={onClear}
+        onDirectionChange={onDirectionChange}
+        onModeChange={onModeChange}
+        onSchemaChange={onSchemaChange}
         onSend={onSend}
+        overrides={overrides}
         pipelineSteps={pipelineSteps}
       />
 

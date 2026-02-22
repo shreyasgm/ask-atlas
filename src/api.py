@@ -78,6 +78,21 @@ class MessageResponse(BaseModel):
     content: str
 
 
+class OverridesResponse(BaseModel):
+    """Trade toggle overrides stored in LangGraph state."""
+
+    override_schema: Literal["hs92", "hs12", "sitc"] | None = None
+    override_direction: Literal["exports", "imports"] | None = None
+    override_mode: Literal["goods", "services"] | None = None
+
+
+class ThreadMessagesResponse(BaseModel):
+    """Response for GET /threads/{id}/messages."""
+
+    messages: list[MessageResponse]
+    overrides: OverridesResponse
+
+
 # ---------------------------------------------------------------------------
 # Application state
 # ---------------------------------------------------------------------------
@@ -288,13 +303,14 @@ async def list_threads(request: Request) -> list[ConversationSummary]:
 
 
 @app.get("/threads/{thread_id}/messages")
-async def get_thread_messages(thread_id: str) -> list[MessageResponse]:
-    """Retrieve message history for a thread from LangGraph state."""
+async def get_thread_messages(thread_id: str) -> ThreadMessagesResponse:
+    """Retrieve message history and trade overrides for a thread from LangGraph state."""
     atlas_sql = _get_atlas_sql()
     config = {"configurable": {"thread_id": thread_id}}
     state = await atlas_sql.agent.aget_state(config)
 
-    messages = (state.values or {}).get("messages")
+    values = state.values or {}
+    messages = values.get("messages")
     if not messages:
         return JSONResponse(
             status_code=404,
@@ -309,7 +325,13 @@ async def get_thread_messages(thread_id: str) -> list[MessageResponse]:
             result.append(MessageResponse(role="ai", content=msg.content))
         # Skip ToolMessages and empty AI messages
 
-    return result
+    overrides = OverridesResponse(
+        override_schema=values.get("override_schema"),
+        override_direction=values.get("override_direction"),
+        override_mode=values.get("override_mode"),
+    )
+
+    return ThreadMessagesResponse(messages=result, overrides=overrides)
 
 
 @app.delete("/threads/{thread_id}", status_code=204)

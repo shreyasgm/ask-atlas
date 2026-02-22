@@ -1,6 +1,8 @@
+import { useCallback } from 'react';
 import ChatWorkspace from '@/components/workspace/chat-workspace';
 import { useChatStream } from '@/hooks/use-chat-stream';
 import { useConversations } from '@/hooks/use-conversations';
+import { useTradeToggles } from '@/hooks/use-trade-toggles';
 
 export default function ChatPage() {
   const {
@@ -10,17 +12,31 @@ export default function ChatPage() {
     refresh,
   } = useConversations();
 
+  const { overrides, resetAll, setDirection, setMode, setOverrides, setSchema } = useTradeToggles();
+
   const {
-    clearChat,
+    clearChat: clearChatStream,
     entitiesData,
     error,
     isStreaming,
     messages,
     pipelineSteps,
     queryStats,
-    sendMessage,
+    sendMessage: sendRaw,
     threadId,
-  } = useChatStream({ onConversationChange: refresh });
+  } = useChatStream({ onConversationChange: refresh, onOverridesLoaded: setOverrides });
+
+  const handleSend = useCallback(
+    (question: string) => {
+      sendRaw(question, overrides);
+    },
+    [overrides, sendRaw],
+  );
+
+  const handleClear = useCallback(() => {
+    clearChatStream();
+    resetAll();
+  }, [clearChatStream, resetAll]);
 
   return (
     <div className="h-screen bg-background text-foreground">
@@ -32,9 +48,13 @@ export default function ChatPage() {
         error={error}
         isStreaming={isStreaming}
         messages={messages}
-        onClear={clearChat}
+        onClear={handleClear}
         onDeleteConversation={deleteConversation}
-        onSend={sendMessage}
+        onDirectionChange={setDirection}
+        onModeChange={setMode}
+        onSchemaChange={setSchema}
+        onSend={handleSend}
+        overrides={overrides}
         pipelineSteps={pipelineSteps}
         queryStats={queryStats}
       />

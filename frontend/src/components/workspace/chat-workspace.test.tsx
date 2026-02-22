@@ -14,7 +14,11 @@ const DEFAULT_PROPS = {
   messages: [],
   onClear: vi.fn(),
   onDeleteConversation: vi.fn(),
+  onDirectionChange: vi.fn(),
+  onModeChange: vi.fn(),
+  onSchemaChange: vi.fn(),
   onSend: vi.fn(),
+  overrides: { direction: null, mode: null, schema: null },
   pipelineSteps: [],
   queryStats: null,
 };
