@@ -24,6 +24,7 @@ let mockHookReturn: {
   clearChat: typeof mockClearChat;
   entitiesData: EntitiesData | null;
   error: null | string;
+  isRestoredThread: boolean;
   isStreaming: boolean;
   messages: Array<ChatMessage>;
   pipelineSteps: Array<PipelineStep>;
@@ -86,6 +87,7 @@ beforeEach(() => {
     clearChat: mockClearChat,
     entitiesData: null,
     error: null,
+    isRestoredThread: false,
     isStreaming: false,
     messages: [],
     pipelineSteps: [],

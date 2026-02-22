@@ -12,6 +12,7 @@ interface RightPanelProps {
   currentQueries: Array<QueryResult>;
   entitiesData: EntitiesData | null;
   expanded: boolean;
+  isRestoredThread: boolean;
   isStreaming: boolean;
   onToggle: () => void;
   pipelineSteps: Array<PipelineStep>;
@@ -28,6 +29,7 @@ export default function RightPanel({
   currentQueries,
   entitiesData,
   expanded,
+  isRestoredThread,
   isStreaming,
   onToggle,
   pipelineSteps,
@@ -97,14 +99,21 @@ export default function RightPanel({
       <div className="flex-1 overflow-y-auto p-3">
         {activeTab === 'activity' && (
           <ActivityTab
+            isRestoredThread={isRestoredThread}
             isStreaming={isStreaming}
             pipelineSteps={pipelineSteps}
             queryStats={queryStats}
           />
         )}
-        {activeTab === 'entities' && <EntitiesTab entitiesData={entitiesData} />}
+        {activeTab === 'entities' && (
+          <EntitiesTab entitiesData={entitiesData} isRestoredThread={isRestoredThread} />
+        )}
         {activeTab === 'queries' && (
-          <QueriesTab currentQueries={currentQueries} queryStats={queryStats} />
+          <QueriesTab
+            currentQueries={currentQueries}
+            isRestoredThread={isRestoredThread}
+            queryStats={queryStats}
+          />
         )}
       </div>
     </div>

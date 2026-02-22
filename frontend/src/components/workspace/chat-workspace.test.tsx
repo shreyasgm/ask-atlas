@@ -10,6 +10,7 @@ const DEFAULT_PROPS = {
   conversationsLoading: false,
   entitiesData: null,
   error: null,
+  isRestoredThread: false,
   isStreaming: false,
   messages: [],
   onClear: vi.fn(),

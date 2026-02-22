@@ -48,19 +48,53 @@ const STATS: QueryAggregateStats = {
 
 describe('ActivityTab', () => {
   it('shows empty state when no steps or stats', () => {
-    render(<ActivityTab isStreaming={false} pipelineSteps={[]} queryStats={null} />);
+    render(
+      <ActivityTab
+        isRestoredThread={false}
+        isStreaming={false}
+        pipelineSteps={[]}
+        queryStats={null}
+      />,
+    );
     expect(screen.getByText(/no activity yet/i)).toBeInTheDocument();
   });
 
+  it('shows restored thread message instead of default empty state', () => {
+    render(
+      <ActivityTab
+        isRestoredThread={true}
+        isStreaming={false}
+        pipelineSteps={[]}
+        queryStats={null}
+      />,
+    );
+    expect(screen.queryByText(/no activity yet/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/only available for the current session/i)).toBeInTheDocument();
+  });
+
   it('renders timeline entries for each pipeline step', () => {
-    render(<ActivityTab isStreaming={false} pipelineSteps={COMPLETED_STEPS} queryStats={null} />);
+    render(
+      <ActivityTab
+        isRestoredThread={false}
+        isStreaming={false}
+        pipelineSteps={COMPLETED_STEPS}
+        queryStats={null}
+      />,
+    );
     expect(screen.getByText('Extracting products')).toBeInTheDocument();
     expect(screen.getByText('Generating SQL query')).toBeInTheDocument();
     expect(screen.getByText('Executing SQL')).toBeInTheDocument();
   });
 
   it('displays timing for completed steps', () => {
-    render(<ActivityTab isStreaming={false} pipelineSteps={COMPLETED_STEPS} queryStats={null} />);
+    render(
+      <ActivityTab
+        isRestoredThread={false}
+        isStreaming={false}
+        pipelineSteps={COMPLETED_STEPS}
+        queryStats={null}
+      />,
+    );
     // 120ms, 230ms, 1150ms → 1.1s or 1.2s (floating point)
     expect(screen.getByText('120ms')).toBeInTheDocument();
     expect(screen.getByText('230ms')).toBeInTheDocument();
@@ -71,6 +105,7 @@ describe('ActivityTab', () => {
   it('shows "In progress" badge while streaming', () => {
     render(
       <ActivityTab
+        isRestoredThread={false}
         isStreaming={true}
         pipelineSteps={[makeStep({ label: 'Generating SQL', node: 'generate_sql' })]}
         queryStats={null}
@@ -80,12 +115,26 @@ describe('ActivityTab', () => {
   });
 
   it('shows "Complete" badge when done with stats', () => {
-    render(<ActivityTab isStreaming={false} pipelineSteps={COMPLETED_STEPS} queryStats={STATS} />);
+    render(
+      <ActivityTab
+        isRestoredThread={false}
+        isStreaming={false}
+        pipelineSteps={COMPLETED_STEPS}
+        queryStats={STATS}
+      />,
+    );
     expect(screen.getByText('Complete')).toBeInTheDocument();
   });
 
   it('renders "Response delivered" with aggregate stats', () => {
-    render(<ActivityTab isStreaming={false} pipelineSteps={COMPLETED_STEPS} queryStats={STATS} />);
+    render(
+      <ActivityTab
+        isRestoredThread={false}
+        isStreaming={false}
+        pipelineSteps={COMPLETED_STEPS}
+        queryStats={STATS}
+      />,
+    );
     expect(screen.getByText('Response delivered')).toBeInTheDocument();
     expect(screen.getByText(/3 queries/)).toBeInTheDocument();
     expect(screen.getByText(/42 rows/)).toBeInTheDocument();

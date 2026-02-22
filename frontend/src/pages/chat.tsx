@@ -18,6 +18,7 @@ export default function ChatPage() {
     clearChat: clearChatStream,
     entitiesData,
     error,
+    isRestoredThread,
     isStreaming,
     messages,
     pipelineSteps,
@@ -46,6 +47,7 @@ export default function ChatPage() {
         conversationsLoading={conversationsLoading}
         entitiesData={entitiesData}
         error={error}
+        isRestoredThread={isRestoredThread}
         isStreaming={isStreaming}
         messages={messages}
         onClear={handleClear}
