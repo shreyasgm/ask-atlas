@@ -24,7 +24,7 @@
 >
 > **Rate limiting:** Per the Atlas `llms.txt`, automated systems must limit to **≤ 120 requests per minute** (2 req/sec) on any API endpoint. Include a **`User-Agent` header** identifying the system (e.g., `User-Agent: ask-atlas/1.0`). Prefer small, targeted queries — request only needed fields. Cache and reuse results. These rules apply to both the production and staging APIs.
 >
-> **For the updated architecture design, see `evaluation/backend_redesign_analysis.md`.**
+> **For the updated architecture design, see `docs/backend_redesign_analysis.md`.**
 
 This document contains a comprehensive analysis of the Atlas GraphQL API capabilities vs. the existing text-to-SQL backend, a question-by-question eval mapping, and a proposed hybrid architecture where simple questions use the GraphQL API and complex analytical questions use the SQL backend. An implementing agent should be able to take this document and execute the refactoring without additional context.
 

@@ -55,7 +55,7 @@ This guide describes how to systematically collect ground truth Q&A pairs from t
 
 ## 1b. GraphQL API Reference
 
-> **ADDITIONAL API (2026-02-21):** A complementary staging GraphQL API is available to Growth Lab members at `http://staging.atlas.growthlab-dev.com/api/graphql`. It uses integer IDs (`countryId: 404`), explicit product classes (`HS92`, `HS12`, `HS22`, `SITC`), integer product levels (`1`, `2`, `4`, `6`), built-in year ranges (`yearMin`/`yearMax`), and fixes all broken endpoints from the production API. It does not have the `countryProfile` endpoint or its derived metrics — for those, use the production API below. See `evaluation/backend_redesign_analysis.md` for full details on both APIs. **Rate limit (per Atlas `llms.txt`): ≤ 120 req/min (2 req/sec) for automated access. Include a `User-Agent` header.**
+> **ADDITIONAL API (2026-02-21):** A complementary staging GraphQL API is available to Growth Lab members at `http://staging.atlas.growthlab-dev.com/api/graphql`. It uses integer IDs (`countryId: 404`), explicit product classes (`HS92`, `HS12`, `HS22`, `SITC`), integer product levels (`1`, `2`, `4`, `6`), built-in year ranges (`yearMin`/`yearMax`), and fixes all broken endpoints from the production API. It does not have the `countryProfile` endpoint or its derived metrics — for those, use the production API below. See `docs/backend_redesign_analysis.md` for full details on both APIs. **Rate limit (per Atlas `llms.txt`): ≤ 120 req/min (2 req/sec) for automated access. Include a `User-Agent` header.**
 
 ### Discovery
 

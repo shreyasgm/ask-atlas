@@ -2,7 +2,7 @@
 
 > **Date:** 2026-02-21
 > **Status:** Analysis complete, pending review
-> **Related:** GitHub issue #42, `evaluation/hybrid_backend_analysis.md`
+> **Related:** GitHub issue #42, `docs/hybrid_backend_analysis.md`
 
 ---
 
