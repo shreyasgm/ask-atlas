@@ -629,3 +629,171 @@ describe('useChatStream', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/chat', { replace: true });
   });
 });
+
+// These tests verify the fix for the race condition where clearChat() would
+// reset historyLoaded and messages to [], but navigate hadn't taken effect yet.
+// The history-loading effect would see the old urlThreadId with empty messages
+// and historyLoaded=null, re-fetch the thread history, and undo the clear.
+//
+// The mock setup naturally reproduces this: mockNavigate doesn't change
+// mockParams, so after clearChat(), urlThreadId still holds the old value —
+// exactly the intermediate state that triggers the race in a real browser.
+describe('clearChat does not re-trigger history loading (race condition)', () => {
+  const HISTORY_THREAD = 'thread-with-history';
+  const historyMessages = [
+    { content: 'What are top exports?', role: 'human' },
+    { content: 'The top exports include soybeans.', role: 'ai' },
+  ];
+
+  function mockHistoryFetch() {
+    return vi.fn().mockResolvedValue({
+      json: () => Promise.resolve(historyMessages),
+      ok: true,
+    });
+  }
+
+  it('clearChat keeps messages empty even when urlThreadId is still set', async () => {
+    // Simulate being at /chat/:threadId
+    mockParams = { threadId: HISTORY_THREAD };
+    global.fetch = mockHistoryFetch();
+
+    const { result } = renderHook(() => useChatStream());
+
+    // Wait for history to load
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(2);
+    });
+
+    // At this point, fetch was called once to load history
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    // Clear chat — navigate is mocked so mockParams STILL has the old threadId.
+    // This is the exact intermediate state that caused the bug: messages=[]
+    // but urlThreadId is still set.
+    act(() => {
+      result.current.clearChat();
+    });
+
+    // Messages should be empty immediately
+    expect(result.current.messages).toEqual([]);
+    expect(result.current.threadId).toBeNull();
+
+    // Wait a tick to ensure no async history reload fires
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    // Messages must still be empty — the history effect must NOT have re-loaded
+    expect(result.current.messages).toEqual([]);
+
+    // fetch should still have been called only once (the initial history load),
+    // NOT twice (which would mean the effect re-triggered after clearChat)
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('clearChat followed by URL change to /chat keeps messages empty', async () => {
+    mockParams = { threadId: HISTORY_THREAD };
+    global.fetch = mockHistoryFetch();
+
+    const { rerender, result } = renderHook(() => useChatStream());
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(2);
+    });
+
+    // clearChat
+    act(() => {
+      result.current.clearChat();
+    });
+
+    expect(result.current.messages).toEqual([]);
+
+    // Now simulate the navigate taking effect — URL becomes /chat (no threadId)
+    mockParams = {};
+    rerender();
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 50));
+    });
+
+    // Messages must still be empty
+    expect(result.current.messages).toEqual([]);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('navigating to a different thread after clearChat loads new history', async () => {
+    mockParams = { threadId: HISTORY_THREAD };
+    global.fetch = mockHistoryFetch();
+
+    const { rerender, result } = renderHook(() => useChatStream());
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(2);
+    });
+
+    // clearChat
+    act(() => {
+      result.current.clearChat();
+    });
+
+    expect(result.current.messages).toEqual([]);
+
+    // Navigate to /chat (no thread) first
+    mockParams = {};
+    rerender();
+
+    // Now navigate to a different thread
+    const newHistory = [
+      { content: 'Tell me about coffee', role: 'human' },
+      { content: 'Coffee is a major export...', role: 'ai' },
+    ];
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () => Promise.resolve(newHistory),
+      ok: true,
+    });
+
+    mockParams = { threadId: 'different-thread' };
+    rerender();
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(2);
+    });
+
+    expect(result.current.messages[0].content).toBe('Tell me about coffee');
+    expect(result.current.threadId).toBe('different-thread');
+  });
+
+  it('navigating back to the same thread after clearChat reloads its history', async () => {
+    mockParams = { threadId: HISTORY_THREAD };
+    global.fetch = mockHistoryFetch();
+
+    const { rerender, result } = renderHook(() => useChatStream());
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(2);
+    });
+
+    // clearChat
+    act(() => {
+      result.current.clearChat();
+    });
+
+    expect(result.current.messages).toEqual([]);
+
+    // Navigate to /chat (no thread)
+    mockParams = {};
+    rerender();
+
+    // Navigate back to the SAME thread
+    global.fetch = mockHistoryFetch();
+    mockParams = { threadId: HISTORY_THREAD };
+    rerender();
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(2);
+    });
+
+    expect(result.current.messages[0].content).toBe('What are top exports?');
+    expect(result.current.threadId).toBe(HISTORY_THREAD);
+  });
+});
