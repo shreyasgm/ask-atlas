@@ -108,24 +108,40 @@ Hovering over a product in the treemap shows:
 
 ## 2. GraphQL API Reference (Explore Endpoint)
 
-### Endpoint
+> **NOTE (2026-02-21):** The Explore endpoint documented here (`/api/graphql`) uses the **same architecture** as the staging API at `http://staging.atlas.growthlab-dev.com/api/graphql`. The staging API is available to Growth Lab members and is preferred for new backend development. The production Country Pages API (`/api/countries/graphql`) remains fully available and provides unique derived metrics (`countryProfile`, lookback, etc.) not present in this API. See `evaluation/backend_redesign_analysis.md` for full details on how both APIs complement each other. **Rate limit (per Atlas `llms.txt`): ≤ 120 req/min (2 req/sec) for automated access. Include a `User-Agent` header.**
+
+### Endpoints
+
+**Production Explore API** (public):
 
 ```
 POST https://atlas.hks.harvard.edu/api/graphql
 Content-Type: application/json
 ```
 
-No authentication headers required. Introspection enabled.
+**Staging API** (Growth Lab internal, preferred for new development):
+
+```
+POST http://staging.atlas.growthlab-dev.com/api/graphql
+Content-Type: application/json
+```
+
+No authentication headers required. Introspection enabled. Per the Atlas `llms.txt`, automated access must:
+- **Limit to ≤ 120 requests per minute** (2 req/sec)
+- **Include a `User-Agent` header** (e.g., `User-Agent: ask-atlas/1.0`)
+- Prefer small, targeted queries — request only needed fields, avoid exhaustive introspection
+- Cache and reuse previous results when possible
 
 ### Key Difference from Country Pages API
 
-| Aspect | Explore API (`/api/graphql`) | Country Pages API (`/api/countries/graphql`) |
+| Aspect | Explore / Staging API (`/api/graphql`) | Country Pages API (`/api/countries/graphql`) |
 |--------|------------------------------|----------------------------------------------|
 | ID format | Numeric integers (`countryId: 404`) | String IDs (`location: "location-404"`) |
 | Year params | `yearMin` / `yearMax` ranges | `year`, `minYear` / `maxYear` |
 | Product class | `HS92`, `HS12`, `HS22`, `SITC` | `HS`, `SITC` |
 | Services | `servicesClass: unilateral` param | Bundled into product class |
 | Focus | Raw trade data, bilateral flows | Analytical profiles, recommendations |
+| Unique features | All endpoints working, data dictionary, groups, 6-digit, HS22 | `countryProfile` (46 derived fields), `countryLookback`, peer comparisons |
 
 ### Available Query Types (26 total)
 

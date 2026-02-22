@@ -55,18 +55,33 @@ This guide describes how to systematically collect ground truth Q&A pairs from t
 
 ## 1b. GraphQL API Reference
 
+> **ADDITIONAL API (2026-02-21):** A complementary staging GraphQL API is available to Growth Lab members at `http://staging.atlas.growthlab-dev.com/api/graphql`. It uses integer IDs (`countryId: 404`), explicit product classes (`HS92`, `HS12`, `HS22`, `SITC`), integer product levels (`1`, `2`, `4`, `6`), built-in year ranges (`yearMin`/`yearMax`), and fixes all broken endpoints from the production API. It does not have the `countryProfile` endpoint or its derived metrics — for those, use the production API below. See `evaluation/backend_redesign_analysis.md` for full details on both APIs. **Rate limit (per Atlas `llms.txt`): ≤ 120 req/min (2 req/sec) for automated access. Include a `User-Agent` header.**
+
 ### Discovery
 
 The Atlas website makes ~20 GraphQL POST requests per page load to a **public, unauthenticated API** with introspection enabled. This means ~85% of data points can be extracted via direct API queries without any browser automation.
 
-### Endpoint
+### Endpoints
+
+**Production API** (public, used by the Atlas website):
 
 ```
 POST https://atlas.hks.harvard.edu/api/countries/graphql
 Content-Type: application/json
 ```
 
-No authentication headers are required.
+**Staging API** (Growth Lab internal, preferred for new development — more capable, all endpoints working):
+
+```
+POST http://staging.atlas.growthlab-dev.com/api/graphql
+Content-Type: application/json
+```
+
+No authentication headers are required for either endpoint. Per the Atlas `llms.txt`, automated access must:
+- **Limit to ≤ 120 requests per minute** (2 req/sec)
+- **Include a `User-Agent` header** (e.g., `User-Agent: ask-atlas/1.0`)
+- Prefer small, targeted queries — request only needed fields, avoid exhaustive introspection
+- Cache and reuse previous results when possible
 
 ### ID Format
 
