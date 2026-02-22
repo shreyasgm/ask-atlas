@@ -5,11 +5,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ChatWorkspace from './chat-workspace';
 
 const DEFAULT_PROPS = {
+  activeThreadId: null,
+  conversations: [],
+  conversationsLoading: false,
   entitiesData: null,
   error: null,
   isStreaming: false,
   messages: [],
   onClear: vi.fn(),
+  onDeleteConversation: vi.fn(),
   onSend: vi.fn(),
   pipelineSteps: [],
   queryStats: null,

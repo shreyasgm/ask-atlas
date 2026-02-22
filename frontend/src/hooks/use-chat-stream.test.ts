@@ -1,7 +1,11 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EntitiesData, QueryAggregateStats } from '@/types/chat';
 import { useChatStream } from './use-chat-stream';
+
+vi.mock('@/utils/session', () => ({
+  getSessionId: () => 'test-session-id',
+}));
 
 /** Encode SSE events into a ReadableStream that fetch() can return. */
 function makeSSEStream(events: Array<{ data: string; event: string }>): ReadableStream<Uint8Array> {
@@ -87,13 +91,20 @@ const STANDARD_EVENTS: Array<{ data: string; event: string }> = [
   },
 ];
 
-// Mock useNavigate
+// Mock useNavigate and useParams
 const mockNavigate = vi.fn();
+let mockParams: Record<string, string> = {};
+
 vi.mock('react-router', () => ({
   useNavigate: () => mockNavigate,
-  useParams: () => ({}),
+  useParams: () => mockParams,
   useSearchParams: () => [new URLSearchParams()],
 }));
+
+beforeEach(() => {
+  mockNavigate.mockReset();
+  mockParams = {};
+});
 
 describe('useChatStream', () => {
   it('has correct initial state', () => {
@@ -524,5 +535,97 @@ describe('useChatStream', () => {
       expect(step?.completedAt).toEqual(expect.any(Number));
       expect(step?.detail).toEqual(expect.objectContaining({ sql: 'SELECT 1' }));
     });
+  });
+
+  it('sends X-Session-Id header with chat stream requests', async () => {
+    global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
+
+    const { result } = renderHook(() => useChatStream());
+
+    act(() => {
+      result.current.sendMessage('hello');
+    });
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/chat/stream',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'X-Session-Id': 'test-session-id',
+        }),
+      }),
+    );
+  });
+
+  it('calls onConversationChange after done event', async () => {
+    global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
+
+    const onConversationChange = vi.fn();
+    const { result } = renderHook(() => useChatStream({ onConversationChange }));
+
+    act(() => {
+      result.current.sendMessage('hello');
+    });
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    expect(onConversationChange).toHaveBeenCalled();
+  });
+
+  it('loads thread history when URL has threadId and no messages', async () => {
+    mockParams = { threadId: 'existing-thread' };
+
+    global.fetch = vi.fn().mockResolvedValue({
+      json: () =>
+        Promise.resolve([
+          { content: 'What are top exports?', role: 'human' },
+          { content: 'The top exports include soybeans.', role: 'ai' },
+        ]),
+      ok: true,
+    });
+
+    const { result } = renderHook(() => useChatStream());
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(2);
+    });
+
+    expect(result.current.messages[0].role).toBe('user');
+    expect(result.current.messages[0].content).toBe('What are top exports?');
+    expect(result.current.messages[1].role).toBe('assistant');
+    expect(result.current.messages[1].content).toBe('The top exports include soybeans.');
+    expect(result.current.threadId).toBe('existing-thread');
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/threads/existing-thread/messages',
+      expect.objectContaining({
+        headers: { 'X-Session-Id': 'test-session-id' },
+      }),
+    );
+  });
+
+  it('clearChat navigates to /chat', async () => {
+    global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
+
+    const { result } = renderHook(() => useChatStream());
+
+    act(() => {
+      result.current.sendMessage('hello');
+    });
+
+    await waitFor(() => {
+      expect(result.current.messages.length).toBeGreaterThan(0);
+    });
+
+    act(() => {
+      result.current.clearChat();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith('/chat', { replace: true });
   });
 });

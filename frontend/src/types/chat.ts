@@ -41,3 +41,10 @@ export interface QueryAggregateStats {
   totalRows: number;
   totalTimeMs: number;
 }
+
+export interface ConversationSummary {
+  createdAt: string;
+  threadId: string;
+  title: string | null;
+  updatedAt: string;
+}

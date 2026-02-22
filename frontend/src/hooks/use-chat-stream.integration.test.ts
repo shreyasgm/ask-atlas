@@ -21,6 +21,11 @@ import {
 } from '@/test/sse-helpers';
 import { useChatStream } from './use-chat-stream';
 
+// Mock session to avoid localStorage issues
+vi.mock('@/utils/session', () => ({
+  getSessionId: () => 'test-session-id',
+}));
+
 // -- react-router mock (only navigate + searchParams, no real routing) --
 const mockNavigate = vi.fn();
 let mockSearchParams = new URLSearchParams();

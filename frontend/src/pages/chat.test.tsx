@@ -4,9 +4,11 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChatMessage, EntitiesData, PipelineStep, QueryAggregateStats } from '@/types/chat';
 
-// Mock the hook
+// Mock the hooks
 const mockSendMessage = vi.fn();
 const mockClearChat = vi.fn();
+const mockDeleteConversation = vi.fn();
+const mockRefresh = vi.fn();
 
 let mockHookReturn: {
   clearChat: typeof mockClearChat;
@@ -22,6 +24,15 @@ let mockHookReturn: {
 
 vi.mock('@/hooks/use-chat-stream', () => ({
   useChatStream: () => mockHookReturn,
+}));
+
+vi.mock('@/hooks/use-conversations', () => ({
+  useConversations: () => ({
+    conversations: [],
+    deleteConversation: mockDeleteConversation,
+    isLoading: false,
+    refresh: mockRefresh,
+  }),
 }));
 
 // Must import AFTER vi.mock
@@ -43,6 +54,8 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
   mockSendMessage.mockReset();
   mockClearChat.mockReset();
+  mockDeleteConversation.mockReset();
+  mockRefresh.mockReset();
   mockHookReturn = {
     clearChat: mockClearChat,
     entitiesData: null,

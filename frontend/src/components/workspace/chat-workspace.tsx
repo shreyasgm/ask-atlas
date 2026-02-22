@@ -1,15 +1,25 @@
-import { useEffect, useState } from 'react';
-import type { ChatMessage, EntitiesData, PipelineStep, QueryAggregateStats } from '@/types/chat';
+import { useCallback, useEffect, useState } from 'react';
+import type {
+  ChatMessage,
+  ConversationSummary,
+  EntitiesData,
+  PipelineStep,
+  QueryAggregateStats,
+} from '@/types/chat';
 import CenterPanel from './center-panel';
 import LeftSidebar from './left-sidebar';
 import RightPanel from './right-panel';
 
 interface ChatWorkspaceProps {
+  activeThreadId: null | string;
+  conversations: Array<ConversationSummary>;
+  conversationsLoading: boolean;
   entitiesData: EntitiesData | null;
   error: null | string;
   isStreaming: boolean;
   messages: Array<ChatMessage>;
   onClear: () => void;
+  onDeleteConversation: (threadId: string) => void;
   onSend: (text: string) => void;
   pipelineSteps: Array<PipelineStep>;
   queryStats: QueryAggregateStats | null;
@@ -37,11 +47,15 @@ function useIsDesktop() {
 }
 
 export default function ChatWorkspace({
+  activeThreadId,
+  conversations,
+  conversationsLoading,
   entitiesData,
   error,
   isStreaming,
   messages,
   onClear,
+  onDeleteConversation,
   onSend,
   pipelineSteps,
   queryStats,
@@ -49,17 +63,36 @@ export default function ChatWorkspace({
   const isDesktop = useIsDesktop();
   const [sidebarExpanded, setSidebarExpanded] = useState(isDesktop);
   const [rightPanelExpanded, setRightPanelExpanded] = useState(isDesktop);
-
   const lastAssistant = messages.findLast((m) => m.role === 'assistant');
   const currentQueries = lastAssistant?.queryResults ?? [];
+
+  const handleSelectConversation = useCallback(
+    (threadId: string) => {
+      // Navigate happens via the Link in the sidebar; this callback
+      // lets us collapse the sidebar on mobile after selection.
+      if (!isDesktop) {
+        setSidebarExpanded(false);
+      }
+    },
+    [isDesktop],
+  );
+
+  const handleNewChat = useCallback(() => {
+    onClear();
+  }, [onClear]);
 
   return (
     <div className="relative flex h-full overflow-hidden">
       {/* Left sidebar — overlays on mobile */}
       <div className={!isDesktop && sidebarExpanded ? 'absolute inset-y-0 left-0 z-20' : undefined}>
         <LeftSidebar
+          activeThreadId={activeThreadId}
+          conversations={conversations}
           expanded={sidebarExpanded}
-          onNewChat={onClear}
+          isLoading={conversationsLoading}
+          onDeleteConversation={onDeleteConversation}
+          onNewChat={handleNewChat}
+          onSelectConversation={handleSelectConversation}
           onToggle={() => setSidebarExpanded((prev) => !prev)}
         />
       </div>

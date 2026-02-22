@@ -6,8 +6,7 @@ export default function App() {
   return (
     <Routes>
       <Route element={<LandingPage />} path="/" />
-      <Route element={<ChatPage />} path="/chat" />
-      <Route element={<ChatPage />} path="/chat/:threadId" />
+      <Route element={<ChatPage />} path="/chat/:threadId?" />
     </Routes>
   );
 }

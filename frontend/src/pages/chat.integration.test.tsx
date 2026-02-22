@@ -18,7 +18,23 @@ import {
   makeThreadIdEvent,
   THREAD_ID,
 } from '@/test/sse-helpers';
-import ChatPage from './chat';
+
+// Mock useConversations so integration tests focus on useChatStream behavior
+vi.mock('@/hooks/use-conversations', () => ({
+  useConversations: () => ({
+    conversations: [],
+    deleteConversation: vi.fn(),
+    isLoading: false,
+    refresh: vi.fn(),
+  }),
+}));
+
+// Mock session to avoid localStorage issues
+vi.mock('@/utils/session', () => ({
+  getSessionId: () => 'test-session-id',
+}));
+
+const { default: ChatPage } = await import('./chat');
 
 function renderChat(path = '/chat') {
   return render(

@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 import type { ChatMessage, EntitiesData, PipelineStep, QueryAggregateStats } from '@/types/chat';
+import { getSessionId } from '@/utils/session';
+
+interface UseChatStreamOptions {
+  onConversationChange?: () => void;
+}
 
 interface UseChatStreamReturn {
   clearChat: () => void;
@@ -78,7 +83,7 @@ function createMessage(
   };
 }
 
-export function useChatStream(): UseChatStreamReturn {
+export function useChatStream(options?: UseChatStreamOptions): UseChatStreamReturn {
   const [messages, setMessages] = useState<Array<ChatMessage>>([]);
   const [pipelineSteps, setPipelineSteps] = useState<Array<PipelineStep>>([]);
   const [threadId, setThreadId] = useState<null | string>(null);
@@ -89,9 +94,15 @@ export function useChatStream(): UseChatStreamReturn {
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const initialQuerySent = useRef(false);
+  const historyLoaded = useRef<string | null>(null);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+  const onConversationChangeRef = useRef(options?.onConversationChange);
+  onConversationChangeRef.current = options?.onConversationChange;
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { threadId: urlThreadId } = useParams<{ threadId: string }>();
 
   const sendMessage = useCallback(
     (question: string) => {
@@ -152,7 +163,10 @@ export function useChatStream(): UseChatStreamReturn {
         try {
           const response = await fetch('/api/chat/stream', {
             body: JSON.stringify(body),
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Session-Id': getSessionId(),
+            },
             method: 'POST',
             signal: controller.signal,
           });
@@ -207,6 +221,7 @@ export function useChatStream(): UseChatStreamReturn {
                     totalTimeMs: parsed.total_time_ms ?? 0,
                   });
                 }
+                onConversationChangeRef.current?.();
                 break;
 
               case 'node_start':
@@ -356,7 +371,40 @@ export function useChatStream(): UseChatStreamReturn {
     setPipelineSteps([]);
     setQueryStats(null);
     setThreadId(null);
-  }, []);
+    historyLoaded.current = null;
+    navigate('/chat', { replace: true });
+  }, [navigate]);
+
+  // Load thread history when navigating to /chat/:threadId.
+  // Only depends on urlThreadId — using messagesRef avoids a race condition
+  // where clearChat resets messages to [] before navigate takes effect,
+  // which would re-trigger this effect and reload the thread history.
+  useEffect(() => {
+    if (!urlThreadId || historyLoaded.current === urlThreadId || messagesRef.current.length > 0) {
+      return;
+    }
+
+    historyLoaded.current = urlThreadId;
+    setThreadId(urlThreadId);
+
+    (async () => {
+      try {
+        const response = await fetch(`/api/threads/${urlThreadId}/messages`, {
+          headers: { 'X-Session-Id': getSessionId() },
+        });
+        if (!response.ok) {
+          return;
+        }
+        const data: Array<{ content: string; role: 'ai' | 'human' }> = await response.json();
+        const loaded = data.map((m) =>
+          createMessage(m.role === 'human' ? 'user' : 'assistant', m.content),
+        );
+        setMessages(loaded);
+      } catch {
+        // Silently fail — user can still send new messages
+      }
+    })();
+  }, [urlThreadId]);
 
   // Auto-submit from ?q= param on mount.
   // Uses setTimeout(0) to defer past React StrictMode's synchronous
