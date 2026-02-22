@@ -37,7 +37,8 @@ async def test_answer_question_basic(atlas_sql, logger):
     question1 = (
         "What were the top 5 products exported from United States to China in 2020?"
     )
-    answer = await atlas_sql.aanswer_question(question1)
+    result = await atlas_sql.aanswer_question(question1)
+    answer = result.answer
     logger.info(f"Question: {question1}\nAnswer: {answer}")
     assert isinstance(answer, str)
     assert len(answer) > 0
@@ -50,7 +51,8 @@ async def test_answer_question_basic(atlas_sql, logger):
     question2 = (
         "Compare India's exports in agricultural goods to China's, from 2000 to 2020"
     )
-    answer2 = await atlas_sql.aanswer_question(question2)
+    result2 = await atlas_sql.aanswer_question(question2)
+    answer2 = result2.answer
     logger.info(f"Question: {question2}\nAnswer: {answer2}")
     assert isinstance(answer2, str)
     assert len(answer2) > 0

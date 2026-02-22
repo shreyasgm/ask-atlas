@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 
 from src.api import _state, app
 from src.conversations import InMemoryConversationStore
-from src.text_to_sql import AtlasTextToSQL, StreamData
+from src.text_to_sql import AnswerResult, AtlasTextToSQL, StreamData
 
 
 # ---------------------------------------------------------------------------
@@ -78,7 +78,14 @@ def _inject_mock_atlas():
     Resets ``_state.atlas_sql`` to ``None`` after each test.
     """
     mock = MagicMock(spec=AtlasTextToSQL)
-    mock.aanswer_question = AsyncMock(return_value="Mocked answer")
+    mock.aanswer_question = AsyncMock(return_value=AnswerResult(
+        answer="Mocked answer",
+        queries=[],
+        resolved_products=None,
+        schemas_used=[],
+        total_rows=0,
+        total_execution_time_ms=0,
+    ))
 
     async def _fake_stream(question: str, thread_id: str | None = None, **kwargs):
         yield StreamData(
@@ -216,9 +223,90 @@ class TestChat:
         assert response.status_code == 422
 
     def test_response_matches_chat_response_schema(self, client: TestClient) -> None:
-        """Response body must have exactly 'answer' and 'thread_id' keys."""
+        """Response body must have the expected ChatResponse keys."""
         data = client.post("/chat", json={"question": "hello"}).json()
-        assert set(data.keys()) == {"answer", "thread_id"}
+        expected_keys = {
+            "answer", "thread_id", "queries", "resolved_products",
+            "schemas_used", "total_rows", "total_execution_time_ms",
+        }
+        assert set(data.keys()) == expected_keys
+
+
+# ---------------------------------------------------------------------------
+# POST /chat — pipeline data
+# ---------------------------------------------------------------------------
+
+
+class TestChatPipelineData:
+    """Tests for structured pipeline data in /chat response."""
+
+    @pytest.fixture(autouse=True)
+    def _inject_pipeline_mock(self):
+        """Override default mock with one that returns pipeline data."""
+        mock = MagicMock(spec=AtlasTextToSQL)
+        mock.aanswer_question = AsyncMock(return_value=AnswerResult(
+            answer="Brazil exports coffee.",
+            queries=[{
+                "sql": "SELECT * FROM hs92.country_product_year_4",
+                "columns": ["country", "value"],
+                "rows": [["BRA", 5000]],
+                "row_count": 1,
+                "execution_time_ms": 55,
+                "tables": ["hs92.country_product_year_4"],
+                "schema_name": "hs92",
+            }],
+            resolved_products={
+                "schemas": ["hs92"],
+                "products": [{"name": "coffee", "codes": ["0901"], "schema": "hs92"}],
+            },
+            schemas_used=["hs92"],
+            total_rows=1,
+            total_execution_time_ms=55,
+        ))
+
+        async def _fake_stream(question, thread_id=None, **kwargs):
+            yield StreamData(source="agent", content="ok", message_type="agent_talk")
+
+        mock.aanswer_question_stream = _fake_stream
+        _state.atlas_sql = mock
+        yield
+        _state.atlas_sql = None
+
+    def test_chat_includes_queries_when_present(self, client: TestClient) -> None:
+        """Response should include queries list with correct shape."""
+        data = client.post("/chat", json={"question": "Brazil coffee?"}).json()
+        assert data["queries"] is not None
+        assert len(data["queries"]) == 1
+        q = data["queries"][0]
+        assert q["sql"] == "SELECT * FROM hs92.country_product_year_4"
+        assert q["columns"] == ["country", "value"]
+        assert q["rows"] == [["BRA", 5000]]
+        assert q["row_count"] == 1
+        assert q["execution_time_ms"] == 55
+
+    def test_chat_response_includes_aggregate_stats(self, client: TestClient) -> None:
+        """Response should include total_rows and total_execution_time_ms."""
+        data = client.post("/chat", json={"question": "Brazil coffee?"}).json()
+        assert data["total_rows"] == 1
+        assert data["total_execution_time_ms"] == 55
+
+    def test_chat_backward_compatible_answer_and_thread_id(self, client: TestClient) -> None:
+        """answer and thread_id must still be present and correct."""
+        data = client.post("/chat", json={"question": "test"}).json()
+        assert data["answer"] == "Brazil exports coffee."
+        assert "thread_id" in data
+        assert len(data["thread_id"]) > 0
+
+
+class TestChatPipelineDataEmpty:
+    """Tests for /chat when no pipeline queries were executed."""
+
+    def test_chat_null_pipeline_fields_for_conversational(self, client: TestClient) -> None:
+        """When no queries run, pipeline fields should be null."""
+        data = client.post("/chat", json={"question": "hello"}).json()
+        assert data["queries"] is None
+        assert data["total_rows"] is None
+        assert data["total_execution_time_ms"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -322,7 +410,10 @@ class TestChatStreamMixedTypes:
     def _inject_mixed_stream(self):
         """Override the default mock with a stream that yields varied types."""
         mock = MagicMock(spec=AtlasTextToSQL)
-        mock.aanswer_question = AsyncMock(return_value="unused")
+        mock.aanswer_question = AsyncMock(return_value=AnswerResult(
+            answer="unused", queries=[], resolved_products=None,
+            schemas_used=[], total_rows=0, total_execution_time_ms=0,
+        ))
 
         async def _mixed_stream(question: str, thread_id: str | None = None, **kwargs):
             yield StreamData(
@@ -418,7 +509,10 @@ class TestChatStreamEnhancedEvents:
     def _inject_pipeline_stream(self):
         """Mock stream that yields pipeline events alongside existing types."""
         mock = MagicMock(spec=AtlasTextToSQL)
-        mock.aanswer_question = AsyncMock(return_value="unused")
+        mock.aanswer_question = AsyncMock(return_value=AnswerResult(
+            answer="unused", queries=[], resolved_products=None,
+            schemas_used=[], total_rows=0, total_execution_time_ms=0,
+        ))
 
         async def _pipeline_stream(question: str, thread_id: str | None = None, **kwargs):
             yield StreamData(
@@ -612,7 +706,14 @@ class TestTimeoutMiddleware:
 
         async def _slow_answer(question, thread_id=None, **kwargs):
             await asyncio.sleep(0.5)
-            return "late answer"
+            return AnswerResult(
+                answer="late answer",
+                queries=[],
+                resolved_products=None,
+                schemas_used=[],
+                total_rows=0,
+                total_execution_time_ms=0,
+            )
 
         _state.atlas_sql.aanswer_question = _slow_answer
 
@@ -644,7 +745,14 @@ class TestConcurrentRequests:
 
         async def _answer_by_thread(question, thread_id=None, **kwargs):
             await asyncio.sleep(0.05)
-            return answer_map.get(thread_id, "default")
+            return AnswerResult(
+                answer=answer_map.get(thread_id, "default"),
+                queries=[],
+                resolved_products=None,
+                schemas_used=[],
+                total_rows=0,
+                total_execution_time_ms=0,
+            )
 
         _state.atlas_sql.aanswer_question = _answer_by_thread
 
@@ -821,7 +929,14 @@ class TestChatNonStreamWithOverrides:
 
         async def _capturing_answer(question: str, thread_id=None, **kwargs):
             parent.captured_kwargs = kwargs
-            return "Mocked answer"
+            return AnswerResult(
+                answer="Mocked answer",
+                queries=[],
+                resolved_products=None,
+                schemas_used=[],
+                total_rows=0,
+                total_execution_time_ms=0,
+            )
 
         mock.aanswer_question = _capturing_answer
 

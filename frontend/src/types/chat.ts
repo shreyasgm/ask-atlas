@@ -52,6 +52,19 @@ export interface TradeOverrides {
   schema: ClassificationSchema | null;
 }
 
+export interface ChatApiResponse {
+  answer: string;
+  queries: Array<QueryResult & { schemaName: string | null; tables: Array<string> }> | null;
+  resolvedProducts: {
+    products: Array<ResolvedProduct>;
+    schemas: Array<string>;
+  } | null;
+  schemasUsed: Array<string> | null;
+  threadId: string;
+  totalExecutionTimeMs: number | null;
+  totalRows: number | null;
+}
+
 export interface ConversationSummary {
   createdAt: string;
   threadId: string;

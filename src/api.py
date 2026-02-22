@@ -24,7 +24,7 @@ from src.conversations import (
     PostgresConversationStore,
     derive_title,
 )
-from src.text_to_sql import AtlasTextToSQL
+from src.text_to_sql import AnswerResult, AtlasTextToSQL
 
 # ---------------------------------------------------------------------------
 # Logging setup — always show timestamps, level, and logger name
@@ -55,11 +55,28 @@ class ChatRequest(BaseModel):
     override_mode: Literal["goods", "services"] | None = None
 
 
+class QueryResultResponse(BaseModel):
+    """A single executed query with its results."""
+
+    sql: str
+    columns: list[str]
+    rows: list[list]
+    row_count: int
+    execution_time_ms: int
+    tables: list[str] = []
+    schema_name: str | None = None
+
+
 class ChatResponse(BaseModel):
     """Response for /chat."""
 
     answer: str
     thread_id: str
+    queries: list[QueryResultResponse] | None = None
+    resolved_products: dict | None = None
+    schemas_used: list[str] | None = None
+    total_rows: int | None = None
+    total_execution_time_ms: int | None = None
 
 
 class ConversationSummary(BaseModel):
@@ -398,7 +415,7 @@ async def chat(
     """Non-streaming chat endpoint."""
     atlas_sql = _get_atlas_sql()
     thread_id = body.thread_id or str(uuid.uuid4())
-    answer = await atlas_sql.aanswer_question(
+    result = await atlas_sql.aanswer_question(
         body.question,
         thread_id=thread_id,
         override_schema=body.override_schema,
@@ -409,7 +426,15 @@ async def chat(
     # Lazy conversation tracking
     await _track_conversation(request, thread_id, body.question)
 
-    return ChatResponse(answer=answer, thread_id=thread_id)
+    return ChatResponse(
+        answer=result.answer,
+        thread_id=thread_id,
+        queries=[QueryResultResponse(**q) for q in result.queries] or None,
+        resolved_products=result.resolved_products,
+        schemas_used=result.schemas_used or None,
+        total_rows=result.total_rows if result.queries else None,
+        total_execution_time_ms=result.total_execution_time_ms if result.queries else None,
+    )
 
 
 @app.post("/chat/stream")
