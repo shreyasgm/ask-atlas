@@ -1,5 +1,4 @@
 .vscode/
-uv.lock
 data/
 proj/
 tables/

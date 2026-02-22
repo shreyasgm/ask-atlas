@@ -1,0 +1,82 @@
+name: Deploy
+
+on:
+  push:
+    tags: ['v*']
+
+# This workflow incurs GCP costs. It does nothing until you configure
+# GitHub secrets (see bottom of file).
+
+jobs:
+  build-and-deploy-backend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Extract tag
+        id: tag
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push via Cloud Build
+        run: |
+          gcloud builds submit --config=cloudbuild.yaml \
+            --substitutions=TAG_NAME=${{ steps.tag.outputs.TAG }} \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ask-atlas-backend \
+            --image=us-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/ask-atlas/backend:${{ steps.tag.outputs.TAG }} \
+            --network=ask-atlas-vpc \
+            --subnet=ask-atlas-subnet \
+            --region=${{ secrets.GCP_REGION }} \
+            --vpc-egress=all-traffic \
+            --min-instances=0 \
+            --max-instances=5 \
+            --memory=1Gi \
+            --cpu=2 \
+            --timeout=900 \
+            --concurrency=10 \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '23'
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: ${{ secrets.GCP_PROJECT_ID }}
+          entryPoint: frontend
+
+# Required GitHub secrets (configure when ready to deploy):
+#   GCP_WIF_PROVIDER       — Workload Identity Federation provider
+#   GCP_SA_EMAIL           — Service account email
+#   GCP_PROJECT_ID         — cid-hks-1537286359734
+#   GCP_REGION             — e.g., us-east1
+#   FIREBASE_SERVICE_ACCOUNT — Firebase service account JSON
