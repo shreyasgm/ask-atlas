@@ -1,18 +1,57 @@
 """Checkpointer management for LangGraph agent persistence.
 
 Provides PostgresSaver-backed persistence when a checkpoint DB URL is
-configured, falling back to in-memory MemorySaver otherwise.
+configured, falling back to in-memory MemorySaver otherwise.  Also creates
+the application-owned ``conversations`` table alongside checkpoint tables.
 """
 
 import logging
 from typing import Optional
 
+import psycopg
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
 
 from src.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+CONVERSATIONS_DDL = """\
+CREATE TABLE IF NOT EXISTS conversations (
+    id VARCHAR PRIMARY KEY,
+    session_id VARCHAR NOT NULL,
+    title VARCHAR,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_conversations_session ON conversations(session_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_updated ON conversations(updated_at DESC);
+"""
+
+
+def setup_app_tables_sync(db_url: str) -> None:
+    """Create application-owned tables (e.g. ``conversations``) synchronously.
+
+    Args:
+        db_url: Postgres connection string for the app database.
+    """
+    with psycopg.connect(db_url) as conn:
+        conn.execute(CONVERSATIONS_DDL)
+        conn.commit()
+    logger.info("App tables created/verified (sync)")
+
+
+async def setup_app_tables(db_url: str) -> None:
+    """Create application-owned tables (e.g. ``conversations``) asynchronously.
+
+    Args:
+        db_url: Postgres connection string for the app database.
+    """
+    async with await psycopg.AsyncConnection.connect(db_url) as conn:
+        await conn.execute(CONVERSATIONS_DDL)
+        await conn.commit()
+    logger.info("App tables created/verified (async)")
 
 
 class CheckpointerManager:
@@ -46,6 +85,7 @@ class CheckpointerManager:
                 self._pg_conn = PostgresSaver.from_conn_string(self._db_url)
                 saver = self._pg_conn.__enter__()
                 saver.setup()
+                setup_app_tables_sync(self._db_url)
                 logger.info("Using PostgresSaver for checkpoint persistence")
                 return saver
             except Exception:
@@ -102,6 +142,7 @@ class AsyncCheckpointerManager:
                 self._async_conn = AsyncPostgresSaver.from_conn_string(self._db_url)
                 saver = await self._async_conn.__aenter__()
                 await saver.setup()
+                await setup_app_tables(self._db_url)
                 logger.info("Using AsyncPostgresSaver for checkpoint persistence")
                 return saver
             except Exception:

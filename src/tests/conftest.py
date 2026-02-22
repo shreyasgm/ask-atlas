@@ -1,7 +1,9 @@
+import logging
+import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 import pytest
-import logging
 
 # Define BASE_DIR
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -47,3 +49,12 @@ def db_available():
     if not settings.atlas_db_url:
         pytest.skip("ATLAS_DB_URL not configured in settings")
     return settings.atlas_db_url
+
+
+@pytest.fixture
+def checkpoint_db_url():
+    """Provide the app-db URL for persistence integration tests."""
+    return os.environ.get(
+        "CHECKPOINT_DB_URL",
+        "postgresql://ask_atlas_app:testpass@localhost:5434/ask_atlas_app",
+    )
