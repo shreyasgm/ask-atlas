@@ -251,6 +251,7 @@ requirements_uv.txt
 modernizing_ask_atlas.md
 long_term_roadmap.md
 technical_overview.md
+docs/project_task_ideas.md
 
 # Generated test seed data (regenerate with: uv run python src/tests/fixtures/generate_seed_sql.py)
 src/tests/fixtures/seed.sql
