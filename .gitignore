@@ -247,10 +247,11 @@ messages.json
 requirements_uv.txt
 
 # Project tracking docs (not for public repo)
-modernizing_ask_atlas.md
-long_term_roadmap.md
-technical_overview.md
+docs/modernizing_ask_atlas.md
+docs/long_term_roadmap.md
+docs/technical_overview.md
 docs/project_task_ideas.md
+docs/technical_info_injection_design.md
 
 # Generated test seed data (regenerate with: uv run python src/tests/fixtures/generate_seed_sql.py)
 src/tests/fixtures/seed.sql
