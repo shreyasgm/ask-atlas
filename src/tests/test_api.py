@@ -105,24 +105,33 @@ def client() -> TestClient:
 
 
 # ---------------------------------------------------------------------------
-# GET /health
+# GET /health (root) and GET /api/health
 # ---------------------------------------------------------------------------
 
 
 class TestHealthEndpoint:
-    """Tests for the health-check endpoint."""
+    """Tests for the API health-check endpoint at /api/health."""
 
     def test_returns_200(self, client: TestClient) -> None:
-        response = client.get("/health")
+        response = client.get("/api/health")
         assert response.status_code == 200
 
     def test_returns_status_ok(self, client: TestClient) -> None:
-        response = client.get("/health")
+        response = client.get("/api/health")
         assert response.json() == {"status": "ok"}
 
     def test_health_independent_of_atlas_state(self, client: TestClient) -> None:
         """Health endpoint should return 200 even when atlas_sql is None."""
         _state.atlas_sql = None
+        response = client.get("/api/health")
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
+
+
+class TestRootHealthEndpoint:
+    """Root health check (not behind /api) for Cloud Run probes."""
+
+    def test_root_health_returns_200(self, client: TestClient) -> None:
         response = client.get("/health")
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
@@ -137,27 +146,27 @@ class TestThreadCreation:
     """Tests for the thread creation endpoint."""
 
     def test_returns_200(self, client: TestClient) -> None:
-        response = client.post("/threads")
+        response = client.post("/api/threads")
         assert response.status_code == 200
 
     def test_returns_thread_id(self, client: TestClient) -> None:
-        data = client.post("/threads").json()
+        data = client.post("/api/threads").json()
         assert "thread_id" in data
         assert len(data["thread_id"]) > 0
 
     def test_thread_id_is_valid_uuid(self, client: TestClient) -> None:
-        data = client.post("/threads").json()
+        data = client.post("/api/threads").json()
         # Should not raise ValueError if it is a valid UUID
         parsed = uuid.UUID(data["thread_id"])
         assert str(parsed) == data["thread_id"]
 
     def test_two_calls_return_unique_ids(self, client: TestClient) -> None:
-        r1 = client.post("/threads").json()
-        r2 = client.post("/threads").json()
+        r1 = client.post("/api/threads").json()
+        r2 = client.post("/api/threads").json()
         assert r1["thread_id"] != r2["thread_id"]
 
     def test_many_calls_all_unique(self, client: TestClient) -> None:
-        ids = {client.post("/threads").json()["thread_id"] for _ in range(20)}
+        ids = {client.post("/api/threads").json()["thread_id"] for _ in range(20)}
         assert len(ids) == 20
 
 
@@ -170,56 +179,56 @@ class TestChat:
     """Tests for the synchronous chat endpoint."""
 
     def test_returns_200(self, client: TestClient) -> None:
-        response = client.post("/chat", json={"question": "Top US exports?"})
+        response = client.post("/api/chat", json={"question": "Top US exports?"})
         assert response.status_code == 200
 
     def test_returns_mocked_answer(self, client: TestClient) -> None:
-        data = client.post("/chat", json={"question": "Top US exports?"}).json()
+        data = client.post("/api/chat", json={"question": "Top US exports?"}).json()
         assert data["answer"] == "Mocked answer"
 
     def test_response_includes_thread_id(self, client: TestClient) -> None:
-        data = client.post("/chat", json={"question": "hello"}).json()
+        data = client.post("/api/chat", json={"question": "hello"}).json()
         assert "thread_id" in data
         assert len(data["thread_id"]) > 0
 
     def test_echoes_provided_thread_id(self, client: TestClient) -> None:
         response = client.post(
-            "/chat", json={"question": "hi", "thread_id": "my-thread-42"}
+            "/api/chat", json={"question": "hi", "thread_id": "my-thread-42"}
         )
         assert response.status_code == 200
         assert response.json()["thread_id"] == "my-thread-42"
 
     def test_generates_thread_id_when_omitted(self, client: TestClient) -> None:
-        data = client.post("/chat", json={"question": "hello"}).json()
+        data = client.post("/api/chat", json={"question": "hello"}).json()
         assert len(data["thread_id"]) > 0
 
     def test_forwards_question_to_atlas(self, client: TestClient) -> None:
         """The question from the request body is forwarded to aanswer_question."""
-        client.post("/chat", json={"question": "Brazil exports?"})
+        client.post("/api/chat", json={"question": "Brazil exports?"})
         _state.atlas_sql.aanswer_question.assert_awaited_once()
         call_args = _state.atlas_sql.aanswer_question.call_args
         assert call_args.args[0] == "Brazil exports?"
 
     def test_forwards_thread_id_to_atlas(self, client: TestClient) -> None:
         """The thread_id should be passed through to the backend."""
-        client.post("/chat", json={"question": "test", "thread_id": "tid-123"})
+        client.post("/api/chat", json={"question": "test", "thread_id": "tid-123"})
         call_kwargs = _state.atlas_sql.aanswer_question.call_args
         # thread_id may be positional or keyword
         assert "tid-123" in (list(call_kwargs.args) + list(call_kwargs.kwargs.values()))
 
     def test_missing_question_returns_422(self, client: TestClient) -> None:
-        response = client.post("/chat", json={})
+        response = client.post("/api/chat", json={})
         assert response.status_code == 422
 
     def test_empty_body_returns_422(self, client: TestClient) -> None:
         response = client.post(
-            "/chat", content=b"", headers={"content-type": "application/json"}
+            "/api/chat", content=b"", headers={"content-type": "application/json"}
         )
         assert response.status_code == 422
 
     def test_response_matches_chat_response_schema(self, client: TestClient) -> None:
         """Response body must have the expected ChatResponse keys."""
-        data = client.post("/chat", json={"question": "hello"}).json()
+        data = client.post("/api/chat", json={"question": "hello"}).json()
         expected_keys = {
             "answer",
             "thread_id",
@@ -280,7 +289,7 @@ class TestChatPipelineData:
 
     def test_chat_includes_queries_when_present(self, client: TestClient) -> None:
         """Response should include queries list with correct shape."""
-        data = client.post("/chat", json={"question": "Brazil coffee?"}).json()
+        data = client.post("/api/chat", json={"question": "Brazil coffee?"}).json()
         assert data["queries"] is not None
         assert len(data["queries"]) == 1
         q = data["queries"][0]
@@ -292,7 +301,7 @@ class TestChatPipelineData:
 
     def test_chat_response_includes_aggregate_stats(self, client: TestClient) -> None:
         """Response should include total_rows and total_execution_time_ms."""
-        data = client.post("/chat", json={"question": "Brazil coffee?"}).json()
+        data = client.post("/api/chat", json={"question": "Brazil coffee?"}).json()
         assert data["total_rows"] == 1
         assert data["total_execution_time_ms"] == 55
 
@@ -300,7 +309,7 @@ class TestChatPipelineData:
         self, client: TestClient
     ) -> None:
         """answer and thread_id must still be present and correct."""
-        data = client.post("/chat", json={"question": "test"}).json()
+        data = client.post("/api/chat", json={"question": "test"}).json()
         assert data["answer"] == "Brazil exports coffee."
         assert "thread_id" in data
         assert len(data["thread_id"]) > 0
@@ -313,7 +322,7 @@ class TestChatPipelineDataEmpty:
         self, client: TestClient
     ) -> None:
         """When no queries run, pipeline fields should be null."""
-        data = client.post("/chat", json={"question": "hello"}).json()
+        data = client.post("/api/chat", json={"question": "hello"}).json()
         assert data["queries"] is None
         assert data["total_rows"] is None
         assert data["total_execution_time_ms"] is None
@@ -328,15 +337,15 @@ class TestChatStream:
     """Tests for the SSE streaming chat endpoint."""
 
     def test_returns_200(self, client: TestClient) -> None:
-        response = client.post("/chat/stream", json={"question": "Exports?"})
+        response = client.post("/api/chat/stream", json={"question": "Exports?"})
         assert response.status_code == 200
 
     def test_content_type_is_event_stream(self, client: TestClient) -> None:
-        response = client.post("/chat/stream", json={"question": "Exports?"})
+        response = client.post("/api/chat/stream", json={"question": "Exports?"})
         assert "text/event-stream" in response.headers.get("content-type", "")
 
     def test_first_event_is_thread_id(self, client: TestClient) -> None:
-        response = client.post("/chat/stream", json={"question": "Exports?"})
+        response = client.post("/api/chat/stream", json={"question": "Exports?"})
         events = _parse_sse(response.text)
         assert len(events) > 0
         assert events[0]["event"] == "thread_id"
@@ -344,18 +353,18 @@ class TestChatStream:
         assert "thread_id" in thread_data
 
     def test_last_event_is_done(self, client: TestClient) -> None:
-        response = client.post("/chat/stream", json={"question": "Exports?"})
+        response = client.post("/api/chat/stream", json={"question": "Exports?"})
         events = _parse_sse(response.text)
         assert events[-1]["event"] == "done"
 
     def test_done_event_contains_thread_id(self, client: TestClient) -> None:
-        response = client.post("/chat/stream", json={"question": "Exports?"})
+        response = client.post("/api/chat/stream", json={"question": "Exports?"})
         events = _parse_sse(response.text)
         done_data = json.loads(events[-1]["data"])
         assert "thread_id" in done_data
 
     def test_middle_events_are_agent_talk(self, client: TestClient) -> None:
-        response = client.post("/chat/stream", json={"question": "Exports?"})
+        response = client.post("/api/chat/stream", json={"question": "Exports?"})
         events = _parse_sse(response.text)
         middle = events[1:-1]
         assert len(middle) >= 1
@@ -364,7 +373,7 @@ class TestChatStream:
 
     def test_middle_events_have_valid_json(self, client: TestClient) -> None:
         """Every SSE event's data field should be parseable JSON."""
-        response = client.post("/chat/stream", json={"question": "Exports?"})
+        response = client.post("/api/chat/stream", json={"question": "Exports?"})
         events = _parse_sse(response.text)
         for ev in events:
             data = json.loads(ev["data"])
@@ -372,7 +381,7 @@ class TestChatStream:
 
     def test_middle_events_contain_required_fields(self, client: TestClient) -> None:
         """Middle (content) events should include source, content, message_type."""
-        response = client.post("/chat/stream", json={"question": "Exports?"})
+        response = client.post("/api/chat/stream", json={"question": "Exports?"})
         events = _parse_sse(response.text)
         middle = events[1:-1]
         for ev in middle:
@@ -383,7 +392,7 @@ class TestChatStream:
 
     def test_streamed_content_matches_mock(self, client: TestClient) -> None:
         """Concatenated content from middle events should match mock output."""
-        response = client.post("/chat/stream", json={"question": "Exports?"})
+        response = client.post("/api/chat/stream", json={"question": "Exports?"})
         events = _parse_sse(response.text)
         middle = events[1:-1]
         combined = "".join(json.loads(e["data"])["content"] for e in middle)
@@ -392,7 +401,7 @@ class TestChatStream:
     def test_echoes_provided_thread_id(self, client: TestClient) -> None:
         """Provided thread_id appears in the first and last SSE events."""
         response = client.post(
-            "/chat/stream",
+            "/api/chat/stream",
             json={"question": "hi", "thread_id": "sse-thread-1"},
         )
         events = _parse_sse(response.text)
@@ -404,7 +413,7 @@ class TestChatStream:
         assert last_data["thread_id"] == "sse-thread-1"
 
     def test_missing_question_returns_422(self, client: TestClient) -> None:
-        response = client.post("/chat/stream", json={})
+        response = client.post("/api/chat/stream", json={})
         assert response.status_code == 422
 
 
@@ -462,7 +471,7 @@ class TestChatStreamMixedTypes:
         _state.atlas_sql = None
 
     def test_all_message_types_present(self, client: TestClient) -> None:
-        response = client.post("/chat/stream", json={"question": "products?"})
+        response = client.post("/api/chat/stream", json={"question": "products?"})
         events = _parse_sse(response.text)
         middle = events[1:-1]
         event_types = {e["event"] for e in middle}
@@ -471,7 +480,7 @@ class TestChatStreamMixedTypes:
         assert "tool_output" in event_types
 
     def test_tool_call_event_content(self, client: TestClient) -> None:
-        response = client.post("/chat/stream", json={"question": "products?"})
+        response = client.post("/api/chat/stream", json={"question": "products?"})
         events = _parse_sse(response.text)
         tool_calls = [e for e in events if e.get("event") == "tool_call"]
         assert len(tool_calls) == 1
@@ -480,7 +489,7 @@ class TestChatStreamMixedTypes:
         assert data["source"] == "tool"
 
     def test_tool_output_event_content(self, client: TestClient) -> None:
-        response = client.post("/chat/stream", json={"question": "products?"})
+        response = client.post("/api/chat/stream", json={"question": "products?"})
         events = _parse_sse(response.text)
         tool_outputs = [e for e in events if e.get("event") == "tool_output"]
         assert len(tool_outputs) == 1
@@ -490,7 +499,7 @@ class TestChatStreamMixedTypes:
 
     def test_event_order_preserved(self, client: TestClient) -> None:
         """Events should arrive in the same order the mock yields them."""
-        response = client.post("/chat/stream", json={"question": "products?"})
+        response = client.post("/api/chat/stream", json={"question": "products?"})
         events = _parse_sse(response.text)
         types = [e["event"] for e in events]
         # thread_id, agent_talk, tool_call, tool_output, agent_talk, done
@@ -503,7 +512,7 @@ class TestChatStreamMixedTypes:
 
     def test_four_middle_events(self, client: TestClient) -> None:
         """The mixed mock yields exactly 4 StreamData chunks."""
-        response = client.post("/chat/stream", json={"question": "products?"})
+        response = client.post("/api/chat/stream", json={"question": "products?"})
         events = _parse_sse(response.text)
         middle = events[1:-1]
         assert len(middle) == 4
@@ -600,7 +609,7 @@ class TestChatStreamEnhancedEvents:
 
     def test_node_start_in_sse_stream(self, client: TestClient) -> None:
         """node_start events should appear in the SSE stream."""
-        response = client.post("/chat/stream", json={"question": "test?"})
+        response = client.post("/api/chat/stream", json={"question": "test?"})
         events = _parse_sse(response.text)
         node_starts = [e for e in events if e.get("event") == "node_start"]
         assert len(node_starts) >= 1
@@ -609,7 +618,7 @@ class TestChatStreamEnhancedEvents:
 
     def test_pipeline_state_in_sse_stream(self, client: TestClient) -> None:
         """pipeline_state events should appear in the SSE stream."""
-        response = client.post("/chat/stream", json={"question": "test?"})
+        response = client.post("/api/chat/stream", json={"question": "test?"})
         events = _parse_sse(response.text)
         pipeline_states = [e for e in events if e.get("event") == "pipeline_state"]
         assert len(pipeline_states) >= 1
@@ -618,7 +627,7 @@ class TestChatStreamEnhancedEvents:
 
     def test_done_event_has_aggregate_stats(self, client: TestClient) -> None:
         """done event should include total_queries, total_rows, etc."""
-        response = client.post("/chat/stream", json={"question": "test?"})
+        response = client.post("/api/chat/stream", json={"question": "test?"})
         events = _parse_sse(response.text)
         done_data = json.loads(events[-1]["data"])
         assert done_data["total_queries"] == 1
@@ -640,7 +649,7 @@ class TestChatStreamEnhancedEvents:
         mock.aanswer_question_stream = _simple_stream
         _state.atlas_sql = mock
 
-        response = client.post("/chat/stream", json={"question": "hi"})
+        response = client.post("/api/chat/stream", json={"question": "hi"})
         events = _parse_sse(response.text)
         done_data = json.loads(events[-1]["data"])
         assert done_data["total_queries"] == 0
@@ -649,7 +658,7 @@ class TestChatStreamEnhancedEvents:
 
     def test_pipeline_state_payload_not_wrapped(self, client: TestClient) -> None:
         """pipeline_state SSE data should NOT have source/message_type wrapper."""
-        response = client.post("/chat/stream", json={"question": "test?"})
+        response = client.post("/api/chat/stream", json={"question": "test?"})
         events = _parse_sse(response.text)
         pipeline_states = [e for e in events if e.get("event") == "pipeline_state"]
         assert len(pipeline_states) >= 1
@@ -660,7 +669,7 @@ class TestChatStreamEnhancedEvents:
 
     def test_node_start_payload_not_wrapped(self, client: TestClient) -> None:
         """node_start SSE data should NOT have source/message_type wrapper."""
-        response = client.post("/chat/stream", json={"question": "test?"})
+        response = client.post("/api/chat/stream", json={"question": "test?"})
         events = _parse_sse(response.text)
         node_starts = [e for e in events if e.get("event") == "node_start"]
         assert len(node_starts) >= 1
@@ -671,7 +680,7 @@ class TestChatStreamEnhancedEvents:
 
     def test_backward_compatible_event_format(self, client: TestClient) -> None:
         """Existing event types (agent_talk, tool_output) still use the wrapper."""
-        response = client.post("/chat/stream", json={"question": "test?"})
+        response = client.post("/api/chat/stream", json={"question": "test?"})
         events = _parse_sse(response.text)
         agent_talks = [e for e in events if e.get("event") == "agent_talk"]
         assert len(agent_talks) >= 1
@@ -697,20 +706,20 @@ class TestServiceUnavailable:
         _state.atlas_sql = None
 
     def test_chat_returns_503(self, client: TestClient) -> None:
-        response = client.post("/chat", json={"question": "hi"})
+        response = client.post("/api/chat", json={"question": "hi"})
         assert response.status_code == 503
 
     def test_chat_503_detail_message(self, client: TestClient) -> None:
-        response = client.post("/chat", json={"question": "hi"})
+        response = client.post("/api/chat", json={"question": "hi"})
         detail = response.json()["detail"]
         assert "not ready" in detail.lower()
 
     def test_chat_stream_returns_503(self, client: TestClient) -> None:
-        response = client.post("/chat/stream", json={"question": "hi"})
+        response = client.post("/api/chat/stream", json={"question": "hi"})
         assert response.status_code == 503
 
     def test_chat_stream_503_detail_message(self, client: TestClient) -> None:
-        response = client.post("/chat/stream", json={"question": "hi"})
+        response = client.post("/api/chat/stream", json={"question": "hi"})
         detail = response.json()["detail"]
         assert "not ready" in detail.lower()
 
@@ -745,7 +754,7 @@ class TestTimeoutMiddleware:
         _state.atlas_sql.aanswer_question = _slow_answer
 
         with patch("src.api.REQUEST_TIMEOUT_SECONDS", 0.05):
-            response = client.post("/chat", json={"question": "slow"})
+            response = client.post("/api/chat", json={"question": "slow"})
             assert response.status_code == 504
             assert "timed out" in response.json()["detail"].lower()
 
@@ -786,7 +795,7 @@ class TestConcurrentRequests:
         results: dict[str, dict] = {}
 
         def _post(tid: str) -> None:
-            resp = client.post("/chat", json={"question": "q", "thread_id": tid})
+            resp = client.post("/api/chat", json={"question": "q", "thread_id": tid})
             results[tid] = resp.json()
 
         t1 = threading.Thread(target=_post, args=("thread-A",))
@@ -807,7 +816,7 @@ class TestConcurrentRequests:
 
         def _stream(tid: str) -> None:
             resp = client.post(
-                "/chat/stream",
+                "/api/chat/stream",
                 json={"question": "q", "thread_id": tid},
             )
             events = _parse_sse(resp.text)
@@ -835,11 +844,11 @@ class TestEndToEndFlow:
 
     def test_chat_then_stream_same_thread(self, client: TestClient) -> None:
         """A thread_id obtained from /chat can be reused in /chat/stream."""
-        r1 = client.post("/chat", json={"question": "first"})
+        r1 = client.post("/api/chat", json={"question": "first"})
         tid = r1.json()["thread_id"]
 
         r2 = client.post(
-            "/chat/stream", json={"question": "follow-up", "thread_id": tid}
+            "/api/chat/stream", json={"question": "follow-up", "thread_id": tid}
         )
         events = _parse_sse(r2.text)
         first_data = json.loads(events[0]["data"])
@@ -847,14 +856,14 @@ class TestEndToEndFlow:
 
     def test_threads_endpoint_id_works_in_chat(self, client: TestClient) -> None:
         """A thread_id from /threads can be used in /chat."""
-        tid = client.post("/threads").json()["thread_id"]
-        r = client.post("/chat", json={"question": "hi", "thread_id": tid})
+        tid = client.post("/api/threads").json()["thread_id"]
+        r = client.post("/api/chat", json={"question": "hi", "thread_id": tid})
         assert r.status_code == 200
         assert r.json()["thread_id"] == tid
 
     def test_stream_event_data_all_valid_json(self, client: TestClient) -> None:
         """Every single SSE event carries parseable JSON in its data field."""
-        response = client.post("/chat/stream", json={"question": "check json"})
+        response = client.post("/api/chat/stream", json={"question": "check json"})
         events = _parse_sse(response.text)
         assert len(events) >= 3  # at minimum: thread_id, one chunk, done
         for i, ev in enumerate(events):
@@ -864,7 +873,7 @@ class TestEndToEndFlow:
 
     def test_chat_response_content_type_json(self, client: TestClient) -> None:
         """Non-streaming /chat should return application/json."""
-        response = client.post("/chat", json={"question": "hello"})
+        response = client.post("/api/chat", json={"question": "hello"})
         assert "application/json" in response.headers.get("content-type", "")
 
 
@@ -897,7 +906,7 @@ class TestChatStreamWithOverrides:
     def test_overrides_forwarded_to_stream(self, client: TestClient) -> None:
         """Override kwargs should reach aanswer_question_stream."""
         client.post(
-            "/chat/stream",
+            "/api/chat/stream",
             json={
                 "question": "Brazil exports?",
                 "override_schema": "hs12",
@@ -912,7 +921,7 @@ class TestChatStreamWithOverrides:
     def test_no_overrides_sends_none(self, client: TestClient) -> None:
         """When no overrides are sent, kwargs should have None values."""
         client.post(
-            "/chat/stream",
+            "/api/chat/stream",
             json={"question": "Brazil exports?"},
         )
         assert self.captured_kwargs.get("override_schema") is None
@@ -921,21 +930,21 @@ class TestChatStreamWithOverrides:
 
     def test_invalid_schema_returns_422(self, client: TestClient) -> None:
         response = client.post(
-            "/chat/stream",
+            "/api/chat/stream",
             json={"question": "q", "override_schema": "invalid"},
         )
         assert response.status_code == 422
 
     def test_invalid_direction_returns_422(self, client: TestClient) -> None:
         response = client.post(
-            "/chat/stream",
+            "/api/chat/stream",
             json={"question": "q", "override_direction": "re-exports"},
         )
         assert response.status_code == 422
 
     def test_invalid_mode_returns_422(self, client: TestClient) -> None:
         response = client.post(
-            "/chat/stream",
+            "/api/chat/stream",
             json={"question": "q", "override_mode": "digital"},
         )
         assert response.status_code == 422
@@ -975,7 +984,7 @@ class TestChatNonStreamWithOverrides:
 
     def test_overrides_forwarded_to_answer(self, client: TestClient) -> None:
         client.post(
-            "/chat",
+            "/api/chat",
             json={
                 "question": "Brazil exports?",
                 "override_schema": "sitc",
@@ -1004,11 +1013,11 @@ class TestListThreads:
         _state.conversation_store = None
 
     def test_missing_session_id_returns_400(self, client: TestClient) -> None:
-        response = client.get("/threads")
+        response = client.get("/api/threads")
         assert response.status_code == 400
 
     def test_empty_session_returns_empty_list(self, client: TestClient) -> None:
-        response = client.get("/threads", headers={"X-Session-Id": "s1"})
+        response = client.get("/api/threads", headers={"X-Session-Id": "s1"})
         assert response.status_code == 200
         assert response.json() == []
 
@@ -1022,7 +1031,7 @@ class TestListThreads:
         asyncio.get_event_loop().run_until_complete(
             store.create("t2", "s1", "Second chat")
         )
-        response = client.get("/threads", headers={"X-Session-Id": "s1"})
+        response = client.get("/api/threads", headers={"X-Session-Id": "s1"})
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 2
@@ -1035,7 +1044,7 @@ class TestListThreads:
         store = _state.conversation_store
         asyncio.get_event_loop().run_until_complete(store.create("t1", "s1", "Mine"))
         asyncio.get_event_loop().run_until_complete(store.create("t2", "s2", "Theirs"))
-        response = client.get("/threads", headers={"X-Session-Id": "s1"})
+        response = client.get("/api/threads", headers={"X-Session-Id": "s1"})
         data = response.json()
         assert len(data) == 1
         assert data[0]["thread_id"] == "t1"
@@ -1045,7 +1054,7 @@ class TestListThreads:
 
         store = _state.conversation_store
         asyncio.get_event_loop().run_until_complete(store.create("t1", "s1", "Chat"))
-        response = client.get("/threads", headers={"X-Session-Id": "s1"})
+        response = client.get("/api/threads", headers={"X-Session-Id": "s1"})
         item = response.json()[0]
         assert "thread_id" in item
         assert "title" in item
@@ -1072,7 +1081,7 @@ class TestGetThreadMessages:
         mock_agent = MagicMock()
         mock_agent.aget_state = AsyncMock(return_value=MagicMock(values={}))
         _state.atlas_sql.agent = mock_agent
-        response = client.get("/threads/nonexistent/messages")
+        response = client.get("/api/threads/nonexistent/messages")
         assert response.status_code == 404
 
     def test_returns_messages(self, client: TestClient) -> None:
@@ -1092,7 +1101,7 @@ class TestGetThreadMessages:
         mock_agent.aget_state = AsyncMock(return_value=mock_state)
         _state.atlas_sql.agent = mock_agent
 
-        response = client.get("/threads/t1/messages")
+        response = client.get("/api/threads/t1/messages")
         assert response.status_code == 200
         data = response.json()
         assert len(data["messages"]) == 3  # Human, AI, AI — ToolMessage filtered out
@@ -1112,7 +1121,7 @@ class TestGetThreadMessages:
         mock_agent.aget_state = AsyncMock(return_value=mock_state)
         _state.atlas_sql.agent = mock_agent
 
-        response = client.get("/threads/t1/messages")
+        response = client.get("/api/threads/t1/messages")
         data = response.json()
         roles = [m["role"] for m in data["messages"]]
         assert "tool" not in roles
@@ -1132,7 +1141,7 @@ class TestGetThreadMessages:
         mock_agent.aget_state = AsyncMock(return_value=mock_state)
         _state.atlas_sql.agent = mock_agent
 
-        response = client.get("/threads/t1/messages")
+        response = client.get("/api/threads/t1/messages")
         data = response.json()
         assert len(data["messages"]) == 2  # Human + non-empty AI
 
@@ -1150,7 +1159,7 @@ class TestGetThreadMessages:
         mock_agent.aget_state = AsyncMock(return_value=mock_state)
         _state.atlas_sql.agent = mock_agent
 
-        response = client.get("/threads/t1/messages")
+        response = client.get("/api/threads/t1/messages")
         data = response.json()
         assert data["messages"][0]["role"] == "human"
         assert data["messages"][0]["content"] == "Hi"
@@ -1175,7 +1184,7 @@ class TestGetThreadMessages:
         mock_agent.aget_state = AsyncMock(return_value=mock_state)
         _state.atlas_sql.agent = mock_agent
 
-        response = client.get("/threads/t1/messages")
+        response = client.get("/api/threads/t1/messages")
         data = response.json()
         assert "overrides" in data
         assert data["overrides"]["override_schema"] == "hs12"
@@ -1197,7 +1206,7 @@ class TestGetThreadMessages:
         mock_agent.aget_state = AsyncMock(return_value=mock_state)
         _state.atlas_sql.agent = mock_agent
 
-        response = client.get("/threads/t1/messages")
+        response = client.get("/api/threads/t1/messages")
         data = response.json()
         assert data["overrides"]["override_schema"] is None
         assert data["overrides"]["override_direction"] is None
@@ -1220,7 +1229,7 @@ class TestGetThreadMessages:
         mock_agent.aget_state = AsyncMock(return_value=mock_state)
         _state.atlas_sql.agent = mock_agent
 
-        response = client.get("/threads/t1/messages")
+        response = client.get("/api/threads/t1/messages")
         data = response.json()
         assert set(data.keys()) == {"messages", "overrides", "turn_summaries"}
 
@@ -1264,7 +1273,7 @@ class TestGetThreadMessages:
         mock_agent.aget_state = AsyncMock(return_value=mock_state)
         _state.atlas_sql.agent = mock_agent
 
-        response = client.get("/threads/t1/messages")
+        response = client.get("/api/threads/t1/messages")
         data = response.json()
         assert len(data["turn_summaries"]) == 1
         ts = data["turn_summaries"][0]
@@ -1291,7 +1300,7 @@ class TestGetThreadMessages:
         mock_agent.aget_state = AsyncMock(return_value=mock_state)
         _state.atlas_sql.agent = mock_agent
 
-        response = client.get("/threads/t1/messages")
+        response = client.get("/api/threads/t1/messages")
         data = response.json()
         assert data["turn_summaries"] == []
 
@@ -1311,12 +1320,12 @@ class TestDeleteThread:
         _state.conversation_store = None
 
     def test_delete_returns_204(self, client: TestClient) -> None:
-        response = client.delete("/threads/any-id")
+        response = client.delete("/api/threads/any-id")
         assert response.status_code == 204
 
     def test_delete_nonexistent_returns_204(self, client: TestClient) -> None:
         """Idempotent — deleting nonexistent thread is fine."""
-        response = client.delete("/threads/no-such-thread")
+        response = client.delete("/api/threads/no-such-thread")
         assert response.status_code == 204
 
     def test_delete_removes_from_store(self, client: TestClient) -> None:
@@ -1324,7 +1333,7 @@ class TestDeleteThread:
 
         store = _state.conversation_store
         asyncio.get_event_loop().run_until_complete(store.create("t1", "s1", "Doomed"))
-        response = client.delete("/threads/t1")
+        response = client.delete("/api/threads/t1")
         assert response.status_code == 204
         row = asyncio.get_event_loop().run_until_complete(store.get("t1"))
         assert row is None
@@ -1350,7 +1359,7 @@ class TestLazyConversationCreation:
         import asyncio
 
         response = client.post(
-            "/chat",
+            "/api/chat",
             json={"question": "Top exports of Brazil?"},
             headers={"X-Session-Id": "session-1"},
         )
@@ -1366,7 +1375,7 @@ class TestLazyConversationCreation:
         """Without X-Session-Id, no conversation row is created."""
         import asyncio
 
-        response = client.post("/chat", json={"question": "Hello"})
+        response = client.post("/api/chat", json={"question": "Hello"})
         assert response.status_code == 200
         thread_id = response.json()["thread_id"]
 
@@ -1380,7 +1389,7 @@ class TestLazyConversationCreation:
         import asyncio
 
         response = client.post(
-            "/chat/stream",
+            "/api/chat/stream",
             json={"question": "Exports data?"},
             headers={"X-Session-Id": "session-2"},
         )
@@ -1397,7 +1406,7 @@ class TestLazyConversationCreation:
         import asyncio
 
         response = client.post(
-            "/chat",
+            "/api/chat",
             json={"question": "What are the main exports of Germany?"},
             headers={"X-Session-Id": "s1"},
         )
@@ -1413,7 +1422,7 @@ class TestLazyConversationCreation:
 
         # First message creates the conversation
         r1 = client.post(
-            "/chat",
+            "/api/chat",
             json={"question": "First question"},
             headers={"X-Session-Id": "s1"},
         )
@@ -1425,7 +1434,7 @@ class TestLazyConversationCreation:
 
         # Second message with same thread_id updates the timestamp
         client.post(
-            "/chat",
+            "/api/chat",
             json={"question": "Follow up", "thread_id": thread_id},
             headers={"X-Session-Id": "s1"},
         )
