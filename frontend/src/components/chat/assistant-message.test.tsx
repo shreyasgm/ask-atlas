@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { ChatMessage } from '@/types/chat';
 import AssistantMessage from './assistant-message';
 
@@ -20,7 +20,7 @@ describe('AssistantMessage', () => {
     const msg = makeMessage({
       content: '| Product | Value |\n|---|---|\n| Coffee | 100 |',
     });
-    render(<AssistantMessage isLast={false} message={msg} onSend={vi.fn()} />);
+    render(<AssistantMessage message={msg} />);
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.getByText('Product')).toBeInTheDocument();
     expect(screen.getByText('Coffee')).toBeInTheDocument();
@@ -31,7 +31,7 @@ describe('AssistantMessage', () => {
     const msg = makeMessage({
       content: '**bold text** and a list:\n\n- item one\n- item two',
     });
-    render(<AssistantMessage isLast={false} message={msg} onSend={vi.fn()} />);
+    render(<AssistantMessage message={msg} />);
     expect(screen.getByText('bold text')).toBeInTheDocument();
     expect(screen.getByText('item one')).toBeInTheDocument();
   });
@@ -49,7 +49,7 @@ describe('AssistantMessage', () => {
         },
       ],
     });
-    render(<AssistantMessage isLast={false} message={msg} onSend={vi.fn()} />);
+    render(<AssistantMessage message={msg} />);
 
     // Table should not be visible before expanding
     expect(screen.queryByRole('table')).not.toBeInTheDocument();

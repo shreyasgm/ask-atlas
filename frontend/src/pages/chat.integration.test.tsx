@@ -58,7 +58,7 @@ afterEach(() => {
 });
 
 describe('ChatPage integration (real hook + real components)', () => {
-  it('full flow: submit → stream → display → suggestions', async () => {
+  it('full flow: submit → stream → display', async () => {
     const user = userEvent.setup();
     const { close, pushEvent, stream } = createControllableStream();
     globalThis.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
@@ -93,13 +93,10 @@ describe('ChatPage integration (real hook + real components)', () => {
     pushEvent(makeDoneEvent());
     close();
 
-    // Suggestion pills appear after streaming ends
-    await waitFor(() => {
-      expect(screen.getByText('Break down by partner')).toBeInTheDocument();
-    });
-
     // Input re-enabled
-    expect(screen.getByPlaceholderText(/ask about trade data/i)).not.toBeDisabled();
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/ask about trade data/i)).not.toBeDisabled();
+    });
   });
 
   it('error flow: 500 response shows error and re-enables input', async () => {

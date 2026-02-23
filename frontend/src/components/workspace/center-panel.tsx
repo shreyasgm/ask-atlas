@@ -48,7 +48,6 @@ export default function CenterPanel({
         error={error}
         isStreaming={isStreaming}
         messages={messages}
-        onSend={onSend}
         pipelineSteps={pipelineSteps}
       />
       <div className="border-t border-border">

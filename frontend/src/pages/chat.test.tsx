@@ -315,43 +315,6 @@ describe('ChatPage - interactions', () => {
     });
   });
 
-  it('suggestion pills appear on completed assistant messages', () => {
-    mockHookReturn.messages = [
-      {
-        content: 'Here are the results.',
-        id: '2',
-        isStreaming: false,
-        queryResults: [],
-        role: 'assistant',
-      },
-    ];
-    renderChat();
-    expect(screen.getByText('Break down by partner')).toBeInTheDocument();
-    expect(screen.getByText('Show time series')).toBeInTheDocument();
-    expect(screen.getByText('View complexity metrics')).toBeInTheDocument();
-  });
-
-  it('clicking suggestion pill calls sendMessage', async () => {
-    const user = userEvent.setup();
-    mockHookReturn.messages = [
-      {
-        content: 'Here are the results.',
-        id: '2',
-        isStreaming: false,
-        queryResults: [],
-        role: 'assistant',
-      },
-    ];
-    renderChat();
-
-    await user.click(screen.getByText('Break down by partner'));
-    expect(mockSendMessage).toHaveBeenCalledWith('Break down by partner', {
-      direction: null,
-      mode: null,
-      schema: null,
-    });
-  });
-
   it('clear button calls clearChat', async () => {
     const user = userEvent.setup();
     mockHookReturn.messages = [
