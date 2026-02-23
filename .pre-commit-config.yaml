@@ -1,0 +1,55 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+        args: ['--maxkb=1200']  # uv.lock is ~1.1 MB
+      - id: detect-private-key
+
+  # Linting — version must match what `uv run ruff --version` reports
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.1
+    hooks:
+      - id: ruff
+        args: [--fix]
+
+  # Formatting — version must match what `uv run black --version` reports
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 26.1.0
+    hooks:
+      - id: black
+
+  # Keep uv.lock in sync with pyproject.toml
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.7.12
+    hooks:
+      - id: uv-lock
+
+  # Frontend checks — local hooks that run only when frontend files change
+  - repo: local
+    hooks:
+      - id: frontend-lint
+        name: frontend lint (oxlint)
+        entry: pnpm --dir frontend run lint
+        language: system
+        files: ^frontend/src/
+        types_or: [ts, tsx, javascript, jsx]
+        pass_filenames: false
+      - id: frontend-format-check
+        name: frontend format check (oxfmt)
+        entry: pnpm --dir frontend run lint:format
+        language: system
+        files: ^frontend/src/
+        types_or: [ts, tsx, javascript, jsx]
+        pass_filenames: false
+      - id: frontend-typecheck
+        name: frontend type check (tsgo)
+        entry: pnpm --dir frontend run tsc:check
+        language: system
+        files: ^frontend/
+        types_or: [ts, tsx]
+        pass_filenames: false
