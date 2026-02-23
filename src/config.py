@@ -15,7 +15,7 @@ from langchain_core.language_models import BaseChatModel
 BASE_DIR = Path(__file__).resolve().parents[1]
 
 # Import non-secret defaults from model_config.py
-import importlib.util
+import importlib.util  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("model_config", BASE_DIR / "model_config.py")
 _mod = importlib.util.module_from_spec(_spec)

@@ -4,13 +4,10 @@ Covers InMemoryConversationStore CRUD operations and the derive_title utility.
 """
 
 import asyncio
-from datetime import datetime, timezone
 
 import pytest
 
 from src.conversations import (
-    ConversationRow,
-    ConversationStore,
     InMemoryConversationStore,
     derive_title,
 )
@@ -159,7 +156,7 @@ class TestInMemoryConversationStore:
     @pytest.mark.asyncio
     async def test_idempotent_create(self, store: InMemoryConversationStore) -> None:
         """Creating the same thread_id twice should not raise or overwrite."""
-        row1 = await store.create("t1", "s1", "Original")
+        await store.create("t1", "s1", "Original")
         row2 = await store.create("t1", "s1", "Duplicate")
         # Should return the existing row
         assert row2.title == "Original"

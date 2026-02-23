@@ -6,18 +6,12 @@ prevent duplicate DB queries for identical lookups.
 """
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 
 from src.cache import (
     cached_product_details,
     cached_text_search,
-    product_details_cache,
-    registry,
-    table_info_cache,
-    table_info_key,
-    text_search_cache,
 )
 
 

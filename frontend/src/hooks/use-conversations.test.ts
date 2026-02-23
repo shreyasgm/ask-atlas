@@ -43,7 +43,7 @@ beforeEach(() => {
 
 describe('useConversations', () => {
   it('starts with empty conversations and loading true', () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () => Promise.resolve([]),
       ok: true,
     });
@@ -54,7 +54,7 @@ describe('useConversations', () => {
   });
 
   it('fetches conversations on mount with X-Session-Id header', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () => Promise.resolve(CONVERSATIONS_RESPONSE),
       ok: true,
     });
@@ -65,14 +65,14 @@ describe('useConversations', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(global.fetch).toHaveBeenCalledWith('/api/threads', {
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/threads', {
       headers: { 'X-Session-Id': 'test-session-id' },
     });
     expect(result.current.conversations).toEqual(EXPECTED_CONVERSATIONS);
   });
 
   it('handles fetch failure gracefully with empty list', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
     });
@@ -87,7 +87,7 @@ describe('useConversations', () => {
   });
 
   it('handles network error gracefully', async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
     const { result } = renderHook(() => useConversations());
 
@@ -99,7 +99,7 @@ describe('useConversations', () => {
   });
 
   it('deleteConversation calls DELETE and removes from local state', async () => {
-    global.fetch = vi
+    globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce({
         json: () => Promise.resolve(CONVERSATIONS_RESPONSE),
@@ -120,7 +120,7 @@ describe('useConversations', () => {
       await result.current.deleteConversation('thread-1');
     });
 
-    expect(global.fetch).toHaveBeenCalledWith('/api/threads/thread-1', {
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/threads/thread-1', {
       headers: { 'X-Session-Id': 'test-session-id' },
       method: 'DELETE',
     });
@@ -131,7 +131,7 @@ describe('useConversations', () => {
   it('refresh re-fetches the conversation list', async () => {
     const updatedResponse = [CONVERSATIONS_RESPONSE[0]];
 
-    global.fetch = vi
+    globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce({
         json: () => Promise.resolve(CONVERSATIONS_RESPONSE),
@@ -158,7 +158,7 @@ describe('useConversations', () => {
   });
 
   it('re-fetches on delete failure to restore state', async () => {
-    global.fetch = vi
+    globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce({
         json: () => Promise.resolve(CONVERSATIONS_RESPONSE),

@@ -8,7 +8,7 @@ from langchain_core.documents import Document
 
 BASE_DIR = Path(__file__).parents[2]
 
-from src.config import get_settings
+from src.config import get_settings  # noqa: E402
 
 # Load settings (replaces load_dotenv)
 settings = get_settings()
