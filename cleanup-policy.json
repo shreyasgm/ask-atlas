@@ -1,0 +1,17 @@
+[
+  {
+    "name": "keep-latest-tag",
+    "action": { "type": "Keep" },
+    "condition": {
+      "tagPrefixes": ["latest"]
+    }
+  },
+  {
+    "name": "delete-old-images",
+    "action": { "type": "Delete" },
+    "condition": {
+      "olderThan": "2592000s",
+      "tagState": "any"
+    }
+  }
+]
