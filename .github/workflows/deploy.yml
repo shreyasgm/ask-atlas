@@ -37,16 +37,24 @@ jobs:
         run: |
           gcloud run deploy ask-atlas-backend \
             --image=us-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/ask-atlas/backend:${{ steps.tag.outputs.TAG }} \
-            --network=ask-atlas-vpc \
-            --subnet=ask-atlas-subnet \
             --region=${{ secrets.GCP_REGION }} \
-            --vpc-egress=all-traffic \
-            --min-instances=0 \
-            --max-instances=5 \
+            --port=8000 \
             --memory=1Gi \
             --cpu=2 \
+            --cpu-boost \
             --timeout=900 \
             --concurrency=10 \
+            --min-instances=0 \
+            --max-instances=5 \
+            --execution-environment=gen2 \
+            --no-use-http2 \
+            --no-session-affinity \
+            --network=ask-atlas-vpc \
+            --subnet=ask-atlas-subnet \
+            --vpc-egress=all-traffic \
+            --set-secrets="ATLAS_DB_URL=atlas-db-url:latest,CHECKPOINT_DB_URL=checkpoint-db-url:latest,OPENAI_API_KEY=openai-api-key:latest" \
+            --service-account=85144878117-compute@developer.gserviceaccount.com \
+            --allow-unauthenticated \
             --project=${{ secrets.GCP_PROJECT_ID }}
 
   deploy-frontend:
