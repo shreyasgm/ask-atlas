@@ -25,22 +25,18 @@ st.set_page_config(
 st.title("Ask-Atlas: Trade Data Assistant")
 
 # Display some information
-st.info(
-    """
+st.info("""
     Ask-Atlas is an AI agent that provides insights from the [Atlas of Economic Complexity](https://atlas.cid.harvard.edu/) using trade data sourced from UN COMTRADE and processed by the [Growth Lab at Harvard University](https://growthlab.hks.harvard.edu/).
 
     Created by: [Shreyas Gadgin Matha](https://growthlab.hks.harvard.edu/people/shreyas-matha)
-    """
-)
+    """)
 
 # Add disclaimers
-st.warning(
-    """
+st.warning("""
     - Alpha release. Feedback and bug reports are welcome.
     - Code is open sourced ([Github repo](https://github.com/shreyasgm/ask-atlas)) under [CC-BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
     - Responses may contain inaccuracies. Verify results independently.
-    """
-)
+    """)
 
 # Add example questions section
 with st.expander("📝 Example Questions You Can Ask"):
@@ -217,7 +213,9 @@ if st.session_state.messages[-1]["role"] != "assistant":
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 503:
-                error_message = "⚠️ The backend service is not ready yet. Please try again shortly."
+                error_message = (
+                    "⚠️ The backend service is not ready yet. Please try again shortly."
+                )
             else:
                 error_message = f"⚠️ API error: {e.response.status_code}"
             st.error(error_message)

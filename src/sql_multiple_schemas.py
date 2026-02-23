@@ -127,9 +127,11 @@ class SQLDatabaseWithSchemas(SQLDatabase):
         for schema in self._schemas:
             # Suppress only the specific warning about vector type
             with warnings.catch_warnings():
-                warnings.filterwarnings('ignore', 
-                                     category=SAWarning,
-                                     message="Did not recognize type 'vector' of column 'embedding'")
+                warnings.filterwarnings(
+                    "ignore",
+                    category=SAWarning,
+                    message="Did not recognize type 'vector' of column 'embedding'",
+                )
                 self._metadata.reflect(
                     views=view_support,
                     bind=self._engine,
@@ -251,9 +253,11 @@ class SQLDatabaseWithSchemas(SQLDatabase):
                 sample_rows = list(
                     map(
                         lambda ls: [
-                            str(i)[: self._max_string_length]
-                            if i is not None
-                            else "NULL"
+                            (
+                                str(i)[: self._max_string_length]
+                                if i is not None
+                                else "NULL"
+                            )
                             for i in ls
                         ],
                         sample_rows_result,

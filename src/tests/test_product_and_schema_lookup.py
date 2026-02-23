@@ -16,7 +16,9 @@ settings = get_settings()
 @pytest.fixture
 def llm():
     """Initialize the language model using configured model."""
-    return create_llm(settings.query_model, settings.query_model_provider, temperature=0)
+    return create_llm(
+        settings.query_model, settings.query_model_provider, temperature=0
+    )
 
 
 @pytest.fixture
@@ -67,7 +69,9 @@ def test_extract_schemas_and_product_mentions(product_lookup, logger):
     ), "Should not require product lookup - HS codes already provided"
 
     # Test question with no product mentions
-    question3 = "What were the top 5 products exported from United States to China in 2020?"
+    question3 = (
+        "What were the top 5 products exported from United States to China in 2020?"
+    )
     result3 = product_lookup.extract_schemas_and_product_mentions().invoke(
         {"question": question3}
     )

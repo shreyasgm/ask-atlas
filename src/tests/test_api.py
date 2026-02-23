@@ -16,7 +16,6 @@ from src.api import _state, app
 from src.conversations import InMemoryConversationStore
 from src.text_to_sql import AnswerResult, AtlasTextToSQL, StreamData
 
-
 # ---------------------------------------------------------------------------
 # SSE helpers
 # ---------------------------------------------------------------------------
@@ -78,22 +77,20 @@ def _inject_mock_atlas():
     Resets ``_state.atlas_sql`` to ``None`` after each test.
     """
     mock = MagicMock(spec=AtlasTextToSQL)
-    mock.aanswer_question = AsyncMock(return_value=AnswerResult(
-        answer="Mocked answer",
-        queries=[],
-        resolved_products=None,
-        schemas_used=[],
-        total_rows=0,
-        total_execution_time_ms=0,
-    ))
+    mock.aanswer_question = AsyncMock(
+        return_value=AnswerResult(
+            answer="Mocked answer",
+            queries=[],
+            resolved_products=None,
+            schemas_used=[],
+            total_rows=0,
+            total_execution_time_ms=0,
+        )
+    )
 
     async def _fake_stream(question: str, thread_id: str | None = None, **kwargs):
-        yield StreamData(
-            source="agent", content="streamed ", message_type="agent_talk"
-        )
-        yield StreamData(
-            source="agent", content="answer", message_type="agent_talk"
-        )
+        yield StreamData(source="agent", content="streamed ", message_type="agent_talk")
+        yield StreamData(source="agent", content="answer", message_type="agent_talk")
 
     mock.aanswer_question_stream = _fake_stream
     _state.atlas_sql = mock
@@ -205,29 +202,32 @@ class TestChat:
 
     def test_forwards_thread_id_to_atlas(self, client: TestClient) -> None:
         """The thread_id should be passed through to the backend."""
-        client.post(
-            "/chat", json={"question": "test", "thread_id": "tid-123"}
-        )
+        client.post("/chat", json={"question": "test", "thread_id": "tid-123"})
         call_kwargs = _state.atlas_sql.aanswer_question.call_args
         # thread_id may be positional or keyword
-        assert "tid-123" in (
-            list(call_kwargs.args) + list(call_kwargs.kwargs.values())
-        )
+        assert "tid-123" in (list(call_kwargs.args) + list(call_kwargs.kwargs.values()))
 
     def test_missing_question_returns_422(self, client: TestClient) -> None:
         response = client.post("/chat", json={})
         assert response.status_code == 422
 
     def test_empty_body_returns_422(self, client: TestClient) -> None:
-        response = client.post("/chat", content=b"", headers={"content-type": "application/json"})
+        response = client.post(
+            "/chat", content=b"", headers={"content-type": "application/json"}
+        )
         assert response.status_code == 422
 
     def test_response_matches_chat_response_schema(self, client: TestClient) -> None:
         """Response body must have the expected ChatResponse keys."""
         data = client.post("/chat", json={"question": "hello"}).json()
         expected_keys = {
-            "answer", "thread_id", "queries", "resolved_products",
-            "schemas_used", "total_rows", "total_execution_time_ms",
+            "answer",
+            "thread_id",
+            "queries",
+            "resolved_products",
+            "schemas_used",
+            "total_rows",
+            "total_execution_time_ms",
         }
         assert set(data.keys()) == expected_keys
 
@@ -244,25 +244,31 @@ class TestChatPipelineData:
     def _inject_pipeline_mock(self):
         """Override default mock with one that returns pipeline data."""
         mock = MagicMock(spec=AtlasTextToSQL)
-        mock.aanswer_question = AsyncMock(return_value=AnswerResult(
-            answer="Brazil exports coffee.",
-            queries=[{
-                "sql": "SELECT * FROM hs92.country_product_year_4",
-                "columns": ["country", "value"],
-                "rows": [["BRA", 5000]],
-                "row_count": 1,
-                "execution_time_ms": 55,
-                "tables": ["hs92.country_product_year_4"],
-                "schema_name": "hs92",
-            }],
-            resolved_products={
-                "schemas": ["hs92"],
-                "products": [{"name": "coffee", "codes": ["0901"], "schema": "hs92"}],
-            },
-            schemas_used=["hs92"],
-            total_rows=1,
-            total_execution_time_ms=55,
-        ))
+        mock.aanswer_question = AsyncMock(
+            return_value=AnswerResult(
+                answer="Brazil exports coffee.",
+                queries=[
+                    {
+                        "sql": "SELECT * FROM hs92.country_product_year_4",
+                        "columns": ["country", "value"],
+                        "rows": [["BRA", 5000]],
+                        "row_count": 1,
+                        "execution_time_ms": 55,
+                        "tables": ["hs92.country_product_year_4"],
+                        "schema_name": "hs92",
+                    }
+                ],
+                resolved_products={
+                    "schemas": ["hs92"],
+                    "products": [
+                        {"name": "coffee", "codes": ["0901"], "schema": "hs92"}
+                    ],
+                },
+                schemas_used=["hs92"],
+                total_rows=1,
+                total_execution_time_ms=55,
+            )
+        )
 
         async def _fake_stream(question, thread_id=None, **kwargs):
             yield StreamData(source="agent", content="ok", message_type="agent_talk")
@@ -290,7 +296,9 @@ class TestChatPipelineData:
         assert data["total_rows"] == 1
         assert data["total_execution_time_ms"] == 55
 
-    def test_chat_backward_compatible_answer_and_thread_id(self, client: TestClient) -> None:
+    def test_chat_backward_compatible_answer_and_thread_id(
+        self, client: TestClient
+    ) -> None:
         """answer and thread_id must still be present and correct."""
         data = client.post("/chat", json={"question": "test"}).json()
         assert data["answer"] == "Brazil exports coffee."
@@ -301,7 +309,9 @@ class TestChatPipelineData:
 class TestChatPipelineDataEmpty:
     """Tests for /chat when no pipeline queries were executed."""
 
-    def test_chat_null_pipeline_fields_for_conversational(self, client: TestClient) -> None:
+    def test_chat_null_pipeline_fields_for_conversational(
+        self, client: TestClient
+    ) -> None:
         """When no queries run, pipeline fields should be null."""
         data = client.post("/chat", json={"question": "hello"}).json()
         assert data["queries"] is None
@@ -410,10 +420,16 @@ class TestChatStreamMixedTypes:
     def _inject_mixed_stream(self):
         """Override the default mock with a stream that yields varied types."""
         mock = MagicMock(spec=AtlasTextToSQL)
-        mock.aanswer_question = AsyncMock(return_value=AnswerResult(
-            answer="unused", queries=[], resolved_products=None,
-            schemas_used=[], total_rows=0, total_execution_time_ms=0,
-        ))
+        mock.aanswer_question = AsyncMock(
+            return_value=AnswerResult(
+                answer="unused",
+                queries=[],
+                resolved_products=None,
+                schemas_used=[],
+                total_rows=0,
+                total_execution_time_ms=0,
+            )
+        )
 
         async def _mixed_stream(question: str, thread_id: str | None = None, **kwargs):
             yield StreamData(
@@ -457,9 +473,7 @@ class TestChatStreamMixedTypes:
     def test_tool_call_event_content(self, client: TestClient) -> None:
         response = client.post("/chat/stream", json={"question": "products?"})
         events = _parse_sse(response.text)
-        tool_calls = [
-            e for e in events if e.get("event") == "tool_call"
-        ]
+        tool_calls = [e for e in events if e.get("event") == "tool_call"]
         assert len(tool_calls) == 1
         data = json.loads(tool_calls[0]["data"])
         assert "SELECT" in data["content"]
@@ -468,9 +482,7 @@ class TestChatStreamMixedTypes:
     def test_tool_output_event_content(self, client: TestClient) -> None:
         response = client.post("/chat/stream", json={"question": "products?"})
         events = _parse_sse(response.text)
-        tool_outputs = [
-            e for e in events if e.get("event") == "tool_output"
-        ]
+        tool_outputs = [e for e in events if e.get("event") == "tool_output"]
         assert len(tool_outputs) == 1
         data = json.loads(tool_outputs[0]["data"])
         assert "Coffee" in data["content"]
@@ -509,12 +521,20 @@ class TestChatStreamEnhancedEvents:
     def _inject_pipeline_stream(self):
         """Mock stream that yields pipeline events alongside existing types."""
         mock = MagicMock(spec=AtlasTextToSQL)
-        mock.aanswer_question = AsyncMock(return_value=AnswerResult(
-            answer="unused", queries=[], resolved_products=None,
-            schemas_used=[], total_rows=0, total_execution_time_ms=0,
-        ))
+        mock.aanswer_question = AsyncMock(
+            return_value=AnswerResult(
+                answer="unused",
+                queries=[],
+                resolved_products=None,
+                schemas_used=[],
+                total_rows=0,
+                total_execution_time_ms=0,
+            )
+        )
 
-        async def _pipeline_stream(question: str, thread_id: str | None = None, **kwargs):
+        async def _pipeline_stream(
+            question: str, thread_id: str | None = None, **kwargs
+        ):
             yield StreamData(
                 source="agent",
                 content="",
@@ -525,7 +545,11 @@ class TestChatStreamEnhancedEvents:
                 source="pipeline",
                 content="",
                 message_type="node_start",
-                payload={"node": "extract_tool_question", "label": "Extracting question", "query_index": 1},
+                payload={
+                    "node": "extract_tool_question",
+                    "label": "Extracting question",
+                    "query_index": 1,
+                },
             )
             yield StreamData(
                 source="pipeline",
@@ -537,7 +561,11 @@ class TestChatStreamEnhancedEvents:
                 source="pipeline",
                 content="",
                 message_type="node_start",
-                payload={"node": "execute_sql", "label": "Executing query", "query_index": 1},
+                payload={
+                    "node": "execute_sql",
+                    "label": "Executing query",
+                    "query_index": 1,
+                },
             )
             yield StreamData(
                 source="pipeline",
@@ -859,9 +887,7 @@ class TestChatStreamWithOverrides:
 
         async def _capturing_stream(question: str, thread_id=None, **kwargs):
             parent.captured_kwargs = kwargs
-            yield StreamData(
-                source="agent", content="ok", message_type="agent_talk"
-            )
+            yield StreamData(source="agent", content="ok", message_type="agent_talk")
 
         mock.aanswer_question_stream = _capturing_stream
         _state.atlas_sql = mock
@@ -940,9 +966,7 @@ class TestChatNonStreamWithOverrides:
         mock.aanswer_question = _capturing_answer
 
         async def _fake_stream(question: str, thread_id=None, **kwargs):
-            yield StreamData(
-                source="agent", content="ok", message_type="agent_talk"
-            )
+            yield StreamData(source="agent", content="ok", message_type="agent_talk")
 
         mock.aanswer_question_stream = _fake_stream
         _state.atlas_sql = mock
@@ -1009,12 +1033,8 @@ class TestListThreads:
         import asyncio
 
         store = _state.conversation_store
-        asyncio.get_event_loop().run_until_complete(
-            store.create("t1", "s1", "Mine")
-        )
-        asyncio.get_event_loop().run_until_complete(
-            store.create("t2", "s2", "Theirs")
-        )
+        asyncio.get_event_loop().run_until_complete(store.create("t1", "s1", "Mine"))
+        asyncio.get_event_loop().run_until_complete(store.create("t2", "s2", "Theirs"))
         response = client.get("/threads", headers={"X-Session-Id": "s1"})
         data = response.json()
         assert len(data) == 1
@@ -1024,9 +1044,7 @@ class TestListThreads:
         import asyncio
 
         store = _state.conversation_store
-        asyncio.get_event_loop().run_until_complete(
-            store.create("t1", "s1", "Chat")
-        )
+        asyncio.get_event_loop().run_until_complete(store.create("t1", "s1", "Chat"))
         response = client.get("/threads", headers={"X-Session-Id": "s1"})
         item = response.json()[0]
         assert "thread_id" in item
@@ -1185,7 +1203,9 @@ class TestGetThreadMessages:
         assert data["overrides"]["override_direction"] is None
         assert data["overrides"]["override_mode"] is None
 
-    def test_response_has_messages_overrides_and_turn_summaries_keys(self, client: TestClient) -> None:
+    def test_response_has_messages_overrides_and_turn_summaries_keys(
+        self, client: TestClient
+    ) -> None:
         """Response should have 'messages', 'overrides', and 'turn_summaries' keys."""
         from langchain_core.messages import AIMessage, HumanMessage
 
@@ -1204,7 +1224,9 @@ class TestGetThreadMessages:
         data = response.json()
         assert set(data.keys()) == {"messages", "overrides", "turn_summaries"}
 
-    def test_response_includes_turn_summaries_when_present(self, client: TestClient) -> None:
+    def test_response_includes_turn_summaries_when_present(
+        self, client: TestClient
+    ) -> None:
         """State with turn_summaries should include them in response."""
         from langchain_core.messages import AIMessage, HumanMessage
 
@@ -1218,7 +1240,9 @@ class TestGetThreadMessages:
                 {
                     "entities": {
                         "schemas": ["hs92"],
-                        "products": [{"name": "coffee", "codes": ["0901"], "schema": "hs92"}],
+                        "products": [
+                            {"name": "coffee", "codes": ["0901"], "schema": "hs92"}
+                        ],
                     },
                     "queries": [
                         {
@@ -1250,7 +1274,9 @@ class TestGetThreadMessages:
         assert ts["total_rows"] == 1
         assert ts["total_execution_time_ms"] == 42
 
-    def test_response_empty_turn_summaries_when_absent(self, client: TestClient) -> None:
+    def test_response_empty_turn_summaries_when_absent(
+        self, client: TestClient
+    ) -> None:
         """Old checkpoints (no turn_summaries key) should return empty list."""
         from langchain_core.messages import AIMessage, HumanMessage
 
@@ -1297,9 +1323,7 @@ class TestDeleteThread:
         import asyncio
 
         store = _state.conversation_store
-        asyncio.get_event_loop().run_until_complete(
-            store.create("t1", "s1", "Doomed")
-        )
+        asyncio.get_event_loop().run_until_complete(store.create("t1", "s1", "Doomed"))
         response = client.delete("/threads/t1")
         assert response.status_code == 204
         row = asyncio.get_event_loop().run_until_complete(store.get("t1"))
@@ -1338,9 +1362,7 @@ class TestLazyConversationCreation:
         assert row is not None
         assert row.session_id == "session-1"
 
-    def test_chat_no_session_header_skips_creation(
-        self, client: TestClient
-    ) -> None:
+    def test_chat_no_session_header_skips_creation(self, client: TestClient) -> None:
         """Without X-Session-Id, no conversation row is created."""
         import asyncio
 
@@ -1371,9 +1393,7 @@ class TestLazyConversationCreation:
         assert row is not None
         assert row.session_id == "session-2"
 
-    def test_chat_derives_title_from_question(
-        self, client: TestClient
-    ) -> None:
+    def test_chat_derives_title_from_question(self, client: TestClient) -> None:
         import asyncio
 
         response = client.post(
@@ -1388,9 +1408,7 @@ class TestLazyConversationCreation:
         assert row is not None
         assert "Germany" in row.title
 
-    def test_second_message_updates_timestamp(
-        self, client: TestClient
-    ) -> None:
+    def test_second_message_updates_timestamp(self, client: TestClient) -> None:
         import asyncio
 
         # First message creates the conversation

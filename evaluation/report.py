@@ -93,7 +93,9 @@ def generate_report(
             "weighted_score": verdict.get("weighted_score", 0),
             "judge_mode": verdict.get("judge_mode", "n/a"),
             "error": run.get("error"),
-            "judge_comment": verdict.get("overall_comment", verdict.get("reasoning", "")),
+            "judge_comment": verdict.get(
+                "overall_comment", verdict.get("reasoning", "")
+            ),
         }
         per_question.append(entry)
 
@@ -113,7 +115,11 @@ def generate_report(
             diff: _aggregate_scores(vds) for diff, vds in sorted(by_difficulty.items())
         },
         "failed_questions": [
-            {"id": q["question_id"], "text": q["question_text"], "comment": q["judge_comment"]}
+            {
+                "id": q["question_id"],
+                "text": q["question_text"],
+                "comment": q["judge_comment"],
+            }
             for q in per_question
             if q["verdict"] == "fail"
         ],
@@ -138,7 +144,9 @@ def report_to_markdown(report: dict[str, Any]) -> str:
     lines.append(f"| Questions evaluated | {agg['count']} |")
     lines.append(f"| Avg weighted score | {agg['avg_weighted_score']} / 5.0 |")
     lines.append(f"| Pass rate | {agg['pass_rate']}% |")
-    lines.append(f"| Pass / Partial / Fail | {agg['pass_count']} / {agg['partial_count']} / {agg['fail_count']} |")
+    lines.append(
+        f"| Pass / Partial / Fail | {agg['pass_count']} / {agg['partial_count']} / {agg['fail_count']} |"
+    )
 
     # Dimension averages
     dims = report.get("dimension_averages", {})
@@ -184,8 +192,12 @@ def report_to_markdown(report: dict[str, Any]) -> str:
     per_q = report.get("per_question", [])
     if per_q:
         lines.append("\n## Per-Question Details\n")
-        lines.append("| ID | Difficulty | Category | Verdict | Score | Judge Mode | Duration |")
-        lines.append("|----|------------|----------|---------|-------|------------|----------|")
+        lines.append(
+            "| ID | Difficulty | Category | Verdict | Score | Judge Mode | Duration |"
+        )
+        lines.append(
+            "|----|------------|----------|---------|-------|------------|----------|"
+        )
         for q in per_q:
             dur = f"{q['duration_s']}s" if q["duration_s"] is not None else "n/a"
             mode = q.get("judge_mode", "n/a")

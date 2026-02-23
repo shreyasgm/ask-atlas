@@ -104,7 +104,9 @@ def validate_sql(sql: str, valid_tables: set[str]) -> ValidationResult:
     for select_node in parsed.find_all(exp.Select):
         for sel_expr in select_node.expressions:
             if isinstance(sel_expr, exp.Star):
-                warnings.append("Query uses SELECT * — consider selecting specific columns.")
+                warnings.append(
+                    "Query uses SELECT * — consider selecting specific columns."
+                )
                 break
 
     # 5. Leading LIKE wildcard warning

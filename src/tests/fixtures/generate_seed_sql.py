@@ -24,7 +24,18 @@ import psycopg2
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
-SAMPLE_COUNTRIES = ["BOL", "IND", "USA", "DEU", "FRA", "KEN", "CHN", "JPN", "BRA", "GBR"]
+SAMPLE_COUNTRIES = [
+    "BOL",
+    "IND",
+    "USA",
+    "DEU",
+    "FRA",
+    "KEN",
+    "CHN",
+    "JPN",
+    "BRA",
+    "GBR",
+]
 YEAR_MIN, YEAR_MAX = 2019, 2021
 
 FULL_COPY_SCHEMAS = ["public", "classification"]
@@ -44,11 +55,14 @@ load_dotenv(BASE_DIR / ".env")
 
 PROD_DB_URL = os.environ.get("ATLAS_DB_URL")
 if not PROD_DB_URL:
-    print("ERROR: ATLAS_DB_URL not set. Add it to .env or set env var.", file=sys.stderr)
+    print(
+        "ERROR: ATLAS_DB_URL not set. Add it to .env or set env var.", file=sys.stderr
+    )
     sys.exit(1)
 
 
 # ── Value formatting ──────────────────────────────────────────────────────────
+
 
 def format_value(val: object) -> str:
     """Format a Python value as a SQL literal."""
@@ -90,6 +104,7 @@ def batch_inserts(qualified: str, col_names: list[str], rows: list[tuple]) -> li
 
 # ── Schema discovery ──────────────────────────────────────────────────────────
 
+
 def get_tables_from_json() -> dict[str, list[str]]:
     """Get the canonical table list from db_table_structure.json.
 
@@ -101,6 +116,7 @@ def get_tables_from_json() -> dict[str, list[str]]:
 
 
 # ── DDL extraction ────────────────────────────────────────────────────────────
+
 
 def extract_enums(cur) -> list[tuple[str, list[str]]]:
     """Get all custom ENUM type definitions from the database."""
@@ -150,6 +166,7 @@ def extract_columns(cur, schema: str, table: str) -> list[tuple[str, str]]:
 
 # ── Data extraction filtering ────────────────────────────────────────────────
 
+
 def should_extract_data(schema: str, table: str) -> bool:
     """Determine if we should extract data (vs DDL-only) for a trade table."""
     if schema in FULL_COPY_SCHEMAS:
@@ -172,7 +189,10 @@ def should_extract_data(schema: str, table: str) -> bool:
         return False
 
     # Bilateral _4 only for primary test schemas (hs92)
-    if table == "country_country_product_year_4" and schema not in BILATERAL_DATA_SCHEMAS:
+    if (
+        table == "country_country_product_year_4"
+        and schema not in BILATERAL_DATA_SCHEMAS
+    ):
         return False
 
     return True
@@ -233,6 +253,7 @@ def extract_data(
 
 # ── Main generation ───────────────────────────────────────────────────────────
 
+
 def generate() -> tuple[str, list[tuple[str, str, int]]]:
     """Generate seed SQL from production data."""
     lines: list[str] = []
@@ -259,12 +280,18 @@ def generate() -> tuple[str, list[tuple[str, str, int]]]:
             print(f"  Sample country_ids: {country_ids}")
 
             # ── 1. Header ─────────────────────────────────────────
-            w("-- ==========================================================================")
+            w(
+                "-- =========================================================================="
+            )
             w("-- Seed SQL for ask-atlas integration tests")
-            w("-- Extracted from production DB by: src/tests/fixtures/generate_seed_sql.py")
+            w(
+                "-- Extracted from production DB by: src/tests/fixtures/generate_seed_sql.py"
+            )
             w(f"-- Countries: {', '.join(SAMPLE_COUNTRIES)}")
             w(f"-- Years: {YEAR_MIN}-{YEAR_MAX}")
-            w("-- ==========================================================================")
+            w(
+                "-- =========================================================================="
+            )
             w("")
 
             # ── 2. Extensions ─────────────────────────────────────
@@ -296,7 +323,9 @@ def generate() -> tuple[str, list[tuple[str, str, int]]]:
                 for table in all_tables[schema]:
                     cols = extract_columns(cur, schema, table)
                     if not cols:
-                        print(f"  WARNING: no columns found for {schema}.{table}, skipping DDL")
+                        print(
+                            f"  WARNING: no columns found for {schema}.{table}, skipping DDL"
+                        )
                         continue
                     qualified = f"{schema}.{table}" if schema != "public" else table
                     col_defs = ",\n".join(f"    {cn} {ct}" for cn, ct in cols)
@@ -306,9 +335,13 @@ def generate() -> tuple[str, list[tuple[str, str, int]]]:
                     w("")
 
             # ── 6. Seed data ──────────────────────────────────────
-            w("-- ==========================================================================")
+            w(
+                "-- =========================================================================="
+            )
             w("-- SEED DATA")
-            w("-- ==========================================================================")
+            w(
+                "-- =========================================================================="
+            )
             w("")
 
             for schema in schema_order:
@@ -357,4 +390,6 @@ if __name__ == "__main__":
         total_rows += count
     print("-" * 75)
     print(f"{'TOTAL':<65} {total_rows:>8,}")
-    print(f"\nWritten to {OUTPUT_FILE} ({total_bytes:,} bytes, {total_bytes / 1024 / 1024:.1f} MB)")
+    print(
+        f"\nWritten to {OUTPUT_FILE} ({total_bytes:,} bytes, {total_bytes / 1024 / 1024:.1f} MB)"
+    )

@@ -118,10 +118,7 @@ class TestLoadFiles:
         # Create a temporary table descriptions file
         table_desc = {
             "schema1": [
-                {
-                    "table_name": "table1",
-                    "context_str": "Description of table1"
-                }
+                {"table_name": "table1", "context_str": "Description of table1"}
             ]
         }
         desc_file = tmp_path / "table_descriptions.json"
@@ -129,7 +126,7 @@ class TestLoadFiles:
             json.dump(table_desc, f)
 
         result = load_table_descriptions(desc_file)
-        
+
         assert result == table_desc
         assert "schema1" in result
         assert len(result["schema1"]) == 1
@@ -143,7 +140,10 @@ class TestGetTablesInSchemas:
     TABLE_DESCRIPTIONS = {
         "hs92": [
             {"table_name": "country_year", "context_str": "Year-level HS92 data"},
-            {"table_name": "country_product_year_4", "context_str": "4-digit product trade"},
+            {
+                "table_name": "country_product_year_4",
+                "context_str": "4-digit product trade",
+            },
         ],
         "sitc": [
             {"table_name": "country_year", "context_str": "Year-level SITC data"},
@@ -184,7 +184,12 @@ class TestGetTablesInSchemas:
     def test_classification_schema_treated_like_any_other(self):
         """'classification' is a valid key — its tables should be schema-qualified too."""
         result = get_tables_in_schemas(self.TABLE_DESCRIPTIONS, ["classification"])
-        assert result == [{"table_name": "classification.location_country", "context_str": "Countries"}]
+        assert result == [
+            {
+                "table_name": "classification.location_country",
+                "context_str": "Countries",
+            }
+        ]
 
 
 class TestQueryToolSchema:
@@ -227,12 +232,18 @@ class TestClassificationTablesForSchemas:
         assert "classification.location_country" in names
 
     def test_no_duplicate_location_country_for_multiple_schemas(self):
-        result = _classification_tables_for_schemas(["hs92", "hs12"], self.TABLE_DESCRIPTIONS)
-        location_count = sum(1 for t in result if t["table_name"] == "classification.location_country")
+        result = _classification_tables_for_schemas(
+            ["hs92", "hs12"], self.TABLE_DESCRIPTIONS
+        )
+        location_count = sum(
+            1 for t in result if t["table_name"] == "classification.location_country"
+        )
         assert location_count == 1
 
     def test_multiple_schemas_get_respective_product_tables(self):
-        result = _classification_tables_for_schemas(["hs92", "sitc"], self.TABLE_DESCRIPTIONS)
+        result = _classification_tables_for_schemas(
+            ["hs92", "sitc"], self.TABLE_DESCRIPTIONS
+        )
         names = {t["table_name"] for t in result}
         assert "classification.product_hs92" in names
         assert "classification.product_sitc" in names
@@ -244,7 +255,9 @@ class TestClassificationTablesForSchemas:
         assert len(result) == 1
 
     def test_unknown_schema_only_includes_location(self):
-        result = _classification_tables_for_schemas(["nonexistent"], self.TABLE_DESCRIPTIONS)
+        result = _classification_tables_for_schemas(
+            ["nonexistent"], self.TABLE_DESCRIPTIONS
+        )
         names = {t["table_name"] for t in result}
         assert "classification.location_country" in names
         assert len(result) == 1
@@ -257,14 +270,16 @@ class TestGetTableInfoForSchemas:
             project_paths["table_descriptions_json"]
         )
         # Set the return value of get_table_info to a mock string
-        mock_db.get_table_info.return_value = "Mock table info with columns: id, name, value"
+        mock_db.get_table_info.return_value = (
+            "Mock table info with columns: id, name, value"
+        )
 
         # Test with sample schemas
         sample_schemas = ["hs92"]
         table_info = get_table_info_for_schemas(
             db=mock_db,
             table_descriptions=table_descriptions,
-            classification_schemas=sample_schemas
+            classification_schemas=sample_schemas,
         )
 
         assert isinstance(table_info, str)
@@ -279,7 +294,9 @@ class TestGetTableInfoForSchemas:
         table_descriptions = load_table_descriptions(
             project_paths["table_descriptions_json"]
         )
-        mock_db.get_table_info.return_value = "CREATE TABLE placeholder (\n  id integer\n);\n"
+        mock_db.get_table_info.return_value = (
+            "CREATE TABLE placeholder (\n  id integer\n);\n"
+        )
 
         table_info = get_table_info_for_schemas(
             db=mock_db,
@@ -289,6 +306,3 @@ class TestGetTableInfoForSchemas:
 
         assert "classification.location_country" in table_info
         assert "classification.product_hs92" in table_info
-
-
-

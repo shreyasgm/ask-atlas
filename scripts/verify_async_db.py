@@ -61,15 +61,15 @@ def verify_engine_config(atlas: AtlasTextToSQL) -> None:
     print(f"    URL:       {sync_url[:60]}...")
     print(f"    Pool size: {sync_pool.size()}")
     print(f"    Overflow:  {sync_pool.overflow()}")
-    assert "psycopg2" in sync_driver or sync_driver == "postgresql", (
-        f"Sync engine should use psycopg2, got {sync_driver}"
-    )
+    assert (
+        "psycopg2" in sync_driver or sync_driver == "postgresql"
+    ), f"Sync engine should use psycopg2, got {sync_driver}"
     print("    ✓ Sync engine uses psycopg2 (default postgresql driver)")
 
     # Async engine
-    assert isinstance(atlas.async_engine, AsyncEngine), (
-        f"Expected AsyncEngine, got {type(atlas.async_engine)}"
-    )
+    assert isinstance(
+        atlas.async_engine, AsyncEngine
+    ), f"Expected AsyncEngine, got {type(atlas.async_engine)}"
     async_driver = atlas.async_engine.url.drivername
     async_pool = atlas.async_engine.pool
     print("\n  Async engine:")
@@ -77,9 +77,9 @@ def verify_engine_config(atlas: AtlasTextToSQL) -> None:
     print(f"    Type:      {type(atlas.async_engine).__name__}")
     print(f"    Pool size: {async_pool.size()}")
     print(f"    Overflow:  {async_pool.overflow()}")
-    assert async_driver == "postgresql+psycopg", (
-        f"Async engine should use postgresql+psycopg, got {async_driver}"
-    )
+    assert (
+        async_driver == "postgresql+psycopg"
+    ), f"Async engine should use postgresql+psycopg, got {async_driver}"
     print("    ✓ Async engine uses postgresql+psycopg (psycopg3 async)")
 
     print("\n  ✓ Both engines configured correctly\n")
@@ -198,7 +198,9 @@ async def run_e2e_query(
     # Summarize engine usage
     async_hits = [e for e in engine_log if e["engine"] == "ASYNC_ENGINE"]
     sync_hits = [e for e in engine_log if e["engine"] == "SYNC_ENGINE"]
-    print(f"\n    Engine usage: {len(async_hits)} ASYNC_ENGINE, {len(sync_hits)} SYNC_ENGINE")
+    print(
+        f"\n    Engine usage: {len(async_hits)} ASYNC_ENGINE, {len(sync_hits)} SYNC_ENGINE"
+    )
     if async_hits:
         print("    ASYNC queries:")
         for h in async_hits:

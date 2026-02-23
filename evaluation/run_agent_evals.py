@@ -51,7 +51,9 @@ async def run_single_question(
     Returns a result dict with question_id, answer, sql, duration_s, status, error.
     """
     async with semaphore:
-        question_path = EVALUATION_BASE_DIR / "questions" / question_id / "question.json"
+        question_path = (
+            EVALUATION_BASE_DIR / "questions" / question_id / "question.json"
+        )
         question_data = load_json_file(question_path)
         question_text = question_data["user_question"]
 
@@ -177,8 +179,7 @@ async def run_agent_evals(
         example_queries_dir=BASE_DIR / "src/example_queries",
     ) as atlas:
         tasks = [
-            run_single_question(atlas, qid, run_dir, semaphore)
-            for qid in ids_to_run
+            run_single_question(atlas, qid, run_dir, semaphore) for qid in ids_to_run
         ]
         results = await asyncio.gather(*tasks)
 

@@ -27,7 +27,6 @@ from src.product_and_schema_lookup import (
     SchemasAndProductsFound,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -59,9 +58,7 @@ def _make_multi_tool_call_message(
         "What did Brazil export in 2021?",
         "What did Argentina export in 2021?",
     ]
-    tool_call_ids = tool_call_ids or [
-        f"call_{i}" for i in range(len(questions))
-    ]
+    tool_call_ids = tool_call_ids or [f"call_{i}" for i in range(len(questions))]
     return AIMessage(
         content="",
         tool_calls=[
@@ -189,7 +186,9 @@ class TestExtractProductsNode:
             MockLookup.return_value = mock_instance
 
             state = _base_state(pipeline_question="US exports of cotton?")
-            result = await extract_products_node(state, llm=mock_llm, engine=mock_engine)
+            result = await extract_products_node(
+                state, llm=mock_llm, engine=mock_engine
+            )
 
         assert result == {"pipeline_products": canned}
         MockLookup.assert_called_once_with(llm=mock_llm, connection=mock_engine)
@@ -215,7 +214,9 @@ class TestExtractProductsNode:
             MockLookup.return_value = mock_instance
 
             state = _base_state(pipeline_question="What is Brazil's ECI?")
-            result = await extract_products_node(state, llm=mock_llm, engine=mock_engine)
+            result = await extract_products_node(
+                state, llm=mock_llm, engine=mock_engine
+            )
 
         assert result["pipeline_products"].products == []
         assert result["pipeline_products"].classification_schemas == ["hs92"]
@@ -240,7 +241,9 @@ class TestExtractProductsNode:
             state = _base_state(
                 pipeline_question="Goods and services trade between US and China?"
             )
-            result = await extract_products_node(state, llm=mock_llm, engine=mock_engine)
+            result = await extract_products_node(
+                state, llm=mock_llm, engine=mock_engine
+            )
 
         assert result["pipeline_products"].classification_schemas == [
             "hs92",
@@ -270,9 +273,7 @@ class TestLookupCodesNode:
             ProductSearchResult(
                 name="wheat",
                 classification_schema="hs92",
-                llm_suggestions=[
-                    {"product_code": "1001", "product_name": "Wheat"}
-                ],
+                llm_suggestions=[{"product_code": "1001", "product_name": "Wheat"}],
                 db_suggestions=[],
             )
         ]
@@ -290,7 +291,9 @@ class TestLookupCodesNode:
         with patch("src.generate_query.ProductAndSchemaLookup") as MockLookup:
             mock_instance = MagicMock()
             mock_instance.get_candidate_codes.return_value = candidates
-            mock_instance.aselect_final_codes_direct = AsyncMock(return_value=final_codes)
+            mock_instance.aselect_final_codes_direct = AsyncMock(
+                return_value=final_codes
+            )
             MockLookup.return_value = mock_instance
 
             state = _base_state(
@@ -349,17 +352,13 @@ class TestLookupCodesNode:
             ProductSearchResult(
                 name="cotton",
                 classification_schema="hs92",
-                llm_suggestions=[
-                    {"product_code": "5201", "product_name": "Cotton"}
-                ],
+                llm_suggestions=[{"product_code": "5201", "product_name": "Cotton"}],
                 db_suggestions=[],
             ),
             ProductSearchResult(
                 name="wheat",
                 classification_schema="hs92",
-                llm_suggestions=[
-                    {"product_code": "1001", "product_name": "Wheat"}
-                ],
+                llm_suggestions=[{"product_code": "1001", "product_name": "Wheat"}],
                 db_suggestions=[],
             ),
         ]
@@ -380,7 +379,9 @@ class TestLookupCodesNode:
         with patch("src.generate_query.ProductAndSchemaLookup") as MockLookup:
             mock_instance = MagicMock()
             mock_instance.get_candidate_codes.return_value = candidates
-            mock_instance.aselect_final_codes_direct = AsyncMock(return_value=final_codes)
+            mock_instance.aselect_final_codes_direct = AsyncMock(
+                return_value=final_codes
+            )
             MockLookup.return_value = mock_instance
 
             state = _base_state(
@@ -408,10 +409,14 @@ class TestGetTableInfoNode:
             requires_product_lookup=False,
         )
         mock_db = MagicMock()
-        mock_table_desc = {"hs92": [{"table_name": "country_year", "context_str": "Year-level data"}]}
+        mock_table_desc = {
+            "hs92": [{"table_name": "country_year", "context_str": "Year-level data"}]
+        }
 
         with patch("src.generate_query.get_table_info_for_schemas") as mock_get:
-            mock_get.return_value = "Table: hs92.country_year\nDescription: Year-level data\n"
+            mock_get.return_value = (
+                "Table: hs92.country_year\nDescription: Year-level data\n"
+            )
 
             state = _base_state(pipeline_products=products_found)
             result = await get_table_info_node(
@@ -498,9 +503,7 @@ class TestGenerateSqlNode:
                 state, llm=mock_llm, example_queries=[], max_results=15
             )
 
-        assert result == {
-            "pipeline_sql": "SELECT * FROM hs92.country_year LIMIT 5"
-        }
+        assert result == {"pipeline_sql": "SELECT * FROM hs92.country_year LIMIT 5"}
         mock_create.assert_called_once_with(
             llm=mock_llm,
             codes=None,
@@ -510,9 +513,7 @@ class TestGenerateSqlNode:
             direction_constraint=None,
             mode_constraint=None,
         )
-        mock_chain.ainvoke.assert_awaited_once_with(
-            {"question": "Brazil exports?"}
-        )
+        mock_chain.ainvoke.assert_awaited_once_with({"question": "Brazil exports?"})
 
     async def test_passes_codes_when_present(self):
         mock_llm = MagicMock()
@@ -577,9 +578,7 @@ class TestGenerateSqlNode:
 
     async def test_example_queries_forwarded(self):
         mock_llm = MagicMock()
-        examples = [
-            {"question": "Top exporters?", "query": "SELECT country FROM ..."}
-        ]
+        examples = [{"question": "Top exporters?", "query": "SELECT country FROM ..."}]
 
         with patch("src.generate_query.create_query_generation_chain") as mock_create:
             mock_chain = MagicMock()
@@ -613,9 +612,7 @@ class TestExecuteSqlNode:
         mock_result.keys.return_value = columns
         mock_result.fetchall.return_value = rows
         mock_conn.execute.return_value = mock_result
-        mock_engine.connect.return_value.__enter__ = MagicMock(
-            return_value=mock_conn
-        )
+        mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
         mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
         return mock_engine
 
@@ -628,7 +625,10 @@ class TestExecuteSqlNode:
             pipeline_sql="SELECT country, value FROM hs92.country_year LIMIT 2"
         )
 
-        with patch("src.generate_query.execute_with_retry", side_effect=lambda fn, *a, **kw: fn()):
+        with patch(
+            "src.generate_query.execute_with_retry",
+            side_effect=lambda fn, *a, **kw: fn(),
+        ):
             result = await execute_sql_node(state, async_engine=engine)
 
         assert result["last_error"] == ""
@@ -640,7 +640,10 @@ class TestExecuteSqlNode:
         engine = self._mock_engine(rows=[], columns=["country", "value"])
         state = _base_state(pipeline_sql="SELECT * FROM hs92.country_year WHERE 1=0")
 
-        with patch("src.generate_query.execute_with_retry", side_effect=lambda fn, *a, **kw: fn()):
+        with patch(
+            "src.generate_query.execute_with_retry",
+            side_effect=lambda fn, *a, **kw: fn(),
+        ):
             result = await execute_sql_node(state, async_engine=engine)
 
         assert result["pipeline_result"] == "SQL query returned no results."
@@ -651,7 +654,10 @@ class TestExecuteSqlNode:
         engine = self._mock_engine(rows=[], columns=[], returns_rows=False)
         state = _base_state(pipeline_sql="CREATE TABLE tmp (id int)")
 
-        with patch("src.generate_query.execute_with_retry", side_effect=lambda fn, *a, **kw: fn()):
+        with patch(
+            "src.generate_query.execute_with_retry",
+            side_effect=lambda fn, *a, **kw: fn(),
+        ):
             result = await execute_sql_node(state, async_engine=engine)
 
         assert result["pipeline_result"] == "SQL query returned no results."
@@ -693,7 +699,10 @@ class TestExecuteSqlNode:
         )
         state = _base_state(pipeline_sql="SELECT iso3_code, export_value FROM t")
 
-        with patch("src.generate_query.execute_with_retry", side_effect=lambda fn, *a, **kw: fn()):
+        with patch(
+            "src.generate_query.execute_with_retry",
+            side_effect=lambda fn, *a, **kw: fn(),
+        ):
             result = await execute_sql_node(state, async_engine=engine)
 
         # The formatting is str(dict(zip(columns, row)))
@@ -719,9 +728,7 @@ class TestExecuteSqlNodeStructuredData:
         mock_result.keys.return_value = columns
         mock_result.fetchall.return_value = rows
         mock_conn.execute.return_value = mock_result
-        mock_engine.connect.return_value.__enter__ = MagicMock(
-            return_value=mock_conn
-        )
+        mock_engine.connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
         mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
         return mock_engine
 
@@ -730,11 +737,12 @@ class TestExecuteSqlNodeStructuredData:
             rows=[("USA", 1000), ("CHN", 800)],
             columns=["country", "value"],
         )
-        state = _base_state(
-            pipeline_sql="SELECT country, value FROM t LIMIT 2"
-        )
+        state = _base_state(pipeline_sql="SELECT country, value FROM t LIMIT 2")
 
-        with patch("src.generate_query.execute_with_retry", side_effect=lambda fn, *a, **kw: fn()):
+        with patch(
+            "src.generate_query.execute_with_retry",
+            side_effect=lambda fn, *a, **kw: fn(),
+        ):
             result = await execute_sql_node(state, async_engine=engine)
 
         assert result["pipeline_result_columns"] == ["country", "value"]
@@ -745,12 +753,13 @@ class TestExecuteSqlNodeStructuredData:
         assert "USA" in result["pipeline_result"]
 
     async def test_empty_result_preserves_column_names(self):
-        engine = self._mock_engine(
-            rows=[], columns=["country", "value"]
-        )
+        engine = self._mock_engine(rows=[], columns=["country", "value"])
         state = _base_state(pipeline_sql="SELECT * FROM t WHERE 1=0")
 
-        with patch("src.generate_query.execute_with_retry", side_effect=lambda fn, *a, **kw: fn()):
+        with patch(
+            "src.generate_query.execute_with_retry",
+            side_effect=lambda fn, *a, **kw: fn(),
+        ):
             result = await execute_sql_node(state, async_engine=engine)
 
         assert result["pipeline_result_columns"] == ["country", "value"]
@@ -776,7 +785,10 @@ class TestExecuteSqlNodeStructuredData:
         engine = self._mock_engine(rows=[], columns=[], returns_rows=False)
         state = _base_state(pipeline_sql="INSERT INTO t VALUES (1)")
 
-        with patch("src.generate_query.execute_with_retry", side_effect=lambda fn, *a, **kw: fn()):
+        with patch(
+            "src.generate_query.execute_with_retry",
+            side_effect=lambda fn, *a, **kw: fn(),
+        ):
             result = await execute_sql_node(state, async_engine=engine)
 
         assert result["pipeline_result_columns"] == []
@@ -1017,12 +1029,24 @@ class TestValidateSqlNode:
     TABLE_DESCRIPTIONS = {
         "hs92": [
             {"table_name": "country_year", "context_str": "Year-level data"},
-            {"table_name": "country_product_year_4", "context_str": "4-digit product data"},
+            {
+                "table_name": "country_product_year_4",
+                "context_str": "4-digit product data",
+            },
         ],
         "classification": [
-            {"table_name": "location_country", "context_str": "Country-level data with names, ISO codes, and hierarchical information."},
-            {"table_name": "product_hs92", "context_str": "HS92 product classification data."},
-            {"table_name": "product_hs12", "context_str": "HS12 product classification data."},
+            {
+                "table_name": "location_country",
+                "context_str": "Country-level data with names, ISO codes, and hierarchical information.",
+            },
+            {
+                "table_name": "product_hs92",
+                "context_str": "HS92 product classification data.",
+            },
+            {
+                "table_name": "product_hs12",
+                "context_str": "HS12 product classification data.",
+            },
         ],
     }
 
@@ -1141,7 +1165,9 @@ class TestValidateSqlNode:
             state, table_descriptions=self.TABLE_DESCRIPTIONS
         )
 
-        assert result["last_error"] == "", f"Expected no error, got: {result['last_error']}"
+        assert (
+            result["last_error"] == ""
+        ), f"Expected no error, got: {result['last_error']}"
 
     async def test_classification_location_country_always_valid(self):
         """classification.location_country should be valid even without product tables."""

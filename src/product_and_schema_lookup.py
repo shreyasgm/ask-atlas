@@ -141,7 +141,7 @@ class ProductAndSchemaLookup:
         system = """
         You are an assistant for a text-to-sql system that uses a database of international trade data.
 
-        Analyze the user's question about trade data to determine which database schemas are needed and what product codes 
+        Analyze the user's question about trade data to determine which database schemas are needed and what product codes
         should be looked up.
 
         Available schemas in the postgres db:
@@ -159,13 +159,13 @@ class ProductAndSchemaLookup:
         - Only include services schemas if services are explicitly mentioned, otherwise just use the goods schemas
         - Include specific product classifications if mentioned (e.g., if "HS 2012" is mentioned, include schema 'hs12')
         - Never return more than two schemas unless explicitly required
-        
+
         Guidelines for product identification:
         - "products" here is how international trade data is classified. Product groups like "machinery" are considered products, and should be identified as such. Be liberal with identifying products. Products could be goods, services, or a mix of both. Here are some examples of products: "cars", "soap", "information technology", "iron", "tourism", "petroleum gas", etc. - anything classified by international trade data classification systems.
         - We are identifying products here for the purpose of looking up their product codes. Only identify products that don't already have codes specified. Ignore products that have codes specified already in the query.
         - Be specific with the codes - suggest the product code at the level most specific to the product mentioned.
         - Include multiple relevant codes if needed for broad product categories
-        
+
         Examples:
 
         Question: "What were US exports of cars and vehicles (HS 87) in 2020?"
@@ -332,7 +332,7 @@ class ProductAndSchemaLookup:
             return ProductCodesMapping(mappings=[])
 
         system = """
-        Select the most appropriate product code for each product name based on the context of the user's 
+        Select the most appropriate product code for each product name based on the context of the user's
         question and the candidate codes.
 
         Choose the most accurate match based on the specific context. Include only the products that have clear matches. If a product name is too ambiguous or has no good matches among the candidates, exclude it from the final mapping.
@@ -348,10 +348,10 @@ class ProductAndSchemaLookup:
                     "human",
                     """
             Question: {question}
-            
+
             Search results for each product:
             {product_search_results}
-            
+
             Return the final mapping of product names to product codes.
             """,
                 ),
@@ -445,7 +445,7 @@ class ProductAndSchemaLookup:
         products_table = SCHEMA_TO_PRODUCTS_TABLE_MAP[classification_schema]
 
         query = text(f"""
-            SELECT DISTINCT 
+            SELECT DISTINCT
                 code as product_code,
                 name_short_en as product_name,
                 product_id,
@@ -492,7 +492,7 @@ class ProductAndSchemaLookup:
         # Using English text search configuration
         # First try full text search with ranking
         ts_query = text(f"""
-            SELECT DISTINCT 
+            SELECT DISTINCT
                 name_short_en as product_name,
                 code as product_code,
                 product_id,
@@ -500,7 +500,7 @@ class ProductAndSchemaLookup:
                 ts_rank_cd(to_tsvector('english', name_short_en),
                         plainto_tsquery('english', :product_to_search)) as rank
             FROM {products_table}
-            WHERE to_tsvector('english', name_short_en) @@ 
+            WHERE to_tsvector('english', name_short_en) @@
                 plainto_tsquery('english', :product_to_search)
             ORDER BY rank DESC
             LIMIT 5
@@ -508,7 +508,7 @@ class ProductAndSchemaLookup:
 
         # Fallback to trigram similarity for non-matching terms or misspellings
         fuzzy_query = text(f"""
-            SELECT DISTINCT 
+            SELECT DISTINCT
                 name_short_en as product_name,
                 code as product_code,
                 product_id,
@@ -635,7 +635,9 @@ class ProductAndSchemaLookup:
 
 def format_product_codes_for_prompt(analysis: ProductCodesMapping) -> str:
     """Format the analysis results for inclusion in the SQL generation prompt."""
-    assert isinstance(analysis, ProductCodesMapping), "Input to format_product_codes_for_prompt must be a ProductCodesMapping object"
+    assert isinstance(
+        analysis, ProductCodesMapping
+    ), "Input to format_product_codes_for_prompt must be a ProductCodesMapping object"
 
     if (not analysis) or (not analysis.mappings):
         return ""

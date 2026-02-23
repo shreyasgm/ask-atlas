@@ -71,10 +71,10 @@ TARGET_GROUPS: dict[str, str] = {
 RATE_DELAY = 0.5  # seconds between requests
 
 # Runtime-populated catalogs
-PRODUCT_MAP: dict[str, dict] = {}       # HS code → product info
-PRODUCT_ID_MAP: dict[str, dict] = {}    # string productId ("product-HS92-726") → info
-COUNTRY_NAMES: dict[str, str] = {}      # string countryId ("country-404") → name
-GROUP_MAP: dict[str, dict] = {}         # groupName → group info
+PRODUCT_MAP: dict[str, dict] = {}  # HS code → product info
+PRODUCT_ID_MAP: dict[str, dict] = {}  # string productId ("product-HS92-726") → info
+COUNTRY_NAMES: dict[str, str] = {}  # string countryId ("country-404") → name
+GROUP_MAP: dict[str, dict] = {}  # groupName → group info
 DATA_AVAILABILITY: list[dict] = []
 
 # Phase 2 data stores
@@ -324,8 +324,9 @@ def write_result(qid: int, result: dict) -> None:
     (d / "results.json").write_text(json.dumps(result, indent=2) + "\n")
 
 
-def make_question(qid: int, text: str, category: str, difficulty: str,
-                  atlas_url: str) -> dict:
+def make_question(
+    qid: int, text: str, category: str, difficulty: str, atlas_url: str
+) -> dict:
     return {
         "question_id": str(qid),
         "user_question": text,
@@ -430,8 +431,9 @@ def product_code_by_id(pid_str: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-async def gql(client: httpx.AsyncClient, query: str,
-              variables: dict | None = None) -> dict:
+async def gql(
+    client: httpx.AsyncClient, query: str, variables: dict | None = None
+) -> dict:
     """Execute a GraphQL query with rate limiting."""
     async with SEM:
         resp = await client.post(
@@ -444,9 +446,7 @@ async def gql(client: httpx.AsyncClient, query: str,
     resp.raise_for_status()
     body = resp.json()
     if "errors" in body:
-        raise RuntimeError(
-            f"GraphQL errors: {json.dumps(body['errors'], indent=2)}"
-        )
+        raise RuntimeError(f"GraphQL errors: {json.dumps(body['errors'], indent=2)}")
     return body["data"]
 
 
@@ -464,22 +464,30 @@ def next_id() -> int:
     return qid
 
 
-def emit(text: str, category_id: str, category_name: str, difficulty: str,
-         url: str, data: list[dict]) -> None:
+def emit(
+    text: str,
+    category_id: str,
+    category_name: str,
+    difficulty: str,
+    url: str,
+    data: list[dict],
+) -> None:
     """Write one question+result pair and track for integration file."""
     qid = next_id()
     q = make_question(qid, text, category_name, difficulty, url)
     r = make_result(qid, url, data)
     write_question(qid, q)
     write_result(qid, r)
-    ALL_QUESTIONS.append({
-        "id": qid,
-        "category_id": category_id,
-        "difficulty": difficulty,
-        "text": text,
-        "source": "atlas_explore_page",
-        "atlas_url": url,
-    })
+    ALL_QUESTIONS.append(
+        {
+            "id": qid,
+            "category_id": category_id,
+            "difficulty": difficulty,
+            "text": text,
+            "source": "atlas_explore_page",
+            "atlas_url": url,
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -525,11 +533,15 @@ async def resolve_catalogs(client: httpx.AsyncClient) -> None:
     # Verify target groups
     for api_name in TARGET_GROUPS:
         if api_name not in GROUP_MAP:
-            print(f"  WARNING: Group '{api_name}' not found. Available: "
-                  f"{sorted(GROUP_MAP.keys())}")
+            print(
+                f"  WARNING: Group '{api_name}' not found. Available: "
+                f"{sorted(GROUP_MAP.keys())}"
+            )
 
-    print(f"  Products: {len(PRODUCT_MAP)}, Countries: {len(COUNTRY_NAMES)}, "
-          f"Groups: {len(GROUP_MAP)}")
+    print(
+        f"  Products: {len(PRODUCT_MAP)}, Countries: {len(COUNTRY_NAMES)}, "
+        f"Groups: {len(GROUP_MAP)}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -541,67 +553,105 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
     """Fetch all targeted data concurrently (rate-limited by semaphore)."""
 
     async def fetch_cpd(country: str) -> None:
-        data = await gql(client, COUNTRY_PRODUCT_YEAR_QUERY, {
-            "countryId": COUNTRIES[country],
-            "yearMin": 2024, "yearMax": 2024,
-        })
+        data = await gql(
+            client,
+            COUNTRY_PRODUCT_YEAR_QUERY,
+            {
+                "countryId": COUNTRIES[country],
+                "yearMin": 2024,
+                "yearMax": 2024,
+            },
+        )
         country_product_data[country] = data["countryProductYear"]
-        print(f"    country products: {country} ({len(data['countryProductYear'])} rows)")
+        print(
+            f"    country products: {country} ({len(data['countryProductYear'])} rows)"
+        )
 
     async def fetch_exporters(code: str) -> None:
-        data = await gql(client, PRODUCT_ALL_COUNTRIES_QUERY, {
-            "productId": get_product_id(code),
-            "yearMin": 2024, "yearMax": 2024,
-        })
+        data = await gql(
+            client,
+            PRODUCT_ALL_COUNTRIES_QUERY,
+            {
+                "productId": get_product_id(code),
+                "yearMin": 2024,
+                "yearMax": 2024,
+            },
+        )
         product_exporters[code] = data["countryProductYear"]
-        print(f"    top exporters: {code} ({len(data['countryProductYear'])} countries)")
+        print(
+            f"    top exporters: {code} ({len(data['countryProductYear'])} countries)"
+        )
 
     async def fetch_all_product_year() -> None:
-        data = await gql(client, PRODUCT_YEAR_ALL_QUERY, {
-            "yearMin": 2024, "yearMax": 2024,
-        })
+        data = await gql(
+            client,
+            PRODUCT_YEAR_ALL_QUERY,
+            {
+                "yearMin": 2024,
+                "yearMax": 2024,
+            },
+        )
         for row in data["productYear"]:
             all_product_year[row["productId"]] = row
         print(f"    product year: {len(all_product_year)} products")
 
     async def fetch_bilateral(pair: tuple[str, str]) -> None:
         exp, imp = pair
-        data = await gql(client, COUNTRY_COUNTRY_YEAR_QUERY, {
-            "countryId": COUNTRIES[exp],
-            "partnerCountryId": COUNTRIES[imp],
-            "yearMin": 2024, "yearMax": 2024,
-        })
+        data = await gql(
+            client,
+            COUNTRY_COUNTRY_YEAR_QUERY,
+            {
+                "countryId": COUNTRIES[exp],
+                "partnerCountryId": COUNTRIES[imp],
+                "yearMin": 2024,
+                "yearMax": 2024,
+            },
+        )
         rows = data["countryCountryYear"]
         bilateral_total[pair] = rows[0] if rows else {}
         print(f"    bilateral: {exp} -> {imp}")
 
     async def fetch_bilateral_prods(pair: tuple[str, str]) -> None:
         exp, imp = pair
-        data = await gql(client, COUNTRY_COUNTRY_PRODUCT_YEAR_QUERY, {
-            "countryId": COUNTRIES[exp],
-            "partnerCountryId": COUNTRIES[imp],
-            "yearMin": 2024, "yearMax": 2024,
-        })
+        data = await gql(
+            client,
+            COUNTRY_COUNTRY_PRODUCT_YEAR_QUERY,
+            {
+                "countryId": COUNTRIES[exp],
+                "partnerCountryId": COUNTRIES[imp],
+                "yearMin": 2024,
+                "yearMax": 2024,
+            },
+        )
         bilateral_products[pair] = data["countryCountryProductYear"]
-        print(f"    bilateral products: {exp} -> {imp} ({len(data['countryCountryProductYear'])} products)")
+        print(
+            f"    bilateral products: {exp} -> {imp} ({len(data['countryCountryProductYear'])} products)"
+        )
 
     async def fetch_ts(country: str) -> None:
-        data = await gql(client, COUNTRY_YEAR_QUERY, {
-            "countryId": COUNTRIES[country],
-            "yearMin": 2000, "yearMax": 2024,
-        })
-        time_series[country] = sorted(
-            data["countryYear"], key=lambda x: x["year"]
+        data = await gql(
+            client,
+            COUNTRY_YEAR_QUERY,
+            {
+                "countryId": COUNTRIES[country],
+                "yearMin": 2000,
+                "yearMax": 2024,
+            },
         )
+        time_series[country] = sorted(data["countryYear"], key=lambda x: x["year"])
         print(f"    time series: {country} ({len(data['countryYear'])} years)")
 
     async def fetch_conversion() -> None:
         try:
-            data = await gql(client, CONVERSION_PATH_QUERY, {
-                "sourceCode": "0901",
-                "sourceClassification": "HS1992",
-                "targetClassification": "HS2012",
-            })
+            data = await gql(
+                client,
+                CONVERSION_PATH_QUERY,
+                {
+                    "sourceCode": "0901",
+                    "sourceClassification": "HS1992",
+                    "targetClassification": "HS2012",
+                },
+            )
             conversion_result.extend(data.get("conversionPath", []))
             print(f"    conversion: {len(conversion_result)} mappings")
         except Exception as e:
@@ -613,23 +663,34 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
             print(f"    WARNING: group '{api_name}' not in catalog, skipping")
             return
         gid = parse_group_id(g["groupId"])
-        data = await gql(client, GROUP_YEAR_QUERY, {
-            "groupId": gid, "yearMin": 2019, "yearMax": 2024,
-        })
-        group_year_data[api_name] = sorted(
-            data["groupYear"], key=lambda x: x["year"]
+        data = await gql(
+            client,
+            GROUP_YEAR_QUERY,
+            {
+                "groupId": gid,
+                "yearMin": 2019,
+                "yearMax": 2024,
+            },
         )
+        group_year_data[api_name] = sorted(data["groupYear"], key=lambda x: x["year"])
         print(f"    group year: {api_name} ({len(data['groupYear'])} years)")
 
     async def fetch_import_src(country: str, hs_code: str) -> None:
         try:
-            data = await gql(client, IMPORT_SOURCES_QUERY, {
-                "countryId": COUNTRIES[country],
-                "productId": get_product_id(hs_code),
-                "yearMin": 2024, "yearMax": 2024,
-            })
+            data = await gql(
+                client,
+                IMPORT_SOURCES_QUERY,
+                {
+                    "countryId": COUNTRIES[country],
+                    "productId": get_product_id(hs_code),
+                    "yearMin": 2024,
+                    "yearMax": 2024,
+                },
+            )
             import_sources[(country, hs_code)] = data["countryCountryProductYear"]
-            print(f"    import sources: {country} x {hs_code} ({len(data['countryCountryProductYear'])} partners)")
+            print(
+                f"    import sources: {country} x {hs_code} ({len(data['countryCountryProductYear'])} partners)"
+            )
         except Exception as e:
             print(f"    WARNING: import sources query failed: {e}")
 
@@ -643,10 +704,15 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
         # Bilateral totals (5)
         *[fetch_bilateral(p) for p in BILATERAL_PAIRS],
         # Bilateral by product (4)
-        *[fetch_bilateral_prods(p) for p in [
-            ("Germany", "USA"), ("India", "China"),
-            ("Kenya", "USA"), ("Brazil", "China"),
-        ]],
+        *[
+            fetch_bilateral_prods(p)
+            for p in [
+                ("Germany", "USA"),
+                ("India", "China"),
+                ("Kenya", "USA"),
+                ("Brazil", "China"),
+            ]
+        ],
         # Time series (3)
         *[fetch_ts(c) for c in ["Brazil", "Turkiye", "Kenya"]],
         # Group year data (4)
@@ -673,14 +739,24 @@ def gen_product_complexity() -> None:
         cpd = get_cpd(country, code)
         if not cpd or cpd.get("exportRca") is None:
             continue
-        url = explore_url("treemap", year=2024,
-                          exporter=f"country-{COUNTRIES[country]}")
+        url = explore_url(
+            "treemap", year=2024, exporter=f"country-{COUNTRIES[country]}"
+        )
         emit(
             f"What is {country}'s Revealed Comparative Advantage (RCA) in {product_name(code)}?",
-            cat_id, cat_name, "easy", url,
-            [{"metric": "RCA", "country": country,
-              "product": product_label(code),
-              "value": round(cpd["exportRca"], 2), "year": "2024"}],
+            cat_id,
+            cat_name,
+            "easy",
+            url,
+            [
+                {
+                    "metric": "RCA",
+                    "country": country,
+                    "product": product_label(code),
+                    "value": round(cpd["exportRca"], 2),
+                    "year": "2024",
+                }
+            ],
         )
 
     # Template 2: Distance
@@ -688,14 +764,24 @@ def gen_product_complexity() -> None:
         cpd = get_cpd(country, code)
         if not cpd or cpd.get("distance") is None:
             continue
-        url = explore_url("treemap", year=2024,
-                          exporter=f"country-{COUNTRIES[country]}")
+        url = explore_url(
+            "treemap", year=2024, exporter=f"country-{COUNTRIES[country]}"
+        )
         emit(
             f"What is {country}'s distance to {product_name(code)} in the product space?",
-            cat_id, cat_name, "medium", url,
-            [{"metric": "Distance", "country": country,
-              "product": product_label(code),
-              "value": round(cpd["distance"], 4), "year": "2024"}],
+            cat_id,
+            cat_name,
+            "medium",
+            url,
+            [
+                {
+                    "metric": "Distance",
+                    "country": country,
+                    "product": product_label(code),
+                    "value": round(cpd["distance"], 4),
+                    "year": "2024",
+                }
+            ],
         )
 
     # Template 3: PCI (product-level, not country-specific)
@@ -706,9 +792,18 @@ def gen_product_complexity() -> None:
         url = explore_url("treemap", year=2024)
         emit(
             f"What is the Product Complexity Index (PCI) of {product_name(code)}?",
-            cat_id, cat_name, "easy", url,
-            [{"metric": "PCI", "product": product_label(code),
-              "value": round(py["pci"], 4), "year": "2024"}],
+            cat_id,
+            cat_name,
+            "easy",
+            url,
+            [
+                {
+                    "metric": "PCI",
+                    "product": product_label(code),
+                    "value": round(py["pci"], 4),
+                    "year": "2024",
+                }
+            ],
         )
 
     # Template 4: COG
@@ -716,14 +811,24 @@ def gen_product_complexity() -> None:
         cpd = get_cpd(country, code)
         if not cpd or cpd.get("cog") is None:
             continue
-        url = explore_url("feasibility", year=2024,
-                          exporter=f"country-{COUNTRIES[country]}")
+        url = explore_url(
+            "feasibility", year=2024, exporter=f"country-{COUNTRIES[country]}"
+        )
         emit(
             f"What is {country}'s Complexity Outlook Gain (COG) for {product_name(code)}?",
-            cat_id, cat_name, "medium", url,
-            [{"metric": "COG", "country": country,
-              "product": product_label(code),
-              "value": round(cpd["cog"], 4), "year": "2024"}],
+            cat_id,
+            cat_name,
+            "medium",
+            url,
+            [
+                {
+                    "metric": "COG",
+                    "country": country,
+                    "product": product_label(code),
+                    "value": round(cpd["cog"], 4),
+                    "year": "2024",
+                }
+            ],
         )
 
     # Template 5: Market share
@@ -731,15 +836,25 @@ def gen_product_complexity() -> None:
         cpd = get_cpd(country, code)
         if not cpd or cpd.get("globalMarketShare") is None:
             continue
-        url = explore_url("treemap", year=2024,
-                          exporter=f"country-{COUNTRIES[country]}")
+        url = explore_url(
+            "treemap", year=2024, exporter=f"country-{COUNTRIES[country]}"
+        )
         emit(
             f"What is {country}'s global market share in {product_name(code)}?",
-            cat_id, cat_name, "medium", url,
-            [{"metric": "Global market share", "country": country,
-              "product": product_label(code),
-              "value": pct_str(cpd["globalMarketShare"]),
-              "raw_value": cpd["globalMarketShare"], "year": "2024"}],
+            cat_id,
+            cat_name,
+            "medium",
+            url,
+            [
+                {
+                    "metric": "Global market share",
+                    "country": country,
+                    "product": product_label(code),
+                    "value": pct_str(cpd["globalMarketShare"]),
+                    "raw_value": cpd["globalMarketShare"],
+                    "year": "2024",
+                }
+            ],
         )
 
     # Template 6: Product status
@@ -747,14 +862,24 @@ def gen_product_complexity() -> None:
         cpd = get_cpd(country, code)
         if not cpd or cpd.get("productStatus") is None:
             continue
-        url = explore_url("treemap", year=2024,
-                          exporter=f"country-{COUNTRIES[country]}")
+        url = explore_url(
+            "treemap", year=2024, exporter=f"country-{COUNTRIES[country]}"
+        )
         emit(
             f"Is {product_name(code)} classified as a new, present, lost, or absent export for {country}?",
-            cat_id, cat_name, "easy", url,
-            [{"metric": "Product status", "country": country,
-              "product": product_label(code),
-              "value": cpd["productStatus"], "year": "2024"}],
+            cat_id,
+            cat_name,
+            "easy",
+            url,
+            [
+                {
+                    "metric": "Product status",
+                    "country": country,
+                    "product": product_label(code),
+                    "value": cpd["productStatus"],
+                    "year": "2024",
+                }
+            ],
         )
 
 
@@ -771,10 +896,19 @@ def gen_global_product_stats() -> None:
         url = explore_url("treemap", year=2024)
         emit(
             f"What is the total global export value of {product_name(code)}?",
-            cat_id, cat_name, "easy", url,
-            [{"metric": "Global export value", "product": product_label(code),
-              "value": format_usd(py["exportValue"]),
-              "raw_value": py["exportValue"], "year": "2024"}],
+            cat_id,
+            cat_name,
+            "easy",
+            url,
+            [
+                {
+                    "metric": "Global export value",
+                    "product": product_label(code),
+                    "value": format_usd(py["exportValue"]),
+                    "raw_value": py["exportValue"],
+                    "year": "2024",
+                }
+            ],
         )
 
     # Template 8: 5-year CAGR (3 products)
@@ -785,11 +919,19 @@ def gen_global_product_stats() -> None:
         url = explore_url("feasibility/table", year=2024, productLevel=4)
         emit(
             f"What is the 5-year export growth rate (CAGR) for {product_name(code)} globally?",
-            cat_id, cat_name, "medium", url,
-            [{"metric": "5-year export CAGR (constant USD)",
-              "product": product_label(code),
-              "value": pct_str(py["exportValueConstCagr5"]),
-              "raw_value": py["exportValueConstCagr5"], "year": "2024"}],
+            cat_id,
+            cat_name,
+            "medium",
+            url,
+            [
+                {
+                    "metric": "5-year export CAGR (constant USD)",
+                    "product": product_label(code),
+                    "value": pct_str(py["exportValueConstCagr5"]),
+                    "raw_value": py["exportValueConstCagr5"],
+                    "year": "2024",
+                }
+            ],
         )
 
     # Template 9: Complexity classification (3 products)
@@ -800,10 +942,18 @@ def gen_global_product_stats() -> None:
         url = explore_url("treemap", year=2024)
         emit(
             f"What is the complexity classification (low/moderate/high) of {product_name(code)}?",
-            cat_id, cat_name, "easy", url,
-            [{"metric": "Complexity classification",
-              "product": product_label(code),
-              "value": py["complexityEnum"], "year": "2024"}],
+            cat_id,
+            cat_name,
+            "easy",
+            url,
+            [
+                {
+                    "metric": "Complexity classification",
+                    "product": product_label(code),
+                    "value": py["complexityEnum"],
+                    "year": "2024",
+                }
+            ],
         )
 
     # Template 10: Largest exporter (1 product)
@@ -813,15 +963,28 @@ def gen_global_product_stats() -> None:
             continue
         top = max(rows, key=lambda r: r.get("exportValue") or 0)
         name = COUNTRY_NAMES.get(top["countryId"], str(top["countryId"]))
-        url = explore_url("treemap", year=2024, view="markets",
-                          product=f"product-HS92-{get_product_id(code)}")
+        url = explore_url(
+            "treemap",
+            year=2024,
+            view="markets",
+            product=f"product-HS92-{get_product_id(code)}",
+        )
         emit(
             f"Which country is the largest exporter of {product_name(code)}?",
-            cat_id, cat_name, "medium", url,
-            [{"metric": "Largest exporter", "product": product_label(code),
-              "country": name,
-              "export_value": format_usd(top["exportValue"]),
-              "raw_export_value": top["exportValue"], "year": "2024"}],
+            cat_id,
+            cat_name,
+            "medium",
+            url,
+            [
+                {
+                    "metric": "Largest exporter",
+                    "product": product_label(code),
+                    "country": name,
+                    "export_value": format_usd(top["exportValue"]),
+                    "raw_export_value": top["exportValue"],
+                    "year": "2024",
+                }
+            ],
         )
 
     # Template 11: Top 3 exporters (1 product)
@@ -829,21 +992,33 @@ def gen_global_product_stats() -> None:
         rows = product_exporters.get(code, [])
         if not rows:
             continue
-        sorted_rows = sorted(rows, key=lambda r: r.get("exportValue") or 0,
-                             reverse=True)[:3]
-        url = explore_url("treemap", year=2024, view="markets",
-                          product=f"product-HS92-{get_product_id(code)}")
+        sorted_rows = sorted(
+            rows, key=lambda r: r.get("exportValue") or 0, reverse=True
+        )[:3]
+        url = explore_url(
+            "treemap",
+            year=2024,
+            view="markets",
+            product=f"product-HS92-{get_product_id(code)}",
+        )
         data = []
         for i, r in enumerate(sorted_rows):
             name = COUNTRY_NAMES.get(r["countryId"], str(r["countryId"]))
-            data.append({
-                "rank": i + 1, "country": name,
-                "export_value": format_usd(r["exportValue"]),
-                "raw_export_value": r["exportValue"],
-            })
+            data.append(
+                {
+                    "rank": i + 1,
+                    "country": name,
+                    "export_value": format_usd(r["exportValue"]),
+                    "raw_export_value": r["exportValue"],
+                }
+            )
         emit(
             f"What are the top 3 exporters of {product_name(code)} by value?",
-            cat_id, cat_name, "medium", url, data,
+            cat_id,
+            cat_name,
+            "medium",
+            url,
+            data,
         )
 
 
@@ -857,16 +1032,29 @@ def gen_bilateral_trade() -> None:
         bt = bilateral_total.get((exp, imp), {})
         if not bt or bt.get("exportValue") is None:
             continue
-        url = explore_url("treemap", year=2024, view="markets",
-                          exporter=f"country-{COUNTRIES[exp]}",
-                          importer=f"country-{COUNTRIES[imp]}")
+        url = explore_url(
+            "treemap",
+            year=2024,
+            view="markets",
+            exporter=f"country-{COUNTRIES[exp]}",
+            importer=f"country-{COUNTRIES[imp]}",
+        )
         emit(
             f"What is the total export value from {exp} to {imp}?",
-            cat_id, cat_name, "easy", url,
-            [{"metric": "Total bilateral exports",
-              "exporter": exp, "importer": imp,
-              "value": format_usd(bt["exportValue"]),
-              "raw_value": bt["exportValue"], "year": "2024"}],
+            cat_id,
+            cat_name,
+            "easy",
+            url,
+            [
+                {
+                    "metric": "Total bilateral exports",
+                    "exporter": exp,
+                    "importer": imp,
+                    "value": format_usd(bt["exportValue"]),
+                    "raw_value": bt["exportValue"],
+                    "year": "2024",
+                }
+            ],
         )
 
     # Template 13: Total imports (2 pairs)
@@ -874,17 +1062,30 @@ def gen_bilateral_trade() -> None:
         bt = bilateral_total.get((exp, imp), {})
         if not bt or bt.get("importValue") is None:
             continue
-        url = explore_url("treemap", year=2024, view="markets",
-                          exporter=f"country-{COUNTRIES[exp]}",
-                          importer=f"country-{COUNTRIES[imp]}",
-                          tradeDirection="imports")
+        url = explore_url(
+            "treemap",
+            year=2024,
+            view="markets",
+            exporter=f"country-{COUNTRIES[exp]}",
+            importer=f"country-{COUNTRIES[imp]}",
+            tradeDirection="imports",
+        )
         emit(
             f"What is the total import value of {exp} from {imp}?",
-            cat_id, cat_name, "easy", url,
-            [{"metric": "Total bilateral imports",
-              "importer": exp, "exporter": imp,
-              "value": format_usd(bt["importValue"]),
-              "raw_value": bt["importValue"], "year": "2024"}],
+            cat_id,
+            cat_name,
+            "easy",
+            url,
+            [
+                {
+                    "metric": "Total bilateral imports",
+                    "importer": exp,
+                    "exporter": imp,
+                    "value": format_usd(bt["importValue"]),
+                    "raw_value": bt["importValue"],
+                    "year": "2024",
+                }
+            ],
         )
 
     # Template 14: Trade balance (2 pairs)
@@ -895,17 +1096,32 @@ def gen_bilateral_trade() -> None:
         if ev is None or iv is None:
             continue
         balance = ev - iv
-        url = explore_url("treemap", year=2024, view="markets",
-                          exporter=f"country-{COUNTRIES[exp]}",
-                          importer=f"country-{COUNTRIES[imp]}")
+        url = explore_url(
+            "treemap",
+            year=2024,
+            view="markets",
+            exporter=f"country-{COUNTRIES[exp]}",
+            importer=f"country-{COUNTRIES[imp]}",
+        )
         emit(
             f"What is the trade balance between {exp} and {imp}?",
-            cat_id, cat_name, "medium", url,
-            [{"metric": "Trade balance", "country": exp, "partner": imp,
-              "value": format_usd(balance), "raw_value": balance,
-              "status": "surplus" if balance > 0 else "deficit",
-              "exports": format_usd(ev), "imports": format_usd(iv),
-              "year": "2024"}],
+            cat_id,
+            cat_name,
+            "medium",
+            url,
+            [
+                {
+                    "metric": "Trade balance",
+                    "country": exp,
+                    "partner": imp,
+                    "value": format_usd(balance),
+                    "raw_value": balance,
+                    "status": "surplus" if balance > 0 else "deficit",
+                    "exports": format_usd(ev),
+                    "imports": format_usd(iv),
+                    "year": "2024",
+                }
+            ],
         )
 
     # Template 15: Product-level bilateral (2 pairs)
@@ -920,18 +1136,30 @@ def gen_bilateral_trade() -> None:
         match = next((r for r in rows if r["productId"] == pid_str), None)
         if not match or match.get("exportValue") is None:
             continue
-        url = explore_url("treemap", year=2024,
-                          exporter=f"country-{COUNTRIES[exp]}",
-                          importer=f"country-{COUNTRIES[imp]}",
-                          product=f"product-HS92-{pid_int}")
+        url = explore_url(
+            "treemap",
+            year=2024,
+            exporter=f"country-{COUNTRIES[exp]}",
+            importer=f"country-{COUNTRIES[imp]}",
+            product=f"product-HS92-{pid_int}",
+        )
         emit(
             f"What is the value of {product_name(code)} exports from {exp} to {imp}?",
-            cat_id, cat_name, "medium", url,
-            [{"metric": "Bilateral product exports",
-              "exporter": exp, "importer": imp,
-              "product": product_label(code),
-              "value": format_usd(match["exportValue"]),
-              "raw_value": match["exportValue"], "year": "2024"}],
+            cat_id,
+            cat_name,
+            "medium",
+            url,
+            [
+                {
+                    "metric": "Bilateral product exports",
+                    "exporter": exp,
+                    "importer": imp,
+                    "product": product_label(code),
+                    "value": format_usd(match["exportValue"]),
+                    "raw_value": match["exportValue"],
+                    "year": "2024",
+                }
+            ],
         )
 
     # Template 16: Top 3 products (2 pairs)
@@ -939,24 +1167,34 @@ def gen_bilateral_trade() -> None:
         rows = bilateral_products.get((exp, imp), [])
         if not rows:
             continue
-        sorted_rows = sorted(rows, key=lambda r: r.get("exportValue") or 0,
-                             reverse=True)[:3]
-        url = explore_url("treemap", year=2024,
-                          exporter=f"country-{COUNTRIES[exp]}",
-                          importer=f"country-{COUNTRIES[imp]}")
+        sorted_rows = sorted(
+            rows, key=lambda r: r.get("exportValue") or 0, reverse=True
+        )[:3]
+        url = explore_url(
+            "treemap",
+            year=2024,
+            exporter=f"country-{COUNTRIES[exp]}",
+            importer=f"country-{COUNTRIES[imp]}",
+        )
         data = []
         for i, r in enumerate(sorted_rows):
             pname = product_name_by_id(r["productId"])
             pcode = product_code_by_id(r["productId"])
-            data.append({
-                "rank": i + 1,
-                "product": f"{pname} ({pcode} HS92)" if pcode else pname,
-                "export_value": format_usd(r["exportValue"]),
-                "raw_export_value": r["exportValue"],
-            })
+            data.append(
+                {
+                    "rank": i + 1,
+                    "product": f"{pname} ({pcode} HS92)" if pcode else pname,
+                    "export_value": format_usd(r["exportValue"]),
+                    "raw_export_value": r["exportValue"],
+                }
+            )
         emit(
             f"What are the top 3 products {exp} exports to {imp}?",
-            cat_id, cat_name, "hard", url, data,
+            cat_id,
+            cat_name,
+            "hard",
+            url,
+            data,
         )
 
 
@@ -974,40 +1212,60 @@ def gen_import_composition() -> None:
         top = max(imports, key=lambda r: r["importValue"])
         pname = product_name_by_id(top["productId"])
         pcode = product_code_by_id(top["productId"])
-        url = explore_url("treemap", year=2024,
-                          exporter=f"country-{COUNTRIES[country]}",
-                          tradeDirection="imports")
+        url = explore_url(
+            "treemap",
+            year=2024,
+            exporter=f"country-{COUNTRIES[country]}",
+            tradeDirection="imports",
+        )
         emit(
             f"What is the top imported product for {country}?",
-            cat_id, cat_name, "easy", url,
-            [{"metric": "Top imported product", "country": country,
-              "product": f"{pname} ({pcode} HS92)" if pcode else pname,
-              "import_value": format_usd(top["importValue"]),
-              "raw_import_value": top["importValue"], "year": "2024"}],
+            cat_id,
+            cat_name,
+            "easy",
+            url,
+            [
+                {
+                    "metric": "Top imported product",
+                    "country": country,
+                    "product": f"{pname} ({pcode} HS92)" if pcode else pname,
+                    "import_value": format_usd(top["importValue"]),
+                    "raw_import_value": top["importValue"],
+                    "year": "2024",
+                }
+            ],
         )
 
     # Template 18: Top 3 imports (USA only)
     rows = country_product_data.get("USA", [])
     imports = sorted(
         [r for r in rows if r.get("importValue") and r["importValue"] > 0],
-        key=lambda r: r["importValue"], reverse=True,
+        key=lambda r: r["importValue"],
+        reverse=True,
     )[:3]
     if imports:
-        url = explore_url("treemap", year=2024,
-                          exporter="country-840", tradeDirection="imports")
+        url = explore_url(
+            "treemap", year=2024, exporter="country-840", tradeDirection="imports"
+        )
         data = []
         for i, r in enumerate(imports):
             pname = product_name_by_id(r["productId"])
             pcode = product_code_by_id(r["productId"])
-            data.append({
-                "rank": i + 1,
-                "product": f"{pname} ({pcode} HS92)" if pcode else pname,
-                "import_value": format_usd(r["importValue"]),
-                "raw_import_value": r["importValue"],
-            })
+            data.append(
+                {
+                    "rank": i + 1,
+                    "product": f"{pname} ({pcode} HS92)" if pcode else pname,
+                    "import_value": format_usd(r["importValue"]),
+                    "raw_import_value": r["importValue"],
+                }
+            )
         emit(
             "What are the top 3 imported products for the USA by value?",
-            cat_id, cat_name, "medium", url, data,
+            cat_id,
+            cat_name,
+            "medium",
+            url,
+            data,
         )
 
     # Template 19: Product import value (2 combos)
@@ -1015,40 +1273,64 @@ def gen_import_composition() -> None:
         cpd = get_cpd(country, code)
         if not cpd or cpd.get("importValue") is None:
             continue
-        url = explore_url("treemap", year=2024,
-                          exporter=f"country-{COUNTRIES[country]}",
-                          tradeDirection="imports")
+        url = explore_url(
+            "treemap",
+            year=2024,
+            exporter=f"country-{COUNTRIES[country]}",
+            tradeDirection="imports",
+        )
         emit(
             f"What is {country}'s import value for {product_name(code)}?",
-            cat_id, cat_name, "easy", url,
-            [{"metric": "Product import value", "country": country,
-              "product": product_label(code),
-              "value": format_usd(cpd["importValue"]),
-              "raw_value": cpd["importValue"], "year": "2024"}],
+            cat_id,
+            cat_name,
+            "easy",
+            url,
+            [
+                {
+                    "metric": "Product import value",
+                    "country": country,
+                    "product": product_label(code),
+                    "value": format_usd(cpd["importValue"]),
+                    "raw_value": cpd["importValue"],
+                    "year": "2024",
+                }
+            ],
         )
 
     # Template 20: Largest source of imports (USA x Petroleum)
     src_rows = import_sources.get(("USA", "2710"), [])
     if src_rows:
-        valid = [r for r in src_rows
-                 if r.get("importValue") and r["importValue"] > 0]
+        valid = [r for r in src_rows if r.get("importValue") and r["importValue"] > 0]
         if valid:
             top = max(valid, key=lambda r: r["importValue"])
-            name = COUNTRY_NAMES.get(top["partnerCountryId"],
-                                     str(top["partnerCountryId"]))
+            name = COUNTRY_NAMES.get(
+                top["partnerCountryId"], str(top["partnerCountryId"])
+            )
             pid_int = get_product_id("2710")
-            url = explore_url("treemap", year=2024,
-                              exporter="country-840",
-                              tradeDirection="imports",
-                              product=f"product-HS92-{pid_int}")
+            url = explore_url(
+                "treemap",
+                year=2024,
+                exporter="country-840",
+                tradeDirection="imports",
+                product=f"product-HS92-{pid_int}",
+            )
             emit(
                 f"From which country does the USA import the most {product_name('2710')}?",
-                cat_id, cat_name, "hard", url,
-                [{"metric": "Largest import source", "country": "USA",
-                  "product": product_label("2710"),
-                  "source_country": name,
-                  "import_value": format_usd(top["importValue"]),
-                  "raw_import_value": top["importValue"], "year": "2024"}],
+                cat_id,
+                cat_name,
+                "hard",
+                url,
+                [
+                    {
+                        "metric": "Largest import source",
+                        "country": "USA",
+                        "product": product_label("2710"),
+                        "source_country": name,
+                        "import_value": format_usd(top["importValue"]),
+                        "raw_import_value": top["importValue"],
+                        "year": "2024",
+                    }
+                ],
             )
 
 
@@ -1062,15 +1344,28 @@ def gen_trade_time_series() -> None:
         row = get_year_row(time_series.get(country, []), year)
         if not row or row.get("exportValue") is None:
             continue
-        url = explore_url("overtime", year=year,
-                          exporter=f"country-{COUNTRIES[country]}",
-                          startYear=2000, endYear=2024)
+        url = explore_url(
+            "overtime",
+            year=year,
+            exporter=f"country-{COUNTRIES[country]}",
+            startYear=2000,
+            endYear=2024,
+        )
         emit(
             f"What was {country}'s total export value in {year}?",
-            cat_id, cat_name, "easy", url,
-            [{"metric": "Total exports", "country": country,
-              "value": format_usd(row["exportValue"]),
-              "raw_value": row["exportValue"], "year": str(year)}],
+            cat_id,
+            cat_name,
+            "easy",
+            url,
+            [
+                {
+                    "metric": "Total exports",
+                    "country": country,
+                    "value": format_usd(row["exportValue"]),
+                    "raw_value": row["exportValue"],
+                    "year": str(year),
+                }
+            ],
         )
 
     # Template 22: Export change between years (2)
@@ -1084,16 +1379,31 @@ def gen_trade_time_series() -> None:
         if ev1 is None or ev2 is None or ev1 == 0:
             continue
         change = (ev2 - ev1) / ev1
-        url = explore_url("overtime",
-                          exporter=f"country-{COUNTRIES[country]}",
-                          startYear=y1, endYear=y2, year=y2)
+        url = explore_url(
+            "overtime",
+            exporter=f"country-{COUNTRIES[country]}",
+            startYear=y1,
+            endYear=y2,
+            year=y2,
+        )
         emit(
             f"How have {country}'s exports changed from {y1} to {y2}?",
-            cat_id, cat_name, "medium", url,
-            [{"metric": "Export change", "country": country,
-              "start_year": str(y1), "end_year": str(y2),
-              "start_value": format_usd(ev1), "end_value": format_usd(ev2),
-              "change_pct": pct_str(change), "raw_change": change}],
+            cat_id,
+            cat_name,
+            "medium",
+            url,
+            [
+                {
+                    "metric": "Export change",
+                    "country": country,
+                    "start_year": str(y1),
+                    "end_year": str(y2),
+                    "start_value": format_usd(ev1),
+                    "end_value": format_usd(ev2),
+                    "change_pct": pct_str(change),
+                    "raw_change": change,
+                }
+            ],
         )
 
     # Template 23: GDP per capita in year (2)
@@ -1101,15 +1411,28 @@ def gen_trade_time_series() -> None:
         row = get_year_row(time_series.get(country, []), year)
         if not row or row.get("gdppc") is None:
             continue
-        url = explore_url("overtime", year=year,
-                          exporter=f"country-{COUNTRIES[country]}",
-                          startYear=2000, endYear=2024)
+        url = explore_url(
+            "overtime",
+            year=year,
+            exporter=f"country-{COUNTRIES[country]}",
+            startYear=2000,
+            endYear=2024,
+        )
         emit(
             f"What was {country}'s GDP per capita in {year}?",
-            cat_id, cat_name, "easy", url,
-            [{"metric": "GDP per capita", "country": country,
-              "value": f"${row['gdppc']:,.0f}",
-              "raw_value": row["gdppc"], "year": str(year)}],
+            cat_id,
+            cat_name,
+            "easy",
+            url,
+            [
+                {
+                    "metric": "GDP per capita",
+                    "country": country,
+                    "value": f"${row['gdppc']:,.0f}",
+                    "raw_value": row["gdppc"],
+                    "year": str(year),
+                }
+            ],
         )
 
     # Template 24: ECI in year (1)
@@ -1117,15 +1440,28 @@ def gen_trade_time_series() -> None:
         row = get_year_row(time_series.get(country, []), year)
         if not row or row.get("eci") is None:
             continue
-        url = explore_url("overtime", year=year,
-                          exporter=f"country-{COUNTRIES[country]}",
-                          startYear=2000, endYear=2024)
+        url = explore_url(
+            "overtime",
+            year=year,
+            exporter=f"country-{COUNTRIES[country]}",
+            startYear=2000,
+            endYear=2024,
+        )
         emit(
             f"What was {country}'s ECI in {year}?",
-            cat_id, cat_name, "easy", url,
-            [{"metric": "ECI", "country": country,
-              "value": f"{row['eci']:.4f}",
-              "raw_value": row["eci"], "year": str(year)}],
+            cat_id,
+            cat_name,
+            "easy",
+            url,
+            [
+                {
+                    "metric": "ECI",
+                    "country": country,
+                    "value": f"{row['eci']:.4f}",
+                    "raw_value": row["eci"],
+                    "year": str(year),
+                }
+            ],
         )
 
     # Template 25: ECI change between years (2)
@@ -1138,16 +1474,30 @@ def gen_trade_time_series() -> None:
         e2 = r2.get("eci")
         if e1 is None or e2 is None:
             continue
-        url = explore_url("overtime",
-                          exporter=f"country-{COUNTRIES[country]}",
-                          startYear=y1, endYear=y2, year=y2)
+        url = explore_url(
+            "overtime",
+            exporter=f"country-{COUNTRIES[country]}",
+            startYear=y1,
+            endYear=y2,
+            year=y2,
+        )
         emit(
             f"How has {country}'s ECI changed from {y1} to {y2}?",
-            cat_id, cat_name, "medium", url,
-            [{"metric": "ECI change", "country": country,
-              "start_year": str(y1), "end_year": str(y2),
-              "start_value": f"{e1:.4f}", "end_value": f"{e2:.4f}",
-              "change": f"{e2 - e1:+.4f}"}],
+            cat_id,
+            cat_name,
+            "medium",
+            url,
+            [
+                {
+                    "metric": "ECI change",
+                    "country": country,
+                    "start_year": str(y1),
+                    "end_year": str(y2),
+                    "start_value": f"{e1:.4f}",
+                    "end_value": f"{e2:.4f}",
+                    "change": f"{e2 - e1:+.4f}",
+                }
+            ],
         )
 
 
@@ -1160,7 +1510,8 @@ def gen_feasibility() -> None:
         rows = country_product_data.get(country, [])
         # Filter to products without RCA, with positive COG
         opps = [
-            r for r in rows
+            r
+            for r in rows
             if r.get("cog") is not None
             and r["cog"] > 0
             and (r.get("exportRca") is None or r["exportRca"] < 1)
@@ -1170,23 +1521,33 @@ def gen_feasibility() -> None:
         if not top5:
             continue
 
-        url = explore_url("feasibility/table", year=2024, productLevel=4,
-                          exporter=f"country-{COUNTRIES[country]}")
+        url = explore_url(
+            "feasibility/table",
+            year=2024,
+            productLevel=4,
+            exporter=f"country-{COUNTRIES[country]}",
+        )
 
         # Template 26: Top 5 by COG
         data = []
         for i, r in enumerate(top5):
             pname = product_name_by_id(r["productId"])
             pcode = product_code_by_id(r["productId"])
-            data.append({
-                "rank": i + 1,
-                "product": f"{pname} ({pcode} HS92)" if pcode else pname,
-                "cog": round(r["cog"], 4),
-                "distance": round(r["distance"], 4) if r.get("distance") else None,
-            })
+            data.append(
+                {
+                    "rank": i + 1,
+                    "product": f"{pname} ({pcode} HS92)" if pcode else pname,
+                    "cog": round(r["cog"], 4),
+                    "distance": round(r["distance"], 4) if r.get("distance") else None,
+                }
+            )
         emit(
             f"What are the top 5 growth opportunity products for {country} ranked by opportunity gain?",
-            cat_id, cat_name, "hard", url, data,
+            cat_id,
+            cat_name,
+            "hard",
+            url,
+            data,
         )
 
         # Template 27: Global size of top opportunity product
@@ -1197,12 +1558,20 @@ def gen_feasibility() -> None:
             pcode = product_code_by_id(top_prod["productId"])
             emit(
                 f"What is the global market size of {country}'s top growth opportunity product?",
-                cat_id, cat_name, "medium", url,
-                [{"metric": "Global export value of top opportunity",
-                  "country": country,
-                  "product": f"{pname} ({pcode} HS92)" if pcode else pname,
-                  "value": format_usd(py["exportValue"]),
-                  "raw_value": py["exportValue"], "year": "2024"}],
+                cat_id,
+                cat_name,
+                "medium",
+                url,
+                [
+                    {
+                        "metric": "Global export value of top opportunity",
+                        "country": country,
+                        "product": f"{pname} ({pcode} HS92)" if pcode else pname,
+                        "value": format_usd(py["exportValue"]),
+                        "raw_value": py["exportValue"],
+                        "year": "2024",
+                    }
+                ],
             )
 
         # Template 28: 5yr growth of top opportunity product
@@ -1211,12 +1580,20 @@ def gen_feasibility() -> None:
             pcode = product_code_by_id(top_prod["productId"])
             emit(
                 f"What is the 5-year growth rate of {country}'s top growth opportunity product globally?",
-                cat_id, cat_name, "medium", url,
-                [{"metric": "5-year CAGR of top opportunity",
-                  "country": country,
-                  "product": f"{pname} ({pcode} HS92)" if pcode else pname,
-                  "value": pct_str(py["exportValueConstCagr5"]),
-                  "raw_value": py["exportValueConstCagr5"], "year": "2024"}],
+                cat_id,
+                cat_name,
+                "medium",
+                url,
+                [
+                    {
+                        "metric": "5-year CAGR of top opportunity",
+                        "country": country,
+                        "product": f"{pname} ({pcode} HS92)" if pcode else pname,
+                        "value": pct_str(py["exportValueConstCagr5"]),
+                        "raw_value": py["exportValueConstCagr5"],
+                        "year": "2024",
+                    }
+                ],
             )
 
 
@@ -1233,11 +1610,19 @@ def gen_regional_aggregates() -> None:
             continue
         emit(
             f"What is the total export value of {display_name} according to the Atlas?",
-            cat_id, cat_name, "medium",
+            cat_id,
+            cat_name,
+            "medium",
             explore_url("treemap", year=2024),
-            [{"metric": "Total export value", "group": api_name,
-              "value": format_usd(row_2024["exportValue"]),
-              "raw_value": row_2024["exportValue"], "year": "2024"}],
+            [
+                {
+                    "metric": "Total export value",
+                    "group": api_name,
+                    "value": format_usd(row_2024["exportValue"]),
+                    "raw_value": row_2024["exportValue"],
+                    "year": "2024",
+                }
+            ],
         )
 
     # Template 30: 5-year CAGR (4 groups) — computed from groupYear
@@ -1245,17 +1630,30 @@ def gen_regional_aggregates() -> None:
         rows = group_year_data.get(api_name, [])
         row_2019 = get_year_row(rows, 2019)
         row_2024 = get_year_row(rows, 2024)
-        if (not row_2019 or not row_2024
-                or not row_2019.get("exportValue") or not row_2024.get("exportValue")):
+        if (
+            not row_2019
+            or not row_2024
+            or not row_2019.get("exportValue")
+            or not row_2024.get("exportValue")
+        ):
             continue
         cagr = compute_cagr(row_2019["exportValue"], row_2024["exportValue"], 5)
         emit(
             f"What is the 5-year export growth rate for {display_name}?",
-            cat_id, cat_name, "medium",
+            cat_id,
+            cat_name,
+            "medium",
             explore_url("treemap", year=2024),
-            [{"metric": "5-year export CAGR", "group": api_name,
-              "value": pct_str(cagr), "raw_value": cagr,
-              "start_year": "2019", "end_year": "2024"}],
+            [
+                {
+                    "metric": "5-year export CAGR",
+                    "group": api_name,
+                    "value": pct_str(cagr),
+                    "raw_value": cagr,
+                    "start_year": "2019",
+                    "end_year": "2024",
+                }
+            ],
         )
 
     # Template 32: Members (2 groups)
@@ -1265,16 +1663,21 @@ def gen_regional_aggregates() -> None:
         if not g or not g.get("members"):
             continue
         # Group members are string IDs like "country-404"
-        member_names = sorted(
-            COUNTRY_NAMES.get(mid, str(mid)) for mid in g["members"]
-        )
+        member_names = sorted(COUNTRY_NAMES.get(mid, str(mid)) for mid in g["members"])
         emit(
             f"Which countries belong to the {display_name} group according to the Atlas?",
-            cat_id, cat_name, "easy",
+            cat_id,
+            cat_name,
+            "easy",
             explore_url("treemap", year=2024),
-            [{"metric": "Group members", "group": api_name,
-              "count": len(member_names),
-              "members": member_names}],
+            [
+                {
+                    "metric": "Group members",
+                    "group": api_name,
+                    "count": len(member_names),
+                    "members": member_names,
+                }
+            ],
         )
 
 
@@ -1290,11 +1693,17 @@ def gen_product_metadata() -> None:
             continue
         emit(
             f"Is {product_name(code)} classified as a natural resource on the Atlas?",
-            cat_id, cat_name, "easy",
+            cat_id,
+            cat_name,
+            "easy",
             explore_url("treemap", year=2024),
-            [{"metric": "Natural resource classification",
-              "product": product_label(code),
-              "value": bool(info.get("naturalResource"))}],
+            [
+                {
+                    "metric": "Natural resource classification",
+                    "product": product_label(code),
+                    "value": bool(info.get("naturalResource")),
+                }
+            ],
         )
 
     # Template 34: Green product flag (2 products)
@@ -1304,11 +1713,17 @@ def gen_product_metadata() -> None:
             continue
         emit(
             f"Is {product_name(code)} classified as a green product on the Atlas?",
-            cat_id, cat_name, "easy",
+            cat_id,
+            cat_name,
+            "easy",
             explore_url("treemap", year=2024),
-            [{"metric": "Green product classification",
-              "product": product_label(code),
-              "value": bool(info.get("greenProduct"))}],
+            [
+                {
+                    "metric": "Green product classification",
+                    "product": product_label(code),
+                    "value": bool(info.get("greenProduct")),
+                }
+            ],
         )
 
     # Template 35: HS conversion
@@ -1316,21 +1731,25 @@ def gen_product_metadata() -> None:
     # If codes is empty at each step, the code is unchanged (0901 → 0901)
     if conversion_result:
         # Check if any step has actual code changes
-        all_codes_empty = all(
-            not step.get("codes") for step in conversion_result
-        )
+        all_codes_empty = all(not step.get("codes") for step in conversion_result)
         if all_codes_empty:
             # Code unchanged through all revisions
             emit(
                 "What HS 2012 code corresponds to Coffee (HS 1992 code 0901)?",
-                cat_id, cat_name, "hard",
+                cat_id,
+                cat_name,
+                "hard",
                 explore_url("treemap", year=2024),
-                [{"metric": "HS code conversion",
-                  "source_code": "0901",
-                  "source_classification": "HS 1992",
-                  "target_classification": "HS 2012",
-                  "target_codes": ["0901"],
-                  "note": "Code unchanged across revisions"}],
+                [
+                    {
+                        "metric": "HS code conversion",
+                        "source_code": "0901",
+                        "source_classification": "HS 1992",
+                        "target_classification": "HS 2012",
+                        "target_codes": ["0901"],
+                        "note": "Code unchanged across revisions",
+                    }
+                ],
             )
         else:
             # Collect target codes from the final step
@@ -1341,38 +1760,52 @@ def gen_product_metadata() -> None:
             if targets:
                 emit(
                     "What HS 2012 code corresponds to Coffee (HS 1992 code 0901)?",
-                    cat_id, cat_name, "hard",
+                    cat_id,
+                    cat_name,
+                    "hard",
                     explore_url("treemap", year=2024),
-                    [{"metric": "HS code conversion",
-                      "source_code": "0901",
-                      "source_classification": "HS 1992",
-                      "target_classification": "HS 2012",
-                      "target_codes": targets}],
+                    [
+                        {
+                            "metric": "HS code conversion",
+                            "source_code": "0901",
+                            "source_classification": "HS 1992",
+                            "target_classification": "HS 2012",
+                            "target_codes": targets,
+                        }
+                    ],
                 )
 
     # Template 36: Product count
     hs4_count = len(PRODUCT_MAP)
     emit(
         "How many 4-digit HS92 products does the Atlas track?",
-        cat_id, cat_name, "easy",
+        cat_id,
+        cat_name,
+        "easy",
         explore_url("treemap", year=2024),
         [{"metric": "HS92 4-digit product count", "value": hs4_count}],
     )
 
     # Template 37: Data years available
     hs92_avail = next(
-        (d for d in DATA_AVAILABILITY
-         if d.get("productClassification") == "HS92"),
+        (d for d in DATA_AVAILABILITY if d.get("productClassification") == "HS92"),
         None,
     )
     if hs92_avail:
         emit(
             "What years of trade data are available for HS 1992 on the Atlas?",
-            cat_id, cat_name, "easy",
+            cat_id,
+            cat_name,
+            "easy",
             explore_url("treemap", year=2024),
-            [{"metric": "Data availability", "classification": "HS 1992",
-              "year_min": hs92_avail["yearMin"],
-              "year_max": hs92_avail["yearMax"]}],
+            [
+                {
+                    "metric": "Data availability",
+                    "classification": "HS 1992",
+                    "year_min": hs92_avail["yearMin"],
+                    "year_max": hs92_avail["yearMax"],
+                }
+            ],
         )
 
 
@@ -1407,30 +1840,46 @@ async def main() -> None:
 
     # Write integration file
     new_categories = [
-        {"id": "explore_product_complexity",
-         "name": "Product-Level Complexity (Explore Page)",
-         "description": "Product-level RCA, PCI, distance, COG from Atlas Explore pages"},
-        {"id": "explore_global_product_stats",
-         "name": "Global Product Statistics (Explore Page)",
-         "description": "Global export values, growth rates, and complexity for specific products"},
-        {"id": "explore_bilateral_trade",
-         "name": "Bilateral Trade (Explore Page)",
-         "description": "Country-to-country trade flows, total and by product"},
-        {"id": "explore_import_composition",
-         "name": "Import Composition (Explore Page)",
-         "description": "Product-level import breakdown for countries"},
-        {"id": "explore_trade_time_series",
-         "name": "Trade Time Series (Explore Page)",
-         "description": "Year-by-year trade data, GDP, ECI time series"},
-        {"id": "explore_feasibility",
-         "name": "Growth Opportunities (Explore Page)",
-         "description": "Feasibility metrics: opportunity gain, distance, global size, growth"},
-        {"id": "explore_regional_aggregates",
-         "name": "Regional Aggregates (Explore Page)",
-         "description": "Regional and group-level trade data and growth rates"},
-        {"id": "explore_product_metadata",
-         "name": "Product Classification & Metadata (Explore Page)",
-         "description": "Product catalog details, natural resource flags, classification conversion"},
+        {
+            "id": "explore_product_complexity",
+            "name": "Product-Level Complexity (Explore Page)",
+            "description": "Product-level RCA, PCI, distance, COG from Atlas Explore pages",
+        },
+        {
+            "id": "explore_global_product_stats",
+            "name": "Global Product Statistics (Explore Page)",
+            "description": "Global export values, growth rates, and complexity for specific products",
+        },
+        {
+            "id": "explore_bilateral_trade",
+            "name": "Bilateral Trade (Explore Page)",
+            "description": "Country-to-country trade flows, total and by product",
+        },
+        {
+            "id": "explore_import_composition",
+            "name": "Import Composition (Explore Page)",
+            "description": "Product-level import breakdown for countries",
+        },
+        {
+            "id": "explore_trade_time_series",
+            "name": "Trade Time Series (Explore Page)",
+            "description": "Year-by-year trade data, GDP, ECI time series",
+        },
+        {
+            "id": "explore_feasibility",
+            "name": "Growth Opportunities (Explore Page)",
+            "description": "Feasibility metrics: opportunity gain, distance, global size, growth",
+        },
+        {
+            "id": "explore_regional_aggregates",
+            "name": "Regional Aggregates (Explore Page)",
+            "description": "Regional and group-level trade data and growth rates",
+        },
+        {
+            "id": "explore_product_metadata",
+            "name": "Product Classification & Metadata (Explore Page)",
+            "description": "Product catalog details, natural resource flags, classification conversion",
+        },
     ]
 
     out_path = BASE_DIR / "new_explore_page_questions.json"

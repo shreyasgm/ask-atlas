@@ -59,14 +59,14 @@ def get_db_schema(db_url):
         cur.execute(
             """
             WITH enum_types AS (
-                SELECT 
+                SELECT
                     t.typname,
                     ARRAY_AGG(e.enumlabel ORDER BY e.enumsortorder) as enum_values
-                FROM pg_type t 
+                FROM pg_type t
                 JOIN pg_enum e ON t.oid = e.enumtypid
                 GROUP BY t.typname
             )
-            SELECT 
+            SELECT
                 t.table_name,
                 c.column_name,
                 c.udt_name,
@@ -75,8 +75,8 @@ def get_db_schema(db_url):
                 c.numeric_scale,
                 (SELECT enum_values FROM enum_types WHERE typname = c.udt_name) as enum_values
             FROM information_schema.tables t
-            JOIN information_schema.columns c 
-                ON t.table_name = c.table_name 
+            JOIN information_schema.columns c
+                ON t.table_name = c.table_name
                 AND t.table_schema = c.table_schema
             WHERE t.table_schema = %s
             AND t.table_type = 'BASE TABLE'

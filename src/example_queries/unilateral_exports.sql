@@ -1,5 +1,5 @@
 -- Goods exports (HS92)
-SELECT 
+SELECT
     'Goods' as category,
     p.name_en as product_name,
     p.code as product_code,
@@ -15,7 +15,7 @@ WHERE cpy.year = 2022
 UNION ALL
 
 -- Services exports
-SELECT 
+SELECT
     'Services' as category,
     p.name_en as product_name,
     p.code as product_code,
@@ -28,6 +28,6 @@ WHERE cpy.year = 2022
     AND cpy.export_value > 0
     AND lc.iso3_code = 'USA'
 
-ORDER BY 
+ORDER BY
     category,
     export_value DESC;

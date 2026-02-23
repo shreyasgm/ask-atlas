@@ -31,6 +31,7 @@ pytestmark = [pytest.mark.eval, pytest.mark.asyncio(loop_scope="module")]
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _load_question(base_dir: Path, question_id: int) -> dict:
     """Load a question definition from the evaluation corpus."""
     path = base_dir / "evaluation" / "questions" / str(question_id) / "question.json"
@@ -57,6 +58,7 @@ def _load_ground_truth(base_dir: Path, question_id: int) -> list[dict] | None:
 # Shared agent fixture (expensive — created once per module)
 # ---------------------------------------------------------------------------
 
+
 @pytest_asyncio.fixture(scope="module", loop_scope="module")
 async def atlas_agent(base_dir: Path):
     """Create a single shared AtlasTextToSQL instance for all eval tests.
@@ -77,7 +79,10 @@ async def atlas_agent(base_dir: Path):
 # Tests
 # ---------------------------------------------------------------------------
 
-async def test_eval_nigeria_crude_oil_exports_2020(base_dir: Path, atlas_agent: AtlasTextToSQL):
+
+async def test_eval_nigeria_crude_oil_exports_2020(
+    base_dir: Path, atlas_agent: AtlasTextToSQL
+):
     """Question 2: crude oil export value for Nigeria in 2020 (ground truth comparison).
 
     Single product (HS 2709), single country, single year — straightforward

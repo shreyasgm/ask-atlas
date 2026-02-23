@@ -1,4 +1,4 @@
-SELECT 
+SELECT
     p.code as hs_code,
     p.name_en as product_name,
     cpy.export_value,
@@ -9,6 +9,6 @@ JOIN classification.product_hs92 p ON cpy.product_id = p.product_id
 WHERE cpy.year = 2022
     AND cpy.export_value > 0
     AND lc.iso3_code = 'USA'
-ORDER BY 
+ORDER BY
     cpy.export_value DESC
 LIMIT 10;

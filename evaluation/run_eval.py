@@ -44,7 +44,9 @@ def _load_questions_meta() -> dict[str, dict]:
 
 def _load_ground_truth(question_id: str) -> list[dict] | None:
     """Load ground truth data for a question, or None if unavailable."""
-    gt_path = EVALUATION_BASE_DIR / "results" / question_id / "ground_truth" / "results.json"
+    gt_path = (
+        EVALUATION_BASE_DIR / "results" / question_id / "ground_truth" / "results.json"
+    )
     if not gt_path.exists():
         return None
     try:
@@ -86,9 +88,9 @@ async def _judge_all(
         async with semaphore:
             try:
                 mode = (
-                    "ground_truth" if ground_truth is not None
-                    else "refusal" if expected_behavior is not None
-                    else "plausibility"
+                    "ground_truth"
+                    if ground_truth is not None
+                    else "refusal" if expected_behavior is not None else "plausibility"
                 )
                 logging.info(f"Question {qid}: judging ({mode})...")
                 verdict = await judge_answer(
@@ -194,7 +196,9 @@ async def main() -> None:
     logging.info(f"  Questions evaluated: {agg['count']}")
     logging.info(f"  Avg weighted score:  {agg['avg_weighted_score']} / 5.0")
     logging.info(f"  Pass rate:           {agg['pass_rate']}%")
-    logging.info(f"  Pass/Partial/Fail:   {agg['pass_count']}/{agg['partial_count']}/{agg['fail_count']}")
+    logging.info(
+        f"  Pass/Partial/Fail:   {agg['pass_count']}/{agg['partial_count']}/{agg['fail_count']}"
+    )
     logging.info(f"  Report:              {md_path}")
     logging.info("=" * 60)
 

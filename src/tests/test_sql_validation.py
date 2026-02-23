@@ -5,7 +5,6 @@ No LLM, no DB, no async needed.
 
 from src.sql_validation import extract_table_names_from_ddl, validate_sql
 
-
 # ---------------------------------------------------------------------------
 # extract_table_names_from_ddl
 # ---------------------------------------------------------------------------
@@ -111,11 +110,7 @@ class TestValidateSql:
         assert any("nonexistent.bad_table" in e.lower() for e in result.errors)
 
     def test_subquery_table_validated(self):
-        sql = (
-            "SELECT * FROM ("
-            "  SELECT country_id FROM hs92.country_year"
-            ") sub"
-        )
+        sql = "SELECT * FROM (" "  SELECT country_id FROM hs92.country_year" ") sub"
         result = validate_sql(sql, self.VALID_TABLES)
         # Inner table is valid; SELECT * on subquery alias is fine
         assert result.is_valid is True

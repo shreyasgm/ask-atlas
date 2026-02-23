@@ -211,8 +211,11 @@ class PostgresConversationStore(ConversationStore):
             rows = await cur.fetchall()
             return [
                 ConversationRow(
-                    id=r[0], session_id=r[1], title=r[2],
-                    created_at=r[3], updated_at=r[4],
+                    id=r[0],
+                    session_id=r[1],
+                    title=r[2],
+                    created_at=r[3],
+                    updated_at=r[4],
                 )
                 for r in rows
             ]
@@ -230,8 +233,11 @@ class PostgresConversationStore(ConversationStore):
             if row is None:
                 return None
             return ConversationRow(
-                id=row[0], session_id=row[1], title=row[2],
-                created_at=row[3], updated_at=row[4],
+                id=row[0],
+                session_id=row[1],
+                title=row[2],
+                created_at=row[3],
+                updated_at=row[4],
             )
 
     async def delete(self, thread_id: str) -> None:

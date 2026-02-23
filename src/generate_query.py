@@ -20,7 +20,11 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from src.error_handling import QueryExecutionError, async_execute_with_retry, execute_with_retry
+from src.error_handling import (
+    QueryExecutionError,
+    async_execute_with_retry,
+    execute_with_retry,
+)
 from src.product_and_schema_lookup import (
     SCHEMA_TO_PRODUCTS_TABLE_MAP,
     ProductAndSchemaLookup,
@@ -205,7 +209,6 @@ Always use these product codes provided, and do not try to search for products b
     return prompt | llm | StrOutputParser() | _strip
 
 
-
 # ---------------------------------------------------------------------------
 # Tool schema (LLM sees this as a callable tool; execution goes through nodes)
 # ---------------------------------------------------------------------------
@@ -241,10 +244,12 @@ def _classification_tables_for_schemas(
     seen: set[str] = set()
 
     # Always include location_country
-    tables.append({
-        "table_name": "classification.location_country",
-        "context_str": "Country-level data with names, ISO codes, and hierarchical information.",
-    })
+    tables.append(
+        {
+            "table_name": "classification.location_country",
+            "context_str": "Country-level data with names, ISO codes, and hierarchical information.",
+        }
+    )
     seen.add("classification.location_country")
 
     # Include the matching product classification table for each data schema
@@ -252,15 +257,19 @@ def _classification_tables_for_schemas(
     classification_by_name = {t["table_name"]: t for t in classification_entries}
 
     for schema in classification_schemas:
-        product_table_full = SCHEMA_TO_PRODUCTS_TABLE_MAP.get(schema)  # e.g. "classification.product_hs92"
+        product_table_full = SCHEMA_TO_PRODUCTS_TABLE_MAP.get(
+            schema
+        )  # e.g. "classification.product_hs92"
         if product_table_full and product_table_full not in seen:
             table_name = product_table_full.split(".", 1)[1]  # "product_hs92"
             entry = classification_by_name.get(table_name)
             if entry:
-                tables.append({
-                    "table_name": product_table_full,
-                    "context_str": entry["context_str"],
-                })
+                tables.append(
+                    {
+                        "table_name": product_table_full,
+                        "context_str": entry["context_str"],
+                    }
+                )
                 seen.add(product_table_full)
 
     return tables
@@ -317,14 +326,12 @@ def get_table_info_for_schemas(
     )
 
     # Add the specific classification lookup tables needed for JOINs
-    tables.extend(_classification_tables_for_schemas(classification_schemas, table_descriptions))
+    tables.extend(
+        _classification_tables_for_schemas(classification_schemas, table_descriptions)
+    )
 
     # Remove any tables that have the word "group" in the table name
-    tables = [
-        table
-        for table in tables
-        if "group" not in table["table_name"].lower()
-    ]
+    tables = [table for table in tables if "group" not in table["table_name"].lower()]
     table_info = ""
     for table in tables:
         table_info += (
@@ -495,7 +502,11 @@ async def validate_sql_node(
                     valid_tables.add(f"{schema}.{table['table_name']}")
 
     # 3. Add the specific classification lookup tables needed for JOINs
-    schemas = products.classification_schemas if (products and hasattr(products, "classification_schemas")) else []
+    schemas = (
+        products.classification_schemas
+        if (products and hasattr(products, "classification_schemas"))
+        else []
+    )
     for ct in _classification_tables_for_schemas(schemas, table_descriptions):
         valid_tables.add(ct["table_name"])
 
@@ -529,6 +540,7 @@ async def execute_sql_node(
     }
 
     if use_async:
+
         async def _run_query() -> Tuple[str, list[str], list[list]]:
             async with async_engine.connect() as conn:
                 result = await conn.execute(text(sql))
@@ -539,16 +551,12 @@ async def execute_sql_node(
                 rows_as_lists = [list(row) for row in rows]
                 if not rows:
                     return "", columns, []
-                result_str = "\n".join(
-                    str(dict(zip(columns, row))) for row in rows
-                )
+                result_str = "\n".join(str(dict(zip(columns, row))) for row in rows)
                 return result_str, columns, rows_as_lists
 
         try:
             t0 = time.monotonic()
-            result_str, columns, rows = await async_execute_with_retry(
-                _run_query
-            )
+            result_str, columns, rows = await async_execute_with_retry(_run_query)
             elapsed_ms = int((time.monotonic() - t0) * 1000)
         except QueryExecutionError as e:
             logger.error("Query execution failed: %s", e)
@@ -570,9 +578,7 @@ async def execute_sql_node(
                 rows_as_lists = [list(row) for row in rows]
                 if not rows:
                     return "", columns, []
-                result_str = "\n".join(
-                    str(dict(zip(columns, row))) for row in rows
-                )
+                result_str = "\n".join(str(dict(zip(columns, row))) for row in rows)
                 return result_str, columns, rows_as_lists
 
         try:
@@ -648,17 +654,19 @@ async def max_queries_exceeded_node(state: AtlasAgentState) -> dict:
 # ---------------------------------------------------------------------------
 
 
-PIPELINE_NODES = frozenset({
-    "extract_tool_question",
-    "extract_products",
-    "lookup_codes",
-    "get_table_info",
-    "generate_sql",
-    "validate_sql",
-    "execute_sql",
-    "format_results",
-    "max_queries_exceeded",
-})
+PIPELINE_NODES = frozenset(
+    {
+        "extract_tool_question",
+        "extract_products",
+        "lookup_codes",
+        "get_table_info",
+        "generate_sql",
+        "validate_sql",
+        "execute_sql",
+        "format_results",
+        "max_queries_exceeded",
+    }
+)
 
 
 # ---------------------------------------------------------------------------
@@ -778,21 +786,25 @@ If a user asks a normative policy question, such as what products a country shou
         prompt_text = AGENT_PREFIX
         overrides_parts: list[str] = []
         if state.get("override_schema"):
-            overrides_parts.append(f"- Classification schema: **{state['override_schema']}**")
+            overrides_parts.append(
+                f"- Classification schema: **{state['override_schema']}**"
+            )
         if state.get("override_direction"):
-            overrides_parts.append(f"- Trade direction: **{state['override_direction']}**")
+            overrides_parts.append(
+                f"- Trade direction: **{state['override_direction']}**"
+            )
         if state.get("override_mode"):
             overrides_parts.append(f"- Trade mode: **{state['override_mode']}**")
 
         if overrides_parts:
-            prompt_text += "\n\n**Active User Overrides:**\n" + "\n".join(overrides_parts)
+            prompt_text += "\n\n**Active User Overrides:**\n" + "\n".join(
+                overrides_parts
+            )
             prompt_text += "\n\nThese overrides take precedence over what the question implies. If the question contradicts an override, briefly note the conflict but follow the override."
 
         system_prompt = SystemMessage(content=prompt_text)
         model_with_tools = llm.bind_tools([_query_tool_schema])
-        response = await model_with_tools.ainvoke(
-            [system_prompt] + state["messages"]
-        )
+        response = await model_with_tools.ainvoke([system_prompt] + state["messages"])
         return {"messages": [response]}
 
     def route_after_agent(state: AtlasAgentState) -> str:
@@ -841,7 +853,10 @@ If a user asks a normative policy question, such as what products a country shou
     )
     builder.add_node(
         "execute_sql",
-        partial(execute_sql_node, async_engine=async_engine if async_engine is not None else engine),
+        partial(
+            execute_sql_node,
+            async_engine=async_engine if async_engine is not None else engine,
+        ),
     )
     builder.add_node("format_results", format_results_node)
     builder.add_node("max_queries_exceeded", max_queries_exceeded_node)

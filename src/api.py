@@ -152,9 +152,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("AtlasTextToSQL ready — accepting requests  (pid=%d)", pid)
 
     # Conversation store — Postgres if available, else in-memory
-    checkpoint_db_url = getattr(
-        _state.atlas_sql, "_async_checkpointer_manager", None
-    )
+    checkpoint_db_url = getattr(_state.atlas_sql, "_async_checkpointer_manager", None)
     if checkpoint_db_url is not None:
         checkpoint_db_url = checkpoint_db_url.db_url
     if checkpoint_db_url:
@@ -232,7 +230,9 @@ async def timeout_middleware(request: Request, call_next):
     import asyncio
 
     try:
-        return await asyncio.wait_for(call_next(request), timeout=REQUEST_TIMEOUT_SECONDS)
+        return await asyncio.wait_for(
+            call_next(request), timeout=REQUEST_TIMEOUT_SECONDS
+        )
     except asyncio.TimeoutError:
         logger.warning(
             "⏱ %s %s  TIMEOUT after %.0fs",
@@ -272,9 +272,7 @@ async def _service_unavailable_handler(request: Request, exc: _ServiceUnavailabl
     )
 
 
-async def _track_conversation(
-    request: Request, thread_id: str, question: str
-) -> None:
+async def _track_conversation(request: Request, thread_id: str, question: str) -> None:
     """Create or update a conversation row if X-Session-Id is present."""
     session_id = request.headers.get("x-session-id")
     store = _state.conversation_store
@@ -402,7 +400,9 @@ async def delete_thread(thread_id: str) -> Response:
                     manager = getattr(atlas_sql, "_async_checkpointer_manager", None)
                     db_url = manager.db_url if manager else None
                     if db_url:
-                        async with await psycopg.AsyncConnection.connect(db_url) as conn:
+                        async with await psycopg.AsyncConnection.connect(
+                            db_url
+                        ) as conn:
                             for table in (
                                 "checkpoint_writes",
                                 "checkpoint_blobs",
@@ -449,7 +449,9 @@ async def chat(
         resolved_products=result.resolved_products,
         schemas_used=result.schemas_used or None,
         total_rows=result.total_rows if result.queries else None,
-        total_execution_time_ms=result.total_execution_time_ms if result.queries else None,
+        total_execution_time_ms=(
+            result.total_execution_time_ms if result.queries else None
+        ),
     )
 
 
@@ -541,15 +543,21 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                             total_execution_time_ms += stream_data.payload.get(
                                 "execution_time_ms", 0
                             )
-                            stream_queries.append({
-                                "sql": stream_data.payload.get("sql", ""),
-                                "columns": stream_data.payload.get("columns", []),
-                                "rows": stream_data.payload.get("rows", []),
-                                "row_count": stream_data.payload.get("row_count", 0),
-                                "execution_time_ms": stream_data.payload.get("execution_time_ms", 0),
-                                "tables": stream_data.payload.get("tables", []),
-                                "schema_name": stream_data.payload.get("schema"),
-                            })
+                            stream_queries.append(
+                                {
+                                    "sql": stream_data.payload.get("sql", ""),
+                                    "columns": stream_data.payload.get("columns", []),
+                                    "rows": stream_data.payload.get("rows", []),
+                                    "row_count": stream_data.payload.get(
+                                        "row_count", 0
+                                    ),
+                                    "execution_time_ms": stream_data.payload.get(
+                                        "execution_time_ms", 0
+                                    ),
+                                    "tables": stream_data.payload.get("tables", []),
+                                    "schema_name": stream_data.payload.get("schema"),
+                                }
+                            )
                 else:
                     # Log content preview for non-pipeline events
                     preview = (stream_data.content or "")[:60]
@@ -562,11 +570,13 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                     # Existing event types: wrap in {source, content, message_type}
                     yield {
                         "event": stream_data.message_type,
-                        "data": json.dumps({
-                            "source": stream_data.source,
-                            "content": stream_data.content,
-                            "message_type": stream_data.message_type,
-                        }),
+                        "data": json.dumps(
+                            {
+                                "source": stream_data.source,
+                                "content": stream_data.content,
+                                "message_type": stream_data.message_type,
+                            }
+                        ),
                     }
         except Exception:
             logger.exception(
@@ -601,13 +611,15 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
         )
         yield {
             "event": "done",
-            "data": json.dumps({
-                "thread_id": thread_id,
-                "total_queries": total_queries,
-                "total_rows": total_rows,
-                "total_execution_time_ms": total_execution_time_ms,
-                "total_time_ms": total_time_ms,
-            }),
+            "data": json.dumps(
+                {
+                    "thread_id": thread_id,
+                    "total_queries": total_queries,
+                    "total_rows": total_rows,
+                    "total_execution_time_ms": total_execution_time_ms,
+                    "total_time_ms": total_time_ms,
+                }
+            ),
         }
 
     return EventSourceResponse(_event_generator())

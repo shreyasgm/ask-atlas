@@ -65,7 +65,7 @@ Question: What did the US export in 2022?
 Query:
 ```sql
 -- Goods exports (HS92)
-SELECT 
+SELECT
     'Goods' as category,
     p.name_en as product_name,
     p.code as product_code,
@@ -81,7 +81,7 @@ WHERE cpy.year = 2022
 UNION ALL
 
 -- Services exports
-SELECT 
+SELECT
     'Services' as category,
     p.name_en as product_name,
     p.code as product_code,
@@ -94,7 +94,7 @@ WHERE cpy.year = 2022
     AND cpy.export_value > 0
     AND lc.iso3_code = 'USA'
 
-ORDER BY 
+ORDER BY
     category,
     export_value DESC;
 
@@ -103,7 +103,7 @@ ORDER BY
 Question: What goods did the US export in 2022, at the 4-digit HS classification level?
 Query:
 ```sql
-SELECT 
+SELECT
     p.code as hs_code,
     p.name_en as product_name,
     cpy.export_value,
@@ -114,7 +114,7 @@ JOIN classification.product_hs92 p ON cpy.product_id = p.product_id
 WHERE cpy.year = 2022
     AND cpy.export_value > 0
     AND lc.iso3_code = 'USA'
-ORDER BY 
+ORDER BY
     cpy.export_value DESC
 LIMIT 10;
 ```
@@ -123,7 +123,7 @@ Question: What did Bolivia export to Morocco between 2010-2022 at the 4-digit HS
 Query:
 ```sql
 -- Goods exports
-(SELECT 
+(SELECT
     'Goods' as category,
     loc_exp.iso3_code as exporter,
     loc_imp.iso3_code as importer,
@@ -131,29 +131,29 @@ Query:
     p.name_en as product_name,
     SUM(ccpy.export_value) as total_export_value
 FROM hs92.country_country_product_year_4 ccpy
-JOIN classification.location_country loc_exp 
-    ON ccpy.country_id = loc_exp.country_id 
+JOIN classification.location_country loc_exp
+    ON ccpy.country_id = loc_exp.country_id
     AND loc_exp.iso3_code = 'BOL'
-JOIN classification.location_country loc_imp 
-    ON ccpy.partner_id = loc_imp.country_id 
+JOIN classification.location_country loc_imp
+    ON ccpy.partner_id = loc_imp.country_id
     AND loc_imp.iso3_code = 'MAR'
-JOIN classification.product_hs92 p 
+JOIN classification.product_hs92 p
     ON ccpy.product_id = p.product_id
 WHERE ccpy.year BETWEEN 2010 AND 2022
     AND ccpy.export_value > 0
-GROUP BY 
+GROUP BY
     p.code,
     p.name_en,
     loc_exp.iso3_code,
     loc_imp.iso3_code
-ORDER BY 
+ORDER BY
     total_export_value DESC
 LIMIT 10)
 
 UNION ALL
 
 -- Services exports
-(SELECT 
+(SELECT
     'Services' as category,
     loc_exp.iso3_code as exporter,
     loc_imp.iso3_code as importer,
@@ -171,12 +171,12 @@ JOIN classification.product_services_bilateral p
     ON ccpy.product_id = p.product_id
 WHERE ccpy.year BETWEEN 2010 AND 2022
     AND ccpy.export_value > 0
-GROUP BY 
+GROUP BY
     p.code,
     p.name_en,
     loc_exp.iso3_code,
     loc_imp.iso3_code
-ORDER BY 
+ORDER BY
     total_export_value DESC
 LIMIT 10);
 ```
@@ -185,18 +185,18 @@ Question: Which country is the world's largest exporter of fruits and vegetables
 Query:
 ```sql
 WITH latest_year AS (
-    SELECT MAX(year) as max_year 
+    SELECT MAX(year) as max_year
     FROM hs92.country_product_year_4
 ),
 combined_trade AS (
     -- Fruits trade (4-digit)
-    SELECT 
+    SELECT
         loc.iso3_code,
         SUM(cpy.export_value) as export_value
     FROM hs92.country_product_year_4 cpy
-    JOIN classification.location_country loc 
+    JOIN classification.location_country loc
         ON cpy.country_id = loc.country_id
-    JOIN classification.product_hs92 p 
+    JOIN classification.product_hs92 p
         ON cpy.product_id = p.product_id
     WHERE p.code IN ('0801', '0802', '0803', '0804', '0805', '0806', '0807', '0808', '0809', '0810', '0811', '0812', '0813', '0814')
         AND cpy.year = (SELECT max_year FROM latest_year)
@@ -205,19 +205,19 @@ combined_trade AS (
     UNION ALL
 
     -- Vegetables trade (2-digit)
-    SELECT 
+    SELECT
         loc.iso3_code,
         SUM(cpy.export_value) as export_value
     FROM hs92.country_product_year_2 cpy
-    JOIN classification.location_country loc 
+    JOIN classification.location_country loc
         ON cpy.country_id = loc.country_id
-    JOIN classification.product_hs92 p 
+    JOIN classification.product_hs92 p
         ON cpy.product_id = p.product_id
     WHERE p.code = '07'
         AND cpy.year = (SELECT max_year FROM latest_year)
     GROUP BY loc.iso3_code
 )
-SELECT 
+SELECT
     iso3_code,
     SUM(export_value) as total_export_value
 FROM combined_trade
@@ -231,12 +231,12 @@ Query:
 ```sql
 -- Get the most recent year from the dataset
 WITH latest_year AS (
-    SELECT MAX(year) as max_year 
+    SELECT MAX(year) as max_year
     FROM hs92.country_product_year_4
 )
 
 -- Combine top 5 imports for both goods and services
-SELECT 
+SELECT
     category,
     code,
     name,
@@ -256,7 +256,7 @@ FROM (
 
 UNION ALL
 
-SELECT 
+SELECT
     category,
     code,
     name,
@@ -279,46 +279,46 @@ Question: What are the best products for India in terms of distance?
 Query:
 ```sql
 WITH latest_year AS (
-    SELECT MAX(year) as max_year 
+    SELECT MAX(year) as max_year
     FROM hs92.country_product_year_4
 ),
 combined_distances AS (
-    (SELECT 
+    (SELECT
         'Goods' as category,
         p.code as product_code,
         p.name_en as product_name,
         cpy.normalized_distance,
         RANK() OVER (ORDER BY cpy.normalized_distance) as distance_rank
     FROM hs92.country_product_year_4 cpy
-    JOIN classification.location_country loc 
-        ON cpy.country_id = loc.country_id 
+    JOIN classification.location_country loc
+        ON cpy.country_id = loc.country_id
         AND loc.iso3_code = 'IND'
-    JOIN classification.product_hs92 p 
+    JOIN classification.product_hs92 p
         ON cpy.product_id = p.product_id
     WHERE cpy.year = (SELECT max_year FROM latest_year)
         AND cpy.normalized_distance IS NOT NULL
     LIMIT 10)
-    
+
     UNION ALL
-    
-    (SELECT 
+
+    (SELECT
         'Services' as category,
         p.code as product_code,
         p.name_en as product_name,
         cpy.normalized_distance,
         RANK() OVER (ORDER BY cpy.normalized_distance) as distance_rank
     FROM services_unilateral.country_product_year_4 cpy
-    JOIN classification.location_country loc 
-        ON cpy.country_id = loc.country_id 
+    JOIN classification.location_country loc
+        ON cpy.country_id = loc.country_id
         AND loc.iso3_code = 'IND'
-    JOIN classification.product_services_unilateral p 
+    JOIN classification.product_services_unilateral p
         ON cpy.product_id = p.product_id
     WHERE cpy.year = (SELECT max_year FROM latest_year)
         AND cpy.normalized_distance IS NOT NULL
     LIMIT 10)
 )
 -- Best products by distance (lower is better)
-SELECT 
+SELECT
     category,
     product_code,
     product_name,
@@ -332,20 +332,20 @@ Question: What are the best products for Kenya in terms of COG?
 Query:
 ```sql
 WITH latest_year AS (
-    SELECT MAX(year) as max_year 
+    SELECT MAX(year) as max_year
     FROM hs92.country_product_year_4
 )
 -- Best products by COG (higher is better)
-SELECT 
+SELECT
     p.code as product_code,
     p.name_en as product_name,
     cpy.normalized_cog,
     RANK() OVER (ORDER BY cpy.normalized_cog DESC) as cog_rank
 FROM hs92.country_product_year_4 cpy
-JOIN classification.location_country loc 
-    ON cpy.country_id = loc.country_id 
+JOIN classification.location_country loc
+    ON cpy.country_id = loc.country_id
     AND loc.iso3_code = 'KEN'
-JOIN classification.product_hs92 p 
+JOIN classification.product_hs92 p
     ON cpy.product_id = p.product_id
 WHERE cpy.year = (SELECT max_year FROM latest_year)
     AND cpy.normalized_cog IS NOT NULL
