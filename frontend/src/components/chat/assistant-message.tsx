@@ -5,7 +5,6 @@ import remarkGfm from 'remark-gfm';
 import type { ChatMessage } from '@/types/chat';
 import QueryResultTable from './query-result-table';
 import SqlBlock from './sql-block';
-import SuggestionPills from './suggestion-pills';
 
 const MARKDOWN_COMPONENTS: Components = {
   h3: (props) => <h3 className="text-sm font-bold" {...props} />,
@@ -29,12 +28,10 @@ const MARKDOWN_COMPONENTS: Components = {
 };
 
 interface AssistantMessageProps {
-  isLast: boolean;
   message: ChatMessage;
-  onSend: (text: string) => void;
 }
 
-export default memo(function AssistantMessage({ isLast, message, onSend }: AssistantMessageProps) {
+export default memo(function AssistantMessage({ message }: AssistantMessageProps) {
   return (
     <div className="flex flex-col gap-2">
       {message.content && (
@@ -67,12 +64,6 @@ export default memo(function AssistantMessage({ isLast, message, onSend }: Assis
         <p className="ml-4 font-mono text-xs text-muted-foreground">
           Source: Atlas of Economic Complexity
         </p>
-      )}
-
-      {isLast && !message.isStreaming && (
-        <div className="ml-4">
-          <SuggestionPills onSend={onSend} />
-        </div>
       )}
     </div>
   );
