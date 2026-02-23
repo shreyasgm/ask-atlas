@@ -702,7 +702,6 @@ class TestTimeoutMiddleware:
     def test_504_response_on_timeout(self, client: TestClient) -> None:
         """A slow handler returns 504 with the correct detail message."""
         import asyncio
-        from unittest.mock import patch
 
         async def _slow_answer(question, thread_id=None, **kwargs):
             await asyncio.sleep(0.5)

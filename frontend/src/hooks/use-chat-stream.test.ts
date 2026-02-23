@@ -108,7 +108,7 @@ beforeEach(() => {
 
 describe('useChatStream', () => {
   it('has correct initial state', () => {
-    global.fetch = vi.fn();
+    globalThis.fetch = vi.fn();
     const { result } = renderHook(() => useChatStream());
 
     expect(result.current.entitiesData).toBeNull();
@@ -121,7 +121,7 @@ describe('useChatStream', () => {
   });
 
   it('adds user message and empty assistant message on sendMessage', async () => {
-    global.fetch = mockFetchWithEvents([
+    globalThis.fetch = mockFetchWithEvents([
       { data: JSON.stringify({ thread_id: THREAD_ID }), event: 'thread_id' },
       {
         data: JSON.stringify({
@@ -150,7 +150,7 @@ describe('useChatStream', () => {
   });
 
   it('stores threadId from thread_id event', async () => {
-    global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
+    globalThis.fetch = mockFetchWithEvents(STANDARD_EVENTS);
 
     const { result } = renderHook(() => useChatStream());
 
@@ -164,7 +164,7 @@ describe('useChatStream', () => {
   });
 
   it('accumulates agent_talk chunks into assistant content', async () => {
-    global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
+    globalThis.fetch = mockFetchWithEvents(STANDARD_EVENTS);
 
     const { result } = renderHook(() => useChatStream());
 
@@ -180,7 +180,7 @@ describe('useChatStream', () => {
 
   it('tracks node_start as active pipeline step', async () => {
     // No agent_talk — steps persist until stream ends so waitFor can observe them
-    global.fetch = mockFetchWithEvents([
+    globalThis.fetch = mockFetchWithEvents([
       { data: JSON.stringify({ thread_id: THREAD_ID }), event: 'thread_id' },
       {
         data: JSON.stringify({
@@ -218,7 +218,7 @@ describe('useChatStream', () => {
 
   it('marks pipeline step completed on pipeline_state', async () => {
     // No agent_talk — steps persist until stream ends so waitFor can observe completed status
-    global.fetch = mockFetchWithEvents([
+    globalThis.fetch = mockFetchWithEvents([
       { data: JSON.stringify({ thread_id: THREAD_ID }), event: 'thread_id' },
       {
         data: JSON.stringify({
@@ -287,7 +287,7 @@ describe('useChatStream', () => {
         event: 'done',
       },
     ];
-    global.fetch = mockFetchWithEvents(events);
+    globalThis.fetch = mockFetchWithEvents(events);
 
     const { result } = renderHook(() => useChatStream());
 
@@ -304,7 +304,7 @@ describe('useChatStream', () => {
   });
 
   it('sets isStreaming to false on done event', async () => {
-    global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
+    globalThis.fetch = mockFetchWithEvents(STANDARD_EVENTS);
 
     const { result } = renderHook(() => useChatStream());
 
@@ -320,7 +320,7 @@ describe('useChatStream', () => {
   });
 
   it('sets error on fetch failure', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
       statusText: 'Internal Server Error',
@@ -339,7 +339,7 @@ describe('useChatStream', () => {
   });
 
   it('resets all state on clearChat', async () => {
-    global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
+    globalThis.fetch = mockFetchWithEvents(STANDARD_EVENTS);
 
     const { result } = renderHook(() => useChatStream());
 
@@ -390,7 +390,7 @@ describe('useChatStream', () => {
         event: 'done',
       },
     ];
-    global.fetch = mockFetchWithEvents(events);
+    globalThis.fetch = mockFetchWithEvents(events);
 
     const { result } = renderHook(() => useChatStream());
 
@@ -445,7 +445,7 @@ describe('useChatStream', () => {
         event: 'done',
       },
     ];
-    global.fetch = mockFetchWithEvents(events);
+    globalThis.fetch = mockFetchWithEvents(events);
 
     const { result } = renderHook(() => useChatStream());
 
@@ -480,7 +480,7 @@ describe('useChatStream', () => {
         event: 'done',
       },
     ];
-    global.fetch = mockFetchWithEvents(events);
+    globalThis.fetch = mockFetchWithEvents(events);
 
     const { result } = renderHook(() => useChatStream());
 
@@ -520,7 +520,7 @@ describe('useChatStream', () => {
         event: 'done',
       },
     ];
-    global.fetch = mockFetchWithEvents(events);
+    globalThis.fetch = mockFetchWithEvents(events);
 
     const { result } = renderHook(() => useChatStream());
 
@@ -538,7 +538,7 @@ describe('useChatStream', () => {
   });
 
   it('sends X-Session-Id header with chat stream requests', async () => {
-    global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
+    globalThis.fetch = mockFetchWithEvents(STANDARD_EVENTS);
 
     const { result } = renderHook(() => useChatStream());
 
@@ -550,7 +550,7 @@ describe('useChatStream', () => {
       expect(result.current.isStreaming).toBe(false);
     });
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(globalThis.fetch).toHaveBeenCalledWith(
       '/api/chat/stream',
       expect.objectContaining({
         headers: expect.objectContaining({
@@ -561,7 +561,7 @@ describe('useChatStream', () => {
   });
 
   it('calls onConversationChange after done event', async () => {
-    global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
+    globalThis.fetch = mockFetchWithEvents(STANDARD_EVENTS);
 
     const onConversationChange = vi.fn();
     const { result } = renderHook(() => useChatStream({ onConversationChange }));
@@ -578,7 +578,7 @@ describe('useChatStream', () => {
   });
 
   it('includes override fields in request body when provided', async () => {
-    global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
+    globalThis.fetch = mockFetchWithEvents(STANDARD_EVENTS);
 
     const overrides: TradeOverrides = { direction: 'exports', mode: 'goods', schema: 'hs12' };
     const { result } = renderHook(() => useChatStream());
@@ -591,7 +591,7 @@ describe('useChatStream', () => {
       expect(result.current.isStreaming).toBe(false);
     });
 
-    const fetchCall = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const fetchCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     const body = JSON.parse(fetchCall[1].body);
     expect(body.override_schema).toBe('hs12');
     expect(body.override_direction).toBe('exports');
@@ -599,7 +599,7 @@ describe('useChatStream', () => {
   });
 
   it('omits override fields when all null', async () => {
-    global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
+    globalThis.fetch = mockFetchWithEvents(STANDARD_EVENTS);
 
     const { result } = renderHook(() => useChatStream());
 
@@ -611,7 +611,7 @@ describe('useChatStream', () => {
       expect(result.current.isStreaming).toBe(false);
     });
 
-    const fetchCall = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const fetchCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     const body = JSON.parse(fetchCall[1].body);
     expect(body.override_schema).toBeUndefined();
     expect(body.override_direction).toBeUndefined();
@@ -621,7 +621,7 @@ describe('useChatStream', () => {
   it('loads thread history when URL has threadId and no messages', async () => {
     mockParams = { threadId: 'existing-thread' };
 
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () =>
         Promise.resolve({
           messages: [
@@ -645,7 +645,7 @@ describe('useChatStream', () => {
     expect(result.current.messages[1].content).toBe('The top exports include soybeans.');
     expect(result.current.threadId).toBe('existing-thread');
 
-    expect(global.fetch).toHaveBeenCalledWith(
+    expect(globalThis.fetch).toHaveBeenCalledWith(
       '/api/threads/existing-thread/messages',
       expect.objectContaining({
         headers: { 'X-Session-Id': 'test-session-id' },
@@ -656,7 +656,7 @@ describe('useChatStream', () => {
   it('calls onOverridesLoaded when loading thread history with overrides', async () => {
     mockParams = { threadId: 'thread-with-overrides' };
 
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () =>
         Promise.resolve({
           messages: [
@@ -689,7 +689,7 @@ describe('useChatStream', () => {
   it('handles legacy array response for backward compatibility', async () => {
     mockParams = { threadId: 'legacy-thread' };
 
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () =>
         Promise.resolve([
           { content: 'Old format question', role: 'human' },
@@ -708,7 +708,7 @@ describe('useChatStream', () => {
   });
 
   it('clearChat navigates to /chat', async () => {
-    global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
+    globalThis.fetch = mockFetchWithEvents(STANDARD_EVENTS);
 
     const { result } = renderHook(() => useChatStream());
 
@@ -756,7 +756,7 @@ describe('clearChat does not re-trigger history loading (race condition)', () =>
   it('clearChat keeps messages empty even when urlThreadId is still set', async () => {
     // Simulate being at /chat/:threadId
     mockParams = { threadId: HISTORY_THREAD };
-    global.fetch = mockHistoryFetch();
+    globalThis.fetch = mockHistoryFetch();
 
     const { result } = renderHook(() => useChatStream());
 
@@ -766,7 +766,7 @@ describe('clearChat does not re-trigger history loading (race condition)', () =>
     });
 
     // At this point, fetch was called once to load history
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
 
     // Clear chat — navigate is mocked so mockParams STILL has the old threadId.
     // This is the exact intermediate state that caused the bug: messages=[]
@@ -789,12 +789,12 @@ describe('clearChat does not re-trigger history loading (race condition)', () =>
 
     // fetch should still have been called only once (the initial history load),
     // NOT twice (which would mean the effect re-triggered after clearChat)
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 
   it('clearChat followed by URL change to /chat keeps messages empty', async () => {
     mockParams = { threadId: HISTORY_THREAD };
-    global.fetch = mockHistoryFetch();
+    globalThis.fetch = mockHistoryFetch();
 
     const { rerender, result } = renderHook(() => useChatStream());
 
@@ -819,12 +819,12 @@ describe('clearChat does not re-trigger history loading (race condition)', () =>
 
     // Messages must still be empty
     expect(result.current.messages).toEqual([]);
-    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
   });
 
   it('navigating to a different thread after clearChat loads new history', async () => {
     mockParams = { threadId: HISTORY_THREAD };
-    global.fetch = mockHistoryFetch();
+    globalThis.fetch = mockHistoryFetch();
 
     const { rerender, result } = renderHook(() => useChatStream());
 
@@ -851,7 +851,7 @@ describe('clearChat does not re-trigger history loading (race condition)', () =>
       ],
       overrides: { override_direction: null, override_mode: null, override_schema: null },
     };
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () => Promise.resolve(newHistory),
       ok: true,
     });
@@ -869,7 +869,7 @@ describe('clearChat does not re-trigger history loading (race condition)', () =>
 
   it('navigating back to the same thread after clearChat reloads its history', async () => {
     mockParams = { threadId: HISTORY_THREAD };
-    global.fetch = mockHistoryFetch();
+    globalThis.fetch = mockHistoryFetch();
 
     const { rerender, result } = renderHook(() => useChatStream());
 
@@ -889,7 +889,7 @@ describe('clearChat does not re-trigger history loading (race condition)', () =>
     rerender();
 
     // Navigate back to the SAME thread
-    global.fetch = mockHistoryFetch();
+    globalThis.fetch = mockHistoryFetch();
     mockParams = { threadId: HISTORY_THREAD };
     rerender();
 
@@ -904,14 +904,14 @@ describe('clearChat does not re-trigger history loading (race condition)', () =>
 
 describe('isRestoredThread flag', () => {
   it('is false initially', () => {
-    global.fetch = vi.fn();
+    globalThis.fetch = vi.fn();
     const { result } = renderHook(() => useChatStream());
     expect(result.current.isRestoredThread).toBe(false);
   });
 
   it('is true after loading thread history', async () => {
     mockParams = { threadId: 'restored-thread' };
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () =>
         Promise.resolve({
           messages: [
@@ -934,7 +934,7 @@ describe('isRestoredThread flag', () => {
 
   it('becomes false after sending a message in restored thread', async () => {
     mockParams = { threadId: 'restored-thread' };
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () =>
         Promise.resolve({
           messages: [
@@ -953,7 +953,7 @@ describe('isRestoredThread flag', () => {
     });
 
     // Now send a new message — switch fetch to SSE stream mode
-    global.fetch = mockFetchWithEvents(STANDARD_EVENTS);
+    globalThis.fetch = mockFetchWithEvents(STANDARD_EVENTS);
 
     act(() => {
       result.current.sendMessage('follow-up question');
@@ -964,7 +964,7 @@ describe('isRestoredThread flag', () => {
 
   it('becomes false after clearChat', async () => {
     mockParams = { threadId: 'restored-thread' };
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () =>
         Promise.resolve({
           messages: [{ content: 'Q', role: 'human' }],
@@ -991,7 +991,7 @@ describe('direct thread-to-thread navigation (no clearChat)', () => {
   it('switching from thread A to thread B loads thread B history', async () => {
     // Start on thread A
     mockParams = { threadId: 'thread-a' };
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () =>
         Promise.resolve({
           messages: [
@@ -1011,7 +1011,7 @@ describe('direct thread-to-thread navigation (no clearChat)', () => {
     });
 
     // Click thread B in sidebar — URL changes directly, no clearChat
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () =>
         Promise.resolve({
           messages: [
@@ -1036,7 +1036,7 @@ describe('direct thread-to-thread navigation (no clearChat)', () => {
 
   it('resets pipeline steps and entities when switching threads', async () => {
     mockParams = { threadId: 'thread-a' };
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () =>
         Promise.resolve({
           messages: [
@@ -1055,7 +1055,7 @@ describe('direct thread-to-thread navigation (no clearChat)', () => {
     });
 
     // Switch to thread B
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () =>
         Promise.resolve({
           messages: [{ content: 'B', role: 'human' }],
@@ -1112,7 +1112,7 @@ describe('history hydration from turn_summaries', () => {
 
   it('hydrates queryResults on assistant messages from turn_summaries', async () => {
     mockParams = { threadId: 'thread-with-summaries' };
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () => Promise.resolve(TURN_SUMMARIES_RESPONSE),
       ok: true,
     });
@@ -1135,7 +1135,7 @@ describe('history hydration from turn_summaries', () => {
 
   it('sets entitiesData from turn_summaries', async () => {
     mockParams = { threadId: 'thread-with-summaries-ent' };
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () => Promise.resolve(TURN_SUMMARIES_RESPONSE),
       ok: true,
     });
@@ -1153,7 +1153,7 @@ describe('history hydration from turn_summaries', () => {
 
   it('sets queryStats from turn_summaries', async () => {
     mockParams = { threadId: 'thread-with-summaries-stats' };
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () => Promise.resolve(TURN_SUMMARIES_RESPONSE),
       ok: true,
     });
@@ -1171,7 +1171,7 @@ describe('history hydration from turn_summaries', () => {
 
   it('backward compatible when turn_summaries is absent', async () => {
     mockParams = { threadId: 'thread-no-summaries' };
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       json: () =>
         Promise.resolve({
           messages: [

@@ -1122,7 +1122,7 @@ class TestTurnSummaryPersistence:
         ]
         instance = _build_pipeline_stub_instance(responses)
         thread_id = "ts-1"
-        result = await instance.aanswer_question("US exports?", thread_id=thread_id)
+        await instance.aanswer_question("US exports?", thread_id=thread_id)
 
         # Retrieve the checkpoint state
         config = {"configurable": {"thread_id": thread_id}}

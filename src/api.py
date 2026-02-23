@@ -11,7 +11,7 @@ from typing import AsyncGenerator
 
 from typing import Literal
 
-from fastapi import FastAPI, Header, Request, Response
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from langchain_core.messages import AIMessage, HumanMessage
@@ -24,7 +24,7 @@ from src.conversations import (
     PostgresConversationStore,
     derive_title,
 )
-from src.text_to_sql import AnswerResult, AtlasTextToSQL, _build_turn_summary
+from src.text_to_sql import AtlasTextToSQL, _build_turn_summary
 
 # ---------------------------------------------------------------------------
 # Logging setup — always show timestamps, level, and logger name

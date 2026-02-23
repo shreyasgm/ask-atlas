@@ -49,7 +49,7 @@ afterEach(() => {
 describe('useChatStream integration (async SSE)', () => {
   it('streaming text renders incrementally', async () => {
     const { close, pushEvent, stream } = createControllableStream();
-    global.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+    globalThis.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
 
     const { result } = renderHook(() => useChatStream());
 
@@ -86,7 +86,7 @@ describe('useChatStream integration (async SSE)', () => {
 
   it('thread_id event navigates mid-stream', async () => {
     const { close, pushEvent, stream } = createControllableStream();
-    global.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+    globalThis.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
 
     const { result } = renderHook(() => useChatStream());
 
@@ -115,7 +115,7 @@ describe('useChatStream integration (async SSE)', () => {
 
   it('pipeline steps appear while streaming', async () => {
     const { close, pushEvent, stream } = createControllableStream();
-    global.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+    globalThis.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
 
     const { result } = renderHook(() => useChatStream());
 
@@ -151,7 +151,7 @@ describe('useChatStream integration (async SSE)', () => {
 
   it('done event sets isStreaming false and marks message complete', async () => {
     const events = [makeThreadIdEvent(), makeAgentTalkEvent('response'), makeDoneEvent()];
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       body: makeAsyncSSEStream(events),
       ok: true,
     });
@@ -171,7 +171,7 @@ describe('useChatStream integration (async SSE)', () => {
   });
 
   it('non-200 response sets error', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
       statusText: 'Internal Server Error',
@@ -193,7 +193,7 @@ describe('useChatStream integration (async SSE)', () => {
     vi.useFakeTimers();
 
     // Fetch that never resolves but rejects on abort (like a real hanging server)
-    global.fetch = vi.fn().mockImplementation(
+    globalThis.fetch = vi.fn().mockImplementation(
       (_url: string, options?: RequestInit) =>
         new Promise<Response>((_resolve, reject) => {
           options?.signal?.addEventListener('abort', () => {
@@ -219,7 +219,7 @@ describe('useChatStream integration (async SSE)', () => {
 
   it('clearChat during streaming resets all state', async () => {
     const { close, pushEvent, stream } = createControllableStream();
-    global.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+    globalThis.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
 
     const { result } = renderHook(() => useChatStream());
 
@@ -251,7 +251,7 @@ describe('useChatStream integration (async SSE)', () => {
 
   it('handles SSE event split across chunk boundaries', async () => {
     const { close, pushRaw, stream } = createControllableStream();
-    global.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+    globalThis.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
 
     const { result } = renderHook(() => useChatStream());
 
@@ -289,7 +289,7 @@ describe('useChatStream integration (async SSE)', () => {
 
   it('parses CRLF line endings from sse_starlette', async () => {
     const { close, pushRaw, stream } = createControllableStream();
-    global.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+    globalThis.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
 
     const { result } = renderHook(() => useChatStream());
 
@@ -325,7 +325,7 @@ describe('useChatStream integration (async SSE)', () => {
 
   it('pipeline_state generate_sql populates queryResults with SQL', async () => {
     const { close, pushEvent, stream } = createControllableStream();
-    global.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+    globalThis.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
 
     const { result } = renderHook(() => useChatStream());
 
@@ -358,7 +358,7 @@ describe('useChatStream integration (async SSE)', () => {
 
   it('pipeline_state execute_sql updates last queryResult with data', async () => {
     const { close, pushEvent, stream } = createControllableStream();
-    global.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+    globalThis.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
 
     const { result } = renderHook(() => useChatStream());
 
@@ -406,7 +406,7 @@ describe('useChatStream integration (async SSE)', () => {
 
   it('accumulates content from multiple agent_talk events in a single chunk', async () => {
     const { close, pushRaw, stream } = createControllableStream();
-    global.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+    globalThis.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
 
     const { result } = renderHook(() => useChatStream());
 
@@ -444,7 +444,7 @@ describe('useChatStream integration (async SSE)', () => {
 
   it('auto-submit from ?q= works with StrictMode double-mount', async () => {
     const events = [makeThreadIdEvent(), makeAgentTalkEvent('auto-response'), makeDoneEvent()];
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       body: makeAsyncSSEStream(events),
       ok: true,
     });

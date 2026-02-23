@@ -61,7 +61,7 @@ describe('ChatPage integration (real hook + real components)', () => {
   it('full flow: submit → stream → display → suggestions', async () => {
     const user = userEvent.setup();
     const { close, pushEvent, stream } = createControllableStream();
-    global.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+    globalThis.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
 
     renderChat();
 
@@ -104,7 +104,7 @@ describe('ChatPage integration (real hook + real components)', () => {
 
   it('error flow: 500 response shows error and re-enables input', async () => {
     const user = userEvent.setup();
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
       statusText: 'Internal Server Error',
@@ -128,7 +128,7 @@ describe('ChatPage integration (real hook + real components)', () => {
 
     // First turn
     const stream1 = createControllableStream();
-    global.fetch = vi.fn().mockResolvedValue({ body: stream1.stream, ok: true });
+    globalThis.fetch = vi.fn().mockResolvedValue({ body: stream1.stream, ok: true });
 
     renderChat();
 
@@ -148,7 +148,7 @@ describe('ChatPage integration (real hook + real components)', () => {
 
     // Second turn — new stream
     const stream2 = createControllableStream();
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       body: stream2.stream,
       ok: true,
     });
@@ -159,7 +159,7 @@ describe('ChatPage integration (real hook + real components)', () => {
 
     // Verify second fetch includes thread_id
     const secondCallBody = JSON.parse(
-      (global.fetch as ReturnType<typeof vi.fn>).mock.calls[1][1].body as string,
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[1][1].body as string,
     );
     expect(secondCallBody.thread_id).toBe(THREAD_ID);
 
@@ -175,7 +175,7 @@ describe('ChatPage integration (real hook + real components)', () => {
   it('pipeline stepper shows active then completed steps', async () => {
     const user = userEvent.setup();
     const { close, pushEvent, stream } = createControllableStream();
-    global.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+    globalThis.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
 
     renderChat();
 
@@ -203,7 +203,7 @@ describe('ChatPage integration (real hook + real components)', () => {
   it('SQL block and result table appear from pipeline_state events', async () => {
     const user = userEvent.setup();
     const { close, pushEvent, stream } = createControllableStream();
-    global.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+    globalThis.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
 
     renderChat();
 
@@ -256,7 +256,7 @@ describe('ChatPage integration (real hook + real components)', () => {
   it('clear button resets messages', async () => {
     const user = userEvent.setup();
     const { close, pushEvent, stream } = createControllableStream();
-    global.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+    globalThis.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
 
     renderChat();
 

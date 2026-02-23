@@ -6,7 +6,6 @@ Run with:
         PYTHONPATH=$(pwd) uv run pytest src/tests/test_conversations_integration.py -v -m db
 """
 
-import asyncio
 import uuid
 
 import psycopg
