@@ -1,11 +1,11 @@
 -- Get the most recent year from the dataset
 WITH latest_year AS (
-    SELECT MAX(year) as max_year 
+    SELECT MAX(year) as max_year
     FROM hs92.country_product_year_4
 )
 
 -- Combine top 5 imports for both goods and services
-SELECT 
+SELECT
     category,
     code,
     name,
@@ -25,7 +25,7 @@ FROM (
 
 UNION ALL
 
-SELECT 
+SELECT
     category,
     code,
     name,

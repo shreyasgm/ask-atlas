@@ -78,7 +78,9 @@ async def process_question_ground_truth(
     """Process ground truth generation for a single question. Returns True on success."""
     try:
         queries_dir = EVALUATION_BASE_DIR / "questions" / question_id / "queries"
-        ground_truth_dir = EVALUATION_BASE_DIR / "results" / question_id / "ground_truth"
+        ground_truth_dir = (
+            EVALUATION_BASE_DIR / "results" / question_id / "ground_truth"
+        )
         ground_truth_dir.mkdir(parents=True, exist_ok=True)
 
         sql_files = sorted(queries_dir.glob("*.sql"))

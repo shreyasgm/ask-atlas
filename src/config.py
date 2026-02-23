@@ -17,7 +17,9 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 # Import non-secret defaults from model_config.py
 import importlib.util  # noqa: E402
 
-_spec = importlib.util.spec_from_file_location("model_config", BASE_DIR / "model_config.py")
+_spec = importlib.util.spec_from_file_location(
+    "model_config", BASE_DIR / "model_config.py"
+)
 _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)
 
@@ -74,12 +76,16 @@ class Settings(BaseSettings):
     )
     metadata_model: str = Field(
         _MODEL_DEFAULTS["metadata_model"],
-        validation_alias=AliasChoices("METADATA_MODEL", "METADATA_LLM", "metadata_model"),
+        validation_alias=AliasChoices(
+            "METADATA_MODEL", "METADATA_LLM", "metadata_model"
+        ),
         description="Model for metadata extraction",
     )
     metadata_model_provider: str = Field(
         _MODEL_DEFAULTS["metadata_model_provider"],
-        validation_alias=AliasChoices("METADATA_MODEL_PROVIDER", "metadata_model_provider"),
+        validation_alias=AliasChoices(
+            "METADATA_MODEL_PROVIDER", "metadata_model_provider"
+        ),
         description="Provider for the metadata model ('openai', 'anthropic', or 'google-genai')",
     )
 

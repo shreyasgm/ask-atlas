@@ -27,8 +27,8 @@ def log_and_cleanup_connections():
             with conn.cursor() as cursor:
                 # Get connection statistics
                 cursor.execute("""
-                    SELECT state, usename, COUNT(*) 
-                    FROM pg_stat_activity 
+                    SELECT state, usename, COUNT(*)
+                    FROM pg_stat_activity
                     WHERE usename != 'rdsadmin'
                     GROUP BY state, usename
                     ORDER BY usename, state;
@@ -42,8 +42,8 @@ def log_and_cleanup_connections():
 
                 # Get idle connections for cleanup
                 cursor.execute("""
-                    SELECT COUNT(*) 
-                    FROM pg_stat_activity 
+                    SELECT COUNT(*)
+                    FROM pg_stat_activity
                     WHERE state IN ('idle', 'idle in transaction', 'idle in transaction (aborted)')
                     AND usename IN ('readonly', 'postgres')
                     AND pid != pg_backend_pid();
@@ -52,8 +52,8 @@ def log_and_cleanup_connections():
 
                 # Terminate idle connections
                 cursor.execute("""
-                    SELECT pg_terminate_backend(pid) 
-                    FROM pg_stat_activity 
+                    SELECT pg_terminate_backend(pid)
+                    FROM pg_stat_activity
                     WHERE state IN ('idle', 'idle in transaction', 'idle in transaction (aborted)')
                     AND usename IN ('readonly', 'postgres')
                     AND pid != pg_backend_pid();

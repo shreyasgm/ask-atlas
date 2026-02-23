@@ -217,16 +217,16 @@ class StreamData:
 
     source: str  # 'agent' or 'tool'
     content: str
-    message_type: str  # 'tool_call', 'tool_output', 'agent_talk', 'node_start', 'pipeline_state'
+    message_type: (
+        str  # 'tool_call', 'tool_output', 'agent_talk', 'node_start', 'pipeline_state'
+    )
     name: Optional[str] = None  # name of the message if applicable
     tool_call: Optional[str] = None  # Tool call name if applicable
     message_id: Optional[str] = None  # ID of the original message for tracking
     payload: Optional[Dict] = None  # Structured data for new event types
 
 
-def _build_turn_summary(
-    queries: list[dict], resolved_products: dict | None
-) -> dict:
+def _build_turn_summary(queries: list[dict], resolved_products: dict | None) -> dict:
     """Build a turn summary dict from pipeline results.
 
     Args:
@@ -426,7 +426,10 @@ class AtlasTextToSQL:
         db_uri: str | None = None,
         table_descriptions_json: str | Path = BASE_DIR / "db_table_descriptions.json",
         table_structure_json: str | Path = BASE_DIR / "db_table_structure.json",
-        queries_json: str | Path = BASE_DIR / "src" / "example_queries" / "queries.json",
+        queries_json: str | Path = BASE_DIR
+        / "src"
+        / "example_queries"
+        / "queries.json",
         example_queries_dir: str | Path = BASE_DIR / "src" / "example_queries",
         max_results: int | None = None,
         max_queries: int | None = None,
@@ -450,8 +453,14 @@ class AtlasTextToSQL:
 
         _settings = get_settings()
         db_uri = db_uri or _settings.atlas_db_url
-        max_results = max_results if max_results is not None else _settings.max_results_per_query
-        max_queries = max_queries if max_queries is not None else _settings.max_queries_per_question
+        max_results = (
+            max_results if max_results is not None else _settings.max_results_per_query
+        )
+        max_queries = (
+            max_queries
+            if max_queries is not None
+            else _settings.max_queries_per_question
+        )
 
         # Sync engine: used for SQLDatabaseWithSchemas (metadata reflection)
         # and get_table_info_node (still sync, wrapped in asyncio.to_thread)
@@ -483,7 +492,9 @@ class AtlasTextToSQL:
         instance.db = SQLDatabaseWithSchemas(engine=instance.engine)
         instance.table_descriptions = cls._load_json_as_dict(table_descriptions_json)
         instance.table_structure = cls._load_json_as_dict(table_structure_json)
-        instance.example_queries = load_example_queries(queries_json, example_queries_dir)
+        instance.example_queries = load_example_queries(
+            queries_json, example_queries_dir
+        )
         instance.metadata_llm = create_llm(
             _settings.metadata_model, _settings.metadata_model_provider, temperature=0
         )
@@ -532,9 +543,7 @@ class AtlasTextToSQL:
         Returns:
             AnswerResult with the answer text and pipeline data.
         """
-        config = {
-            "configurable": {"thread_id": thread_id or str(uuid.uuid4())}
-        }
+        config = {"configurable": {"thread_id": thread_id or str(uuid.uuid4())}}
         turn_input = self._turn_input(
             question,
             override_schema=override_schema,
@@ -558,15 +567,17 @@ class AtlasTextToSQL:
             current_queries_executed = step.get("queries_executed", 0)
             if current_queries_executed > prev_queries_executed:
                 sql = step.get("pipeline_sql", "")
-                queries.append({
-                    "sql": sql,
-                    "columns": step.get("pipeline_result_columns", []),
-                    "rows": _json_safe_deep(step.get("pipeline_result_rows", [])),
-                    "row_count": len(step.get("pipeline_result_rows", [])),
-                    "execution_time_ms": step.get("pipeline_execution_time_ms", 0),
-                    "tables": _extract_tables_from_sql(sql),
-                    "schema_name": None,
-                })
+                queries.append(
+                    {
+                        "sql": sql,
+                        "columns": step.get("pipeline_result_columns", []),
+                        "rows": _json_safe_deep(step.get("pipeline_result_rows", [])),
+                        "row_count": len(step.get("pipeline_result_rows", [])),
+                        "execution_time_ms": step.get("pipeline_execution_time_ms", 0),
+                        "tables": _extract_tables_from_sql(sql),
+                        "schema_name": None,
+                    }
+                )
                 # Set schema_name from pipeline_products if available
                 products = step.get("pipeline_products")
                 if products and products.classification_schemas:
@@ -582,7 +593,11 @@ class AtlasTextToSQL:
             resolved_products = {
                 "schemas": schemas_used,
                 "products": [
-                    {"name": p.name, "codes": p.codes, "schema": p.classification_schema}
+                    {
+                        "name": p.name,
+                        "codes": p.codes,
+                        "schema": p.classification_schema,
+                    }
                     for p in (pipeline_products.products or [])
                 ],
             }
@@ -856,9 +871,7 @@ class AtlasTextToSQL:
         Yields:
             StreamData objects for each piece of streamed content.
         """
-        config = {
-            "configurable": {"thread_id": thread_id or str(uuid.uuid4())}
-        }
+        config = {"configurable": {"thread_id": thread_id or str(uuid.uuid4())}}
         async for _stream_mode, stream_data in self.astream_agent_response(
             question,
             config,
@@ -874,11 +887,15 @@ if __name__ == "__main__":
 
     async def main():
         async with await AtlasTextToSQL.create_async() as atlas_sql:
-            question = "What were the top 5 products exported by the US to China in 2020?"
+            question = (
+                "What were the top 5 products exported by the US to China in 2020?"
+            )
             config = {"configurable": {"thread_id": "debug_thread"}}
             async for stream_mode, stream_data in atlas_sql.astream_agent_response(
                 question, config
             ):
-                print(f"[{stream_mode}] {stream_data.source}: {stream_data.content[:80]}")
+                print(
+                    f"[{stream_mode}] {stream_data.source}: {stream_data.content[:80]}"
+                )
 
     asyncio.run(main())

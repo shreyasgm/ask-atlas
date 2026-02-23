@@ -93,7 +93,13 @@ async def test_stream_contract(atlas_sql):
     assert len(items) > 0
 
     valid_sources = {"agent", "tool", "pipeline"}
-    valid_types = {"agent_talk", "tool_output", "tool_call", "node_start", "pipeline_state"}
+    valid_types = {
+        "agent_talk",
+        "tool_output",
+        "tool_call",
+        "node_start",
+        "pipeline_state",
+    }
 
     for item in items:
         assert isinstance(item, StreamData)
@@ -117,5 +123,3 @@ def test_json_loading(base_dir):
     result = AtlasTextToSQL._load_json_as_dict(test_file)
     assert isinstance(result, dict)
     assert len(result) > 0
-
-

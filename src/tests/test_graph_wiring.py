@@ -16,7 +16,6 @@ from src.generate_query import QueryToolInput, max_queries_exceeded_node
 from src.state import AtlasAgentState
 from src.tests.fake_model import FakeToolCallingModel
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -197,23 +196,17 @@ class TestGraphRouting:
                 # Round 1: tool call
                 AIMessage(
                     content="",
-                    tool_calls=[
-                        _tool_call("query_tool", "question 1", "call-1")
-                    ],
+                    tool_calls=[_tool_call("query_tool", "question 1", "call-1")],
                 ),
                 # Round 2: another tool call
                 AIMessage(
                     content="",
-                    tool_calls=[
-                        _tool_call("query_tool", "question 2", "call-2")
-                    ],
+                    tool_calls=[_tool_call("query_tool", "question 2", "call-2")],
                 ),
                 # Round 3: another tool call (should be blocked by max_queries)
                 AIMessage(
                     content="",
-                    tool_calls=[
-                        _tool_call("query_tool", "question 3", "call-3")
-                    ],
+                    tool_calls=[_tool_call("query_tool", "question 3", "call-3")],
                 ),
                 # Round 3 continued: agent sees the error and gives final answer
                 AIMessage(content="I have exceeded the query limit."),
@@ -343,9 +336,7 @@ class TestGraphRouting:
             responses=[
                 AIMessage(
                     content="",
-                    tool_calls=[
-                        _tool_call("query_tool", "bad query", "call-err")
-                    ],
+                    tool_calls=[_tool_call("query_tool", "bad query", "call-err")],
                 ),
                 AIMessage(
                     content="Sorry, the query failed. Let me try again differently."
@@ -383,15 +374,11 @@ class TestMultiplePipelineRounds:
             responses=[
                 AIMessage(
                     content="",
-                    tool_calls=[
-                        _tool_call("query_tool", "round 1", "call-r1")
-                    ],
+                    tool_calls=[_tool_call("query_tool", "round 1", "call-r1")],
                 ),
                 AIMessage(
                     content="",
-                    tool_calls=[
-                        _tool_call("query_tool", "round 2", "call-r2")
-                    ],
+                    tool_calls=[_tool_call("query_tool", "round 2", "call-r2")],
                 ),
                 AIMessage(content="Done with both queries."),
             ]

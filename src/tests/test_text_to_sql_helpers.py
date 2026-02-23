@@ -11,7 +11,6 @@ from src.text_to_sql import (
     _extract_tables_from_sql,
 )
 
-
 # ---------------------------------------------------------------------------
 # _extract_tables_from_sql — SQL parsing for table names
 # ---------------------------------------------------------------------------

@@ -103,9 +103,7 @@ class TestAsyncCheckpointerManager:
         """Bad Postgres URL -> catches exception, falls back to MemorySaver."""
         with patch("src.persistence.get_settings") as mock_settings:
             mock_settings.return_value = MagicMock(checkpoint_db_url=None)
-            manager = AsyncCheckpointerManager(
-                db_url="postgresql://bad-host:5432/nope"
-            )
+            manager = AsyncCheckpointerManager(db_url="postgresql://bad-host:5432/nope")
             cp = await manager.get_checkpointer()
             assert isinstance(cp, MemorySaver)
 

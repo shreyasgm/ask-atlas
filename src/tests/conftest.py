@@ -9,6 +9,7 @@ import pytest
 BASE_DIR = Path(__file__).resolve().parents[2]
 load_dotenv(BASE_DIR / ".env")
 
+
 def pytest_configure(config):
     config.addinivalue_line(
         "markers",
@@ -27,19 +28,20 @@ def pytest_configure(config):
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.StreamHandler()  # This prints to stdout
-        ],
+        handlers=[logging.StreamHandler()],  # This prints to stdout
     )
+
 
 @pytest.fixture(scope="session")
 def base_dir():
     return BASE_DIR
 
+
 @pytest.fixture(autouse=True)
 def _clear_caches():
     """Reset all in-process caches between tests for isolation."""
     from src.cache import registry
+
     registry.clear_all()
 
 
@@ -48,10 +50,12 @@ def logger():
     """Fixture to provide a logger instance to tests."""
     return logging.getLogger("test_logger")
 
+
 @pytest.fixture
 def db_available():
     """Skip test if database is not available."""
     from src.config import get_settings
+
     settings = get_settings()
     if not settings.atlas_db_url:
         pytest.skip("ATLAS_DB_URL not configured in settings")

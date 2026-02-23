@@ -19,7 +19,6 @@ from src.text_to_sql import AnswerResult, AtlasTextToSQL, StreamData
 from src.tests.fake_model import FakeToolCallingModel
 from src.product_and_schema_lookup import SchemasAndProductsFound, ProductDetails
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -371,16 +370,14 @@ class TestAStreamAgentResponse:
         config = {"configurable": {"thread_id": "stream-both"}}
 
         sources = set()
-        async for _mode, data in instance.astream_agent_response(
-            "trade data?", config
-        ):
+        async for _mode, data in instance.astream_agent_response("trade data?", config):
             sources.add(data.source)
 
-        assert "agent" in sources, (
-            "Expected 'agent' source in stream but got: " + str(sources)
+        assert "agent" in sources, "Expected 'agent' source in stream but got: " + str(
+            sources
         )
-        assert "tool" in sources, (
-            "Expected 'tool' source in stream but got: " + str(sources)
+        assert "tool" in sources, "Expected 'tool' source in stream but got: " + str(
+            sources
         )
 
 
@@ -434,11 +431,11 @@ class TestAAnswerQuestionStream:
         ):
             sources.add(data.source)
 
-        assert "agent" in sources, (
-            "Expected 'agent' source in stream but got: " + str(sources)
+        assert "agent" in sources, "Expected 'agent' source in stream but got: " + str(
+            sources
         )
-        assert "tool" in sources, (
-            "Expected 'tool' source in stream but got: " + str(sources)
+        assert "tool" in sources, "Expected 'tool' source in stream but got: " + str(
+            sources
         )
 
     async def test_message_types_present(self):
@@ -459,12 +456,12 @@ class TestAAnswerQuestionStream:
         ):
             message_types.add(data.message_type)
 
-        assert "agent_talk" in message_types, (
-            "Expected 'agent_talk' message_type but got: " + str(message_types)
-        )
-        assert "tool_output" in message_types, (
-            "Expected 'tool_output' message_type but got: " + str(message_types)
-        )
+        assert (
+            "agent_talk" in message_types
+        ), "Expected 'agent_talk' message_type but got: " + str(message_types)
+        assert (
+            "tool_output" in message_types
+        ), "Expected 'tool_output' message_type but got: " + str(message_types)
 
 
 # ---------------------------------------------------------------------------
@@ -570,12 +567,12 @@ class TestCreateAsync:
             )
 
             # Behavioral assertions: the factory produced a complete instance
-            assert hasattr(instance, "_async_checkpointer_manager"), (
-                "create_async must set _async_checkpointer_manager on the instance"
-            )
-            assert hasattr(instance, "agent"), (
-                "create_async must set agent on the instance"
-            )
+            assert hasattr(
+                instance, "_async_checkpointer_manager"
+            ), "create_async must set _async_checkpointer_manager on the instance"
+            assert hasattr(
+                instance, "agent"
+            ), "create_async must set agent on the instance"
 
 
 # ---------------------------------------------------------------------------
@@ -678,7 +675,9 @@ def _build_pipeline_stub_instance(
             "pipeline_products": SchemasAndProductsFound(
                 classification_schemas=["hs92"],
                 products=[
-                    ProductDetails(name="coffee", classification_schema="hs92", codes=["0901"])
+                    ProductDetails(
+                        name="coffee", classification_schema="hs92", codes=["0901"]
+                    )
                 ],
                 requires_product_lookup=True,
             )
@@ -871,10 +870,16 @@ class TestNodeStartEvents:
             if data.message_type == "node_start":
                 node_starts.append(data)
 
-        q1_indices = {ns.payload["query_index"] for ns in node_starts
-                      if ns.payload["query_index"] == 1}
-        q2_indices = {ns.payload["query_index"] for ns in node_starts
-                      if ns.payload["query_index"] == 2}
+        q1_indices = {
+            ns.payload["query_index"]
+            for ns in node_starts
+            if ns.payload["query_index"] == 1
+        }
+        q2_indices = {
+            ns.payload["query_index"]
+            for ns in node_starts
+            if ns.payload["query_index"] == 2
+        }
         assert len(q1_indices) == 1, "Expected query_index=1 in first pipeline cycle"
         assert len(q2_indices) == 1, "Expected query_index=2 in second pipeline cycle"
 
@@ -922,8 +927,10 @@ class TestPipelineStateEvents:
 
         extract_products_states = []
         async for _mode, data in instance.astream_agent_response("coffee?", config):
-            if (data.message_type == "pipeline_state"
-                    and data.payload.get("stage") == "extract_products"):
+            if (
+                data.message_type == "pipeline_state"
+                and data.payload.get("stage") == "extract_products"
+            ):
                 extract_products_states.append(data)
 
         assert len(extract_products_states) == 1
@@ -945,8 +952,10 @@ class TestPipelineStateEvents:
 
         execute_sql_states = []
         async for _mode, data in instance.astream_agent_response("data?", config):
-            if (data.message_type == "pipeline_state"
-                    and data.payload.get("stage") == "execute_sql"):
+            if (
+                data.message_type == "pipeline_state"
+                and data.payload.get("stage") == "execute_sql"
+            ):
                 execute_sql_states.append(data)
 
         assert len(execute_sql_states) == 1
@@ -1026,12 +1035,12 @@ class TestBackwardCompatibility:
         async for _mode, data in instance.astream_agent_response("exports?", config):
             message_types.add(data.message_type)
 
-        assert "agent_talk" in message_types, (
-            "Expected 'agent_talk' in stream but got: " + str(message_types)
-        )
-        assert "tool_output" in message_types, (
-            "Expected 'tool_output' in stream but got: " + str(message_types)
-        )
+        assert (
+            "agent_talk" in message_types
+        ), "Expected 'agent_talk' in stream but got: " + str(message_types)
+        assert (
+            "tool_output" in message_types
+        ), "Expected 'tool_output' in stream but got: " + str(message_types)
 
 
 # ---------------------------------------------------------------------------
@@ -1060,9 +1069,9 @@ class TestNoDuplicateAgentTalk:
 
         combined = "".join(d.content for d in agent_talks)
         # Content must appear exactly once, not doubled
-        assert combined.count("Hello world!") == 1, (
-            f"Expected 'Hello world!' exactly once but got: {combined!r}"
-        )
+        assert (
+            combined.count("Hello world!") == 1
+        ), f"Expected 'Hello world!' exactly once but got: {combined!r}"
 
     async def test_post_tool_answer_not_doubled(self):
         """After a tool call round-trip, the final answer should not be doubled."""
@@ -1082,9 +1091,9 @@ class TestNoDuplicateAgentTalk:
                 agent_talks.append(data)
 
         combined = "".join(d.content for d in agent_talks)
-        assert combined.count("Here are the results.") == 1, (
-            f"Expected answer exactly once but got: {combined!r}"
-        )
+        assert (
+            combined.count("Here are the results.") == 1
+        ), f"Expected answer exactly once but got: {combined!r}"
 
     async def test_aanswer_question_stream_not_doubled(self):
         """High-level streaming API should also not duplicate agent_talk."""
@@ -1097,9 +1106,9 @@ class TestNoDuplicateAgentTalk:
                 agent_talks.append(data)
 
         combined = "".join(d.content for d in agent_talks)
-        assert combined.count("No duplication please.") == 1, (
-            f"Expected content exactly once but got: {combined!r}"
-        )
+        assert (
+            combined.count("No duplication please.") == 1
+        ), f"Expected content exactly once but got: {combined!r}"
 
 
 # ---------------------------------------------------------------------------

@@ -165,7 +165,9 @@ class AsyncCheckpointerManager:
             try:
                 await self._async_conn.__aexit__(None, None, None)
             except Exception:
-                logger.warning("Error closing AsyncPostgresSaver connection", exc_info=True)
+                logger.warning(
+                    "Error closing AsyncPostgresSaver connection", exc_info=True
+                )
             finally:
                 self._async_conn = None
                 self._checkpointer = None

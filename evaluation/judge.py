@@ -110,12 +110,8 @@ class RefusalVerdict(BaseModel):
     appropriate_refusal: bool = Field(
         ..., description="Did the agent appropriately refuse or flag the limitation?"
     )
-    graceful: bool = Field(
-        ..., description="Was the response polite and informative?"
-    )
-    score: int = Field(
-        ..., ge=1, le=5, description="Overall appropriateness score 1-5"
-    )
+    graceful: bool = Field(..., description="Was the response polite and informative?")
+    score: int = Field(..., ge=1, le=5, description="Overall appropriateness score 1-5")
     reasoning: str = Field(..., description="Justification")
 
     @property

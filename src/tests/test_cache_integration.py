@@ -14,7 +14,6 @@ from src.cache import (
     cached_text_search,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -143,7 +142,9 @@ class TestTableInfoCaching:
         mock_db = MagicMock()
         mock_db.get_table_info.return_value = "CREATE TABLE ..."
         table_descriptions = {
-            "hs92": [{"table_name": "country_year", "context_str": "Trade by country-year"}],
+            "hs92": [
+                {"table_name": "country_year", "context_str": "Trade by country-year"}
+            ],
         }
 
         r1 = get_table_info_for_schemas(mock_db, table_descriptions, ["hs92"])

@@ -12,7 +12,6 @@ from src.conversations import (
     derive_title,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -87,7 +86,9 @@ class TestInMemoryConversationStore:
         assert row.title == "My title"
 
     @pytest.mark.asyncio
-    async def test_create_sets_timestamps(self, store: InMemoryConversationStore) -> None:
+    async def test_create_sets_timestamps(
+        self, store: InMemoryConversationStore
+    ) -> None:
         row = await store.create("t1", "s1", "title")
         assert row.created_at is not None
         assert row.updated_at is not None
@@ -101,7 +102,9 @@ class TestInMemoryConversationStore:
         assert row.id == "t1"
 
     @pytest.mark.asyncio
-    async def test_get_nonexistent_returns_none(self, store: InMemoryConversationStore) -> None:
+    async def test_get_nonexistent_returns_none(
+        self, store: InMemoryConversationStore
+    ) -> None:
         row = await store.get("nope")
         assert row is None
 
@@ -128,7 +131,9 @@ class TestInMemoryConversationStore:
         assert rows[1].id == "t2"
 
     @pytest.mark.asyncio
-    async def test_list_by_session_empty(self, store: InMemoryConversationStore) -> None:
+    async def test_list_by_session_empty(
+        self, store: InMemoryConversationStore
+    ) -> None:
         rows = await store.list_by_session("no-session")
         assert rows == []
 
@@ -140,7 +145,9 @@ class TestInMemoryConversationStore:
         assert row is None
 
     @pytest.mark.asyncio
-    async def test_delete_nonexistent_is_noop(self, store: InMemoryConversationStore) -> None:
+    async def test_delete_nonexistent_is_noop(
+        self, store: InMemoryConversationStore
+    ) -> None:
         # Should not raise
         await store.delete("nonexistent")
 

@@ -28,9 +28,9 @@ class TestRetryBehavior:
     def test_retries_on_operational_error(self):
         """Transient OperationalError is retried; succeeds on final attempt."""
         fn = MagicMock(
-            side_effect=[
-                OperationalError("conn lost", params=None, orig=Exception())
-            ] * (MAX_ATTEMPTS - 1) + ["recovered"]
+            side_effect=[OperationalError("conn lost", params=None, orig=Exception())]
+            * (MAX_ATTEMPTS - 1)
+            + ["recovered"]
         )
         result = execute_with_retry(fn, "q")
         assert result == "recovered"

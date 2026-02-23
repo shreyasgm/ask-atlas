@@ -9,7 +9,6 @@ from src.cache import (
     text_search_key,
 )
 
-
 # --- Key normalization: equivalent queries must share cache entries ---
 
 

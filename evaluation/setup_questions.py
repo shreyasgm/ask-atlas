@@ -26,15 +26,20 @@ from src.config import get_settings
 # Load settings
 settings = get_settings()
 
+
 class SQLQuery(BaseModel):
     query: str
+
 
 class SQLResponse(BaseModel):
     plan: Optional[str] = None
     queries: List[SQLQuery]
 
+
 @backoff.on_exception(backoff.expo, openai.RateLimitError)
-async def call_openai_api(user_question: str, db_descriptions_text: str, db_structure_text: str) -> dict:
+async def call_openai_api(
+    user_question: str, db_descriptions_text: str, db_structure_text: str
+) -> dict:
     """Calls OpenAI API to generate initial SQL queries."""
     client = openai.AsyncOpenAI()
     try:
@@ -47,7 +52,7 @@ async def call_openai_api(user_question: str, db_descriptions_text: str, db_stru
             + f"\n\nDatabase Table Descriptions:\n{db_descriptions_text}\n\n"
             + f"Database Schema Structure:\n{db_structure_text}"
         )
-        
+
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": f"Generate SQL queries for: {user_question}"},
@@ -69,12 +74,17 @@ async def call_openai_api(user_question: str, db_descriptions_text: str, db_stru
         logging.error(f"Error during OpenAI API call: {str(e)}")
         raise
 
-async def setup_question(question: dict, categories: dict, db_descriptions_text: str, db_structure_text: str) -> None:
+
+async def setup_question(
+    question: dict, categories: dict, db_descriptions_text: str, db_structure_text: str
+) -> None:
     """Sets up initial structure and files for a single question."""
     try:
-        question_id = str(question['id'])  # Use existing ID from JSON, convert to string
+        question_id = str(
+            question["id"]
+        )  # Use existing ID from JSON, convert to string
         logging.info(f"Setting up question {question_id}: {question['text']}")
-        
+
         # Create directory structure
         dirs = setup_directories(question_id)
 
@@ -83,14 +93,16 @@ async def setup_question(question: dict, categories: dict, db_descriptions_text:
             "question_id": question_id,
             "user_question": question["text"],
             "category": categories[question["category_id"]]["name"],
-            "difficulty": question["difficulty"]
+            "difficulty": question["difficulty"],
         }
         save_json_file(dirs["question_dir"] / "question.json", question_json)
 
         # Check if SQL files already exist
         existing_sql_files = list(dirs["queries_dir"].glob("*.sql"))
         if existing_sql_files:
-            logging.info(f"SQL queries already exist for question {question_id}, skipping generation")
+            logging.info(
+                f"SQL queries already exist for question {question_id}, skipping generation"
+            )
             return
 
         # Generate initial SQL queries only if no existing files
@@ -111,10 +123,11 @@ async def setup_question(question: dict, categories: dict, db_descriptions_text:
             query_filepath.write_text(query_obj["query"], encoding="utf-8")
 
         logging.info(f"Completed setup for question {question_id}")
-        
+
     except Exception as e:
         logging.error(f"Error setting up question {question_id}: {str(e)}")
         raise
+
 
 async def main():
     logging.info("Starting evaluation setup...")
@@ -127,10 +140,10 @@ async def main():
 
     # Load questions and categories from eval_questions.json
     eval_data = load_json_file(BASE_DIR / "evaluation/eval_questions.json")
-    
+
     # Create a dictionary of categories for easy lookup
     categories = {cat["id"]: cat for cat in eval_data["categories"]}
-    
+
     # Process each question
     tasks = [
         setup_question(question, categories, db_descriptions_text, db_structure_text)
@@ -140,5 +153,6 @@ async def main():
 
     logging.info("Evaluation setup complete.")
 
+
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())

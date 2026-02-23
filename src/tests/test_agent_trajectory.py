@@ -11,7 +11,6 @@ from src.generate_query import QueryToolInput
 from src.state import AtlasAgentState
 from src.tests.fake_model import FakeToolCallingModel
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

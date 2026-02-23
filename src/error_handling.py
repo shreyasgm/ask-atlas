@@ -16,9 +16,7 @@ logger = logging.getLogger(__name__)
 class QueryExecutionError(Exception):
     """Custom exception for query execution failures."""
 
-    def __init__(
-        self, message: str, sql: str = None, original_error: Exception = None
-    ):
+    def __init__(self, message: str, sql: str = None, original_error: Exception = None):
         self.sql = sql
         self.original_error = original_error
         super().__init__(message)
@@ -106,4 +104,3 @@ async def async_execute_with_retry(execute_fn, *args, **kwargs):
         raise QueryExecutionError(
             f"Failed to execute query: {str(e)}", original_error=e
         )
-

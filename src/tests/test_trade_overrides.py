@@ -27,7 +27,6 @@ from src.product_and_schema_lookup import (
     SchemasAndProductsFound,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -138,15 +137,23 @@ class TestExtractProductsNodeOverrides:
         canned = SchemasAndProductsFound(
             classification_schemas=["hs92"],
             products=[
-                ProductDetails(name="cotton", classification_schema="hs92", codes=["5201"]),
-                ProductDetails(name="wheat", classification_schema="hs92", codes=["1001"]),
+                ProductDetails(
+                    name="cotton", classification_schema="hs92", codes=["5201"]
+                ),
+                ProductDetails(
+                    name="wheat", classification_schema="hs92", codes=["1001"]
+                ),
             ],
             requires_product_lookup=True,
         )
 
         with self._mock_extraction(canned):
-            state = _base_state(pipeline_question="US cotton and wheat exports?", override_schema="hs12")
-            result = await extract_products_node(state, llm=MagicMock(), engine=MagicMock())
+            state = _base_state(
+                pipeline_question="US cotton and wheat exports?", override_schema="hs12"
+            )
+            result = await extract_products_node(
+                state, llm=MagicMock(), engine=MagicMock()
+            )
 
         products = result["pipeline_products"]
         assert products.classification_schemas == ["hs12"]
@@ -164,8 +171,12 @@ class TestExtractProductsNodeOverrides:
         )
 
         with self._mock_extraction(canned):
-            state = _base_state(pipeline_question="Trade between US and China?", override_mode="goods")
-            result = await extract_products_node(state, llm=MagicMock(), engine=MagicMock())
+            state = _base_state(
+                pipeline_question="Trade between US and China?", override_mode="goods"
+            )
+            result = await extract_products_node(
+                state, llm=MagicMock(), engine=MagicMock()
+            )
 
         schemas = result["pipeline_products"].classification_schemas
         assert schemas == ["hs92"]
@@ -182,7 +193,9 @@ class TestExtractProductsNodeOverrides:
 
         with self._mock_extraction(canned):
             state = _base_state(pipeline_question="Trade data?", override_mode="goods")
-            result = await extract_products_node(state, llm=MagicMock(), engine=MagicMock())
+            result = await extract_products_node(
+                state, llm=MagicMock(), engine=MagicMock()
+            )
 
         assert result["pipeline_products"].classification_schemas == ["hs92"]
 
@@ -196,8 +209,12 @@ class TestExtractProductsNodeOverrides:
         )
 
         with self._mock_extraction(canned):
-            state = _base_state(pipeline_question="Services trade?", override_mode="services")
-            result = await extract_products_node(state, llm=MagicMock(), engine=MagicMock())
+            state = _base_state(
+                pipeline_question="Services trade?", override_mode="services"
+            )
+            result = await extract_products_node(
+                state, llm=MagicMock(), engine=MagicMock()
+            )
 
         schemas = result["pipeline_products"].classification_schemas
         assert schemas == ["services_bilateral"]
@@ -213,10 +230,16 @@ class TestExtractProductsNodeOverrides:
         )
 
         with self._mock_extraction(canned):
-            state = _base_state(pipeline_question="Services trade?", override_mode="services")
-            result = await extract_products_node(state, llm=MagicMock(), engine=MagicMock())
+            state = _base_state(
+                pipeline_question="Services trade?", override_mode="services"
+            )
+            result = await extract_products_node(
+                state, llm=MagicMock(), engine=MagicMock()
+            )
 
-        assert result["pipeline_products"].classification_schemas == ["services_unilateral"]
+        assert result["pipeline_products"].classification_schemas == [
+            "services_unilateral"
+        ]
 
     async def test_schema_override_takes_precedence_over_mode(self):
         """When both schema and mode are set, schema wins — because a
@@ -233,7 +256,9 @@ class TestExtractProductsNodeOverrides:
                 override_schema="sitc",
                 override_mode="services",
             )
-            result = await extract_products_node(state, llm=MagicMock(), engine=MagicMock())
+            result = await extract_products_node(
+                state, llm=MagicMock(), engine=MagicMock()
+            )
 
         assert result["pipeline_products"].classification_schemas == ["sitc"]
 
@@ -242,14 +267,18 @@ class TestExtractProductsNodeOverrides:
         canned = SchemasAndProductsFound(
             classification_schemas=["hs92", "services_bilateral"],
             products=[
-                ProductDetails(name="coffee", classification_schema="hs92", codes=["0901"]),
+                ProductDetails(
+                    name="coffee", classification_schema="hs92", codes=["0901"]
+                ),
             ],
             requires_product_lookup=True,
         )
 
         with self._mock_extraction(canned):
             state = _base_state(pipeline_question="Coffee trade?")
-            result = await extract_products_node(state, llm=MagicMock(), engine=MagicMock())
+            result = await extract_products_node(
+                state, llm=MagicMock(), engine=MagicMock()
+            )
 
         products = result["pipeline_products"]
         assert products.classification_schemas == ["hs92", "services_bilateral"]
@@ -287,7 +316,10 @@ class TestQueryGenerationChainConstraints:
         """Without constraints, the prompt should not contain override paragraphs."""
         prompt = self._render_prompt()
         assert "User override" not in prompt
-        assert "trade direction" not in prompt.lower().split("user override")[-1:].__repr__()
+        assert (
+            "trade direction"
+            not in prompt.lower().split("user override")[-1:].__repr__()
+        )
 
     def test_direction_constraint_appears_in_prompt(self):
         """direction_constraint='imports' should inject an imports-specific
@@ -349,7 +381,9 @@ class TestGenerateSqlNodeOverrides:
                 pipeline_table_info="table info",
                 override_direction="imports",
             )
-            await generate_sql_node(state, llm=mock_llm, example_queries=[], max_results=15)
+            await generate_sql_node(
+                state, llm=mock_llm, example_queries=[], max_results=15
+            )
 
         _, kwargs = mock_create.call_args
         assert kwargs["direction_constraint"] == "imports"
@@ -368,7 +402,9 @@ class TestGenerateSqlNodeOverrides:
                 pipeline_table_info="table info",
                 override_mode="services",
             )
-            await generate_sql_node(state, llm=mock_llm, example_queries=[], max_results=15)
+            await generate_sql_node(
+                state, llm=mock_llm, example_queries=[], max_results=15
+            )
 
         _, kwargs = mock_create.call_args
         assert kwargs["mode_constraint"] == "services"
@@ -381,8 +417,12 @@ class TestGenerateSqlNodeOverrides:
             mock_chain.ainvoke = AsyncMock(return_value="SELECT 1")
             mock_create.return_value = mock_chain
 
-            state = _base_state(pipeline_question="q", pipeline_codes="", pipeline_table_info="")
-            await generate_sql_node(state, llm=mock_llm, example_queries=[], max_results=15)
+            state = _base_state(
+                pipeline_question="q", pipeline_codes="", pipeline_table_info=""
+            )
+            await generate_sql_node(
+                state, llm=mock_llm, example_queries=[], max_results=15
+            )
 
         _, kwargs = mock_create.call_args
         assert kwargs["direction_constraint"] is None
@@ -433,11 +473,16 @@ class TestAgentNodeDynamicPrompt:
         # We need to call it directly with state to capture the prompt
         # The node is registered under "agent" in the graph
         import asyncio
+
         agent_fn = graph.nodes["agent"]
         asyncio.get_event_loop().run_until_complete(agent_fn.ainvoke(state))
 
         # Find the SystemMessage in captured_messages
-        system_msgs = [m for m in captured_messages if hasattr(m, "content") and "Ask-Atlas" in m.content]
+        system_msgs = [
+            m
+            for m in captured_messages
+            if hasattr(m, "content") and "Ask-Atlas" in m.content
+        ]
         assert system_msgs, "No system message captured"
         return system_msgs[0].content
 
