@@ -11,7 +11,7 @@ from typing import AsyncGenerator
 
 from typing import Literal
 
-from fastapi import FastAPI, Request, Response
+from fastapi import APIRouter, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from langchain_core.messages import AIMessage, HumanMessage
@@ -287,17 +287,19 @@ async def _track_conversation(request: Request, thread_id: str, question: str) -
 
 
 # ---------------------------------------------------------------------------
-# Endpoints
+# API Router — all business routes mounted at /api
 # ---------------------------------------------------------------------------
 
+router = APIRouter()
 
-@app.get("/health")
+
+@router.get("/health")
 async def health() -> dict:
     """Health check endpoint."""
     return {"status": "ok"}
 
 
-@app.get("/debug/caches")
+@router.get("/debug/caches")
 async def cache_stats() -> dict:
     """Read-only diagnostic endpoint for monitoring cache hit rates."""
     from src.cache import registry
@@ -305,13 +307,13 @@ async def cache_stats() -> dict:
     return registry.stats()
 
 
-@app.post("/threads")
+@router.post("/threads")
 async def create_thread() -> dict:
     """Generate a new conversation thread ID."""
     return {"thread_id": str(uuid.uuid4())}
 
 
-@app.get("/threads")
+@router.get("/threads")
 async def list_threads(request: Request) -> list[ConversationSummary]:
     """List conversations for a session (requires X-Session-Id header)."""
     session_id = request.headers.get("x-session-id")
@@ -335,7 +337,7 @@ async def list_threads(request: Request) -> list[ConversationSummary]:
     ]
 
 
-@app.get("/threads/{thread_id}/messages")
+@router.get("/threads/{thread_id}/messages")
 async def get_thread_messages(thread_id: str) -> ThreadMessagesResponse:
     """Retrieve message history and trade overrides for a thread from LangGraph state."""
     atlas_sql = _get_atlas_sql()
@@ -373,7 +375,7 @@ async def get_thread_messages(thread_id: str) -> ThreadMessagesResponse:
     )
 
 
-@app.delete("/threads/{thread_id}", status_code=204)
+@router.delete("/threads/{thread_id}", status_code=204)
 async def delete_thread(thread_id: str) -> Response:
     """Delete a conversation and its checkpoints."""
     # Delete from conversation store
@@ -423,7 +425,7 @@ async def delete_thread(thread_id: str) -> Response:
     return Response(status_code=204)
 
 
-@app.post("/chat", response_model=ChatResponse)
+@router.post("/chat", response_model=ChatResponse)
 async def chat(
     body: ChatRequest,
     request: Request,
@@ -455,7 +457,7 @@ async def chat(
     )
 
 
-@app.post("/chat/stream")
+@router.post("/chat/stream")
 async def chat_stream(body: ChatRequest, request: Request) -> EventSourceResponse:
     """SSE streaming chat endpoint.
 
@@ -623,3 +625,17 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
         }
 
     return EventSourceResponse(_event_generator())
+
+
+# ---------------------------------------------------------------------------
+# Mount router and root-level health check
+# ---------------------------------------------------------------------------
+
+
+@app.get("/health")
+async def root_health() -> dict:
+    """Root health check for Cloud Run probes and Docker HEALTHCHECK."""
+    return {"status": "ok"}
+
+
+app.include_router(router, prefix="/api")
