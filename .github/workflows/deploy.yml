@@ -59,11 +59,20 @@ jobs:
 
   deploy-frontend:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     defaults:
       run:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
       - uses: pnpm/action-setup@v4
         with:
           version: 10
@@ -74,17 +83,12 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          channelId: live
-          projectId: ${{ secrets.GCP_PROJECT_ID }}
-          entryPoint: frontend
+
+      - name: Deploy to Firebase Hosting
+        run: npx firebase-tools deploy --only hosting --project=${{ secrets.GCP_PROJECT_ID }}
 
 # Required GitHub secrets (configure when ready to deploy):
-#   GCP_WIF_PROVIDER       — Workload Identity Federation provider
-#   GCP_SA_EMAIL           — Service account email
-#   GCP_PROJECT_ID         — cid-hks-1537286359734
-#   GCP_REGION             — e.g., us-east1
-#   FIREBASE_SERVICE_ACCOUNT — Firebase service account JSON
+#   GCP_WIF_PROVIDER — Workload Identity Federation provider resource name
+#   GCP_SA_EMAIL     — Service account email (github-actions@cid-hks-1537286359734.iam.gserviceaccount.com)
+#   GCP_PROJECT_ID   — cid-hks-1537286359734
+#   GCP_REGION       — us-east1
