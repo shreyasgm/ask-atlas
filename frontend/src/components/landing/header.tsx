@@ -20,7 +20,7 @@ export default function Header() {
         </a>
         <a
           className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline"
-          href="https://github.com/cid-harvard/atlas-subnational-frontend"
+          href="https://github.com/shreyasgm/ask-atlas"
           rel="noopener noreferrer"
           target="_blank"
         >
