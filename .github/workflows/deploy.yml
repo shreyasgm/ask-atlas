@@ -88,7 +88,7 @@ jobs:
           VITE_API_BASE_URL: https://ask-atlas-backend-k272csz3hq-ue.a.run.app
 
       - name: Deploy to Firebase Hosting
-        run: npx firebase-tools deploy --only hosting --project=${{ secrets.GCP_PROJECT_ID }}
+        run: npx firebase-tools deploy --only hosting:app --project=${{ secrets.GCP_PROJECT_ID }}
 
 # Required GitHub secrets (configure when ready to deploy):
 #   GCP_WIF_PROVIDER — Workload Identity Federation provider resource name
