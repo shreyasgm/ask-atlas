@@ -58,6 +58,7 @@ jobs:
             --project=${{ secrets.GCP_PROJECT_ID }}
 
   deploy-frontend:
+    needs: build-and-deploy-backend
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -83,6 +84,8 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+        env:
+          VITE_API_BASE_URL: https://ask-atlas-backend-k272csz3hq-ue.a.run.app
 
       - name: Deploy to Firebase Hosting
         run: npx firebase-tools deploy --only hosting --project=${{ secrets.GCP_PROJECT_ID }}

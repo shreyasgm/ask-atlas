@@ -101,6 +101,13 @@ class Settings(BaseSettings):
         description="Maximum rows returned per SQL query",
     )
 
+    # CORS
+    cors_origins: str = Field(
+        "",
+        validation_alias=AliasChoices("CORS_ORIGINS", "cors_origins"),
+        description="Comma-separated additional CORS origins (e.g. https://example.com,https://other.com)",
+    )
+
     # Feature Flags
     enable_langsmith: bool = Field(
         True,

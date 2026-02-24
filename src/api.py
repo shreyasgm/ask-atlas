@@ -173,13 +173,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 app = FastAPI(title="Ask-Atlas API", version="0.1.0", lifespan=lifespan)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+
+def _build_cors_origins() -> list[str]:
+    """Build the CORS allow_origins list from hardcoded + env var origins."""
+    origins = [
         "http://localhost:5173",
         "http://localhost:5174",
         "http://localhost:4173",
-    ],
+        "https://cid-hks-1537286359734.web.app",
+        "https://cid-hks-1537286359734.firebaseapp.com",
+    ]
+    extra = os.environ.get("CORS_ORIGINS", "")
+    if extra:
+        origins.extend(o.strip() for o in extra.split(",") if o.strip())
+    return origins
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_build_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
