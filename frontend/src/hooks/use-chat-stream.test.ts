@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EntitiesData, QueryAggregateStats, TradeOverrides } from '@/types/chat';
 import { useChatStream } from './use-chat-stream';
 
+vi.mock('@/config', () => ({ API_BASE_URL: '' }));
+
 vi.mock('@/utils/session', () => ({
   getSessionId: () => 'test-session-id',
 }));

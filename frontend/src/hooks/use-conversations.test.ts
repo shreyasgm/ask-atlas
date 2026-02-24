@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ConversationSummary } from '@/types/chat';
 import { useConversations } from './use-conversations';
 
+vi.mock('@/config', () => ({ API_BASE_URL: '' }));
+
 vi.mock('@/utils/session', () => ({
   getSessionId: () => 'test-session-id',
 }));
