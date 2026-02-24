@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "cid-hks-1537286359734"
-  }
+  },
+  "targets": {
+    "cid-hks-1537286359734": {
+      "hosting": {
+        "app": [
+          "ask-atlas-gl"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
