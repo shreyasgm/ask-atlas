@@ -11,7 +11,7 @@ export default function Footer() {
       <div className="flex items-center gap-4 text-xs text-muted-foreground">
         <a
           className="hover:text-foreground"
-          href="https://github.com/cid-harvard/atlas-subnational-frontend"
+          href="https://github.com/shreyasgm/ask-atlas"
           rel="noopener noreferrer"
           target="_blank"
         >
