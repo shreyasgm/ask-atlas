@@ -180,8 +180,8 @@ def _build_cors_origins() -> list[str]:
         "http://localhost:5173",
         "http://localhost:5174",
         "http://localhost:4173",
-        "https://cid-hks-1537286359734.web.app",
-        "https://cid-hks-1537286359734.firebaseapp.com",
+        "https://ask-atlas-gl.web.app",
+        "https://ask-atlas-gl.firebaseapp.com",
     ]
     extra = os.environ.get("CORS_ORIGINS", "")
     if extra:
