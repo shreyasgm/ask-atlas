@@ -26,7 +26,7 @@ st.title("Ask-Atlas: Trade Data Assistant")
 
 # Display some information
 st.info("""
-    Ask-Atlas is an AI agent that provides insights from the [Atlas of Economic Complexity](https://atlas.cid.harvard.edu/) using trade data sourced from UN COMTRADE and processed by the [Growth Lab at Harvard University](https://growthlab.hks.harvard.edu/).
+    Ask-Atlas is an AI agent that provides insights from the [Atlas of Economic Complexity](https://atlas.hks.harvard.edu/) using trade data sourced from UN COMTRADE and processed by the [Growth Lab at Harvard University](https://growthlab.hks.harvard.edu/).
 
     Created by: [Shreyas Gadgin Matha](https://growthlab.hks.harvard.edu/people/shreyas-matha)
     """)

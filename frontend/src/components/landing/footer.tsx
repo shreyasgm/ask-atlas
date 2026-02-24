@@ -19,7 +19,7 @@ export default function Footer() {
         </a>
         <a
           className="hover:text-foreground"
-          href="https://atlas.cid.harvard.edu"
+          href="https://atlas.hks.harvard.edu"
           rel="noopener noreferrer"
           target="_blank"
         >
