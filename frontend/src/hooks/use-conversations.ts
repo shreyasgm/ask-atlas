@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ConversationSummary } from '@/types/chat';
+import { API_BASE_URL } from '@/config';
 import { getSessionId } from '@/utils/session';
 
 interface BackendConversation {
@@ -32,7 +33,7 @@ export function useConversations(): UseConversationsReturn {
   const fetchConversations = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/threads', {
+      const response = await fetch(`${API_BASE_URL}/api/threads`, {
         headers: { 'X-Session-Id': getSessionId() },
       });
       if (!response.ok) {
@@ -58,7 +59,7 @@ export function useConversations(): UseConversationsReturn {
       setConversations((prev) => prev.filter((c) => c.threadId !== threadId));
 
       try {
-        const response = await fetch(`/api/threads/${threadId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/threads/${threadId}`, {
           headers: { 'X-Session-Id': getSessionId() },
           method: 'DELETE',
         });

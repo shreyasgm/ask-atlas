@@ -8,6 +8,7 @@ import type {
   TradeOverrides,
   TurnSummary,
 } from '@/types/chat';
+import { API_BASE_URL } from '@/config';
 import { getSessionId } from '@/utils/session';
 
 interface UseChatStreamOptions {
@@ -181,7 +182,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
         }
 
         try {
-          const response = await fetch('/api/chat/stream', {
+          const response = await fetch(`${API_BASE_URL}/api/chat/stream`, {
             body: JSON.stringify(body),
             headers: {
               'Content-Type': 'application/json',
@@ -429,7 +430,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
 
     (async () => {
       try {
-        const response = await fetch(`/api/threads/${urlThreadId}/messages`, {
+        const response = await fetch(`${API_BASE_URL}/api/threads/${urlThreadId}/messages`, {
           headers: { 'X-Session-Id': getSessionId() },
         });
         if (!response.ok) {
