@@ -75,10 +75,10 @@ export default function TradeTogglesBar({
   return (
     <div
       aria-label="Trade query constraints"
-      className="flex h-10 items-center gap-3 overflow-x-auto border-b border-border bg-secondary px-5"
+      className="flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-border bg-secondary px-5 py-1.5"
       role="toolbar"
     >
-      <span className="text-[9px] font-semibold tracking-widest text-muted-foreground uppercase select-none">
+      <span className="hidden text-[9px] font-semibold tracking-widest text-muted-foreground uppercase select-none sm:inline">
         MODE
       </span>
 
@@ -91,7 +91,13 @@ export default function TradeTogglesBar({
 
       {showSchema && (
         <>
-          <div className="h-4 w-px shrink-0 bg-border" data-testid="toggle-divider" />
+          {/* Force schema group to next row on mobile */}
+          <div className="h-0 basis-full sm:hidden" />
+
+          <div
+            className="hidden h-4 w-px shrink-0 bg-border sm:block"
+            data-testid="toggle-divider"
+          />
 
           <ToggleGroup
             onChange={onSchemaChange}
