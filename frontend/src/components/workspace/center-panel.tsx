@@ -1,7 +1,9 @@
 import type {
   ChatMessage,
   ClassificationSchema,
+  EntitiesData,
   PipelineStep,
+  QueryAggregateStats,
   TradeMode,
   TradeOverrides,
 } from '@/types/chat';
@@ -11,7 +13,9 @@ import MessageList from '@/components/chat/message-list';
 import TradeTogglesBar from '@/components/chat/trade-toggles-bar';
 
 interface CenterPanelProps {
+  entitiesData: EntitiesData | null;
   error: null | string;
+  isRestoredThread: boolean;
   isStreaming: boolean;
   messages: Array<ChatMessage>;
   onClear: () => void;
@@ -20,10 +24,13 @@ interface CenterPanelProps {
   onSend: (text: string) => void;
   overrides: TradeOverrides;
   pipelineSteps: Array<PipelineStep>;
+  queryStats: QueryAggregateStats | null;
 }
 
 export default function CenterPanel({
+  entitiesData,
   error,
+  isRestoredThread,
   isStreaming,
   messages,
   onClear,
@@ -32,6 +39,7 @@ export default function CenterPanel({
   onSend,
   overrides,
   pipelineSteps,
+  queryStats,
 }: CenterPanelProps) {
   const firstUserMessage = messages.find((m) => m.role === 'user');
   const chatTitle = firstUserMessage ? firstUserMessage.content.slice(0, 60) : '';
@@ -45,10 +53,13 @@ export default function CenterPanel({
         overrides={overrides}
       />
       <MessageList
+        entitiesData={entitiesData}
         error={error}
+        isRestoredThread={isRestoredThread}
         isStreaming={isStreaming}
         messages={messages}
         pipelineSteps={pipelineSteps}
+        queryStats={queryStats}
       />
       <div className="border-t border-border">
         <div className="mx-auto w-full max-w-2xl px-4 py-4">

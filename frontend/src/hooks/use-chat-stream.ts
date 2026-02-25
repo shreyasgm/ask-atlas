@@ -273,6 +273,12 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
 
                 if (parsed.stage === 'extract_products' && parsed.products) {
                   setEntitiesData((prev) => ({
+                    countries: (parsed.countries ?? []).map(
+                      (c: { iso3_code: string; name: string }) => ({
+                        iso3Code: c.iso3_code,
+                        name: c.name,
+                      }),
+                    ),
                     lookupCodes: prev?.lookupCodes ?? '',
                     products: parsed.products,
                     schemas: parsed.schemas ?? [],
@@ -281,7 +287,12 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
                   setEntitiesData((prev) =>
                     prev
                       ? { ...prev, lookupCodes: parsed.lookup_codes }
-                      : { lookupCodes: parsed.lookup_codes, products: [], schemas: [] },
+                      : {
+                          countries: [],
+                          lookupCodes: parsed.lookup_codes,
+                          products: [],
+                          schemas: [],
+                        },
                   );
                 }
 
@@ -474,6 +485,12 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
           const lastWithEntities = [...turnSummaries].reverse().find((ts) => ts.entities !== null);
           if (lastWithEntities?.entities) {
             setEntitiesData({
+              countries: (lastWithEntities.entities.countries ?? []).map(
+                (c: { iso3_code: string; name: string }) => ({
+                  iso3Code: c.iso3_code,
+                  name: c.name,
+                }),
+              ),
               lookupCodes: '',
               products: lastWithEntities.entities.products,
               schemas: lastWithEntities.entities.schemas,

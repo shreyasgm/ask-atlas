@@ -16,6 +16,12 @@ function makeMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
 }
 
 describe('AssistantMessage', () => {
+  it('renders "Ask-Atlas Assistant" label', () => {
+    const msg = makeMessage({ content: 'Hello world' });
+    render(<AssistantMessage message={msg} />);
+    expect(screen.getByText('Ask-Atlas Assistant')).toBeInTheDocument();
+  });
+
   it('renders GFM markdown table as HTML table', () => {
     const msg = makeMessage({
       content: '| Product | Value |\n|---|---|\n| Coffee | 100 |',
@@ -34,6 +40,31 @@ describe('AssistantMessage', () => {
     render(<AssistantMessage message={msg} />);
     expect(screen.getByText('bold text')).toBeInTheDocument();
     expect(screen.getByText('item one')).toBeInTheDocument();
+  });
+
+  it('renders query results and source text flush left (no ml-4 indent)', () => {
+    const msg = makeMessage({
+      content: 'Some answer',
+      queryResults: [
+        {
+          columns: ['country'],
+          executionTimeMs: 10,
+          rowCount: 1,
+          rows: [['Brazil']],
+          sql: 'SELECT country FROM trade',
+        },
+      ],
+    });
+    render(<AssistantMessage message={msg} />);
+
+    // The SQL Query wrapper div should NOT have ml-4 class
+    const sqlQueryButton = screen.getByText('SQL Query');
+    const sqlWrapper = sqlQueryButton.closest('[class]')?.parentElement;
+    expect(sqlWrapper?.className).not.toMatch(/\bml-4\b/);
+
+    // The "Source:" text should NOT have ml-4 class
+    const sourceText = screen.getByText(/Source: Atlas/);
+    expect(sourceText.className).not.toMatch(/\bml-4\b/);
   });
 
   it('hides query result table until SQL collapsible is expanded', async () => {

@@ -44,9 +44,6 @@ export default function HeroSection() {
           <ArrowUp className="h-4 w-4" />
         </button>
       </form>
-      <p className="text-xs text-muted-foreground/70">
-        Powered by Growth Lab at Harvard University
-      </p>
     </section>
   );
 }

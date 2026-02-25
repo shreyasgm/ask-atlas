@@ -550,6 +550,7 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                             stream_entities = {
                                 "schemas": stream_data.payload.get("schemas", []),
                                 "products": stream_data.payload.get("products", []),
+                                "countries": stream_data.payload.get("countries", []),
                             }
                         elif stage == "execute_sql":
                             total_queries += 1

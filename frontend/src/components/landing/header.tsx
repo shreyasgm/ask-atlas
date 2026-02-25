@@ -12,14 +12,6 @@ export default function Header() {
       <nav className="flex items-center gap-6">
         <a
           className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline"
-          href="https://atlas.hks.harvard.edu/about"
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          About
-        </a>
-        <a
-          className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline"
           href="https://github.com/shreyasgm/ask-atlas"
           rel="noopener noreferrer"
           target="_blank"

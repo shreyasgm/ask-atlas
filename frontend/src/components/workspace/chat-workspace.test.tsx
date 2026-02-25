@@ -41,11 +41,11 @@ describe('ChatWorkspace', () => {
     expect(screen.getByRole('button', { name: /collapse sidebar/i })).toBeInTheDocument();
   });
 
-  it('renders right panel with tab buttons', () => {
+  it('does not render right panel tabs', () => {
     renderWorkspace();
-    expect(screen.getByRole('tab', { name: 'Activity' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Entities' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Queries' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Activity' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Entities' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Queries' })).not.toBeInTheDocument();
   });
 
   it('renders center panel with chat input', () => {
@@ -61,15 +61,6 @@ describe('ChatWorkspace', () => {
 
     // Should now show expand button and new chat icon
     expect(screen.getByRole('button', { name: /expand sidebar/i })).toBeInTheDocument();
-  });
-
-  it('collapsing right panel shows icon strip', async () => {
-    const user = userEvent.setup();
-    renderWorkspace();
-
-    await user.click(screen.getByRole('button', { name: /collapse panel/i }));
-
-    expect(screen.getByRole('button', { name: /expand panel/i })).toBeInTheDocument();
   });
 
   it('welcome message visible when no messages', () => {

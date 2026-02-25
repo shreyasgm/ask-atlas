@@ -50,9 +50,9 @@ describe('LeftSidebar - expanded', () => {
     expect(screen.getByText('Coffee trade patterns')).toBeInTheDocument();
   });
 
-  it('renders section header', () => {
+  it('renders "History" section header', () => {
     renderSidebar();
-    expect(screen.getByText('Recent conversations')).toBeInTheDocument();
+    expect(screen.getByText('History')).toBeInTheDocument();
   });
 
   it('active conversation is highlighted', () => {
