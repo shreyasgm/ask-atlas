@@ -35,10 +35,10 @@ describe('Header', () => {
     expect(screen.getByRole('link', { name: /ask atlas/i })).toBeInTheDocument();
   });
 
-  it('renders nav links: About, GitHub, Atlas', () => {
+  it('renders nav links: GitHub and Atlas (no About)', () => {
     renderLanding();
     const header = screen.getByRole('banner');
-    expect(within(header).getByRole('link', { name: 'About' })).toBeInTheDocument();
+    expect(within(header).queryByRole('link', { name: 'About' })).not.toBeInTheDocument();
     expect(within(header).getByRole('link', { name: 'GitHub' })).toBeInTheDocument();
     expect(within(header).getByRole('link', { name: 'Atlas' })).toBeInTheDocument();
   });
@@ -63,9 +63,11 @@ describe('Hero Section', () => {
     expect(screen.getByPlaceholderText(/top exports/i)).toBeInTheDocument();
   });
 
-  it('renders powered-by credit', () => {
+  it('does not render powered-by credit', () => {
     renderLanding();
-    expect(screen.getByText(/powered by growth lab at harvard university/i)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/powered by growth lab at harvard university/i),
+    ).not.toBeInTheDocument();
   });
 
   it('navigates to /chat?q=... on search submission', async () => {
@@ -109,9 +111,9 @@ describe('Quick Start Section', () => {
 });
 
 describe('Data Coverage Section', () => {
-  it('renders "DATA COVERAGE" section label', () => {
+  it('renders "TRADE CLASSIFICATIONS" section label', () => {
     renderLanding();
-    expect(screen.getByText('DATA COVERAGE')).toBeInTheDocument();
+    expect(screen.getByText('TRADE CLASSIFICATIONS')).toBeInTheDocument();
   });
 
   it('renders all 4 data coverage card titles', () => {
@@ -123,9 +125,11 @@ describe('Data Coverage Section', () => {
 });
 
 describe('Footer', () => {
-  it('renders credit text', () => {
+  it('renders simplified footer without credit text', () => {
     renderLanding();
-    expect(screen.getByText(/created by shreyas gadgin matha/i)).toBeInTheDocument();
+    const footer = screen.getByRole('contentinfo');
+    expect(screen.queryByText(/created by shreyas gadgin matha/i)).not.toBeInTheDocument();
+    expect(within(footer).getByText('Ask Atlas')).toBeInTheDocument();
   });
 
   it('renders Atlas of Economic Complexity link', () => {

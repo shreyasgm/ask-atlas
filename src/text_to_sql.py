@@ -146,10 +146,15 @@ def _extract_pipeline_state(node_name: str, state_snapshot: dict) -> dict:
                 for p in (products.products or [])
             ]
             base["requires_lookup"] = products.requires_product_lookup
+            base["countries"] = [
+                {"name": c.name, "iso3_code": c.iso3_code}
+                for c in (products.countries or [])
+            ]
         else:
             base["schemas"] = []
             base["products"] = []
             base["requires_lookup"] = False
+            base["countries"] = []
 
     elif node_name == "lookup_codes":
         codes = state_snapshot.get("pipeline_codes", "")
@@ -599,6 +604,10 @@ class AtlasTextToSQL:
                         "schema": p.classification_schema,
                     }
                     for p in (pipeline_products.products or [])
+                ],
+                "countries": [
+                    {"name": c.name, "iso3_code": c.iso3_code}
+                    for c in (pipeline_products.countries or [])
                 ],
             }
 

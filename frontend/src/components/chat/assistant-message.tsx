@@ -1,4 +1,5 @@
 import type { Components } from 'react-markdown';
+import { Bot } from 'lucide-react';
 import { memo } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -35,18 +36,21 @@ export default memo(function AssistantMessage({ message }: AssistantMessageProps
   return (
     <div className="flex flex-col gap-2">
       {message.content && (
-        <div className="flex items-start gap-2">
-          <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-green-500" />
+        <>
+          <div className="flex items-center gap-2">
+            <Bot className="h-4 w-4 text-blue-500" />
+            <span className="text-xs font-semibold text-blue-500">Ask-Atlas Assistant</span>
+          </div>
           <div className="flex flex-col gap-1">
             <Markdown components={MARKDOWN_COMPONENTS} remarkPlugins={[remarkGfm]}>
               {message.content}
             </Markdown>
           </div>
-        </div>
+        </>
       )}
 
       {message.queryResults.map((qr, i) => (
-        <div className="ml-4 flex flex-col gap-2" key={`qr-${i}`}>
+        <div className="flex flex-col gap-2" key={`qr-${i}`}>
           <SqlBlock sql={qr.sql}>
             {qr.rowCount > 0 && (
               <div className="mt-2 flex flex-col gap-1">
@@ -61,7 +65,7 @@ export default memo(function AssistantMessage({ message }: AssistantMessageProps
       ))}
 
       {message.queryResults.length > 0 && (
-        <p className="ml-4 font-mono text-xs text-muted-foreground">
+        <p className="font-mono text-xs text-muted-foreground">
           Source: Atlas of Economic Complexity
         </p>
       )}

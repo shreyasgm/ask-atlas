@@ -11,7 +11,6 @@ import type {
 } from '@/types/chat';
 import CenterPanel from './center-panel';
 import LeftSidebar from './left-sidebar';
-import RightPanel from './right-panel';
 
 interface ChatWorkspaceProps {
   activeThreadId: null | string;
@@ -73,12 +72,9 @@ export default function ChatWorkspace({
 }: ChatWorkspaceProps) {
   const isDesktop = useIsDesktop();
   const [sidebarExpanded, setSidebarExpanded] = useState(isDesktop);
-  const [rightPanelExpanded, setRightPanelExpanded] = useState(isDesktop);
-  const lastAssistant = messages.findLast((m) => m.role === 'assistant');
-  const currentQueries = lastAssistant?.queryResults ?? [];
 
   const handleSelectConversation = useCallback(
-    (threadId: string) => {
+    (_threadId: string) => {
       // Navigate happens via the Link in the sidebar; this callback
       // lets us collapse the sidebar on mobile after selection.
       if (!isDesktop) {
@@ -109,7 +105,9 @@ export default function ChatWorkspace({
       </div>
 
       <CenterPanel
+        entitiesData={entitiesData}
         error={error}
+        isRestoredThread={isRestoredThread}
         isStreaming={isStreaming}
         messages={messages}
         onClear={onClear}
@@ -118,23 +116,8 @@ export default function ChatWorkspace({
         onSend={onSend}
         overrides={overrides}
         pipelineSteps={pipelineSteps}
+        queryStats={queryStats}
       />
-
-      {/* Right panel — overlays on mobile */}
-      <div
-        className={!isDesktop && rightPanelExpanded ? 'absolute inset-y-0 right-0 z-20' : undefined}
-      >
-        <RightPanel
-          currentQueries={currentQueries}
-          entitiesData={entitiesData}
-          expanded={rightPanelExpanded}
-          isRestoredThread={isRestoredThread}
-          isStreaming={isStreaming}
-          onToggle={() => setRightPanelExpanded((prev) => !prev)}
-          pipelineSteps={pipelineSteps}
-          queryStats={queryStats}
-        />
-      </div>
     </div>
   );
 }

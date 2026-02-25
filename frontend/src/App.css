@@ -8,7 +8,7 @@
  *
  * Dark palette derived from design prototype:
  *   Background:  #0A0F1C / #0F172A  (deep slate)
- *   Accent:      #22D3EE            (cyan-400)
+ *   Accent:      #3B82F6 / #60A5FA  (blue-500 / blue-400)
  *   Text:        #FFFFFF / #CBD5E1   (white / slate-300)
  *
  * oklch values converted from the hex targets above.
@@ -62,8 +62,8 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.75 0.15 195);
-  --primary-foreground: oklch(0.15 0.02 250);
+  --primary: oklch(0.623 0.214 259);
+  --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -74,27 +74,27 @@
   --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.75 0.15 195);
-  --chart-1: oklch(0.75 0.15 195);
+  --ring: oklch(0.623 0.214 259);
+  --chart-1: oklch(0.623 0.214 259);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.75 0.15 195);
+  --sidebar-primary: oklch(0.623 0.214 259);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.75 0.15 195);
+  --sidebar-ring: oklch(0.623 0.214 259);
 }
 
 /* ── Dark theme (default) ── */
 /* #0A0F1C ≈ oklch(0.13 0.02 260)  — deepest background           */
 /* #0F172A ≈ oklch(0.17 0.02 260)  — card / elevated surfaces      */
 /* #1E293B ≈ oklch(0.25 0.02 255)  — secondary / muted backgrounds */
-/* #22D3EE ≈ oklch(0.80 0.15 195)  — cyan accent (primary)         */
+/* #60A5FA ≈ oklch(0.69 0.17 259)  — blue-400 accent (primary)     */
 /* #CBD5E1 ≈ oklch(0.87 0.01 250)  — slate-300 muted text          */
 .dark {
   --background: oklch(0.13 0.02 260);
@@ -103,32 +103,38 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.17 0.02 260);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.8 0.15 195);
+  --primary: oklch(0.69 0.17 259);
   --primary-foreground: oklch(0.13 0.02 260);
   --secondary: oklch(0.25 0.02 255);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.25 0.02 255);
   --muted-foreground: oklch(0.87 0.01 250);
-  --accent: oklch(0.8 0.15 195);
+  --accent: oklch(0.69 0.17 259);
   --accent-foreground: oklch(0.13 0.02 260);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.8 0.15 195);
-  --chart-1: oklch(0.8 0.15 195);
+  --ring: oklch(0.69 0.17 259);
+  --chart-1: oklch(0.69 0.17 259);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
   --sidebar: oklch(0.13 0.02 260);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.8 0.15 195);
+  --sidebar-primary: oklch(0.69 0.17 259);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.25 0.02 255);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.8 0.15 195);
+  --sidebar-ring: oklch(0.69 0.17 259);
+}
+
+@theme inline {
+  --font-mono:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
 }
 
 @layer base {
@@ -137,6 +143,7 @@
   }
 
   body {
+    font-family: 'DM Sans', system-ui, sans-serif;
     @apply bg-background text-foreground;
   }
 }

@@ -1,4 +1,4 @@
-import { ChevronLeft, Globe, Menu, Plus, Search, Trash2 } from 'lucide-react';
+import { ChevronLeft, Globe, Menu, MessageSquare, Plus, Search, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import type { ConversationSummary } from '@/types/chat';
@@ -131,7 +131,7 @@ export default function LeftSidebar({
       {/* Conversations */}
       <div className="flex-1 overflow-y-auto px-3">
         <p className="mb-2 text-[10px] font-medium tracking-wider text-muted-foreground uppercase">
-          Recent conversations
+          History
         </p>
 
         {isLoading ? (
@@ -183,16 +183,24 @@ function ConversationItem({
       data-testid="conversation-item"
     >
       <Link
-        className="block px-2 py-1.5"
+        className="flex items-start gap-2 px-2 py-1.5"
         onClick={() => onSelect(conversation.threadId)}
         to={`/chat/${conversation.threadId}`}
       >
-        <p className="truncate text-xs font-medium text-foreground">
-          {conversation.title ?? 'Untitled conversation'}
-        </p>
-        <p className="text-[10px] text-muted-foreground">
-          {formatRelativeTime(conversation.updatedAt)}
-        </p>
+        <MessageSquare
+          className={cn(
+            'mt-0.5 h-3.5 w-3.5 shrink-0',
+            active ? 'text-blue-500' : 'text-muted-foreground',
+          )}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-medium text-foreground">
+            {conversation.title ?? 'Untitled conversation'}
+          </p>
+          <p className="text-[10px] text-muted-foreground">
+            {formatRelativeTime(conversation.updatedAt)}
+          </p>
+        </div>
       </Link>
       <button
         aria-label="Delete conversation"

@@ -29,7 +29,13 @@ export interface ResolvedProduct {
   schema: string;
 }
 
+export interface CountryInfo {
+  iso3Code: string;
+  name: string;
+}
+
 export interface EntitiesData {
+  countries: Array<CountryInfo>;
   lookupCodes: string;
   products: Array<ResolvedProduct>;
   schemas: Array<string>;
@@ -67,6 +73,7 @@ export interface ChatApiResponse {
 
 export interface TurnSummary {
   entities: {
+    countries?: Array<{ iso3_code: string; name: string }>;
     products: Array<ResolvedProduct>;
     schemas: Array<string>;
   } | null;

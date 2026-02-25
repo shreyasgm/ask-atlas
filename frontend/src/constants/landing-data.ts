@@ -54,19 +54,19 @@ export const QUICK_START_TILES: Array<QuickStartTile> = [
 
 export const DATA_COVERAGE_CARDS: Array<DataCoverageCard> = [
   {
-    description: 'Goods trade, 6-digit product codes',
+    description: 'Harmonized System 1992',
     title: 'HS 1992',
   },
   {
-    description: 'Updated goods classification',
+    description: 'Harmonized System 2012',
     title: 'HS 2012',
   },
   {
-    description: 'Alternative goods classification',
+    description: 'Standard International Trade Classification',
     title: 'SITC',
   },
   {
-    description: 'Bilateral & unilateral services data',
+    description: 'Services classification',
     title: 'Services',
   },
 ];

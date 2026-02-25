@@ -1,23 +1,30 @@
 import { AlertCircle } from 'lucide-react';
 import { useEffect, useRef } from 'react';
-import type { ChatMessage, PipelineStep } from '@/types/chat';
+import type { ChatMessage, EntitiesData, PipelineStep, QueryAggregateStats } from '@/types/chat';
 import AssistantMessage from './assistant-message';
 import PipelineStepper from './pipeline-stepper';
+import QueryContextCard from './query-context-card';
 import UserMessage from './user-message';
 import WelcomeMessage from './welcome-message';
 
 interface MessageListProps {
+  entitiesData?: EntitiesData | null;
   error?: null | string;
+  isRestoredThread?: boolean;
   isStreaming: boolean;
   messages: Array<ChatMessage>;
   pipelineSteps: Array<PipelineStep>;
+  queryStats?: QueryAggregateStats | null;
 }
 
 export default function MessageList({
+  entitiesData,
   error,
+  isRestoredThread,
   isStreaming,
   messages,
   pipelineSteps,
+  queryStats,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -34,15 +41,24 @@ export default function MessageList({
     }
   }, [messages, pipelineSteps]);
 
+  const lastAssistantIndex = messages.findLastIndex((m) => m.role === 'assistant');
+
   return (
     <div className="flex-1 overflow-y-auto px-4 py-6" ref={containerRef}>
       <div className="mx-auto flex max-w-2xl flex-col gap-4">
         <WelcomeMessage />
-        {messages.map((msg) => {
+        {messages.map((msg, index) => {
           if (msg.role === 'user') {
             return <UserMessage content={msg.content} key={msg.id} />;
           }
-          return <AssistantMessage key={msg.id} message={msg} />;
+          return (
+            <div className="flex flex-col gap-3" key={msg.id}>
+              {index === lastAssistantIndex && entitiesData && (
+                <QueryContextCard entitiesData={entitiesData} queryStats={queryStats ?? null} />
+              )}
+              <AssistantMessage message={msg} />
+            </div>
+          );
         })}
         {isStreaming && pipelineSteps.length > 0 && (
           <div className="ml-4">

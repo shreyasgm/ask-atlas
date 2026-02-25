@@ -21,6 +21,7 @@ from src.generate_query import (
     validate_sql_node,
 )
 from src.product_and_schema_lookup import (
+    CountryDetails,
     ProductCodesMapping,
     ProductDetails,
     ProductSearchResult,
@@ -220,6 +221,35 @@ class TestExtractProductsNode:
 
         assert result["pipeline_products"].products == []
         assert result["pipeline_products"].classification_schemas == ["hs92"]
+
+    async def test_returns_countries_when_present(self):
+        canned = SchemasAndProductsFound(
+            classification_schemas=["hs92"],
+            products=[],
+            requires_product_lookup=False,
+            countries=[
+                CountryDetails(name="India", iso3_code="IND"),
+            ],
+        )
+
+        mock_llm = MagicMock()
+        mock_engine = MagicMock()
+
+        with patch("src.generate_query.ProductAndSchemaLookup") as MockLookup:
+            mock_instance = MagicMock()
+            mock_instance.aextract_schemas_and_product_mentions_direct = AsyncMock(
+                return_value=canned
+            )
+            MockLookup.return_value = mock_instance
+
+            state = _base_state(pipeline_question="What did India export in 2021?")
+            result = await extract_products_node(
+                state, llm=mock_llm, engine=mock_engine
+            )
+
+        assert len(result["pipeline_products"].countries) == 1
+        assert result["pipeline_products"].countries[0].name == "India"
+        assert result["pipeline_products"].countries[0].iso3_code == "IND"
 
     async def test_multiple_schemas(self):
         canned = SchemasAndProductsFound(
