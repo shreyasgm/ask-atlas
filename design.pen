@@ -2639,7 +2639,7 @@
                               "id": "v33UA",
                               "name": "countryLabel",
                               "fill": "#475569",
-                              "content": "Country:",
+                              "content": "Countries:",
                               "fontFamily": "DM Sans",
                               "fontSize": 12,
                               "fontWeight": "medium"
@@ -2687,7 +2687,7 @@
                               "id": "xhpa3",
                               "name": "hsLabel",
                               "fill": "#475569",
-                              "content": "HS92:",
+                              "content": "Products (HS92):",
                               "fontFamily": "DM Sans",
                               "fontSize": 12,
                               "fontWeight": "medium"
@@ -3497,7 +3497,7 @@
                           "id": "3Stf3",
                           "name": "countryLabel",
                           "fill": "#475569",
-                          "content": "Country:",
+                          "content": "Countries:",
                           "fontFamily": "DM Sans",
                           "fontSize": 12,
                           "fontWeight": "medium"
@@ -3545,7 +3545,7 @@
                           "id": "tThoW",
                           "name": "hsLabel",
                           "fill": "#475569",
-                          "content": "HS92:",
+                          "content": "Products (HS92):",
                           "fontFamily": "DM Sans",
                           "fontSize": 12,
                           "fontWeight": "medium"
@@ -3763,7 +3763,7 @@
                           "id": "qym7v",
                           "name": "countryLabel",
                           "fill": "#475569",
-                          "content": "Country:",
+                          "content": "Countries:",
                           "fontFamily": "DM Sans",
                           "fontSize": 12,
                           "fontWeight": "medium"
