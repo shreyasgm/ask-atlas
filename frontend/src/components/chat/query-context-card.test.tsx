@@ -27,88 +27,82 @@ describe('QueryContextCard', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('renders collapsed state with country ISO3 code in green pill', () => {
+  it('shows country ISO3 codes and product codes in collapsed state', () => {
     render(<QueryContextCard entitiesData={ENTITIES} queryStats={null} />);
-    expect(screen.getByText('Country:')).toBeInTheDocument();
     expect(screen.getByText('IND')).toBeInTheDocument();
-  });
-
-  it('renders collapsed state with schema label and product code pills', () => {
-    render(<QueryContextCard entitiesData={ENTITIES} queryStats={null} />);
-    expect(screen.getByText('HS92:')).toBeInTheDocument();
     expect(screen.getByText('0901')).toBeInTheDocument();
     expect(screen.getByText('0902')).toBeInTheDocument();
   });
 
-  it('shows "Name (ISO3)" format in expanded country pill', async () => {
-    const user = userEvent.setup();
-    render(<QueryContextCard entitiesData={ENTITIES} queryStats={STATS} />);
-
-    await user.click(screen.getByRole('button', { name: /expand query context/i }));
-
-    expect(screen.getByText('India (IND)')).toBeInTheDocument();
+  it('uses the actual schema name in the collapsed products label', () => {
+    const hs12Entities: EntitiesData = {
+      countries: [],
+      lookupCodes: '',
+      products: [{ codes: ['8541'], name: 'Semiconductors', schema: 'HS12' }],
+      schemas: ['HS12'],
+    };
+    render(<QueryContextCard entitiesData={hs12Entities} queryStats={null} />);
+    expect(screen.getByText(/Products \(HS12\)/)).toBeInTheDocument();
   });
 
-  it('expands on click to show full details with product name+code pills', async () => {
-    const user = userEvent.setup();
-    render(<QueryContextCard entitiesData={ENTITIES} queryStats={STATS} />);
-
-    await user.click(screen.getByRole('button', { name: /expand query context/i }));
-
-    expect(screen.getByText('Query Context')).toBeInTheDocument();
-    expect(screen.getByText('Country:')).toBeInTheDocument();
-    expect(screen.getByText(/Schema: HS92/)).toBeInTheDocument();
-    expect(screen.getByText('Products:')).toBeInTheDocument();
-    // Product pills show "code name" format
-    expect(screen.getByText('0901 Coffee')).toBeInTheDocument();
-    expect(screen.getByText('0902 Tea')).toBeInTheDocument();
-  });
-
-  it('shows query stats line when queryStats provided', async () => {
-    const user = userEvent.setup();
-    render(<QueryContextCard entitiesData={ENTITIES} queryStats={STATS} />);
-
-    await user.click(screen.getByRole('button', { name: /expand query context/i }));
-
-    expect(screen.getByText(/3 queries/)).toBeInTheDocument();
-    expect(screen.getByText(/42 rows/)).toBeInTheDocument();
-  });
-
-  it('handles empty products array gracefully', () => {
-    const emptyEntities: EntitiesData = {
+  it('hides country row when no countries are present', () => {
+    const noCountry: EntitiesData = {
       countries: [],
       lookupCodes: 'name_to_code',
-      products: [],
+      products: [{ codes: ['0901'], name: 'Coffee', schema: 'HS92' }],
       schemas: ['HS92'],
     };
-    render(<QueryContextCard entitiesData={emptyEntities} queryStats={null} />);
-    expect(screen.getByText('HS92:')).toBeInTheDocument();
+    render(<QueryContextCard entitiesData={noCountry} queryStats={null} />);
+    expect(screen.queryByText('IND')).not.toBeInTheDocument();
+    // Products should still render
+    expect(screen.getByText('0901')).toBeInTheDocument();
   });
 
-  it('shows dash when no countries provided', () => {
-    const noCountryEntities: EntitiesData = {
-      countries: [],
-      lookupCodes: 'name_to_code',
-      products: [],
-      schemas: ['HS92'],
-    };
-    render(<QueryContextCard entitiesData={noCountryEntities} queryStats={null} />);
-    // Should show a dash placeholder when no countries
-    expect(screen.getByText('—')).toBeInTheDocument();
-  });
-
-  it('shows multiple country codes in collapsed view', () => {
-    const multiCountry: EntitiesData = {
-      countries: [
-        { iso3Code: 'IND', name: 'India' },
-        { iso3Code: 'USA', name: 'United States' },
-      ],
+  it('hides products row when no products are present', () => {
+    const noProducts: EntitiesData = {
+      countries: [{ iso3Code: 'IND', name: 'India' }],
       lookupCodes: '',
       products: [],
       schemas: ['HS92'],
     };
-    render(<QueryContextCard entitiesData={multiCountry} queryStats={null} />);
+    render(<QueryContextCard entitiesData={noProducts} queryStats={null} />);
+    expect(screen.queryByText(/Products/)).not.toBeInTheDocument();
+    // Country should still render
     expect(screen.getByText('IND')).toBeInTheDocument();
-    expect(screen.getByText('USA')).toBeInTheDocument();
+  });
+
+  it('expands on click to show full product names, country names, and stats', async () => {
+    const user = userEvent.setup();
+    render(<QueryContextCard entitiesData={ENTITIES} queryStats={STATS} />);
+
+    await user.click(screen.getByRole('button', { name: /expand query context/i }));
+
+    // Country shows full name
+    expect(screen.getByText('India (IND)')).toBeInTheDocument();
+    // Products show code + name
+    expect(screen.getByText('0901 Coffee')).toBeInTheDocument();
+    expect(screen.getByText('0902 Tea')).toBeInTheDocument();
+    // Stats rendered
+    expect(screen.getByText(/3 queries/)).toBeInTheDocument();
+    expect(screen.getByText(/42 rows/)).toBeInTheDocument();
+  });
+
+  it('hides country and products sections in expanded state when empty', async () => {
+    const user = userEvent.setup();
+    const schemaOnly: EntitiesData = {
+      countries: [],
+      lookupCodes: '',
+      products: [],
+      schemas: ['HS92'],
+    };
+    render(<QueryContextCard entitiesData={schemaOnly} queryStats={STATS} />);
+
+    await user.click(screen.getByRole('button', { name: /expand query context/i }));
+
+    expect(screen.getByText('Query Context')).toBeInTheDocument();
+    expect(screen.getByText(/Schema: HS92/)).toBeInTheDocument();
+    // Neither countries nor products rendered
+    expect(screen.queryByText(/India/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Products:/)).not.toBeInTheDocument();
   });
 });
