@@ -38,31 +38,27 @@ export default function QueryContextCard({ entitiesData, queryStats }: QueryCont
               <ChevronUp className="h-3.5 w-3.5 text-slate-400" />
             </button>
 
-            {/* Country row */}
-            <div className="flex items-center gap-1.5 text-xs">
-              <span className="font-medium text-slate-600 dark:text-slate-400">Country:</span>
-              {countries.length > 0 ? (
-                countries.map((c) => (
+            {/* Country row — hidden when no countries */}
+            {countries.length > 0 && (
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="font-medium text-slate-600 dark:text-slate-400">Countries:</span>
+                {countries.map((c) => (
                   <span
                     className="rounded-full bg-green-100 px-2 py-0.5 font-semibold text-green-800 dark:bg-green-950 dark:text-green-300"
                     key={c.iso3Code}
                   >
                     {c.name} ({c.iso3Code})
                   </span>
-                ))
-              ) : (
-                <span className="rounded-full bg-green-100 px-2 py-0.5 font-semibold text-green-800 dark:bg-green-950 dark:text-green-300">
-                  —
-                </span>
-              )}
-            </div>
+                ))}
+              </div>
+            )}
 
             {/* Schema */}
             {schema && (
               <p className="text-xs text-slate-600 dark:text-slate-400">Schema: {schema}</p>
             )}
 
-            {/* Products */}
+            {/* Products — hidden when no products */}
             {entitiesData.products.length > 0 && (
               <div className="flex flex-col gap-1.5">
                 <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
@@ -109,8 +105,6 @@ export default function QueryContextCard({ entitiesData, queryStats }: QueryCont
   }
 
   // ── Collapsed state ──
-  // Row 1: database icon + "Country:" + green country pill(s)
-  // Row 2: "HS92:" + product code pills
   return (
     <button
       aria-label="Expand query context"
@@ -119,39 +113,47 @@ export default function QueryContextCard({ entitiesData, queryStats }: QueryCont
       type="button"
     >
       <div className="flex flex-col gap-1.5">
-        {/* Country row */}
-        <div className="flex items-center gap-1.5">
-          <Database className="h-3.5 w-3.5 text-blue-500" />
-          <span className="text-xs font-medium text-slate-600 dark:text-slate-400">Country:</span>
-          {countries.length > 0 ? (
-            countries.map((c) => (
+        {/* Country row — hidden when no countries */}
+        {countries.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <Database className="h-3.5 w-3.5 text-blue-500" />
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+              Countries:
+            </span>
+            {countries.map((c) => (
               <span
                 className="rounded-full bg-green-100 px-2 py-0.5 font-mono text-[11px] font-semibold text-green-800 dark:bg-green-950 dark:text-green-300"
                 key={c.iso3Code}
               >
                 {c.iso3Code}
               </span>
-            ))
-          ) : (
-            <span className="rounded-full bg-green-100 px-2 py-0.5 font-mono text-[11px] font-semibold text-green-800 dark:bg-green-950 dark:text-green-300">
-              —
+            ))}
+          </div>
+        )}
+        {/* Products row — hidden when no product codes */}
+        {allCodes.length > 0 && (
+          <div className={`flex items-center gap-1.5 ${countries.length > 0 ? 'pl-5' : ''}`}>
+            {countries.length === 0 && <Database className="h-3.5 w-3.5 text-blue-500" />}
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+              Products ({schema}):
             </span>
-          )}
-        </div>
-        {/* Schema + product codes row */}
-        <div className="flex items-center gap-1.5 pl-5">
-          <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
-            {schema ? `${schema}:` : ''}
-          </span>
-          {allCodes.map((code) => (
-            <span
-              className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 font-mono text-[11px] font-medium text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300"
-              key={code}
-            >
-              {code}
-            </span>
-          ))}
-        </div>
+            {allCodes.map((code) => (
+              <span
+                className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 font-mono text-[11px] font-medium text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                key={code}
+              >
+                {code}
+              </span>
+            ))}
+          </div>
+        )}
+        {/* Fallback: only schema, no countries or products */}
+        {countries.length === 0 && allCodes.length === 0 && (
+          <div className="flex items-center gap-1.5">
+            <Database className="h-3.5 w-3.5 text-blue-500" />
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{schema}</span>
+          </div>
+        )}
       </div>
       <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
     </button>
