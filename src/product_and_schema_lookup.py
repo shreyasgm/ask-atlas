@@ -23,6 +23,17 @@ SCHEMA_TO_PRODUCTS_TABLE_MAP = {
 }
 
 
+class CountryDetails(BaseModel):
+    """A country mentioned in the user query."""
+
+    name: str = Field(
+        description="The common name of the country (e.g. 'India', 'United States')"
+    )
+    iso3_code: str = Field(
+        description="The ISO 3166-1 alpha-3 code (e.g. 'IND', 'USA')"
+    )
+
+
 class ProductDetails(BaseModel):
     """A single product code with its basic metadata."""
 
@@ -61,7 +72,7 @@ class ProductSearchResult(BaseModel):
 
 
 class SchemasAndProductsFound(BaseModel):
-    """Schemas and products found in a trade-related question."""
+    """Schemas, products, and countries found in a trade-related question."""
 
     classification_schemas: List[str] = Field(
         description="List of relevant schema names from the db to use, based on the product classification systems implied in the user's question"
@@ -71,6 +82,10 @@ class SchemasAndProductsFound(BaseModel):
     )
     requires_product_lookup: bool = Field(
         description="Whether the query mentions products without associated codes (those need to be looked up in the db)"
+    )
+    countries: List[CountryDetails] = Field(
+        default_factory=list,
+        description="List of countries mentioned in the user's question, with their ISO 3166-1 alpha-3 codes",
     )
 
 
@@ -166,15 +181,22 @@ class ProductAndSchemaLookup:
         - Be specific with the codes - suggest the product code at the level most specific to the product mentioned.
         - Include multiple relevant codes if needed for broad product categories
 
+        Guidelines for country identification:
+        - Identify all countries mentioned in the user's question.
+        - Provide the country's common name and its ISO 3166-1 alpha-3 code (e.g. "IND" for India, "USA" for United States, "BRA" for Brazil).
+        - If no specific countries are mentioned, return an empty list.
+        - Regions or continents (e.g. "Africa", "Europe") are NOT countries — do not include them.
+
         Examples:
 
         Question: "What were US exports of cars and vehicles (HS 87) in 2020?"
         Response: {{
             "classification_schemas": ["hs92"],
             "products": [],
-            "requires_product_lookup": false
+            "requires_product_lookup": false,
+            "countries": [{{"name": "United States", "iso3_code": "USA"}}]
         }}
-        Reason: Since no specific product classification is mentioned, default to the schema 'hs92'. The question specifies a product code (HS 87), so no further lookup is needed for the codes.
+        Reason: Since no specific product classification is mentioned, default to the schema 'hs92'. The question specifies a product code (HS 87), so no further lookup is needed for the codes. The US is mentioned.
 
         Question: "What were US exports of cotton and wheat in 2021?"
         Response: {{
@@ -191,7 +213,8 @@ class ProductAndSchemaLookup:
                     "codes": ["1001"]
                 }}
             ],
-            "requires_product_lookup": true
+            "requires_product_lookup": true,
+            "countries": [{{"name": "United States", "iso3_code": "USA"}}]
         }}
         Reason: The question mentions two products without codes, so the products need to be looked up in the db. The schema wasn't mentioned, so default to 'hs92'.
 
@@ -199,7 +222,8 @@ class ProductAndSchemaLookup:
         Response: {{
             "classification_schemas": ["services_bilateral"],
             "products": [],
-            "requires_product_lookup": false
+            "requires_product_lookup": false,
+            "countries": [{{"name": "India", "iso3_code": "IND"}}, {{"name": "United States", "iso3_code": "USA"}}]
         }}
         Reason: The question specifically asks for services trade between two countries, so use the 'services_bilateral' schema. No products are mentioned, so no further lookup is needed for the codes.
 
@@ -207,7 +231,8 @@ class ProductAndSchemaLookup:
         Response: {{
             "classification_schemas": ["hs12", "services_bilateral"],
             "products": [],
-            "requires_product_lookup": false
+            "requires_product_lookup": false,
+            "countries": [{{"name": "United States", "iso3_code": "USA"}}, {{"name": "China", "iso3_code": "CHN"}}]
         }}
         Reason: The question mentions two different product classifications, so include both 'hs12' and 'services_bilateral' schemas. No products are mentioned, so no further lookup is needed for the codes.
 
@@ -226,9 +251,10 @@ class ProductAndSchemaLookup:
                     "codes": ["07"]
                 }}
             ],
-            "requires_product_lookup": true
+            "requires_product_lookup": true,
+            "countries": []
         }}
-        Reason: The question mentions two different product classifications, so include both 'hs12' and 'services_bilateral' schemas. No products are mentioned, so no further lookup is needed for the codes.
+        Reason: No specific countries are mentioned, so countries is empty.
         """
 
         prompt = ChatPromptTemplate.from_messages(

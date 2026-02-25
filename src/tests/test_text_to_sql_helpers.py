@@ -6,8 +6,14 @@ that never had direct test coverage.
 
 import pytest
 
+from src.product_and_schema_lookup import (
+    CountryDetails,
+    ProductDetails,
+    SchemasAndProductsFound,
+)
 from src.text_to_sql import (
     AtlasTextToSQL,
+    _extract_pipeline_state,
     _extract_tables_from_sql,
 )
 
@@ -143,3 +149,55 @@ class TestExtractTextWithRealProviders:
         result = AtlasTextToSQL._extract_text(raw)
         assert isinstance(result, str)
         assert len(result) > 0
+
+
+# ---------------------------------------------------------------------------
+# _extract_pipeline_state — SSE payload extraction
+# ---------------------------------------------------------------------------
+
+
+class TestExtractPipelineStateCountries:
+    """Verify that _extract_pipeline_state includes countries in
+    the extract_products event payload."""
+
+    def test_extract_products_includes_countries(self):
+        products = SchemasAndProductsFound(
+            classification_schemas=["hs92"],
+            products=[
+                ProductDetails(
+                    name="cotton", classification_schema="hs92", codes=["5201"]
+                ),
+            ],
+            requires_product_lookup=True,
+            countries=[
+                CountryDetails(name="India", iso3_code="IND"),
+                CountryDetails(name="United States", iso3_code="USA"),
+            ],
+        )
+        snapshot = {"pipeline_products": products}
+        result = _extract_pipeline_state("extract_products", snapshot)
+
+        assert result["stage"] == "extract_products"
+        assert result["countries"] == [
+            {"name": "India", "iso3_code": "IND"},
+            {"name": "United States", "iso3_code": "USA"},
+        ]
+
+    def test_extract_products_empty_countries(self):
+        products = SchemasAndProductsFound(
+            classification_schemas=["hs92"],
+            products=[],
+            requires_product_lookup=False,
+            countries=[],
+        )
+        snapshot = {"pipeline_products": products}
+        result = _extract_pipeline_state("extract_products", snapshot)
+
+        assert result["countries"] == []
+
+    def test_extract_products_no_pipeline_products(self):
+        """When pipeline_products is None, countries should default to []."""
+        snapshot = {"pipeline_products": None}
+        result = _extract_pipeline_state("extract_products", snapshot)
+
+        assert result["countries"] == []
