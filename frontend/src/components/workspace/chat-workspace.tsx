@@ -75,8 +75,6 @@ export default function ChatWorkspace({
 
   const handleSelectConversation = useCallback(
     (_threadId: string) => {
-      // Navigate happens via the Link in the sidebar; this callback
-      // lets us collapse the sidebar on mobile after selection.
       if (!isDesktop) {
         setSidebarExpanded(false);
       }
@@ -88,8 +86,21 @@ export default function ChatWorkspace({
     onClear();
   }, [onClear]);
 
+  const toggleSidebar = useCallback(() => {
+    setSidebarExpanded((prev) => !prev);
+  }, []);
+
   return (
     <div className="relative flex h-full overflow-hidden">
+      {/* Mobile backdrop when sidebar is open */}
+      {!isDesktop && sidebarExpanded && (
+        <div
+          aria-hidden="true"
+          className="fixed inset-0 z-10 bg-black/30"
+          onClick={() => setSidebarExpanded(false)}
+        />
+      )}
+
       {/* Left sidebar — overlays on mobile */}
       <div className={!isDesktop && sidebarExpanded ? 'absolute inset-y-0 left-0 z-20' : undefined}>
         <LeftSidebar
@@ -100,7 +111,7 @@ export default function ChatWorkspace({
           onDeleteConversation={onDeleteConversation}
           onNewChat={handleNewChat}
           onSelectConversation={handleSelectConversation}
-          onToggle={() => setSidebarExpanded((prev) => !prev)}
+          onToggle={toggleSidebar}
         />
       </div>
 
@@ -114,6 +125,7 @@ export default function ChatWorkspace({
         onModeChange={onModeChange}
         onSchemaChange={onSchemaChange}
         onSend={onSend}
+        onToggleSidebar={toggleSidebar}
         overrides={overrides}
         pipelineSteps={pipelineSteps}
         queryStats={queryStats}

@@ -16,11 +16,11 @@ export default function HeroSection() {
   }
 
   return (
-    <section className="flex w-full flex-col items-center gap-6 px-6 py-20 lg:px-52">
-      <h1 className="max-w-3xl text-center text-4xl font-bold text-foreground lg:text-5xl">
+    <section className="flex w-full flex-col items-center gap-6 px-5 py-10 sm:px-6 sm:py-20 lg:px-52">
+      <h1 className="max-w-3xl text-center text-[28px] leading-tight font-bold text-foreground sm:text-4xl lg:text-5xl">
         Ask about global trade and complexity
       </h1>
-      <p className="max-w-2xl text-center text-lg leading-relaxed text-muted-foreground">
+      <p className="max-w-2xl text-center text-[15px] leading-relaxed text-muted-foreground sm:text-lg">
         AI-powered insights from the Atlas of Economic Complexity. Natural language queries across
         trade data from 1962 to 2024.
       </p>

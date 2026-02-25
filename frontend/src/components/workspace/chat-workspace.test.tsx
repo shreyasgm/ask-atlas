@@ -67,4 +67,9 @@ describe('ChatWorkspace', () => {
     renderWorkspace();
     expect(screen.getByText(/ask me anything about trade data/i)).toBeInTheDocument();
   });
+
+  it('renders sidebar toggle button in center panel for mobile', () => {
+    renderWorkspace();
+    expect(screen.getByRole('button', { name: /toggle sidebar/i })).toBeInTheDocument();
+  });
 });

@@ -49,6 +49,24 @@ describe('Header', () => {
     expect(cta).toBeInTheDocument();
     expect(cta).toHaveAttribute('href', '/chat');
   });
+
+  it('renders mobile hamburger menu button', () => {
+    renderLanding();
+    const header = screen.getByRole('banner');
+    expect(within(header).getByRole('button', { name: /open menu/i })).toBeInTheDocument();
+  });
+
+  it('opens mobile menu dropdown when hamburger is clicked', async () => {
+    const user = userEvent.setup();
+    renderLanding();
+    const header = screen.getByRole('banner');
+    await user.click(within(header).getByRole('button', { name: /open menu/i }));
+    // Dropdown adds extra links (desktop nav also has them), so use getAllBy
+    const startLinks = screen.getAllByRole('link', { name: /start chatting/i });
+    expect(startLinks.length).toBeGreaterThanOrEqual(2);
+    const ghLinks = screen.getAllByRole('link', { name: 'GitHub' });
+    expect(ghLinks.length).toBeGreaterThanOrEqual(2);
+  });
 });
 
 describe('Hero Section', () => {
@@ -91,6 +109,11 @@ describe('Quick Start Section', () => {
   it('renders "QUICK START" section label', () => {
     renderLanding();
     expect(screen.getByText('QUICK START')).toBeInTheDocument();
+  });
+
+  it('renders "Explore Trade Data" heading', () => {
+    renderLanding();
+    expect(screen.getByText('Explore Trade Data')).toBeInTheDocument();
   });
 
   it('renders all 6 tile titles', () => {
