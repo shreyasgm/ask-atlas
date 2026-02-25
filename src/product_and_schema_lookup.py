@@ -176,10 +176,11 @@ class ProductAndSchemaLookup:
         - Never return more than two schemas unless explicitly required
 
         Guidelines for product identification:
-        - "products" here is how international trade data is classified. Product groups like "machinery" are considered products, and should be identified as such. Be liberal with identifying products. Products could be goods, services, or a mix of both. Here are some examples of products: "cars", "soap", "information technology", "iron", "tourism", "petroleum gas", etc. - anything classified by international trade data classification systems.
-        - We are identifying products here for the purpose of looking up their product codes. Only identify products that don't already have codes specified. Ignore products that have codes specified already in the query.
-        - Be specific with the codes - suggest the product code at the level most specific to the product mentioned.
-        - Include multiple relevant codes if needed for broad product categories
+        - "products" here is how international trade data is classified. Product groups like "machinery" are considered products, and should be identified as such. Products could be goods, services, or a mix of both — anything classified by international trade data classification systems (e.g. "cars", "coffee", "information technology", "iron", "tourism", "petroleum gas").
+        - You MUST extract every product mentioned by name in the user's question into the products list, with your best-guess HS/SITC codes. The ONLY exception is when the user provides an explicit numeric code (e.g., "HS 2012" means the classification is already known — do not re-extract it).
+        - If the question mentions no specific products at all (e.g., "What were India's top exports?"), then products should be empty.
+        - Be specific with the codes — suggest the product code at the level most specific to the product mentioned.
+        - Include multiple relevant codes if needed for broad product categories.
 
         Guidelines for country identification:
         - Identify all countries mentioned in the user's question.
