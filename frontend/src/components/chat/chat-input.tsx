@@ -46,7 +46,7 @@ export default function ChatInput({ disabled, onSend }: ChatInputProps) {
         />
         <button
           aria-label="Send"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-50"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-50"
           disabled={disabled || !value.trim()}
           type="submit"
         >

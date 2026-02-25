@@ -63,7 +63,7 @@ export default function LeftSidebar({
 
   if (!expanded) {
     return (
-      <div className="flex h-full w-12 shrink-0 flex-col items-center gap-3 border-r border-border bg-background py-3">
+      <div className="hidden h-full w-12 shrink-0 flex-col items-center gap-3 border-r border-border bg-background py-3 lg:flex">
         <button
           aria-label="Expand sidebar"
           className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"

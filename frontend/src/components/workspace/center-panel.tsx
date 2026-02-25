@@ -22,6 +22,7 @@ interface CenterPanelProps {
   onModeChange: (v: TradeMode | null) => void;
   onSchemaChange: (v: ClassificationSchema | null) => void;
   onSend: (text: string) => void;
+  onToggleSidebar: () => void;
   overrides: TradeOverrides;
   pipelineSteps: Array<PipelineStep>;
   queryStats: QueryAggregateStats | null;
@@ -37,6 +38,7 @@ export default function CenterPanel({
   onModeChange,
   onSchemaChange,
   onSend,
+  onToggleSidebar,
   overrides,
   pipelineSteps,
   queryStats,
@@ -46,7 +48,7 @@ export default function CenterPanel({
 
   return (
     <div className="flex min-w-0 flex-1 flex-col">
-      {messages.length > 0 && <ChatTopBar onClear={onClear} title={chatTitle} />}
+      <ChatTopBar onClear={onClear} onToggleSidebar={onToggleSidebar} title={chatTitle} />
       <TradeTogglesBar
         onModeChange={onModeChange}
         onSchemaChange={onSchemaChange}
