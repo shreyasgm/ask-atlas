@@ -250,6 +250,41 @@ describe('ChatPage integration (real hook + real components)', () => {
     expect(screen.getByText(/source: atlas of economic complexity/i)).toBeInTheDocument();
   });
 
+  it('extract_products event renders product pills in QueryContextCard', async () => {
+    const user = userEvent.setup();
+    const { close, pushEvent, stream } = createControllableStream();
+    globalThis.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+
+    renderChat();
+
+    const input = screen.getByPlaceholderText(/ask about trade data/i);
+    await user.type(input, 'Brazil coffee exports');
+    await user.click(screen.getByRole('button', { name: /send/i }));
+
+    pushEvent(makeThreadIdEvent());
+    pushEvent(
+      makePipelineStateEvent('extract_products', {
+        countries: [{ iso3_code: 'BRA', name: 'Brazil' }],
+        products: [{ codes: ['0901'], name: 'Coffee', schema: 'hs92' }],
+        requires_lookup: true,
+        schemas: ['hs92'],
+      }),
+    );
+    pushEvent(makeAgentTalkEvent('Brazil exported coffee worth $5B.'));
+    pushEvent(makeDoneEvent());
+    close();
+
+    // Wait for stream to finish
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/ask about trade data/i)).not.toBeDisabled();
+    });
+
+    // Product code pill should render in the collapsed QueryContextCard
+    expect(screen.getByText('0901')).toBeInTheDocument();
+    // Country pill should render
+    expect(screen.getByText('BRA')).toBeInTheDocument();
+  });
+
   it('clear button resets messages', async () => {
     const user = userEvent.setup();
     const { close, pushEvent, stream } = createControllableStream();

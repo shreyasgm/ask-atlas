@@ -442,6 +442,43 @@ describe('useChatStream integration (async SSE)', () => {
     });
   });
 
+  it('extract_products pipeline event populates entitiesData with products and countries', async () => {
+    const { close, pushEvent, stream } = createControllableStream();
+    globalThis.fetch = vi.fn().mockResolvedValue({ body: stream, ok: true });
+
+    const { result } = renderHook(() => useChatStream());
+
+    act(() => {
+      result.current.sendMessage('What did Brazil export in coffee?');
+    });
+
+    pushEvent(makeThreadIdEvent());
+    pushEvent(
+      makePipelineStateEvent('extract_products', {
+        countries: [{ iso3_code: 'BRA', name: 'Brazil' }],
+        products: [{ codes: ['0901'], name: 'Coffee', schema: 'hs92' }],
+        requires_lookup: true,
+        schemas: ['hs92'],
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.entitiesData).not.toBeNull();
+      expect(result.current.entitiesData!.products).toEqual([
+        { codes: ['0901'], name: 'Coffee', schema: 'hs92' },
+      ]);
+      expect(result.current.entitiesData!.countries).toEqual([{ iso3Code: 'BRA', name: 'Brazil' }]);
+      expect(result.current.entitiesData!.schemas).toEqual(['hs92']);
+    });
+
+    pushEvent(makeDoneEvent());
+    close();
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+    });
+  });
+
   it('auto-submit from ?q= works with StrictMode double-mount', async () => {
     const events = [makeThreadIdEvent(), makeAgentTalkEvent('auto-response'), makeDoneEvent()];
     globalThis.fetch = vi.fn().mockResolvedValue({
