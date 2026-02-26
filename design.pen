@@ -70,7 +70,7 @@
                       "name": "pickerTxt",
                       "fill": "#1E293B",
                       "content": "Product Code Picker",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 14,
                       "fontWeight": "semibold"
                     }
@@ -98,7 +98,7 @@
               "width": "fill_container",
               "content": "Your query mentions \"chips.\" 8 candidate codes were found — select the codes to include in your query.",
               "lineHeight": 1.5,
-              "fontFamily": "DM Sans",
+              "fontFamily": "Inter",
               "fontSize": 12,
               "fontWeight": "normal"
             }
@@ -137,7 +137,7 @@
                   "name": "saLeft",
                   "fill": "#0F172A",
                   "content": "CANDIDATES",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 10,
                   "fontWeight": "semibold",
                   "letterSpacing": 1.5
@@ -148,7 +148,7 @@
                   "name": "saRight",
                   "fill": "#0F172A",
                   "content": "Select All",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 11,
                   "fontWeight": "normal"
                 }
@@ -243,7 +243,7 @@
                                   "name": "c1name",
                                   "fill": "#0F172A",
                                   "content": "Semiconductor devices",
-                                  "fontFamily": "DM Sans",
+                                  "fontFamily": "Inter",
                                   "fontSize": 12,
                                   "fontWeight": "normal"
                                 }
@@ -348,7 +348,7 @@
                                   "name": "c2name",
                                   "fill": "#0F172A",
                                   "content": "Integrated circuits",
-                                  "fontFamily": "DM Sans",
+                                  "fontFamily": "Inter",
                                   "fontSize": 12,
                                   "fontWeight": "normal"
                                 }
@@ -442,7 +442,7 @@
                                   "name": "c3name",
                                   "fill": "#0F172A",
                                   "content": "Electrical machines nes",
-                                  "fontFamily": "DM Sans",
+                                  "fontFamily": "Inter",
                                   "fontSize": 12,
                                   "fontWeight": "normal"
                                 }
@@ -536,7 +536,7 @@
                                   "name": "c4name",
                                   "fill": "#0F172A",
                                   "content": "Potato chips (food)",
-                                  "fontFamily": "DM Sans",
+                                  "fontFamily": "Inter",
                                   "fontSize": 12,
                                   "fontWeight": "normal"
                                 }
@@ -621,7 +621,7 @@
               "name": "selInfo",
               "fill": "#94A3B8",
               "content": "2 of 4 codes selected",
-              "fontFamily": "DM Sans",
+              "fontFamily": "Inter",
               "fontSize": 11,
               "fontWeight": "normal"
             },
@@ -656,7 +656,7 @@
                   "name": "confirmText",
                   "fill": "#FFFFFF",
                   "content": "Confirm Selection",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 13,
                   "fontWeight": "semibold"
                 }
@@ -721,7 +721,7 @@
                   "name": "logoText",
                   "fill": "$text-primary",
                   "content": "Ask Atlas",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 20,
                   "fontWeight": "bold"
                 }
@@ -740,7 +740,7 @@
                   "name": "nav2",
                   "fill": "$text-secondary",
                   "content": "GitHub",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 14,
                   "fontWeight": "normal"
                 },
@@ -750,7 +750,7 @@
                   "name": "nav3",
                   "fill": "$text-secondary",
                   "content": "Atlas",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 14,
                   "fontWeight": "normal"
                 },
@@ -772,7 +772,7 @@
                       "name": "ctaTxt",
                       "fill": "#FFFFFF",
                       "content": "Start Chatting",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 14,
                       "fontWeight": "semibold"
                     }
@@ -806,7 +806,7 @@
               "width": 800,
               "content": "Ask about global trade and complexity",
               "textAlign": "center",
-              "fontFamily": "DM Sans",
+              "fontFamily": "Inter",
               "fontSize": 52,
               "fontWeight": "bold"
             },
@@ -820,7 +820,7 @@
               "content": "AI-powered insights from the Atlas of Economic Complexity. Natural language queries across trade data from 1962 to 2024.",
               "lineHeight": 1.6,
               "textAlign": "center",
-              "fontFamily": "DM Sans",
+              "fontFamily": "Inter",
               "fontSize": 18,
               "fontWeight": "normal"
             },
@@ -870,7 +870,7 @@
                   "name": "searchPlc",
                   "fill": "$text-muted",
                   "content": "What were India's top exports in 2020?",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 15,
                   "fontWeight": "normal"
                 },
@@ -922,7 +922,7 @@
               "name": "tilesLabel",
               "fill": "$text-tertiary",
               "content": "QUICK START",
-              "fontFamily": "DM Sans",
+              "fontFamily": "Inter",
               "fontSize": 11,
               "fontWeight": "semibold",
               "letterSpacing": 2
@@ -989,7 +989,7 @@
                           "name": "t1title",
                           "fill": "$text-primary",
                           "content": "Top Exports",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 15,
                           "fontWeight": "semibold"
                         },
@@ -1002,7 +1002,7 @@
                           "width": 320,
                           "content": "What were Brazil's top 5 exports in 2022?",
                           "lineHeight": 1.4,
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "normal"
                         }
@@ -1052,7 +1052,7 @@
                           "name": "t2title",
                           "fill": "$text-primary",
                           "content": "Bilateral Trade",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 15,
                           "fontWeight": "semibold"
                         },
@@ -1065,7 +1065,7 @@
                           "width": 320,
                           "content": "Trade between China and the US from 2010-2020",
                           "lineHeight": 1.4,
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "normal"
                         }
@@ -1115,7 +1115,7 @@
                           "name": "t3title",
                           "fill": "$text-primary",
                           "content": "Product Search",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 15,
                           "fontWeight": "semibold"
                         },
@@ -1128,7 +1128,7 @@
                           "width": 320,
                           "content": "Which countries export semiconductors?",
                           "lineHeight": 1.4,
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "normal"
                         }
@@ -1188,7 +1188,7 @@
                           "name": "t4title",
                           "fill": "$text-primary",
                           "content": "Trade Balance",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 15,
                           "fontWeight": "semibold"
                         },
@@ -1201,7 +1201,7 @@
                           "width": 320,
                           "content": "Trade balance of Germany with France",
                           "lineHeight": 1.4,
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "normal"
                         }
@@ -1251,7 +1251,7 @@
                           "name": "t5title",
                           "fill": "$text-primary",
                           "content": "Complexity Metrics",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 15,
                           "fontWeight": "semibold"
                         },
@@ -1264,7 +1264,7 @@
                           "width": 320,
                           "content": "What is Japan's Economic Complexity Index?",
                           "lineHeight": 1.4,
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "normal"
                         }
@@ -1314,7 +1314,7 @@
                           "name": "t6title",
                           "fill": "$text-primary",
                           "content": "Trading Partners",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 15,
                           "fontWeight": "semibold"
                         },
@@ -1327,7 +1327,7 @@
                           "width": 320,
                           "content": "Main trading partners of Mexico in automotive",
                           "lineHeight": 1.4,
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "normal"
                         }
@@ -1359,7 +1359,7 @@
               "name": "covLabel",
               "fill": "$text-tertiary",
               "content": "TRADE CLASSIFICATIONS",
-              "fontFamily": "DM Sans",
+              "fontFamily": "Inter",
               "fontSize": 11,
               "fontWeight": "semibold",
               "letterSpacing": 2
@@ -1395,7 +1395,7 @@
                       "name": "b1c",
                       "fill": "$accent",
                       "content": "HS 1992",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 14,
                       "fontWeight": "600"
                     },
@@ -1405,7 +1405,7 @@
                       "name": "b1n",
                       "fill": "$text-secondary",
                       "content": "Harmonized System 1992",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "normal"
                     }
@@ -1434,7 +1434,7 @@
                       "name": "b2c",
                       "fill": "$accent",
                       "content": "HS 2012",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 14,
                       "fontWeight": "600"
                     },
@@ -1444,7 +1444,7 @@
                       "name": "b2n",
                       "fill": "$text-secondary",
                       "content": "Harmonized System 2012",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "normal"
                     }
@@ -1473,7 +1473,7 @@
                       "name": "b3c",
                       "fill": "$accent",
                       "content": "SITC",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 14,
                       "fontWeight": "600"
                     },
@@ -1483,7 +1483,7 @@
                       "name": "b3n",
                       "fill": "$text-secondary",
                       "content": "Standard International Trade Classification",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "normal"
                     }
@@ -1512,7 +1512,7 @@
                       "name": "b4c",
                       "fill": "$accent",
                       "content": "Services",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 14,
                       "fontWeight": "600"
                     },
@@ -1522,7 +1522,7 @@
                       "name": "b4n",
                       "fill": "$text-secondary",
                       "content": "Services classification",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "normal"
                     }
@@ -1563,7 +1563,7 @@
                   "name": "footLogo",
                   "fill": "$text-secondary",
                   "content": "Ask Atlas",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 13,
                   "fontWeight": "semibold"
                 }
@@ -1582,7 +1582,7 @@
                   "name": "footLink1",
                   "fill": "$text-secondary",
                   "content": "GitHub",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "normal"
                 },
@@ -1592,7 +1592,7 @@
                   "name": "footLink2",
                   "fill": "$text-secondary",
                   "content": "Atlas of Economic Complexity",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 12,
                   "fontWeight": "normal"
                 },
@@ -1671,7 +1671,7 @@
                   "name": "logoTxt",
                   "fill": "#F1F5F9",
                   "content": "Ask Atlas",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 16,
                   "fontWeight": "bold"
                 },
@@ -1730,7 +1730,7 @@
                   "name": "newChatTxt",
                   "fill": "#FFFFFF",
                   "content": "New Chat",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 13,
                   "fontWeight": "medium"
                 }
@@ -1742,7 +1742,7 @@
               "name": "histLabel",
               "fill": "#64748B",
               "content": "HISTORY",
-              "fontFamily": "DM Sans",
+              "fontFamily": "Inter",
               "fontSize": 10,
               "fontWeight": "semibold",
               "letterSpacing": 1.5
@@ -1787,7 +1787,7 @@
                       "textGrowth": "fixed-width",
                       "width": 150,
                       "content": "India top exports 2020",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "medium"
                     }
@@ -1824,7 +1824,7 @@
                       "textGrowth": "fixed-width",
                       "width": 150,
                       "content": "US-China bilateral trade",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "normal"
                     }
@@ -1861,7 +1861,7 @@
                       "textGrowth": "fixed-width",
                       "width": 150,
                       "content": "Semiconductor exporters",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "normal"
                     }
@@ -1905,7 +1905,7 @@
                   "name": "topTitle",
                   "fill": "#1E293B",
                   "content": "India's top exports 2020",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 15,
                   "fontWeight": "semibold"
                 },
@@ -1922,7 +1922,7 @@
                       "name": "clearBtn",
                       "fill": "#94A3B8",
                       "content": "Clear",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "normal"
                     },
@@ -1966,7 +1966,7 @@
                   "name": "modeLabel",
                   "fill": "#94A3B8",
                   "content": "MODE",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 9,
                   "fontWeight": "semibold",
                   "letterSpacing": 1.5
@@ -1988,7 +1988,7 @@
                       "name": "tg1txt",
                       "fill": "#FFFFFF",
                       "content": "Goods",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 11,
                       "fontWeight": "semibold"
                     }
@@ -2010,7 +2010,7 @@
                       "name": "tg2txt",
                       "fill": "#94A3B8",
                       "content": "Services",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 11,
                       "fontWeight": "normal"
                     }
@@ -2136,7 +2136,7 @@
                           "name": "userTxt",
                           "fill": "#1E293B",
                           "content": "What were India's top 5 exports in 2020?",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 14,
                           "fontWeight": "normal"
                         }
@@ -2207,7 +2207,7 @@
                                   "name": "pickerTxt",
                                   "fill": "#1E293B",
                                   "content": "Product Code Picker",
-                                  "fontFamily": "DM Sans",
+                                  "fontFamily": "Inter",
                                   "fontSize": 14,
                                   "fontWeight": "semibold"
                                 }
@@ -2224,7 +2224,7 @@
                           "width": "fill_container",
                           "content": "Your query mentions \"semiconductors.\" 2 candidate codes were found — select the best fit:",
                           "lineHeight": 1.5,
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
                         }
@@ -2263,7 +2263,7 @@
                               "name": "saLeft",
                               "fill": "#0F172A",
                               "content": "CANDIDATES",
-                              "fontFamily": "DM Sans",
+                              "fontFamily": "Inter",
                               "fontSize": 10,
                               "fontWeight": "semibold",
                               "letterSpacing": 1.5
@@ -2274,7 +2274,7 @@
                               "name": "saRight",
                               "fill": "#0F172A",
                               "content": "Select All",
-                              "fontFamily": "DM Sans",
+                              "fontFamily": "Inter",
                               "fontSize": 11,
                               "fontWeight": "normal"
                             }
@@ -2369,7 +2369,7 @@
                                               "name": "c1name",
                                               "fill": "#0F172A",
                                               "content": "Semiconductor devices",
-                                              "fontFamily": "DM Sans",
+                                              "fontFamily": "Inter",
                                               "fontSize": 12,
                                               "fontWeight": "normal"
                                             }
@@ -2463,7 +2463,7 @@
                                               "name": "c2name",
                                               "fill": "#0F172A",
                                               "content": "Integrated circuits",
-                                              "fontFamily": "DM Sans",
+                                              "fontFamily": "Inter",
                                               "fontSize": 12,
                                               "fontWeight": "normal"
                                             }
@@ -2548,7 +2548,7 @@
                           "name": "selInfo",
                           "fill": "#94A3B8",
                           "content": "1 of 2 codes selected",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "normal"
                         },
@@ -2583,7 +2583,7 @@
                               "name": "confirmText",
                               "fill": "#FFFFFF",
                               "content": "Confirm Selection",
-                              "fontFamily": "DM Sans",
+                              "fontFamily": "Inter",
                               "fontSize": 13,
                               "fontWeight": "semibold"
                             }
@@ -2640,7 +2640,7 @@
                               "name": "countryLabel",
                               "fill": "#475569",
                               "content": "Countries:",
-                              "fontFamily": "DM Sans",
+                              "fontFamily": "Inter",
                               "fontSize": 12,
                               "fontWeight": "medium"
                             },
@@ -2688,7 +2688,7 @@
                               "name": "hsLabel",
                               "fill": "#475569",
                               "content": "Products (HS92):",
-                              "fontFamily": "DM Sans",
+                              "fontFamily": "Inter",
                               "fontSize": 12,
                               "fontWeight": "medium"
                             },
@@ -2820,7 +2820,7 @@
                           "name": "aiLabel",
                           "fill": "#3B82F6",
                           "content": "Ask-Atlas Assistant",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "semibold"
                         }
@@ -2835,7 +2835,7 @@
                       "width": "fill_container",
                       "content": "Refined Petroleum was India's largest export in 2020 at $27.1B, followed by Diamonds ($18.6B), Packaged Medicaments ($15.8B), Rice ($8.0B), and Jewellery ($7.5B). Here are the details:",
                       "lineHeight": 1.5,
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 14,
                       "fontWeight": "normal"
                     },
@@ -2882,7 +2882,7 @@
                                   "name": "tblHdrT1",
                                   "fill": "#94A3B8",
                                   "content": "PRODUCT",
-                                  "fontFamily": "DM Sans",
+                                  "fontFamily": "Inter",
                                   "fontSize": 10,
                                   "fontWeight": "semibold",
                                   "letterSpacing": 1
@@ -2906,7 +2906,7 @@
                                   "name": "tblHdrT2",
                                   "fill": "#94A3B8",
                                   "content": "VALUE (USD)",
-                                  "fontFamily": "DM Sans",
+                                  "fontFamily": "Inter",
                                   "fontSize": 10,
                                   "fontWeight": "semibold",
                                   "letterSpacing": 1
@@ -2943,7 +2943,7 @@
                                   "name": "r1t1",
                                   "fill": "#1E293B",
                                   "content": "Refined Petroleum",
-                                  "fontFamily": "DM Sans",
+                                  "fontFamily": "Inter",
                                   "fontSize": 13,
                                   "fontWeight": "normal"
                                 }
@@ -3002,7 +3002,7 @@
                                   "name": "r2t1",
                                   "fill": "#1E293B",
                                   "content": "Diamonds",
-                                  "fontFamily": "DM Sans",
+                                  "fontFamily": "Inter",
                                   "fontSize": 13,
                                   "fontWeight": "normal"
                                 }
@@ -3061,7 +3061,7 @@
                                   "name": "r3t1",
                                   "fill": "#1E293B",
                                   "content": "Packaged Medicaments",
-                                  "fontFamily": "DM Sans",
+                                  "fontFamily": "Inter",
                                   "fontSize": 13,
                                   "fontWeight": "normal"
                                 }
@@ -3120,7 +3120,7 @@
                                   "name": "r4t1",
                                   "fill": "#1E293B",
                                   "content": "Rice",
-                                  "fontFamily": "DM Sans",
+                                  "fontFamily": "Inter",
                                   "fontSize": 13,
                                   "fontWeight": "normal"
                                 }
@@ -3173,7 +3173,7 @@
                                   "name": "r5t1",
                                   "fill": "#1E293B",
                                   "content": "Jewellery",
-                                  "fontFamily": "DM Sans",
+                                  "fontFamily": "Inter",
                                   "fontSize": 13,
                                   "fontWeight": "normal"
                                 }
@@ -3243,7 +3243,7 @@
                               "name": "pill1txt",
                               "fill": "#3B82F6",
                               "content": "Show as chart",
-                              "fontFamily": "DM Sans",
+                              "fontFamily": "Inter",
                               "fontSize": 12,
                               "fontWeight": "medium"
                             }
@@ -3270,7 +3270,7 @@
                               "name": "pill2txt",
                               "fill": "#3B82F6",
                               "content": "Compare with 2019",
-                              "fontFamily": "DM Sans",
+                              "fontFamily": "Inter",
                               "fontSize": 12,
                               "fontWeight": "medium"
                             }
@@ -3297,7 +3297,7 @@
                               "name": "pill3txt",
                               "fill": "#3B82F6",
                               "content": "Top import partners",
-                              "fontFamily": "DM Sans",
+                              "fontFamily": "Inter",
                               "fontSize": 12,
                               "fontWeight": "medium"
                             }
@@ -3362,7 +3362,7 @@
                           "name": "inputPlc",
                           "fill": "#94A3B8",
                           "content": "Ask about trade data...",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 14,
                           "fontWeight": "normal"
                         }
@@ -3400,7 +3400,7 @@
                   "fill": "#CBD5E1",
                   "content": "Responses may contain inaccuracies. Verify independently.",
                   "textAlign": "center",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 10,
                   "fontWeight": "normal"
                 }
@@ -3431,7 +3431,7 @@
           "name": "f2title",
           "fill": "#1E293B",
           "content": "Query Context - Inline Chat Card",
-          "fontFamily": "DM Sans",
+          "fontFamily": "Inter",
           "fontSize": 18,
           "fontWeight": "bold"
         },
@@ -3448,7 +3448,7 @@
               "name": "varBLabel",
               "fill": "#1E293B",
               "content": "Variant B: Collapsed",
-              "fontFamily": "DM Sans",
+              "fontFamily": "Inter",
               "fontSize": 13,
               "fontWeight": "semibold"
             },
@@ -3498,7 +3498,7 @@
                           "name": "countryLabel",
                           "fill": "#475569",
                           "content": "Countries:",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "medium"
                         },
@@ -3546,7 +3546,7 @@
                           "name": "hsLabel",
                           "fill": "#475569",
                           "content": "Products (HS92):",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "medium"
                         },
@@ -3662,7 +3662,7 @@
               "name": "varCLabel",
               "fill": "#1E293B",
               "content": "Variant A: Expanded",
-              "fontFamily": "DM Sans",
+              "fontFamily": "Inter",
               "fontSize": 13,
               "fontWeight": "semibold"
             },
@@ -3733,7 +3733,7 @@
                               "name": "vcHdrTxt",
                               "fill": "#1E293B",
                               "content": "Query Context",
-                              "fontFamily": "DM Sans",
+                              "fontFamily": "Inter",
                               "fontSize": 12,
                               "fontWeight": "semibold"
                             }
@@ -3764,7 +3764,7 @@
                           "name": "countryLabel",
                           "fill": "#475569",
                           "content": "Countries:",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "medium"
                         },
@@ -3785,7 +3785,7 @@
                               "name": "countryPillTxt",
                               "fill": "#166534",
                               "content": "India (IND)",
-                              "fontFamily": "DM Sans",
+                              "fontFamily": "Inter",
                               "fontSize": 11,
                               "fontWeight": "semibold"
                             }
@@ -3799,7 +3799,7 @@
                       "name": "vcR2",
                       "fill": "#475569",
                       "content": "Schema: HS92",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "normal"
                     },
@@ -3809,7 +3809,7 @@
                       "name": "vcProdsLabel",
                       "fill": "#475569",
                       "content": "Products:",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "medium"
                     },
@@ -3932,7 +3932,7 @@
                           "name": "vcResTxt",
                           "fill": "#475569",
                           "content": "Resolution: Auto-resolved (LLM + FTS)",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "normal"
                         },
@@ -3953,7 +3953,7 @@
                               "name": "vcBadgeTxt",
                               "fill": "#166534",
                               "content": "Confident",
-                              "fontFamily": "DM Sans",
+                              "fontFamily": "Inter",
                               "fontSize": 10,
                               "fontWeight": "semibold"
                             }
@@ -4036,7 +4036,7 @@
                   "name": "logoText",
                   "fill": "$text-primary",
                   "content": "Ask Atlas",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 18,
                   "fontWeight": "700"
                 }
@@ -4080,7 +4080,7 @@
               "content": "Ask about global trade and complexity",
               "lineHeight": 1.2,
               "textAlign": "center",
-              "fontFamily": "DM Sans",
+              "fontFamily": "Inter",
               "fontSize": 28,
               "fontWeight": "700",
               "letterSpacing": -0.5
@@ -4095,7 +4095,7 @@
               "content": "AI-powered insights from the Atlas of Economic Complexity. Explore trade data, product complexity, and economic growth patterns.",
               "lineHeight": 1.5,
               "textAlign": "center",
-              "fontFamily": "DM Sans",
+              "fontFamily": "Inter",
               "fontSize": 15,
               "fontWeight": "normal"
             },
@@ -4135,7 +4135,7 @@
                   "name": "searchPlaceholder",
                   "fill": "$text-tertiary",
                   "content": "Ask a question about trade data...",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 15,
                   "fontWeight": "normal"
                 }
@@ -4161,7 +4161,7 @@
               "name": "qsLabel",
               "fill": "$text-tertiary",
               "content": "QUICK START",
-              "fontFamily": "DM Sans",
+              "fontFamily": "Inter",
               "fontSize": 12,
               "fontWeight": "600",
               "letterSpacing": 1
@@ -4172,7 +4172,7 @@
               "name": "qsTitle",
               "fill": "$text-primary",
               "content": "Explore Trade Data",
-              "fontFamily": "DM Sans",
+              "fontFamily": "Inter",
               "fontSize": 20,
               "fontWeight": "600"
             },
@@ -4223,7 +4223,7 @@
                           "name": "t1title",
                           "fill": "$text-primary",
                           "content": "Top Exports",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 14,
                           "fontWeight": "600"
                         },
@@ -4236,7 +4236,7 @@
                           "width": "fill_container",
                           "content": "Leading export products by country",
                           "lineHeight": 1.4,
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
                         }
@@ -4274,7 +4274,7 @@
                           "name": "t2title",
                           "fill": "$text-primary",
                           "content": "Bilateral Trade",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 14,
                           "fontWeight": "600"
                         },
@@ -4287,7 +4287,7 @@
                           "width": "fill_container",
                           "content": "Trade flows between two countries",
                           "lineHeight": 1.4,
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
                         }
@@ -4334,7 +4334,7 @@
                           "name": "t3title",
                           "fill": "$text-primary",
                           "content": "Product Search",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 14,
                           "fontWeight": "600"
                         },
@@ -4347,7 +4347,7 @@
                           "width": "fill_container",
                           "content": "Find products by name or HS code",
                           "lineHeight": 1.4,
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
                         }
@@ -4385,7 +4385,7 @@
                           "name": "t4title",
                           "fill": "$text-primary",
                           "content": "Trade Balance",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 14,
                           "fontWeight": "600"
                         },
@@ -4398,7 +4398,7 @@
                           "width": "fill_container",
                           "content": "Import and export balance analysis",
                           "lineHeight": 1.4,
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
                         }
@@ -4445,7 +4445,7 @@
                           "name": "t5title",
                           "fill": "$text-primary",
                           "content": "Complexity Metrics",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 14,
                           "fontWeight": "600"
                         },
@@ -4458,7 +4458,7 @@
                           "width": "fill_container",
                           "content": "Economic complexity rankings",
                           "lineHeight": 1.4,
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
                         }
@@ -4496,7 +4496,7 @@
                           "name": "t6title",
                           "fill": "$text-primary",
                           "content": "Trading Partners",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 14,
                           "fontWeight": "600"
                         },
@@ -4509,7 +4509,7 @@
                           "width": "fill_container",
                           "content": "Key trading partners by country",
                           "lineHeight": 1.4,
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
                         }
@@ -4541,7 +4541,7 @@
               "name": "dcLabel",
               "fill": "$text-tertiary",
               "content": "TRADE CLASSIFICATIONS",
-              "fontFamily": "DM Sans",
+              "fontFamily": "Inter",
               "fontSize": 12,
               "fontWeight": "600",
               "letterSpacing": 1
@@ -4578,7 +4578,7 @@
                       "name": "mb1c",
                       "fill": "$accent",
                       "content": "HS 1992",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "600"
                     },
@@ -4588,7 +4588,7 @@
                       "name": "mb1n",
                       "fill": "$text-secondary",
                       "content": "Harmonized System 1992",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "normal"
                     }
@@ -4617,7 +4617,7 @@
                       "name": "mb2c",
                       "fill": "$accent",
                       "content": "HS 2012",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "600"
                     },
@@ -4627,7 +4627,7 @@
                       "name": "mb2n",
                       "fill": "$text-secondary",
                       "content": "Harmonized System 2012",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "normal"
                     }
@@ -4656,7 +4656,7 @@
                       "name": "mb3c",
                       "fill": "$accent",
                       "content": "SITC",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "600"
                     },
@@ -4666,7 +4666,7 @@
                       "name": "mb3n",
                       "fill": "$text-secondary",
                       "content": "Standard International Trade Classification",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "normal"
                     }
@@ -4695,7 +4695,7 @@
                       "name": "mb4c",
                       "fill": "$accent",
                       "content": "Services",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 13,
                       "fontWeight": "600"
                     },
@@ -4705,7 +4705,7 @@
                       "name": "mb4n",
                       "fill": "$text-secondary",
                       "content": "Services classification",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "normal"
                     }
@@ -4763,7 +4763,7 @@
                   "name": "footerTitle",
                   "fill": "$text-primary",
                   "content": "Ask Atlas",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 16,
                   "fontWeight": "600"
                 }
@@ -4783,7 +4783,7 @@
                   "name": "link1",
                   "fill": "$text-secondary",
                   "content": "GitHub",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 13,
                   "fontWeight": "500"
                 },
@@ -4793,7 +4793,7 @@
                   "name": "linkDot1",
                   "fill": "$text-tertiary",
                   "content": "·",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 13,
                   "fontWeight": "500"
                 },
@@ -4803,7 +4803,7 @@
                   "name": "link2",
                   "fill": "$text-secondary",
                   "content": "Atlas",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 13,
                   "fontWeight": "500"
                 }
@@ -4815,7 +4815,7 @@
               "name": "footerLicense",
               "fill": "$text-tertiary",
               "content": "CC-BY-NC-SA 4.0",
-              "fontFamily": "DM Sans",
+              "fontFamily": "Inter",
               "fontSize": 12,
               "fontWeight": "normal"
             }
@@ -4905,7 +4905,7 @@
                   "name": "logoText",
                   "fill": "#1E293B",
                   "content": "Ask Atlas",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 18,
                   "fontWeight": "600"
                 }
@@ -4950,7 +4950,7 @@
               "name": "modeLabel",
               "fill": "#94A3B8",
               "content": "MODE",
-              "fontFamily": "DM Sans",
+              "fontFamily": "Inter",
               "fontSize": 9,
               "fontWeight": "semibold",
               "letterSpacing": 1.5
@@ -4972,7 +4972,7 @@
                   "name": "tg1txt",
                   "fill": "#FFFFFF",
                   "content": "Goods",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 11,
                   "fontWeight": "semibold"
                 }
@@ -4994,7 +4994,7 @@
                   "name": "tg2txt",
                   "fill": "#94A3B8",
                   "content": "Services",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 11,
                   "fontWeight": "normal"
                 }
@@ -5121,7 +5121,7 @@
                       "width": 220,
                       "content": "What were India's top 5 exports in 2020?",
                       "lineHeight": 1.45,
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 14,
                       "fontWeight": "normal"
                     }
@@ -5193,7 +5193,7 @@
                               "name": "pickerTxt",
                               "fill": "#1E293B",
                               "content": "Product Code Picker",
-                              "fontFamily": "DM Sans",
+                              "fontFamily": "Inter",
                               "fontSize": 14,
                               "fontWeight": "semibold"
                             }
@@ -5210,7 +5210,7 @@
                       "width": "fill_container",
                       "content": "Your query mentions \"petroleum.\" 2 candidate codes were found — select the best fit:",
                       "lineHeight": 1.5,
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "normal"
                     }
@@ -5249,7 +5249,7 @@
                           "name": "saLeft",
                           "fill": "#0F172A",
                           "content": "CANDIDATES",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 10,
                           "fontWeight": "semibold",
                           "letterSpacing": 1.5
@@ -5260,7 +5260,7 @@
                           "name": "saRight",
                           "fill": "#0F172A",
                           "content": "Select All",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 11,
                           "fontWeight": "normal"
                         }
@@ -5355,7 +5355,7 @@
                                           "name": "c1name",
                                           "fill": "#0F172A",
                                           "content": "Refined Petroleum",
-                                          "fontFamily": "DM Sans",
+                                          "fontFamily": "Inter",
                                           "fontSize": 12,
                                           "fontWeight": "normal"
                                         }
@@ -5449,7 +5449,7 @@
                                           "name": "c2name",
                                           "fill": "#0F172A",
                                           "content": "Crude Petroleum",
-                                          "fontFamily": "DM Sans",
+                                          "fontFamily": "Inter",
                                           "fontSize": 12,
                                           "fontWeight": "normal"
                                         }
@@ -5534,7 +5534,7 @@
                       "name": "selInfo",
                       "fill": "#94A3B8",
                       "content": "1 of 2 codes selected",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 11,
                       "fontWeight": "normal"
                     },
@@ -5569,7 +5569,7 @@
                           "name": "confirmText",
                           "fill": "#FFFFFF",
                           "content": "Confirm Selection",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 13,
                           "fontWeight": "semibold"
                         }
@@ -5629,7 +5629,7 @@
                           "name": "mcountryLabel",
                           "fill": "#475569",
                           "content": "Country:",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "medium"
                         },
@@ -5677,7 +5677,7 @@
                           "name": "mhsLabel",
                           "fill": "#475569",
                           "content": "HS92:",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "medium"
                         },
@@ -5809,7 +5809,7 @@
                       "name": "aiLabel",
                       "fill": "#3B82F6",
                       "content": "Ask-Atlas Assistant",
-                      "fontFamily": "DM Sans",
+                      "fontFamily": "Inter",
                       "fontSize": 12,
                       "fontWeight": "semibold"
                     }
@@ -5824,7 +5824,7 @@
                   "width": "fill_container",
                   "content": "Refined petroleum was India's largest export in 2020, accounting for over $26 billion in trade value. Here are the top 5 exports:",
                   "lineHeight": 1.5,
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 14,
                   "fontWeight": "normal"
                 },
@@ -5868,7 +5868,7 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "Product",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "600"
                         },
@@ -5878,7 +5878,7 @@
                           "name": "thValue",
                           "fill": "#475569",
                           "content": "Trade Value",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "600"
                         }
@@ -5909,7 +5909,7 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "Refined Petroleum",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
                         },
@@ -5919,7 +5919,7 @@
                           "name": "r1Value",
                           "fill": "#1E293B",
                           "content": "$26.2B",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "600"
                         }
@@ -5950,7 +5950,7 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "Diamonds",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
                         },
@@ -5960,7 +5960,7 @@
                           "name": "r2Value",
                           "fill": "#1E293B",
                           "content": "$18.7B",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "600"
                         }
@@ -5991,7 +5991,7 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "Packaged Medicaments",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
                         },
@@ -6001,7 +6001,7 @@
                           "name": "r3Value",
                           "fill": "#1E293B",
                           "content": "$15.1B",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "600"
                         }
@@ -6032,7 +6032,7 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "Rice",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
                         },
@@ -6042,7 +6042,7 @@
                           "name": "r4Value",
                           "fill": "#1E293B",
                           "content": "$8.4B",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "600"
                         }
@@ -6066,7 +6066,7 @@
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
                           "content": "Jewellery",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "normal"
                         },
@@ -6076,7 +6076,7 @@
                           "name": "r5Value",
                           "fill": "#1E293B",
                           "content": "$7.9B",
-                          "fontFamily": "DM Sans",
+                          "fontFamily": "Inter",
                           "fontSize": 12,
                           "fontWeight": "600"
                         }
@@ -6133,7 +6133,7 @@
                   "name": "inputPlaceholder",
                   "fill": "#94A3B8",
                   "content": "Ask about trade data...",
-                  "fontFamily": "DM Sans",
+                  "fontFamily": "Inter",
                   "fontSize": 14,
                   "fontWeight": "normal"
                 }
