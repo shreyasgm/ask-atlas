@@ -358,6 +358,18 @@ class TestQueryGenerationChainConstraints:
             # (once in the header, at least once in the instruction)
             assert prompt.count(direction) >= 2
 
+    def test_context_appears_in_prompt(self):
+        """context parameter injects technical guidance into the SQL prompt."""
+        context_text = "ECI values are not comparable across years."
+        prompt = self._render_prompt(context=context_text)
+        assert "Additional technical context" in prompt
+        assert context_text in prompt
+
+    def test_empty_context_absent_from_prompt(self):
+        """Empty context string should not inject any block."""
+        prompt = self._render_prompt(context="")
+        assert "Additional technical context" not in prompt
+
 
 # ---------------------------------------------------------------------------
 # 4. generate_sql_node — reads overrides from state, passes to chain

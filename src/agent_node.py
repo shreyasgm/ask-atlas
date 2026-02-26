@@ -16,6 +16,7 @@ from langchain_core.tools import tool
 from pydantic import BaseModel, Field
 
 from src.config import AgentMode
+from src.docs_pipeline import _docs_tool_schema
 from src.graphql_client import GraphQLBudgetTracker
 from src.sql_pipeline import _query_tool_schema, build_sql_only_system_prompt
 from src.state import AtlasAgentState
@@ -96,6 +97,35 @@ pre-calculated metrics and visualizations. This is complementary to `query_tool`
 
 
 # ---------------------------------------------------------------------------
+# Documentation tool system prompt extension
+# USER REVIEW PENDING (per CLAUDE.md: never modify LLM prompts without approval)
+# ---------------------------------------------------------------------------
+
+
+_DOCS_TOOL_EXTENSION = """
+
+**Documentation Tool (docs_tool)**
+
+You have access to `docs_tool`, which retrieves in-depth technical documentation about
+economic complexity methodology, metric definitions, data sources, classification systems,
+and how to reproduce Atlas visualizations.
+
+**When to use docs_tool:**
+- The question involves metric definitions or formulas (ECI, PCI, RCA, COI, COG, distance, proximity, etc.) beyond what the system prompt covers
+- The user asks about data methodology (mirror statistics, CIF/FOB, data cleaning, why Atlas values differ from raw Comtrade)
+- The question involves data coverage limits (year ranges, classification availability, missing countries)
+- The user wants to reproduce an Atlas country page or explore page visualization
+- You need guidance on which DB columns or tables to use for a specific metric variant (e.g., normalized vs raw ECI)
+
+**How to use docs_tool effectively:**
+- Call docs_tool BEFORE your data query when you need technical guidance.
+- Pass the docs_tool response as `context` to your subsequent `query_tool` or `atlas_graphql` call — this ensures the data query benefits from the technical documentation.
+- docs_tool does NOT count against your query budget of {max_uses} total data queries.
+- You can call docs_tool multiple times if needed.
+"""
+
+
+# ---------------------------------------------------------------------------
 # Mode resolution
 # ---------------------------------------------------------------------------
 
@@ -107,7 +137,7 @@ def resolve_effective_mode(
     """Resolve the effective agent mode given config and budget state.
 
     Args:
-        config_mode: The configured agent mode (AUTO, GRAPHQL_SQL, SQL_ONLY).
+        config_mode: The configured agent mode (AUTO, GRAPHQL_SQL, SQL_ONLY, GRAPHQL_ONLY).
         budget_tracker: The budget tracker instance, or None.
 
     Returns:
@@ -115,6 +145,8 @@ def resolve_effective_mode(
     """
     if config_mode == AgentMode.SQL_ONLY:
         return AgentMode.SQL_ONLY
+    if config_mode == AgentMode.GRAPHQL_ONLY:
+        return AgentMode.GRAPHQL_ONLY
     if config_mode == AgentMode.GRAPHQL_SQL:
         return AgentMode.GRAPHQL_SQL
     # AUTO: check budget
@@ -153,18 +185,25 @@ def make_agent_node(
         state_mode = state.get("override_agent_mode")
         effective_config_mode = AgentMode(state_mode) if state_mode else agent_mode
         effective_mode = resolve_effective_mode(effective_config_mode, budget_tracker)
-        tools = [_query_tool_schema]
-        if effective_mode != AgentMode.SQL_ONLY:
-            tools = [_query_tool_schema, _atlas_graphql_schema]
+        if effective_mode == AgentMode.GRAPHQL_ONLY:
+            tools = [_atlas_graphql_schema, _docs_tool_schema]
+        elif effective_mode == AgentMode.SQL_ONLY:
+            tools = [_query_tool_schema, _docs_tool_schema]
+        else:
+            # GRAPHQL_SQL (and AUTO resolved to GRAPHQL_SQL)
+            tools = [_query_tool_schema, _atlas_graphql_schema, _docs_tool_schema]
 
         # Select system prompt based on effective mode
         prompt_text = build_sql_only_system_prompt(max_uses, top_k_per_query)
-        if effective_mode != AgentMode.SQL_ONLY:
+        if effective_mode not in (AgentMode.SQL_ONLY, AgentMode.GRAPHQL_ONLY):
             remaining = budget_tracker.remaining() if budget_tracker else "unknown"
             budget_status = f"Available ({remaining} calls remaining this window)"
             prompt_text += _DUAL_TOOL_EXTENSION.format(
                 max_uses=max_uses, budget_status=budget_status
             )
+
+        # Docs tool extension — available in ALL modes
+        prompt_text += _DOCS_TOOL_EXTENSION.format(max_uses=max_uses)
 
         # Apply override lines (same logic as legacy create_sql_agent)
         overrides_parts: list[str] = []

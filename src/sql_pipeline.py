@@ -102,6 +102,7 @@ def create_query_generation_chain(
     example_queries: List[Dict[str, str]] = [],
     direction_constraint: str | None = None,
     mode_constraint: str | None = None,
+    context: str = "",
 ) -> Runnable:
     """
     Creates a chain that generates SQL queries based on the user's question.
@@ -114,6 +115,7 @@ def create_query_generation_chain(
         example_queries: List of example SQL queries for reference
         direction_constraint: Optional trade direction constraint (exports/imports)
         mode_constraint: Optional trade mode constraint (goods/services)
+        context: Optional technical context (e.g., from docs_tool) to guide SQL generation.
 
     Returns:
         A chain that generates SQL queries
@@ -186,6 +188,15 @@ Always use these product codes provided, and do not try to search for products b
         prefix += f"""
 
 **User override — trade mode:** The user has specified **{mode_constraint}** trade data only. Use only {mode_constraint} tables. Do not include tables for the other trade mode."""
+
+    if context:
+        prefix += f"""
+
+**Additional technical context provided by the agent:**
+{context}
+
+Use this context to inform your SQL generation. It may contain metric definitions,
+column guidance, time comparability caveats, or table recommendations."""
 
     example_prompt = PromptTemplate.from_template(
         "User question: {question}\nSQL query: {query}"
@@ -469,6 +480,7 @@ async def generate_sql_node(
         example_queries=example_queries,
         direction_constraint=state.get("override_direction"),
         mode_constraint=state.get("override_mode"),
+        context=state.get("pipeline_context", ""),
     )
     sql = await chain.ainvoke({"question": state["pipeline_question"]})
     return {"pipeline_sql": sql}

@@ -565,6 +565,7 @@ class TestGenerateSqlNode:
             example_queries=[],
             direction_constraint=None,
             mode_constraint=None,
+            context="",
         )
         mock_chain.ainvoke.assert_awaited_once_with({"question": "Brazil exports?"})
 
@@ -597,6 +598,7 @@ class TestGenerateSqlNode:
             example_queries=[],
             direction_constraint=None,
             mode_constraint=None,
+            context="",
         )
         assert "pipeline_sql" in result
 
@@ -627,6 +629,7 @@ class TestGenerateSqlNode:
             example_queries=[],
             direction_constraint=None,
             mode_constraint=None,
+            context="",
         )
 
     async def test_example_queries_forwarded(self):
@@ -645,6 +648,30 @@ class TestGenerateSqlNode:
 
         _, kwargs = mock_create.call_args
         assert kwargs["example_queries"] == examples
+
+    async def test_pipeline_context_forwarded_to_chain(self):
+        """pipeline_context from state is passed as context to create_query_generation_chain."""
+        mock_llm = MagicMock()
+        context_text = (
+            "ECI values are not comparable across years. Use normalized_eci for trends."
+        )
+
+        with patch("src.sql_pipeline.create_query_generation_chain") as mock_create:
+            mock_chain = MagicMock()
+            mock_chain.ainvoke = AsyncMock(return_value="SELECT 1")
+            mock_create.return_value = mock_chain
+
+            state = _base_state(
+                pipeline_question="ECI of Brazil over time?",
+                pipeline_codes="",
+                pipeline_context=context_text,
+            )
+            await generate_sql_node(
+                state, llm=mock_llm, example_queries=[], max_results=15
+            )
+
+        _, kwargs = mock_create.call_args
+        assert kwargs["context"] == context_text
 
 
 # ---------------------------------------------------------------------------
