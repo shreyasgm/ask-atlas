@@ -14,11 +14,16 @@ Provides two cache styles:
 The ``CacheRegistry`` tracks all caches for observability (``/debug/caches``).
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import time
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from src.graphql_client import AtlasGraphQLClient
 
 from cachetools import TTLCache
 from cachetools_async import cached as async_cached
@@ -425,6 +430,45 @@ services_catalog.add_index(
     key_fn=lambda e: str(e["productId"]) if "productId" in e else None,
 )
 registry.register_catalog(services_catalog)
+
+
+# ---------------------------------------------------------------------------
+# Catalog fetcher wiring (called once at app startup)
+# ---------------------------------------------------------------------------
+
+
+def wire_catalog_fetchers(explore_client: AtlasGraphQLClient) -> None:
+    """Wire async fetcher functions to the module-level catalog caches.
+
+    Must be called once during app startup, after the Explore API
+    GraphQL client is constructed.  Each fetcher executes a lightweight
+    catalog query and returns the full list of entries.
+
+    GraphQL field names verified against the official Atlas API docs
+    (``evaluation/graphql_api_official_docs.md``).
+    """
+
+    async def _fetch_countries() -> list[dict[str, Any]]:
+        query = "{ locationCountry { countryId iso3Code nameShortEn nameEn } }"
+        data = await explore_client.execute(query)
+        return data.get("locationCountry", [])
+
+    async def _fetch_products() -> list[dict[str, Any]]:
+        query = "{ productHs92(productLevel: 4) { productId code nameShortEn nameEn } }"
+        data = await explore_client.execute(query)
+        return data.get("productHs92", [])
+
+    async def _fetch_services() -> list[dict[str, Any]]:
+        query = (
+            "{ productHs92(servicesClass: unilateral)"
+            " { productId nameShortEn nameEn } }"
+        )
+        data = await explore_client.execute(query)
+        return data.get("productHs92", [])
+
+    country_catalog.set_fetcher(_fetch_countries)
+    product_catalog.set_fetcher(_fetch_products)
+    services_catalog.set_fetcher(_fetch_services)
 
 
 # ---------------------------------------------------------------------------

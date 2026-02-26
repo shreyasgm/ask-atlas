@@ -22,6 +22,7 @@ from src.cache import (
     product_catalog,
     registry,
     services_catalog,
+    wire_catalog_fetchers,
 )
 
 # ---------------------------------------------------------------------------
@@ -558,3 +559,90 @@ class TestCatalogRegistryIntegration:
         assert "country_catalog" in stats
         assert stats["country_catalog"]["size"] == 0
         assert stats["country_catalog"]["populated"] is False
+
+
+# ---------------------------------------------------------------------------
+# wire_catalog_fetchers
+# ---------------------------------------------------------------------------
+
+
+class TestWireCatalogFetchersSetsAll:
+    """wire_catalog_fetchers must wire fetchers to all three module-level catalogs."""
+
+    async def test_wire_catalog_fetchers_sets_fetchers(self):
+        """After calling wire_catalog_fetchers, all three catalogs have a non-None _fetcher."""
+        mock_client = AsyncMock()
+        mock_client.execute = AsyncMock(return_value={})
+
+        # Ensure fetchers are initially None (clean state)
+        country_catalog._fetcher = None
+        product_catalog._fetcher = None
+        services_catalog._fetcher = None
+
+        try:
+            wire_catalog_fetchers(mock_client)
+
+            assert country_catalog._fetcher is not None
+            assert product_catalog._fetcher is not None
+            assert services_catalog._fetcher is not None
+        finally:
+            # Reset fetchers to None to avoid leaking state to other tests
+            country_catalog._fetcher = None
+            product_catalog._fetcher = None
+            services_catalog._fetcher = None
+
+    async def test_wired_fetcher_calls_client_execute(self):
+        """The wired fetchers delegate to AtlasGraphQLClient.execute with correct queries."""
+        mock_client = AsyncMock()
+        mock_client.execute = AsyncMock(
+            return_value={"locationCountry": SAMPLE_COUNTRIES}
+        )
+
+        country_catalog._fetcher = None
+        country_catalog.clear()
+
+        try:
+            wire_catalog_fetchers(mock_client)
+
+            # Trigger the fetcher by accessing data
+            result = await country_catalog.lookup("iso3", "KEN")
+            assert result is not None
+            assert result["countryId"] == 404
+
+            # Verify execute was called with a query containing locationCountry
+            mock_client.execute.assert_called()
+            call_args = mock_client.execute.call_args[0][0]
+            assert "locationCountry" in call_args
+        finally:
+            country_catalog._fetcher = None
+            country_catalog.clear()
+
+
+@pytest.mark.integration
+class TestWireCatalogFetchersIntegration:
+    """Integration test: wire_catalog_fetchers populates real data from the Atlas API."""
+
+    async def test_wire_catalog_fetchers_populates_real_data(self):
+        """Real AtlasGraphQLClient populates country catalog with Kenya."""
+        from src.graphql_client import AtlasGraphQLClient
+
+        client = AtlasGraphQLClient(
+            base_url="https://atlas.hks.harvard.edu/api/graphql",
+            timeout=15.0,
+        )
+
+        # Clear state before test
+        country_catalog._fetcher = None
+        country_catalog.clear()
+
+        try:
+            wire_catalog_fetchers(client)
+
+            result = await country_catalog.lookup("iso3", "KEN")
+            assert result is not None
+            assert "countryId" in result
+            assert "Kenya" in (result.get("nameShortEn") or result.get("nameEn", ""))
+        finally:
+            # Reset catalog state to avoid leaking to other tests
+            country_catalog._fetcher = None
+            country_catalog.clear()
