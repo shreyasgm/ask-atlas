@@ -66,6 +66,14 @@ QUERY_TYPE_DESCRIPTION = (
     "           custom SQL aggregation, multi-table joins, or data not available via the Atlas APIs.\n"
     "- country_profile : Country overview including GDP, population, ECI, top exports,\n"
     "                    diversification grade, peer comparisons (countryProfile API).\n"
+    "- country_profile_exports : Country export basket — top exports by product, export\n"
+    "                            composition, export diversification (countryProfile API).\n"
+    "                            Use when the user asks about what a country exports, its\n"
+    "                            export basket, or export composition.\n"
+    "- country_profile_complexity : Country complexity metrics — ECI, COI, complexity\n"
+    "                               rankings, growth projections (countryProfile API).\n"
+    "                               Use when the user asks about a country's economic\n"
+    "                               complexity, ECI ranking, or COI.\n"
     "- country_lookback : Growth dynamics over a lookback period — how a country's exports\n"
     "                     and complexity have changed (countryLookback API).\n"
     "- new_products : Products a country has started exporting recently (newProductsCountry API).\n"
@@ -103,7 +111,11 @@ QUERY_TYPE_DESCRIPTION = (
     "- For time-series questions ('how has X changed since Y'), prefer overtime_* or marketshare.\n"
     "- For growth opportunity / diversification questions, prefer feasibility, feasibility_table, or growth_opportunities.\n"
     "- For 'what does country X export' snapshot questions, prefer treemap_products or product_table.\n"
-    "- For country overview / profile questions, prefer country_profile."
+    "- For country overview / profile questions, prefer country_profile.\n"
+    "- For questions specifically about a country's export basket or export composition,\n"
+    "  prefer country_profile_exports.\n"
+    "- For questions about economic complexity, ECI, COI, or complexity rankings,\n"
+    "  prefer country_profile_complexity."
 )
 
 API_TARGET_DESCRIPTION = (
@@ -116,8 +128,9 @@ API_TARGET_DESCRIPTION = (
     "- country_pages : The Country Pages API at /api/countries/graphql — provides derived analytical\n"
     "                  profiles including countryProfile (46 fields), countryLookback (growth dynamics),\n"
     "                  newProductsCountry, growth_opportunities (productSpace), peer comparisons, and\n"
-    "                  policy recommendations. Used by country_profile, country_lookback,\n"
-    "                  new_products, and growth_opportunities query types."
+    "                  policy recommendations. Used by country_profile, country_profile_exports,\n"
+    "                  country_profile_complexity, country_lookback, new_products, and\n"
+    "                  growth_opportunities query types."
 )
 
 PRODUCT_LEVEL_DESCRIPTION = (
@@ -164,6 +177,8 @@ class GraphQLQueryClassification(BaseModel):
     )
     query_type: Literal[
         "country_profile",
+        "country_profile_exports",
+        "country_profile_complexity",
         "country_lookback",
         "new_products",
         "treemap_products",
@@ -1292,6 +1307,8 @@ _QUERY_BUILDERS: dict[str, Callable[[dict], tuple[str, dict]]] = {
     "product_table": _build_product_table,
     # Country Pages API queries
     "country_profile": _build_country_profile,
+    "country_profile_exports": _build_country_profile,
+    "country_profile_complexity": _build_country_profile,
     "country_lookback": _build_country_lookback,
     "new_products": _build_new_products,
     "global_datum": _build_global_datum,
