@@ -4,6 +4,8 @@ Uses FakeToolCallingModel and build_atlas_graph with mocked GraphQL dependencies
 All tests are unit tests — no database or external LLM required.
 """
 
+import pytest
+
 from unittest.mock import MagicMock, patch
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
@@ -308,4 +310,109 @@ class TestRetryPolicyConfiguration:
         assert node.retry_policy is None, (
             "build_and_execute_graphql should NOT have RetryPolicy "
             "(GraphQL client handles HTTP retries)"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Tests: SQL-only mode regression (integration)
+# ---------------------------------------------------------------------------
+
+_GRAPHQL_STAGES = frozenset(
+    {
+        "classify_query",
+        "extract_entities",
+        "resolve_ids",
+        "build_and_execute_graphql",
+        "format_graphql_results",
+    }
+)
+
+
+@pytest.mark.integration
+@pytest.mark.asyncio
+class TestSQLOnlyModeRegression:
+    """Regression gate: SQL-only mode must never touch the GraphQL pipeline.
+
+    Requires a live Atlas DB and LLM API keys.  Run with::
+
+        PYTHONPATH=$(pwd) uv run pytest \\
+            src/tests/test_graph.py::TestSQLOnlyModeRegression -v -m integration
+    """
+
+    async def test_sql_only_never_calls_graphql_tool(self):
+        """End-to-end SQL-only invariant: only query_tool called, only SQL nodes traversed.
+
+        Failure modes caught by each assertion:
+        1. query_tool called at least once
+           → agent produced no tool calls at all (routing failure / empty response)
+        2. atlas_graphql NEVER called
+           → mode override ignored; agent had both tools and routed to GraphQL
+        3. execute_sql stage present in pipeline_states
+           → SQL pipeline started but silently stopped before execution
+        4. No GraphQL stages in pipeline_states
+           → agent called query_tool but graph routing sent output to GraphQL node
+        5. SQL returned at least 1 row
+           → query executed but returned empty (wrong schema / broken SQL generation)
+        6. Final answer is non-trivial (> 80 chars, not an error message)
+           → agent received tool output but produced a refusal or generic error
+        """
+        from src.streaming import AtlasTextToSQL
+
+        question = "What were the top 5 products exported by Brazil in 2020?"
+
+        tool_calls: list[str] = []
+        pipeline_states: list[dict] = []
+        answer_chunks: list[str] = []
+
+        async with await AtlasTextToSQL.create_async() as atlas:
+            async for stream_data in atlas.aanswer_question_stream(
+                question,
+                agent_mode="sql_only",
+            ):
+                if stream_data.message_type == "tool_call":
+                    tool_calls.append(stream_data.tool_call or "")
+                elif stream_data.message_type == "pipeline_state":
+                    pipeline_states.append(stream_data.payload or {})
+                elif stream_data.message_type == "agent_talk":
+                    answer_chunks.append(stream_data.content or "")
+
+        final_answer = "".join(answer_chunks)
+        stages = {p.get("stage") for p in pipeline_states}
+
+        # 1. query_tool was called at least once
+        assert any(t == "query_tool" for t in tool_calls), (
+            "Expected at least one query_tool call in SQL-only mode; "
+            f"got tool_calls={tool_calls}"
+        )
+
+        # 2. atlas_graphql was NEVER called
+        assert not any(t == "atlas_graphql" for t in tool_calls), (
+            "atlas_graphql was called in SQL-only mode — mode override was ignored; "
+            f"tool_calls={tool_calls}"
+        )
+
+        # 3. execute_sql stage present
+        assert "execute_sql" in stages, (
+            "SQL pipeline did not reach execute_sql stage; " f"observed stages={stages}"
+        )
+
+        # 4. No GraphQL stages in pipeline_states
+        graphql_stages_seen = stages & _GRAPHQL_STAGES
+        assert (
+            not graphql_stages_seen
+        ), f"GraphQL pipeline stages appeared in SQL-only mode: {graphql_stages_seen}"
+
+        # 5. SQL returned at least 1 row
+        execute_sql_states = [
+            p for p in pipeline_states if p.get("stage") == "execute_sql"
+        ]
+        row_counts = [p.get("row_count", 0) for p in execute_sql_states]
+        assert any(
+            rc > 0 for rc in row_counts
+        ), f"SQL query returned no rows; row_counts={row_counts}"
+
+        # 6. Final answer is non-trivial
+        assert len(final_answer) > 80, (
+            f"Final answer is too short ({len(final_answer)} chars); "
+            f"likely an error or refusal: {final_answer!r}"
         )
