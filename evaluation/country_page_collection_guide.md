@@ -20,8 +20,8 @@ This guide describes how to systematically collect ground truth Q&A pairs from t
 
 ### URL Structure
 
-- **Base URL**: `https://atlas.hks.harvard.edu/countries/{iso_numeric_id}`
-- **Country IDs**: ISO 3166-1 numeric codes (e.g., 840 = USA, 404 = Kenya, 724 = Spain)
+- **Base URL**: `https://atlas.hks.harvard.edu/countries/{m49_code}`
+- **Country IDs**: [M49 codes as designated by the UN](https://unstats.un.org/unsd/methodology/m49/) (which coincide with ISO 3166-1 numeric codes for most countries) — e.g., 840 = USA, 404 = Kenya, 724 = Spain
 - **Total countries on Atlas**: 145
 
 ### The 12 Subpages
@@ -61,9 +61,13 @@ This guide describes how to systematically collect ground truth Q&A pairs from t
 
 The Atlas website makes ~20 GraphQL POST requests per page load to a **public, unauthenticated API** with introspection enabled. This means ~85% of data points can be extracted via direct API queries without any browser automation.
 
+For the Explore API, the official docs confirm that navigating to [`https://atlas.hks.harvard.edu/api/graphql`](https://atlas.hks.harvard.edu/api/graphql) in a browser opens a **GraphiQL interface** with a Documentation Explorer (accessible via the "Docs" menu in the top right). This provides an interactive way to browse all queries, types, and field descriptions for the Explore API schema.
+
 ### Endpoints
 
-**Country Pages API** (used by the Atlas country pages):
+> **Documentation note:** Only the **Explore API** (`/api/graphql`) has [official documentation from the Growth Lab](https://github.com/harvard-growth-lab/api-docs/blob/main/atlas.md). The **Country Pages API** (`/api/countries/graphql`) is **not officially documented** — our knowledge of it comes entirely from reverse-engineering the Atlas website's network requests and GraphQL introspection. Treat Country Pages API details as best-effort research, not authoritative specifications. The official docs also confirm that the [GraphiQL interface](https://atlas.hks.harvard.edu/api/graphql) is accessible by navigating to the Explore API URL in a browser; this may or may not work for the Country Pages API endpoint.
+
+**Country Pages API** (used by the Atlas country pages — **undocumented**):
 
 ```
 POST https://atlas.hks.harvard.edu/api/countries/graphql
@@ -72,7 +76,7 @@ Content-Type: application/json
 
 Also available at `https://staging.atlas.growthlab-dev.com/api/countries/graphql` (identical schema).
 
-**Explore API** (used by the Atlas explore pages — preferred for most data queries):
+**Explore API** (used by the Atlas explore pages — preferred for most data queries; [officially documented](https://github.com/harvard-growth-lab/api-docs/blob/main/atlas.md)):
 
 ```
 POST https://atlas.hks.harvard.edu/api/graphql
@@ -86,10 +90,13 @@ No authentication headers are required for any endpoint. Per the Atlas `llms.txt
 - **Include a `User-Agent` header** (e.g., `User-Agent: ask-atlas/1.0`)
 - Prefer small, targeted queries — request only needed fields, avoid exhaustive introspection
 - Cache and reuse previous results when possible
+- **For bulk data**, use the [Atlas data downloads page](https://atlas.hks.harvard.edu/data-downloads) instead of the API — it provides pre-generated tables for download
+
+> **Official usage warning (from the Growth Lab API docs):** "The Atlas API is best used to access data for stand-alone economic analysis, not to support other software applications."
 
 ### ID Format
 
-The API uses a **`location-{iso_numeric}`** format for country IDs:
+The API uses a **`location-{m49_code}`** format for country IDs (where the numeric portion is the [UN M49 code](https://unstats.un.org/unsd/methodology/m49/)):
 
 | URL Path | GraphQL ID |
 |----------|-----------|

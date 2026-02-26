@@ -24,7 +24,6 @@ import httpx
 
 ENDPOINT = "https://atlas.hks.harvard.edu/api/graphql"
 BASE_DIR = Path(__file__).resolve().parent
-QUESTIONS_DIR = BASE_DIR / "questions"
 RESULTS_DIR = BASE_DIR / "results"
 TIMESTAMP = datetime.now(timezone.utc).isoformat()
 
@@ -312,29 +311,10 @@ def pct_str(value: float) -> str:
     return f"{value * 100:.1f}%"
 
 
-def write_question(qid: int, question: dict) -> None:
-    d = QUESTIONS_DIR / str(qid)
-    d.mkdir(parents=True, exist_ok=True)
-    (d / "question.json").write_text(json.dumps(question, indent=2) + "\n")
-
-
 def write_result(qid: int, result: dict) -> None:
     d = RESULTS_DIR / str(qid) / "ground_truth"
     d.mkdir(parents=True, exist_ok=True)
     (d / "results.json").write_text(json.dumps(result, indent=2) + "\n")
-
-
-def make_question(
-    qid: int, text: str, category: str, difficulty: str, atlas_url: str
-) -> dict:
-    return {
-        "question_id": str(qid),
-        "user_question": text,
-        "category": category,
-        "difficulty": difficulty,
-        "source": "atlas_explore_page",
-        "atlas_url": atlas_url,
-    }
 
 
 def make_result(qid: int, atlas_url: str, data: list[dict]) -> dict:
@@ -472,11 +452,9 @@ def emit(
     url: str,
     data: list[dict],
 ) -> None:
-    """Write one question+result pair and track for integration file."""
+    """Write ground truth result and track question for eval_questions.json."""
     qid = next_id()
-    q = make_question(qid, text, category_name, difficulty, url)
     r = make_result(qid, url, data)
-    write_question(qid, q)
     write_result(qid, r)
     ALL_QUESTIONS.append(
         {
