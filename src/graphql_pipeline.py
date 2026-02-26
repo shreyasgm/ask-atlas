@@ -17,7 +17,7 @@ import time
 from typing import Any, Callable, Literal, Optional
 
 from langchain_core.messages import ToolMessage
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from src.atlas_links import generate_atlas_links
 from src.cache import CatalogCache
@@ -172,8 +172,7 @@ class GraphQLQueryClassification(BaseModel):
     """Classification of a user question for the Atlas GraphQL API."""
 
     reasoning: str = Field(
-        description="Step-by-step reasoning for the classification decision.",
-        max_length=300,
+        description="Step-by-step reasoning for the classification decision (max 300 chars).",
     )
     query_type: Literal[
         "country_profile",
@@ -209,13 +208,20 @@ class GraphQLQueryClassification(BaseModel):
         description=API_TARGET_DESCRIPTION,
     )
 
+    @field_validator("reasoning", mode="before")
+    @classmethod
+    def truncate_reasoning(cls, v: str) -> str:
+        """Truncate reasoning to 300 chars to avoid LLM over-generation failures."""
+        if isinstance(v, str) and len(v) > 300:
+            return v[:297] + "..."
+        return v
+
 
 class GraphQLEntityExtraction(BaseModel):
     """Entities extracted from a user question for GraphQL query construction."""
 
     reasoning: str = Field(
-        description="Step-by-step reasoning for entity extraction decisions.",
-        max_length=300,
+        description="Step-by-step reasoning for entity extraction decisions (max 300 chars).",
     )
     country_name: Optional[str] = Field(
         default=None, description="Primary country mentioned in the question."
@@ -265,6 +271,14 @@ class GraphQLEntityExtraction(BaseModel):
         default=None,
         description="Lookback period in years for Country Pages growth dynamics (country_lookback query type).",
     )
+
+    @field_validator("reasoning", mode="before")
+    @classmethod
+    def truncate_reasoning(cls, v: str) -> str:
+        """Truncate reasoning to 300 chars to avoid LLM over-generation failures."""
+        if isinstance(v, str) and len(v) > 300:
+            return v[:297] + "..."
+        return v
 
 
 # ---------------------------------------------------------------------------
