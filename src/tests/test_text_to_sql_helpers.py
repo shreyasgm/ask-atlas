@@ -11,7 +11,7 @@ from src.product_and_schema_lookup import (
     ProductDetails,
     SchemasAndProductsFound,
 )
-from src.text_to_sql import (
+from src.streaming import (
     AtlasTextToSQL,
     _extract_pipeline_state,
     _extract_tables_from_sql,
