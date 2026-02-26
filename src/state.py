@@ -51,6 +51,16 @@ class AtlasAgentState(TypedDict):
         override_schema: User-specified classification schema override.
         override_direction: User-specified trade direction override.
         override_mode: User-specified trade mode override (goods/services).
+        graphql_question: Question extracted from the GraphQL tool_call args.
+        graphql_context: Conversational context for the GraphQL question.
+        graphql_classification: Classification result dict (query_type, api_target, etc.).
+        graphql_entity_extraction: Extracted entities dict (country, product, year, etc.).
+        graphql_resolved_params: Resolved entity IDs and API parameters.
+        graphql_query: The constructed GraphQL query string.
+        graphql_api_target: Target API identifier (e.g., "explore", "country_pages").
+        graphql_raw_response: Raw response data from the GraphQL API.
+        graphql_execution_time_ms: GraphQL query execution time in milliseconds.
+        graphql_atlas_links: Atlas visualization links generated from resolved params.
     """
 
     messages: Annotated[list[BaseMessage], add_messages]
@@ -73,3 +83,14 @@ class AtlasAgentState(TypedDict):
     override_schema: Optional[str]
     override_direction: Optional[str]
     override_mode: Optional[str]
+    # === GraphQL pipeline state (reset by extract_graphql_question at cycle start) ===
+    graphql_question: str
+    graphql_context: str
+    graphql_classification: Optional[dict]
+    graphql_entity_extraction: Optional[dict]
+    graphql_resolved_params: Optional[dict]
+    graphql_query: Optional[str]
+    graphql_api_target: Optional[str]
+    graphql_raw_response: Optional[dict]
+    graphql_execution_time_ms: int
+    graphql_atlas_links: list[dict]
