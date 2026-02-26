@@ -14,7 +14,7 @@ import pytest
 from sqlalchemy import create_engine
 
 from src.config import get_settings
-from src.generate_query import (
+from src.sql_pipeline import (
     execute_sql_node,
     get_table_info_node,
     get_table_info_for_schemas,

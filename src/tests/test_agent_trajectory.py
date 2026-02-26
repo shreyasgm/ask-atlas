@@ -7,7 +7,7 @@ from langchain_core.tools import tool
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph, START, END
 
-from src.generate_query import QueryToolInput
+from src.sql_pipeline import QueryToolInput
 from src.state import AtlasAgentState
 from src.tests.fake_model import FakeToolCallingModel
 
@@ -41,7 +41,7 @@ def dummy_query_tool():
     """A no-op query_tool that always returns canned results."""
 
     @tool("query_tool", args_schema=QueryToolInput)
-    def _query_tool(question: str) -> str:
+    def _query_tool(question: str, context: str = "") -> str:
         """A trade data query tool."""
         return "Results: USA exported $500B in machinery in 2020"
 
