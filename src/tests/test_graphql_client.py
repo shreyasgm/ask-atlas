@@ -686,3 +686,111 @@ class TestAtlasGraphQLClient:
         ):
             with pytest.raises(GraphQLError, match="Cannot query field"):
                 await client.execute(query="{ foo }")
+
+
+# ---------------------------------------------------------------------------
+# Integration tests — real Atlas GraphQL API
+# ---------------------------------------------------------------------------
+
+ATLAS_GRAPHQL_URL = "https://atlas.hks.harvard.edu/api/graphql"
+
+
+@pytest.mark.integration
+class TestAtlasGraphQLClientIntegration:
+    """Integration tests that hit the real Atlas GraphQL API.
+
+    These verify that the client handles real HTTP responses, error codes,
+    and response shapes correctly — things mocked tests cannot catch.
+    """
+
+    @pytest.fixture()
+    def client(self) -> AtlasGraphQLClient:
+        return AtlasGraphQLClient(
+            base_url=ATLAS_GRAPHQL_URL,
+            timeout=15.0,
+            max_retries=1,
+        )
+
+    async def test_simple_metadata_query(self, client: AtlasGraphQLClient) -> None:
+        """A minimal no-args query returns expected metadata fields."""
+        data = await client.execute(query="{ metadata { serverName ingestionDate } }")
+        assert "metadata" in data
+        assert "serverName" in data["metadata"]
+        assert "ingestionDate" in data["metadata"]
+
+    async def test_country_product_year_query(self, client: AtlasGraphQLClient) -> None:
+        """A standard trade data query returns rows with expected schema."""
+        query = """
+        {
+            countryProductYear(
+                countryId: 404
+                productLevel: 2
+                yearMin: 2022
+                yearMax: 2022
+            ) {
+                countryId productId year exportValue
+            }
+        }
+        """
+        data = await client.execute(query=query)
+        rows = data["countryProductYear"]
+        assert len(rows) > 0
+
+        row = rows[0]
+        # API returns countryId as a string like "country-404"
+        assert "404" in str(row["countryId"])
+        assert row["year"] == 2022
+        assert "exportValue" in row
+        assert "productId" in row
+
+    async def test_invalid_field_returns_graphql_error(
+        self, client: AtlasGraphQLClient
+    ) -> None:
+        """Querying a non-existent field raises a permanent GraphQLError."""
+        with pytest.raises(GraphQLError):
+            await client.execute(query="{ metadata { nonExistentField } }")
+
+    async def test_timeout_with_very_short_limit(self) -> None:
+        """An extremely short timeout triggers a TransientGraphQLError."""
+        short_client = AtlasGraphQLClient(
+            base_url=ATLAS_GRAPHQL_URL,
+            timeout=0.001,
+            max_retries=0,
+        )
+        with pytest.raises(TransientGraphQLError):
+            await short_client.execute(query="{ metadata { serverName } }")
+
+    async def test_budget_tracker_integration_with_real_api(self) -> None:
+        """Budget is consumed only on successful real API calls."""
+        tracker = GraphQLBudgetTracker(max_requests=5, window_seconds=60.0)
+        client = AtlasGraphQLClient(
+            base_url=ATLAS_GRAPHQL_URL,
+            timeout=15.0,
+            max_retries=0,
+            budget_tracker=tracker,
+        )
+
+        await client.execute(query="{ metadata { serverName } }")
+        assert tracker.remaining() == 4
+
+        # A failing query should NOT consume budget
+        with pytest.raises(GraphQLError):
+            await client.execute(query="{ metadata { bogusField } }")
+        assert tracker.remaining() == 4
+
+    async def test_circuit_breaker_closes_after_real_success(self) -> None:
+        """A real successful response resets the circuit breaker."""
+        cb = CircuitBreaker(failure_threshold=3, recovery_timeout=30.0)
+        cb.record_failure()
+        cb.record_failure()
+        assert cb.state == CircuitState.CLOSED  # not yet tripped
+
+        client = AtlasGraphQLClient(
+            base_url=ATLAS_GRAPHQL_URL,
+            timeout=15.0,
+            max_retries=0,
+            circuit_breaker=cb,
+        )
+        await client.execute(query="{ metadata { serverName } }")
+        assert cb._failure_count == 0
+        assert cb.state == CircuitState.CLOSED
