@@ -294,13 +294,15 @@ class TestGraphQLQueryClassification:
         assert {"api_target", "query_type", "reasoning", "rejection_reason"} == fields
 
     def test_all_query_types_present(self):
-        """The query_type literal must include all 20 valid types + reject."""
+        """The query_type literal must include all 22 valid types + reject."""
         import typing
 
         field_info = GraphQLQueryClassification.model_fields["query_type"]
         args = typing.get_args(field_info.annotation)
         expected = {
             "country_profile",
+            "country_profile_exports",
+            "country_profile_complexity",
             "country_lookback",
             "new_products",
             "treemap_products",
@@ -934,6 +936,26 @@ class TestBuildGraphQLQuery:
         assert "countryProfile" in query
         assert "latestGdpPerCapita" in query
         assert "latestEci" in query
+        assert "growthProjection" in query
+        assert variables["location"] == "location-404"
+
+    def test_country_profile_exports_reuses_country_profile_builder(self):
+        """country_profile_exports uses the same countryProfile query."""
+        query, variables = build_graphql_query(
+            "country_profile_exports",
+            {"location": "location-404"},
+        )
+        assert "countryProfile" in query
+        assert "latestEci" in query
+        assert variables["location"] == "location-404"
+
+    def test_country_profile_complexity_reuses_country_profile_builder(self):
+        """country_profile_complexity uses the same countryProfile query."""
+        query, variables = build_graphql_query(
+            "country_profile_complexity",
+            {"location": "location-404"},
+        )
+        assert "countryProfile" in query
         assert "growthProjection" in query
         assert variables["location"] == "location-404"
 
@@ -1661,6 +1683,8 @@ class TestBuildersExtended:
             "explore_group",
             "explore_data_availability",
             "country_profile",
+            "country_profile_exports",
+            "country_profile_complexity",
             "country_lookback",
             "new_products",
             "global_datum",
