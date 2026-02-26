@@ -1,12 +1,14 @@
-"""build_atlas_graph: assembles the full Atlas LangGraph with SQL + GraphQL pipelines.
+"""build_atlas_graph: assembles the full Atlas LangGraph with SQL + GraphQL + Docs pipelines.
 
 Replaces create_sql_agent() from generate_query.py with a multi-tool graph
-that supports SQL-only, GraphQL+SQL, and AUTO modes.
+that supports SQL-only, GraphQL+SQL, and AUTO modes, plus a documentation
+lookup pipeline (docs_tool) available in all modes.
 """
 
 from __future__ import annotations
 
 from functools import partial
+from pathlib import Path
 from typing import Dict, List, Literal
 
 from langchain_core.language_models import BaseLanguageModel
@@ -20,6 +22,12 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from src.agent_node import make_agent_node
 from src.config import AgentMode
+from src.docs_pipeline import (
+    extract_docs_question,
+    format_docs_results,
+    load_docs_manifest,
+    select_and_synthesize,
+)
 from src.graphql_client import GraphQLBudgetTracker
 from src.graphql_pipeline import (
     build_and_execute_graphql,
@@ -72,8 +80,9 @@ def build_atlas_graph(
     services_cache=None,
     agent_mode: AgentMode = AgentMode.AUTO,
     budget_tracker: GraphQLBudgetTracker | None = None,
+    docs_dir: Path | None = None,
 ) -> CompiledStateGraph:
-    """Build the full Atlas agent graph with SQL and optional GraphQL pipelines.
+    """Build the full Atlas agent graph with SQL, optional GraphQL, and docs pipelines.
 
     Args:
         llm: Frontier language model for agent reasoning and SQL generation.
@@ -93,6 +102,7 @@ def build_atlas_graph(
         services_cache: Optional CatalogCache for services lookups.
         agent_mode: Operating mode (AUTO, GRAPHQL_SQL, SQL_ONLY).
         budget_tracker: Optional GraphQLBudgetTracker for AUTO mode.
+        docs_dir: Path to documentation directory. Defaults to src/docs/.
 
     Returns:
         A compiled LangGraph StateGraph.
@@ -105,15 +115,19 @@ def build_atlas_graph(
     ) -> Literal[
         "extract_tool_question",
         "extract_graphql_question",
+        "extract_docs_question",
         "max_queries_exceeded",
         "__end__",
     ]:
         last_msg = state["messages"][-1]
         if not (hasattr(last_msg, "tool_calls") and last_msg.tool_calls):
             return END
+        tool_name = last_msg.tool_calls[0]["name"]
+        # docs_tool bypasses the query budget — check BEFORE budget gate
+        if tool_name == "docs_tool":
+            return "extract_docs_question"
         if state.get("queries_executed", 0) >= max_uses:
             return "max_queries_exceeded"
-        tool_name = last_msg.tool_calls[0]["name"]
         if tool_name == "query_tool":
             return "extract_tool_question"
         elif tool_name == "atlas_graphql":
@@ -234,6 +248,21 @@ def build_atlas_graph(
     )
     builder.add_node("format_graphql_results", format_graphql_results)
 
+    # Docs pipeline nodes
+    _docs_dir = docs_dir or Path(__file__).resolve().parent / "docs"
+    _docs_manifest = load_docs_manifest(_docs_dir)
+    builder.add_node("extract_docs_question", extract_docs_question)
+    builder.add_node(
+        "select_and_synthesize",
+        partial(
+            select_and_synthesize,
+            lightweight_model=lightweight_llm,
+            manifest=_docs_manifest,
+        ),
+        retry_policy=_llm_retry,
+    )
+    builder.add_node("format_docs_results", format_docs_results)
+
     # --- Edges ---
     builder.add_edge(START, "agent")
     builder.add_conditional_edges(
@@ -242,6 +271,7 @@ def build_atlas_graph(
         {
             "extract_tool_question": "extract_tool_question",
             "extract_graphql_question": "extract_graphql_question",
+            "extract_docs_question": "extract_docs_question",
             "max_queries_exceeded": "max_queries_exceeded",
             END: END,
         },
@@ -279,6 +309,11 @@ def build_atlas_graph(
     builder.add_edge("resolve_ids", "build_and_execute_graphql")
     builder.add_edge("build_and_execute_graphql", "format_graphql_results")
     builder.add_edge("format_graphql_results", "agent")
+
+    # Docs pipeline
+    builder.add_edge("extract_docs_question", "select_and_synthesize")
+    builder.add_edge("select_and_synthesize", "format_docs_results")
+    builder.add_edge("format_docs_results", "agent")
 
     memory = checkpointer if checkpointer is not None else MemorySaver()
     return builder.compile(checkpointer=memory)

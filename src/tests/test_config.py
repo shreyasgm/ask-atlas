@@ -95,10 +95,10 @@ class TestAgentMode:
         with pytest.raises(ValueError):
             AgentMode("invalid_mode")
 
-    def test_agent_mode_has_exactly_three_members(self):
+    def test_agent_mode_has_exactly_four_members(self):
         from src.config import AgentMode
 
-        assert len(AgentMode) == 3
+        assert len(AgentMode) == 4
 
     def test_settings_agent_mode_default(self):
         """Settings should have an agent_mode field defaulting to 'auto'."""

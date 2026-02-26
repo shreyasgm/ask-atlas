@@ -44,6 +44,7 @@ class AgentMode(str, Enum):
     AUTO = "auto"
     GRAPHQL_SQL = "graphql_sql"
     SQL_ONLY = "sql_only"
+    GRAPHQL_ONLY = "graphql_only"
 
 
 class Settings(BaseSettings):
@@ -135,7 +136,7 @@ class Settings(BaseSettings):
     agent_mode: AgentMode = Field(
         _MODEL_DEFAULTS["agent_mode"],
         validation_alias=AliasChoices("AGENT_MODE", "agent_mode"),
-        description="Agent operating mode: 'auto', 'graphql_sql', or 'sql_only'",
+        description="Agent operating mode: 'auto', 'graphql_sql', 'sql_only', or 'graphql_only'",
     )
 
     # Per-prompt model assignments

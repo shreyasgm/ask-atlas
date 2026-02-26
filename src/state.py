@@ -63,6 +63,10 @@ class AtlasAgentState(TypedDict):
         graphql_raw_response: Raw response data from the GraphQL API.
         graphql_execution_time_ms: GraphQL query execution time in milliseconds.
         graphql_atlas_links: Atlas visualization links generated from resolved params.
+        docs_question: Question extracted from the docs_tool tool_call args.
+        docs_context: Broader user context for the docs question.
+        docs_selected_files: Filenames of documentation files selected by the LLM.
+        docs_synthesis: Synthesized documentation response.
     """
 
     messages: Annotated[list[BaseMessage], add_messages]
@@ -99,3 +103,8 @@ class AtlasAgentState(TypedDict):
     graphql_raw_response: Optional[dict]
     graphql_execution_time_ms: int
     graphql_atlas_links: list[dict]
+    # === Docs pipeline state (reset by extract_docs_question at cycle start) ===
+    docs_question: str
+    docs_context: str
+    docs_selected_files: list[str]
+    docs_synthesis: str
