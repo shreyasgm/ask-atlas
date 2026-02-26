@@ -24,7 +24,7 @@ from src.conversations import (
     PostgresConversationStore,
     derive_title,
 )
-from src.text_to_sql import AtlasTextToSQL, _build_turn_summary
+from src.streaming import AtlasTextToSQL, _build_turn_summary
 
 # ---------------------------------------------------------------------------
 # Logging setup — always show timestamps, level, and logger name
@@ -53,6 +53,7 @@ class ChatRequest(BaseModel):
     override_schema: Literal["hs92", "hs12", "sitc"] | None = None
     override_direction: Literal["exports", "imports"] | None = None
     override_mode: Literal["goods", "services"] | None = None
+    mode: Literal["auto", "sql_only", "graphql_sql"] | None = None
 
 
 class QueryResultResponse(BaseModel):
@@ -110,6 +111,7 @@ class TurnSummaryResponse(BaseModel):
     queries: list[dict] = []
     total_rows: int = 0
     total_execution_time_ms: int = 0
+    atlas_links: list[dict] = []
 
 
 class ThreadMessagesResponse(BaseModel):
@@ -503,6 +505,7 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
         # Turn summary tracking for checkpoint persistence
         stream_queries: list[dict] = []
         stream_entities: dict | None = None
+        stream_atlas_links: list[dict] = []
 
         # First event: thread_id
         event_count += 1
@@ -522,6 +525,7 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                 override_schema=body.override_schema,
                 override_direction=body.override_direction,
                 override_mode=body.override_mode,
+                agent_mode=body.mode,
             ):
                 event_count += 1
                 if stream_data.message_type in ("node_start", "pipeline_state"):
@@ -573,6 +577,28 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                                     "schema_name": stream_data.payload.get("schema"),
                                 }
                             )
+                        elif stage == "format_graphql_results":
+                            links = stream_data.payload.get("atlas_links") or []
+                            if links:
+                                stream_atlas_links.extend(links)
+                                # Emit a dedicated atlas_links SSE event
+                                event_count += 1
+                                logger.info(
+                                    "  SSE #%d  event=atlas_links  count=%d",
+                                    event_count,
+                                    len(links),
+                                )
+                                yield {
+                                    "event": "atlas_links",
+                                    "data": json.dumps(
+                                        {
+                                            "atlas_links": links,
+                                            "query_index": stream_data.payload.get(
+                                                "query_index", 0
+                                            ),
+                                        }
+                                    ),
+                                }
                 else:
                     # Log content preview for non-pipeline events
                     preview = (stream_data.content or "")[:60]
@@ -603,7 +629,11 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
 
         # Persist turn summary to checkpoint
         try:
-            summary = _build_turn_summary(stream_queries, stream_entities)
+            summary = _build_turn_summary(
+                stream_queries,
+                stream_entities,
+                atlas_links=stream_atlas_links or None,
+            )
             config = {"configurable": {"thread_id": thread_id}}
             await atlas_sql.agent.aupdate_state(config, {"turn_summaries": [summary]})
         except Exception:

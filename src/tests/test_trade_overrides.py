@@ -16,9 +16,9 @@ from pydantic import ValidationError
 from langchain_core.messages import AIMessage, HumanMessage
 
 from src.api import ChatRequest
-from src.generate_query import (
+from src.graph import build_atlas_graph
+from src.sql_pipeline import (
     create_query_generation_chain,
-    create_sql_agent,
     extract_products_node,
     generate_sql_node,
 )
@@ -55,6 +55,7 @@ def _base_state(**overrides) -> dict:
         "last_error": "",
         "retry_count": 0,
         "pipeline_question": "",
+        "pipeline_context": "",
         "pipeline_products": None,
         "pipeline_codes": "",
         "pipeline_table_info": "",
@@ -128,7 +129,7 @@ class TestExtractProductsNodeOverrides:
         mock_lookup.return_value.aextract_schemas_and_product_mentions_direct = (
             AsyncMock(return_value=canned_result)
         )
-        return patch("src.generate_query.ProductAndSchemaLookup", mock_lookup)
+        return patch("src.sql_pipeline.ProductAndSchemaLookup", mock_lookup)
 
     async def test_schema_override_replaces_llm_schemas_and_rebinds_products(self):
         """override_schema should replace classification_schemas AND update
@@ -370,7 +371,7 @@ class TestGenerateSqlNodeOverrides:
     async def test_direction_override_forwarded_to_chain(self):
         mock_llm = MagicMock()
 
-        with patch("src.generate_query.create_query_generation_chain") as mock_create:
+        with patch("src.sql_pipeline.create_query_generation_chain") as mock_create:
             mock_chain = MagicMock()
             mock_chain.ainvoke = AsyncMock(return_value="SELECT 1")
             mock_create.return_value = mock_chain
@@ -391,7 +392,7 @@ class TestGenerateSqlNodeOverrides:
     async def test_mode_override_forwarded_to_chain(self):
         mock_llm = MagicMock()
 
-        with patch("src.generate_query.create_query_generation_chain") as mock_create:
+        with patch("src.sql_pipeline.create_query_generation_chain") as mock_create:
             mock_chain = MagicMock()
             mock_chain.ainvoke = AsyncMock(return_value="SELECT 1")
             mock_create.return_value = mock_chain
@@ -412,7 +413,7 @@ class TestGenerateSqlNodeOverrides:
     async def test_no_overrides_passes_none_constraints(self):
         mock_llm = MagicMock()
 
-        with patch("src.generate_query.create_query_generation_chain") as mock_create:
+        with patch("src.sql_pipeline.create_query_generation_chain") as mock_create:
             mock_chain = MagicMock()
             mock_chain.ainvoke = AsyncMock(return_value="SELECT 1")
             mock_create.return_value = mock_chain
@@ -461,8 +462,9 @@ class TestAgentNodeDynamicPrompt:
         mock_db = MagicMock()
         mock_engine = MagicMock()
 
-        graph = create_sql_agent(
+        graph = build_atlas_graph(
             llm=mock_llm,
+            lightweight_llm=mock_llm,
             db=mock_db,
             engine=mock_engine,
             table_descriptions={},

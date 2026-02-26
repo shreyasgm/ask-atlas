@@ -117,6 +117,20 @@ class Settings(BaseSettings):
         description="Provider for the lightweight model ('openai', 'anthropic', or 'google-genai')",
     )
 
+    # GraphQL API endpoints (public Atlas APIs — override only in tests or staging)
+    graphql_explore_url: str = Field(
+        "https://atlas.hks.harvard.edu/api/graphql",
+        validation_alias=AliasChoices("GRAPHQL_EXPLORE_URL", "graphql_explore_url"),
+        description="Atlas Explore GraphQL API endpoint",
+    )
+    graphql_country_pages_url: str = Field(
+        "https://atlas.hks.harvard.edu/api/countries/graphql",
+        validation_alias=AliasChoices(
+            "GRAPHQL_COUNTRY_PAGES_URL", "graphql_country_pages_url"
+        ),
+        description="Atlas Country Pages GraphQL API endpoint",
+    )
+
     # Agent mode
     agent_mode: AgentMode = Field(
         _MODEL_DEFAULTS["agent_mode"],
