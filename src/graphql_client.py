@@ -250,6 +250,31 @@ class GraphQLBudgetTracker:
 
 
 # ---------------------------------------------------------------------------
+# Process-global budget tracker singleton
+# ---------------------------------------------------------------------------
+
+_shared_budget_tracker: GraphQLBudgetTracker | None = None
+
+
+def get_shared_budget_tracker(
+    max_requests: int = 100,
+    window_seconds: float = 60.0,
+) -> GraphQLBudgetTracker:
+    """Return the process-global budget tracker singleton.
+
+    Creates the instance on first call; returns the same instance thereafter.
+    Tests should create their own GraphQLBudgetTracker instances directly.
+    """
+    global _shared_budget_tracker
+    if _shared_budget_tracker is None:
+        _shared_budget_tracker = GraphQLBudgetTracker(
+            max_requests=max_requests,
+            window_seconds=window_seconds,
+        )
+    return _shared_budget_tracker
+
+
+# ---------------------------------------------------------------------------
 # AtlasGraphQLClient
 # ---------------------------------------------------------------------------
 
@@ -352,9 +377,8 @@ class AtlasGraphQLClient:
                     logger.error("All %d attempts failed: %s", total_attempts, exc)
 
             except GraphQLError:
-                # Permanent errors — record failure but don't retry
-                if self.circuit_breaker is not None:
-                    self.circuit_breaker.record_failure()
+                # Permanent errors (bad query, validation) — API is healthy,
+                # don't count toward circuit breaker failures.
                 raise
 
         # All retries exhausted

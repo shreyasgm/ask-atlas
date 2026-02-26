@@ -13,6 +13,7 @@ from unittest.mock import AsyncMock, patch
 import httpx
 import pytest
 
+import src.graphql_client as graphql_client_module
 from src.graphql_client import (
     AtlasGraphQLClient,
     BudgetExhaustedError,
@@ -22,6 +23,7 @@ from src.graphql_client import (
     GraphQLBudgetTracker,
     GraphQLError,
     TransientGraphQLError,
+    get_shared_budget_tracker,
 )
 
 # ---------------------------------------------------------------------------
@@ -686,6 +688,112 @@ class TestAtlasGraphQLClient:
         ):
             with pytest.raises(GraphQLError, match="Cannot query field"):
                 await client.execute(query="{ foo }")
+
+
+# ---------------------------------------------------------------------------
+# Permanent errors must NOT trip circuit breaker
+# ---------------------------------------------------------------------------
+
+
+class TestPermanentErrorCircuitBreakerInteraction:
+    """Verify that permanent GraphQL errors don't affect circuit breaker health."""
+
+    async def test_permanent_error_does_not_trip_circuit_breaker(self) -> None:
+        """Permanent GraphQLErrors must not count toward circuit breaker failures.
+
+        A permanent error (bad query, validation failure) means the API is
+        healthy — it responded correctly. Only transient errors (network, 5xx)
+        should trip the circuit.
+        """
+        cb = CircuitBreaker(failure_threshold=5, recovery_timeout=30.0)
+        client = AtlasGraphQLClient(
+            base_url="https://atlas.cid.harvard.edu/api/graphql",
+            timeout=5.0,
+            max_retries=0,
+            circuit_breaker=cb,
+        )
+
+        # Response that triggers a permanent GraphQLError (errors + data: null)
+        error_response = _make_httpx_response(
+            json_data={
+                "errors": [{"message": "Field 'x' not found"}],
+                "data": None,
+            }
+        )
+
+        for _ in range(10):
+            with patch.object(
+                httpx.AsyncClient,
+                "post",
+                new_callable=AsyncMock,
+                return_value=error_response,
+            ):
+                with pytest.raises(GraphQLError, match="Field 'x' not found"):
+                    await client.execute(query="{ x }")
+
+        # Circuit breaker should remain healthy
+        assert cb.state == CircuitState.CLOSED
+        assert cb._failure_count == 0
+
+    async def test_transient_errors_still_trip_circuit_breaker(self) -> None:
+        """Regression guard: transient errors must still trip the circuit breaker.
+
+        After failure_threshold consecutive transient errors, the circuit
+        breaker should transition to OPEN.
+        """
+        threshold = 3
+        cb = CircuitBreaker(failure_threshold=threshold, recovery_timeout=30.0)
+        client = AtlasGraphQLClient(
+            base_url="https://atlas.cid.harvard.edu/api/graphql",
+            timeout=5.0,
+            max_retries=0,
+            circuit_breaker=cb,
+        )
+
+        for _ in range(threshold):
+            with patch.object(
+                httpx.AsyncClient,
+                "post",
+                new_callable=AsyncMock,
+                side_effect=httpx.ConnectError("connection refused"),
+            ):
+                with pytest.raises(TransientGraphQLError):
+                    await client.execute(query="{ x }")
+
+        assert cb.state == CircuitState.OPEN
+
+
+# ---------------------------------------------------------------------------
+# Process-global budget tracker singleton
+# ---------------------------------------------------------------------------
+
+
+class TestGetSharedBudgetTracker:
+    """Tests for the get_shared_budget_tracker() factory function."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_singleton(self) -> None:
+        """Reset the module-level singleton before and after each test."""
+        graphql_client_module._shared_budget_tracker = None
+        yield  # type: ignore[misc]
+        graphql_client_module._shared_budget_tracker = None
+
+    def test_get_shared_budget_tracker_returns_singleton(self) -> None:
+        """Two calls return the exact same object; mutations are shared."""
+        tracker_a = get_shared_budget_tracker()
+        tracker_b = get_shared_budget_tracker()
+
+        assert tracker_a is tracker_b
+
+    async def test_shared_budget_tracker_shares_state(self) -> None:
+        """Consuming from one reference is visible through the other."""
+        tracker_a = get_shared_budget_tracker(max_requests=5, window_seconds=60.0)
+        tracker_b = get_shared_budget_tracker()
+
+        assert tracker_a.remaining() == 5
+
+        await tracker_a.consume()
+        assert tracker_b.remaining() == 4
 
 
 # ---------------------------------------------------------------------------
