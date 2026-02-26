@@ -196,14 +196,6 @@ def explore_treemap_url(
     return f"{ATLAS_BASE_URL}/explore/treemap?{'&'.join(params)}"
 
 
-def explore_geomap_url(*, year: int, country_id: int) -> str:
-    """Build an explore geomap URL."""
-    return (
-        f"{ATLAS_BASE_URL}/explore/geomap?"
-        f"year={year}&exporter={_exporter_param(country_id)}"
-    )
-
-
 def explore_overtime_url(
     *,
     year: int,

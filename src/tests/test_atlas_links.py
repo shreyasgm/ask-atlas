@@ -26,7 +26,6 @@ from src.atlas_links import (
     country_page_url,
     explore_feasibility_table_url,
     explore_feasibility_url,
-    explore_geomap_url,
     explore_marketshare_url,
     explore_overtime_url,
     explore_productspace_url,
@@ -150,12 +149,6 @@ class TestExploreTreemapURL:
         url = explore_treemap_url(year=2024, country_id=404, group_id=5)
         assert "exporter=group-5" in url
         assert "country-404" not in url
-
-
-class TestExploreGeomapURL:
-    def test_basic_geomap(self):
-        url = explore_geomap_url(year=2024, country_id=404)
-        assert url == f"{ATLAS_BASE_URL}/explore/geomap?year=2024&exporter=country-404"
 
 
 class TestExploreOvertimeURL:
