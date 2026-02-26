@@ -35,6 +35,7 @@ SAMPLE_COUNTRIES = [
     "JPN",
     "BRA",
     "GBR",
+    "NGA",  # Nigeria — needed for eval question 2 (crude oil exports)
 ]
 YEAR_MIN, YEAR_MAX = 2019, 2021
 
