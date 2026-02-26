@@ -130,12 +130,14 @@ async def process_question_ground_truth(
 
 
 def _discover_question_ids() -> list[str]:
-    """Return sorted numeric question IDs from evaluation/questions/."""
+    """Return sorted question IDs that have SQL query files."""
     questions_dir = EVALUATION_BASE_DIR / "questions"
     ids = []
     for p in questions_dir.iterdir():
         if p.is_dir() and p.name.isdigit():
-            ids.append(p.name)
+            queries_dir = p / "queries"
+            if queries_dir.is_dir() and any(queries_dir.glob("*.sql")):
+                ids.append(p.name)
     return sorted(ids, key=int)
 
 

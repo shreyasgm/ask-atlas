@@ -15,6 +15,7 @@ This guide describes how to systematically collect ground truth Q&A pairs from t
 7. [Integration with the Eval System](#7-integration-with-the-eval-system)
 8. [Batch Workflow](#8-batch-workflow)
 9. [Scale & Time Estimate](#9-scale--time-estimate)
+10. [Additional Resources](#10-additional-resources)
 
 ---
 
@@ -123,7 +124,11 @@ POST https://staging.atlas.growthlab-dev.com/api/graphql
 Content-Type: application/json
 ```
 
-No authentication headers required. Introspection enabled. Per the Atlas `llms.txt`, automated access must:
+No authentication headers required. Introspection enabled.
+
+> **GraphiQL interface:** The official docs confirm that users can explore the schema interactively by navigating to `https://atlas.hks.harvard.edu/api/graphql` in a browser. This opens the GraphiQL interface, which includes a Documentation Explorer accessible via the "Docs" menu in the top right of the page. The Documentation Explorer allows clicking through the base Query object into descriptions of all fields, parameters, and response types.
+
+Per the Atlas `llms.txt`, automated access must:
 - **Limit to ≤ 120 requests per minute** (2 req/sec)
 - **Include a `User-Agent` header** (e.g., `User-Agent: ask-atlas/1.0`)
 - Prefer small, targeted queries — request only needed fields, avoid exhaustive introspection
@@ -134,7 +139,7 @@ No authentication headers required. Introspection enabled. Per the Atlas `llms.t
 | Aspect | Explore API (`/api/graphql`) | Country Pages API (`/api/countries/graphql`) |
 |--------|------------------------------|----------------------------------------------|
 | Query count | 27 query types, 40 custom types | 25 query types, 49 custom types |
-| ID format | Numeric integers (`countryId: 404`) | String IDs (`location: "location-404"`) |
+| ID format | Numeric integers — [M49 codes](https://unstats.un.org/unsd/methodology/m49/) as designated by the UN, which coincide with ISO 3166-1 numeric codes for most countries (e.g., `countryId: 404` for Kenya) | String IDs (`location: "location-404"`) |
 | Year params | `yearMin` / `yearMax` ranges | `year`, `minYear` / `maxYear` |
 | Product class | `HS92`, `HS12`, `HS22`, `SITC` (explicit revisions) | `HS`, `SITC` (generic) |
 | Product levels | 2, 4, **6** digit | section, twoDigit, fourDigit |
@@ -293,6 +298,116 @@ exportValueCagr3/5/10/15
 exportValueNonOilCagr3/5/10/15
 gdpCagr3/5/10/15, gdpConstCagr3/5/10/15
 gdppcConstCagr3/5/10/15
+```
+
+#### `GroupYear` (8 fields)
+
+```
+groupId, groupType, year
+population, gdp, gdpPpp
+exportValue, importValue
+```
+
+#### `GroupGroupProductYear` (11 fields)
+
+```
+groupId, groupType, locationLevel
+partnerGroupId, partnerType, partnerLevel
+productId, productLevel, year
+exportValue, importValue
+```
+
+#### `CountryGroupProductYear` (9 fields)
+
+```
+locationLevel, partnerLevel
+productId, productLevel, year
+exportValue, importValue
+countryId, partnerGroupId
+```
+
+#### `GroupCountryProductYear` (9 fields)
+
+```
+locationLevel, partnerLevel
+productId, productLevel, year
+exportValue, importValue
+groupId, partnerCountryId
+```
+
+#### `Year` (2 fields)
+
+```
+year, deflator
+```
+
+#### `Metadata` (4 fields)
+
+```
+serverName, ingestionCommit, ingestionDate, apiCommit
+```
+
+#### `CountryYearThresholds` (18 fields)
+
+```
+countryId, year, variable
+mean, median, min, max, std
+percentile10, percentile20, percentile25, percentile30
+percentile40, percentile50, percentile60
+percentile70, percentile75, percentile80, percentile90
+```
+
+#### `DataFlags` (20 fields)
+
+```
+countryId, formerCountry, countryProject
+rankingsOverride, cpOverride
+year, minPopulation, population
+minAvgExport, avgExport3
+complexityCurrentYearCoverage, complexityLookbackYearsCoverage
+imfAnyCoverage, imfCurrentYearsCoverage, imfLookbackYearsCoverage
+rankingsEligible, countryProfilesEligible
+inRankings, inCp, inMv
+```
+
+#### `ConversionClassifications` (3 fields)
+
+```
+fromClassification, toClassification, codes (list of ConversionCodes)
+```
+
+#### `ConversionWeights` (19 fields)
+
+```
+sitc1962, sitc1976, weightSitc1962Sitc1976
+sitc1988, weightSitc1976Sitc1988
+hs1992, weightSitc1988Hs1992
+hs1997, weightHs1992Hs1997
+hs2002, weightHs1997Hs2002
+hs2007, weightHs2002Hs2007
+hs2012, weightHs2007Hs2012
+hs2017, weightHs2012Hs2017
+hs2022, weightHs2017Hs2022
+```
+
+#### `DownloadsTable` (17+ fields)
+
+```
+tableId, tableName, tableDataType, repo
+complexityData, productLevel, facet
+yearMin, yearMax, displayName
+productClassificationHs92, productClassificationHs12
+productClassificationHs22, productClassificationSitc
+productClassificationServicesUnilateral
+dvFileId, dvFileName, dvFileSize, dvPublicationDate, doi
+columns (list of DownloadsColumn)
+```
+
+#### `Banner` (6 fields)
+
+```
+bannerId, startTime, endTime
+text, ctaText, ctaLink
 ```
 
 ### Enum Values
@@ -493,8 +608,10 @@ Instead, Explore pages provide data points that country pages **cannot** answer:
 
 ### Selected Countries (same 8 as Country Pages)
 
-| Country | ISO ID | Income Level | Role |
-|---------|--------|-------------|------|
+Country IDs in the Explore API correspond to [M49 codes as designated by the UN](https://unstats.un.org/unsd/methodology/m49/) (which coincide with ISO 3166-1 numeric codes for most countries).
+
+| Country | M49 / Country ID | Income Level | Role |
+|---------|------------------|-------------|------|
 | USA | 840 | High | Frontier, high bilateral trade |
 | Germany | 276 | High | Major exporter |
 | Spain | 724 | High | Mid-complexity |
@@ -1074,3 +1191,21 @@ Document any discrepancies as comments in the ground truth `results.json` and ad
 | New question categories | 11 | 8 |
 | Estimated questions | ~109 (done) | ~85 |
 | Time estimate | ~1.5–3 hours | ~1.5–2 hours |
+
+---
+
+## 10. Additional Resources
+
+### Bulk Data Downloads
+
+For bulk data access, the official docs recommend using the [Atlas data downloads page](https://atlas.hks.harvard.edu/data-downloads) rather than making large numbers of API requests. This page provides pre-generated tables for download.
+
+### Official Citation
+
+When referencing Atlas data in academic or published work, use:
+
+> Growth Lab at Harvard University. "The Atlas of Economic Complexity." Web application. Harvard Kennedy School. https://atlas.hks.harvard.edu
+
+### Support
+
+For issues not covered in available resources, contact the Growth Lab tools team at: **growthlabtools@hks.harvard.edu**
