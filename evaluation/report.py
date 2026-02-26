@@ -57,10 +57,35 @@ def _dimension_averages(verdicts: list[dict]) -> dict[str, float]:
     return avgs
 
 
+def _compute_run_stats(run_results: list[dict[str, Any]]) -> dict[str, Any]:
+    """Compute aggregate timing statistics from agent run results."""
+    durations = [
+        r["duration_s"] for r in run_results if r.get("duration_s") is not None
+    ]
+    if not durations:
+        return {
+            "total_duration_s": 0,
+            "avg_question_duration_s": 0,
+            "slowest_question": None,
+        }
+
+    slowest = max(run_results, key=lambda r: r.get("duration_s") or 0)
+    return {
+        "total_duration_s": round(sum(durations), 1),
+        "avg_question_duration_s": round(sum(durations) / len(durations), 1),
+        "slowest_question": {
+            "id": str(slowest["question_id"]),
+            "duration_s": slowest["duration_s"],
+        },
+    }
+
+
 def generate_report(
     run_results: list[dict[str, Any]],
     judge_results: dict[str, dict],
     questions_meta: dict[str, dict],
+    judge_model: str = "unknown",
+    judge_provider: str = "unknown",
 ) -> dict[str, Any]:
     """Build the full report data structure.
 
@@ -68,6 +93,8 @@ def generate_report(
         run_results: List of per-question agent run results.
         judge_results: Dict mapping question_id → judge verdict dict.
         questions_meta: Dict mapping question_id → {category, difficulty, text, ...}.
+        judge_model: Name of the LLM model used for judging.
+        judge_provider: Provider of the judge model.
 
     Returns:
         Report dict containing aggregate and per-question data.
@@ -106,8 +133,11 @@ def generate_report(
 
     report = {
         "timestamp": get_timestamp(),
+        "judge_model": judge_model,
+        "judge_provider": judge_provider,
         "aggregate": _aggregate_scores(all_verdicts),
         "dimension_averages": _dimension_averages(all_verdicts),
+        "run_stats": _compute_run_stats(run_results),
         "by_category": {
             cat: _aggregate_scores(vds) for cat, vds in sorted(by_category.items())
         },
@@ -137,6 +167,12 @@ def report_to_markdown(report: dict[str, Any]) -> str:
     lines.append("# Evaluation Report")
     lines.append(f"\n_Generated: {report['timestamp']}_\n")
 
+    # Model info
+    if report.get("judge_model") and report["judge_model"] != "unknown":
+        lines.append(
+            f"_Judge: {report['judge_model']} ({report.get('judge_provider', 'unknown')})_\n"
+        )
+
     # Aggregate summary
     lines.append("## Summary\n")
     lines.append("| Metric | Value |")
@@ -147,6 +183,22 @@ def report_to_markdown(report: dict[str, Any]) -> str:
     lines.append(
         f"| Pass / Partial / Fail | {agg['pass_count']} / {agg['partial_count']} / {agg['fail_count']} |"
     )
+
+    # Run stats
+    run_stats = report.get("run_stats", {})
+    if run_stats and run_stats.get("total_duration_s"):
+        lines.append("\n## Run Stats\n")
+        lines.append("| Metric | Value |")
+        lines.append("|--------|-------|")
+        lines.append(f"| Total duration | {run_stats['total_duration_s']}s |")
+        lines.append(
+            f"| Avg question duration | {run_stats['avg_question_duration_s']}s |"
+        )
+        slowest = run_stats.get("slowest_question")
+        if slowest:
+            lines.append(
+                f"| Slowest question | Q{slowest['id']} ({slowest['duration_s']}s) |"
+            )
 
     # Dimension averages
     dims = report.get("dimension_averages", {})

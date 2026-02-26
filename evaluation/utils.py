@@ -65,8 +65,6 @@ def setup_directories(question_id: str) -> Dict[str, Path]:
         dirs["queries_dir"] = dirs["question_dir"] / "queries"
         dirs["results_dir"] = EVALUATION_BASE_DIR / "results" / question_id
         dirs["ground_truth_dir"] = dirs["results_dir"] / "ground_truth"
-        dirs["agent_runs_dir"] = dirs["results_dir"] / "agent_runs"
-        dirs["evaluation_dir"] = EVALUATION_BASE_DIR / "evaluations" / question_id
 
         for directory in dirs.values():
             directory.mkdir(parents=True, exist_ok=True)
