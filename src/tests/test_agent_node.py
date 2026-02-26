@@ -81,6 +81,17 @@ class TestResolveEffectiveMode:
         result = resolve_effective_mode(AgentMode.AUTO, None)
         assert result == AgentMode.SQL_ONLY
 
+    def test_mode_resolution_graphql_only_ignores_budget(self):
+        """GRAPHQL_ONLY always returns GRAPHQL_ONLY even when budget is exhausted."""
+        budget = _make_budget(available=False)
+        result = resolve_effective_mode(AgentMode.GRAPHQL_ONLY, budget)
+        assert result == AgentMode.GRAPHQL_ONLY
+
+    def test_mode_resolution_graphql_only_with_none_budget(self):
+        """GRAPHQL_ONLY returns GRAPHQL_ONLY even with no budget tracker."""
+        result = resolve_effective_mode(AgentMode.GRAPHQL_ONLY, None)
+        assert result == AgentMode.GRAPHQL_ONLY
+
 
 # ---------------------------------------------------------------------------
 # Tests: make_agent_node — SQL-only mode
@@ -120,9 +131,13 @@ class TestAgentNodeSqlOnly:
         assert "international trade data" in prompt
         assert "Ask-Atlas" in prompt
 
-        # Must equal build_sql_only_system_prompt exactly (no override section)
-        expected = build_sql_only_system_prompt(3, 15)
-        assert prompt == expected
+        # Must start with build_sql_only_system_prompt (now includes docs_tool extension)
+        expected_base = build_sql_only_system_prompt(3, 15)
+        assert prompt.startswith(expected_base)
+
+        # Must include docs_tool extension (available in all modes)
+        assert "docs_tool" in prompt
+        assert "Documentation Tool" in prompt
 
     async def test_sql_only_agent_binds_only_query_tool(self):
         """In SQL-only mode, only query_tool is bound — no atlas_graphql."""
@@ -152,6 +167,7 @@ class TestAgentNodeSqlOnly:
 
         tool_names = [t.name for t in bound_tools_list]
         assert "query_tool" in tool_names
+        assert "docs_tool" in tool_names
         assert "atlas_graphql" not in tool_names
 
     async def test_budget_status_appears_in_dual_mode_prompt(self):
@@ -214,3 +230,104 @@ class TestAgentNodeSqlOnly:
         tool_names = [t.name for t in bound_tools_list]
         assert "query_tool" in tool_names
         assert "atlas_graphql" in tool_names
+        assert "docs_tool" in tool_names
+
+
+# ---------------------------------------------------------------------------
+# Tests: make_agent_node — GRAPHQL_ONLY mode
+# ---------------------------------------------------------------------------
+
+
+class TestAgentNodeGraphqlOnly:
+    async def test_graphql_only_binds_only_graphql_and_docs(self):
+        """In GRAPHQL_ONLY mode, only atlas_graphql and docs_tool are bound — no query_tool."""
+        bound_tools_list = []
+        mock_bound = MagicMock()
+
+        async def _capture(messages):
+            return AIMessage(content="answer")
+
+        mock_bound.ainvoke = _capture
+
+        mock_llm = MagicMock()
+
+        def _bind_tools(tools, **kwargs):
+            bound_tools_list.extend(tools)
+            return mock_bound
+
+        mock_llm.bind_tools = _bind_tools
+
+        node = make_agent_node(
+            llm=mock_llm,
+            agent_mode=AgentMode.GRAPHQL_ONLY,
+            max_uses=3,
+            top_k_per_query=15,
+        )
+        await node(_base_state())
+
+        tool_names = [t.name for t in bound_tools_list]
+        assert "atlas_graphql" in tool_names
+        assert "docs_tool" in tool_names
+        assert "query_tool" not in tool_names
+
+    async def test_graphql_only_prompt_does_not_include_dual_tool_extension(self):
+        """GRAPHQL_ONLY mode should NOT include the dual-tool extension."""
+        captured_messages = []
+        mock_bound = MagicMock()
+
+        async def _capture(messages):
+            captured_messages.extend(messages)
+            return AIMessage(content="answer")
+
+        mock_bound.ainvoke = _capture
+        mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value = mock_bound
+
+        node = make_agent_node(
+            llm=mock_llm,
+            agent_mode=AgentMode.GRAPHQL_ONLY,
+            max_uses=3,
+            top_k_per_query=15,
+        )
+        await node(_base_state())
+
+        system_msgs = [m for m in captured_messages if isinstance(m, SystemMessage)]
+        assert system_msgs
+        prompt = system_msgs[0].content
+        # Should NOT contain the dual-tool table
+        assert "Multi-tool strategy" not in prompt
+        # But SHOULD contain docs_tool extension
+        assert "docs_tool" in prompt
+
+    async def test_graphql_only_via_per_request_override(self):
+        """Per-request override_agent_mode='graphql_only' binds only graphql + docs."""
+        bound_tools_list = []
+        mock_bound = MagicMock()
+
+        async def _capture(messages):
+            return AIMessage(content="answer")
+
+        mock_bound.ainvoke = _capture
+
+        mock_llm = MagicMock()
+
+        def _bind_tools(tools, **kwargs):
+            bound_tools_list.extend(tools)
+            return mock_bound
+
+        mock_llm.bind_tools = _bind_tools
+
+        # Build node with SQL_ONLY as the default, but override per-request
+        node = make_agent_node(
+            llm=mock_llm,
+            agent_mode=AgentMode.SQL_ONLY,
+            max_uses=3,
+            top_k_per_query=15,
+        )
+        state = _base_state(override_agent_mode="graphql_only")
+        await node(state)
+
+        tool_names = [t.name for t in bound_tools_list]
+        assert "atlas_graphql" in tool_names
+        assert "docs_tool" in tool_names
+        assert "query_tool" not in tool_names

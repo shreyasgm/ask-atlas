@@ -7,6 +7,7 @@ After each answer, extracts pipeline_sql from the checkpointed graph state.
 Usage:
     PYTHONPATH=$(pwd) uv run python evaluation/run_agent_evals.py
     PYTHONPATH=$(pwd) uv run python evaluation/run_agent_evals.py --questions 1 2 6 --concurrency 2
+    PYTHONPATH=$(pwd) uv run python evaluation/run_agent_evals.py --mode sql_only --smoke
 """
 
 from __future__ import annotations
@@ -61,6 +62,7 @@ async def run_single_question(
     question_meta: dict,
     run_dir: Path,
     semaphore: asyncio.Semaphore,
+    agent_mode: str | None = None,
 ) -> dict[str, Any]:
     """Run the agent on a single question and save results.
 
@@ -70,6 +72,7 @@ async def run_single_question(
         question_meta: Metadata from eval_questions.json (text, category, difficulty).
         run_dir: Directory for this run's output.
         semaphore: Concurrency limiter.
+        agent_mode: Optional per-request agent mode override (auto/sql_only/graphql_sql/graphql_only).
 
     Returns a result dict with question_id, answer, sql, duration_s, status, error.
     """
@@ -81,6 +84,7 @@ async def run_single_question(
             "question_text": question_text,
             "category": question_meta.get("category", ""),
             "difficulty": question_meta.get("difficulty", ""),
+            "agent_mode": agent_mode,
             "answer": None,
             "sql": None,
             "duration_s": None,
@@ -99,7 +103,7 @@ async def run_single_question(
             # Stream through agent to get final answer
             answer = None
             async for step in atlas.agent.astream(
-                atlas._turn_input(question_text),
+                atlas._turn_input(question_text, agent_mode=agent_mode),
                 stream_mode="values",
                 config=config,
             ):
@@ -149,18 +153,27 @@ def _parse_args() -> argparse.Namespace:
         default=3,
         help="Max concurrent agent runs (default: 3)",
     )
+    parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["auto", "sql_only", "graphql_sql", "graphql_only"],
+        default=None,
+        help="Agent mode override for all questions (default: use configured mode)",
+    )
     return parser.parse_args()
 
 
 async def run_agent_evals(
     question_ids: list[str] | None = None,
     concurrency: int = 3,
+    agent_mode: str | None = None,
 ) -> tuple[Path, list[dict[str, Any]]]:
     """Run the agent on evaluation questions.
 
     Args:
         question_ids: Specific question IDs to run, or None for all.
         concurrency: Maximum concurrent agent runs.
+        agent_mode: Optional per-request agent mode override applied to all questions.
 
     Returns:
         Tuple of (run_dir, list_of_results).
@@ -185,9 +198,10 @@ async def run_agent_evals(
     run_dir = EVALUATION_BASE_DIR / "runs" / timestamp
     run_dir.mkdir(parents=True, exist_ok=True)
 
+    mode_label = agent_mode or "default"
     logging.info(
         f"Starting agent evals: {len(ids_to_run)} questions, "
-        f"concurrency={concurrency}, run_dir={run_dir}"
+        f"concurrency={concurrency}, mode={mode_label}, run_dir={run_dir}"
     )
 
     # Capture agent model info from settings
@@ -209,7 +223,14 @@ async def run_agent_evals(
         example_queries_dir=BASE_DIR / "src/example_queries",
     ) as atlas:
         tasks = [
-            run_single_question(atlas, qid, questions_index[qid], run_dir, semaphore)
+            run_single_question(
+                atlas,
+                qid,
+                questions_index[qid],
+                run_dir,
+                semaphore,
+                agent_mode=agent_mode,
+            )
             for qid in ids_to_run
         ]
         results = await asyncio.gather(*tasks)
@@ -226,6 +247,7 @@ async def run_agent_evals(
         "failed": failed,
         "agent_model": agent_model,
         "agent_provider": agent_provider,
+        "agent_mode": agent_mode or settings.agent_mode,
         "results": results,
     }
     save_json_file(run_dir / "summary.json", summary)
@@ -243,6 +265,7 @@ async def main() -> None:
     await run_agent_evals(
         question_ids=args.questions,
         concurrency=args.concurrency,
+        agent_mode=args.mode,
     )
 
 

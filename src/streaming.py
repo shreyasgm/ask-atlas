@@ -564,7 +564,7 @@ class AtlasTextToSQL:
             services_cache=services_catalog,
             agent_mode=AgentMode(_settings.agent_mode),
             budget_tracker=budget_tracker,
-            docs_dir=BASE_DIR / "technical_docs",
+            docs_dir=BASE_DIR / "src" / "docs",
         )
 
         return instance

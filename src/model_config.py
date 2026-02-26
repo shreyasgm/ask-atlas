@@ -40,7 +40,7 @@ LIGHTWEIGHT_MODEL = "gpt-5-mini"
 LIGHTWEIGHT_MODEL_PROVIDER = "openai"
 
 # --- Agent mode ---
-# "auto" (default), "graphql_sql", or "sql_only"
+# "auto" (default), "graphql_sql", "sql_only", or "graphql_only"
 AGENT_MODE = "auto"
 
 # --- Per-prompt model assignment ---

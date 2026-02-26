@@ -1,8 +1,9 @@
 """Graph structure and conditional routing tests.
 
 Verifies the agent graph's conditional routing (agent -> END, agent -> pipeline,
-agent -> max_queries_exceeded) and state transitions using a simplified test graph
-that replaces the full pipeline nodes with stubs while preserving routing logic.
+agent -> max_queries_exceeded, agent -> docs_pipeline) and state transitions
+using simplified test graphs that replace full pipeline nodes with stubs while
+preserving routing logic.
 
 All tests are unit tests -- no database or external LLM required.
 """
@@ -12,6 +13,7 @@ from langchain_core.tools import tool
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
+from src.docs_pipeline import DocsToolInput
 from src.sql_pipeline import QueryToolInput, max_queries_exceeded_node
 from src.state import AtlasAgentState
 from src.tests.fake_model import FakeToolCallingModel
@@ -430,3 +432,240 @@ class TestMultiplePipelineRounds:
 
         # queries_executed should still be 0 since pipeline never ran
         assert result.get("queries_executed", 0) == 0
+
+
+# ---------------------------------------------------------------------------
+# Docs tool routing tests
+# ---------------------------------------------------------------------------
+
+
+def build_test_graph_with_docs(
+    fake_model: FakeToolCallingModel,
+    max_uses: int = 3,
+):
+    """Build a graph with query_tool + docs_tool routing and stub pipelines.
+
+    Mirrors the production routing logic from graph.py:
+    - docs_tool bypasses the query budget
+    - query_tool increments queries_executed
+    """
+
+    @tool("query_tool", args_schema=QueryToolInput)
+    def dummy_query_tool(question: str, context: str = "") -> str:
+        """A trade data query tool."""
+        return "stub result"
+
+    @tool("docs_tool", args_schema=DocsToolInput)
+    def dummy_docs_tool(question: str, context: str = "") -> str:
+        """A documentation lookup tool."""
+        return "stub docs"
+
+    async def agent_node(state: AtlasAgentState) -> dict:
+        model_with_tools = fake_model.bind_tools([dummy_query_tool, dummy_docs_tool])
+        return {"messages": [await model_with_tools.ainvoke(state["messages"])]}
+
+    async def pipeline_stub(state: AtlasAgentState) -> dict:
+        """Simulate query pipeline: returns result, increments queries_executed."""
+        last_msg = state["messages"][-1]
+        tc = last_msg.tool_calls[0]
+        content = f"Query results for: {tc['args']['question']}"
+        return {
+            "messages": [ToolMessage(content=content, tool_call_id=tc["id"])],
+            "queries_executed": state.get("queries_executed", 0) + 1,
+        }
+
+    async def docs_pipeline_stub(state: AtlasAgentState) -> dict:
+        """Simulate docs pipeline: returns doc content, does NOT increment queries_executed."""
+        last_msg = state["messages"][-1]
+        tc = last_msg.tool_calls[0]
+        content = f"Documentation for: {tc['args']['question']}"
+        return {
+            "messages": [ToolMessage(content=content, tool_call_id=tc["id"])],
+        }
+
+    def route_after_agent(state: AtlasAgentState) -> str:
+        """Mirror the production routing logic including docs_tool."""
+        last_msg = state["messages"][-1]
+        if not (hasattr(last_msg, "tool_calls") and last_msg.tool_calls):
+            return END
+        tool_name = last_msg.tool_calls[0]["name"]
+        # docs_tool bypasses budget check
+        if tool_name == "docs_tool":
+            return "docs_pipeline_stub"
+        if state.get("queries_executed", 0) >= max_uses:
+            return "max_queries_exceeded"
+        if tool_name == "query_tool":
+            return "pipeline_stub"
+        return END
+
+    builder = StateGraph(AtlasAgentState)
+    builder.add_node("agent", agent_node)
+    builder.add_node("pipeline_stub", pipeline_stub)
+    builder.add_node("docs_pipeline_stub", docs_pipeline_stub)
+    builder.add_node("max_queries_exceeded", max_queries_exceeded_node)
+    builder.add_edge(START, "agent")
+    builder.add_conditional_edges("agent", route_after_agent)
+    builder.add_edge("pipeline_stub", "agent")
+    builder.add_edge("docs_pipeline_stub", "agent")
+    builder.add_edge("max_queries_exceeded", "agent")
+
+    return builder.compile(checkpointer=MemorySaver())
+
+
+class TestDocsToolRouting:
+    """Verify docs_tool routing, budget bypass, and docs+SQL sequences."""
+
+    async def test_docs_tool_happy_path(self):
+        """docs_tool call routes through docs pipeline and returns documentation."""
+        model = FakeToolCallingModel(
+            responses=[
+                AIMessage(
+                    content="",
+                    tool_calls=[_tool_call("docs_tool", "What is ECI?", "docs-call-1")],
+                ),
+                AIMessage(content="ECI measures economic complexity."),
+            ]
+        )
+        graph = build_test_graph_with_docs(model)
+        config = {"configurable": {"thread_id": "docs-happy"}}
+
+        result = await graph.ainvoke(
+            {"messages": [HumanMessage(content="Tell me about ECI")]},
+            config=config,
+        )
+
+        msgs = result["messages"]
+        assert len(msgs) == 4  # Human, AI(tc), Tool(docs), AI(answer)
+        assert isinstance(msgs[2], ToolMessage)
+        assert "Documentation for: What is ECI?" in msgs[2].content
+        assert msgs[2].tool_call_id == "docs-call-1"
+
+    async def test_docs_tool_does_not_count_against_budget(self):
+        """Calling docs_tool N times does not affect queries_executed."""
+        model = FakeToolCallingModel(
+            responses=[
+                # docs_tool call 1
+                AIMessage(
+                    content="",
+                    tool_calls=[_tool_call("docs_tool", "What is ECI?", "docs-1")],
+                ),
+                # docs_tool call 2
+                AIMessage(
+                    content="",
+                    tool_calls=[_tool_call("docs_tool", "What is RCA?", "docs-2")],
+                ),
+                # docs_tool call 3
+                AIMessage(
+                    content="",
+                    tool_calls=[_tool_call("docs_tool", "What is PCI?", "docs-3")],
+                ),
+                # Then a query_tool call — should work (budget not affected)
+                AIMessage(
+                    content="",
+                    tool_calls=[_tool_call("query_tool", "Brazil ECI", "query-1")],
+                ),
+                AIMessage(content="Brazil's ECI is 0.5."),
+            ]
+        )
+        graph = build_test_graph_with_docs(model, max_uses=1)
+        config = {"configurable": {"thread_id": "docs-no-budget"}}
+
+        result = await graph.ainvoke(
+            {"messages": [HumanMessage(content="ECI details and data")]},
+            config=config,
+        )
+
+        # queries_executed should be 1 (only query_tool counts)
+        assert result.get("queries_executed", 0) == 1
+
+        msgs = result["messages"]
+        tool_msgs = [m for m in msgs if isinstance(m, ToolMessage)]
+        # 3 docs + 1 query = 4 ToolMessages
+        assert len(tool_msgs) == 4
+        docs_msgs = [m for m in tool_msgs if "Documentation for:" in m.content]
+        query_msgs = [m for m in tool_msgs if "Query results for:" in m.content]
+        assert len(docs_msgs) == 3
+        assert len(query_msgs) == 1
+
+    async def test_docs_tool_works_when_budget_exhausted(self):
+        """docs_tool still works even when the query budget is fully exhausted."""
+        model = FakeToolCallingModel(
+            responses=[
+                # Use up the entire query budget (max_uses=1)
+                AIMessage(
+                    content="",
+                    tool_calls=[_tool_call("query_tool", "initial query", "q-1")],
+                ),
+                # Now budget is exhausted — but docs_tool should still work
+                AIMessage(
+                    content="",
+                    tool_calls=[_tool_call("docs_tool", "What is COG?", "docs-after")],
+                ),
+                AIMessage(content="COG measures complexity outlook gain."),
+            ]
+        )
+        graph = build_test_graph_with_docs(model, max_uses=1)
+        config = {"configurable": {"thread_id": "docs-after-budget"}}
+
+        result = await graph.ainvoke(
+            {"messages": [HumanMessage(content="Query then docs")]},
+            config=config,
+        )
+
+        msgs = result["messages"]
+        tool_msgs = [m for m in msgs if isinstance(m, ToolMessage)]
+
+        # Should have 2 ToolMessages: 1 query + 1 docs
+        assert len(tool_msgs) == 2
+        assert "Query results for:" in tool_msgs[0].content
+        assert "Documentation for: What is COG?" in tool_msgs[1].content
+
+        # queries_executed is 1 (only query counted)
+        assert result.get("queries_executed", 0) == 1
+
+    async def test_docs_plus_sql_sequence(self):
+        """docs_tool followed by query_tool — both pipelines fire correctly."""
+        model = FakeToolCallingModel(
+            responses=[
+                # First: docs_tool for methodology
+                AIMessage(
+                    content="",
+                    tool_calls=[
+                        _tool_call("docs_tool", "How is ECI calculated?", "d-1")
+                    ],
+                ),
+                # Then: query_tool with context from docs
+                AIMessage(
+                    content="",
+                    tool_calls=[
+                        {
+                            "name": "query_tool",
+                            "args": {
+                                "question": "Brazil ECI over time",
+                                "context": "ECI uses eigenvector method...",
+                            },
+                            "id": "q-1",
+                            "type": "tool_call",
+                        }
+                    ],
+                ),
+                AIMessage(content="Here are Brazil's ECI values over time."),
+            ]
+        )
+        graph = build_test_graph_with_docs(model)
+        config = {"configurable": {"thread_id": "docs-then-sql"}}
+
+        result = await graph.ainvoke(
+            {"messages": [HumanMessage(content="Explain and query ECI for Brazil")]},
+            config=config,
+        )
+
+        msgs = result["messages"]
+        tool_msgs = [m for m in msgs if isinstance(m, ToolMessage)]
+
+        assert len(tool_msgs) == 2
+        assert "Documentation for:" in tool_msgs[0].content
+        assert "Query results for:" in tool_msgs[1].content
+
+        # Only the query_tool counted against budget
+        assert result.get("queries_executed", 0) == 1
