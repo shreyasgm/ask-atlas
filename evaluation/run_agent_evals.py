@@ -30,38 +30,57 @@ from utils import (
 from src.text_to_sql import AtlasTextToSQL
 
 
+def _load_questions_index() -> dict[str, dict]:
+    """Load question metadata from eval_questions.json, keyed by string ID.
+
+    This is the single source of truth for question text, category, and difficulty.
+    """
+    eval_data = load_json_file(EVALUATION_BASE_DIR / "eval_questions.json")
+    categories = {cat["id"]: cat["name"] for cat in eval_data["categories"]}
+    index: dict[str, dict] = {}
+    for q in eval_data["questions"]:
+        qid = str(q["id"])
+        index[qid] = {
+            "text": q["text"],
+            "category": categories.get(q["category_id"], q["category_id"]),
+            "difficulty": q["difficulty"],
+            "expected_behavior": q.get("expected_behavior"),
+        }
+    return index
+
+
 def _discover_question_ids() -> list[str]:
-    """Return sorted numeric question IDs from evaluation/questions/."""
-    questions_dir = EVALUATION_BASE_DIR / "questions"
-    ids = []
-    for p in questions_dir.iterdir():
-        if p.is_dir() and p.name.isdigit():
-            ids.append(p.name)
-    return sorted(ids, key=int)
+    """Return sorted question IDs from eval_questions.json."""
+    index = _load_questions_index()
+    return sorted(index.keys(), key=int)
 
 
 async def run_single_question(
     atlas: AtlasTextToSQL,
     question_id: str,
+    question_meta: dict,
     run_dir: Path,
     semaphore: asyncio.Semaphore,
 ) -> dict[str, Any]:
     """Run the agent on a single question and save results.
 
+    Args:
+        atlas: The AtlasTextToSQL agent instance.
+        question_id: Numeric question ID (as string).
+        question_meta: Metadata from eval_questions.json (text, category, difficulty).
+        run_dir: Directory for this run's output.
+        semaphore: Concurrency limiter.
+
     Returns a result dict with question_id, answer, sql, duration_s, status, error.
     """
     async with semaphore:
-        question_path = (
-            EVALUATION_BASE_DIR / "questions" / question_id / "question.json"
-        )
-        question_data = load_json_file(question_path)
-        question_text = question_data["user_question"]
+        question_text = question_meta["text"]
 
         result: dict[str, Any] = {
             "question_id": question_id,
             "question_text": question_text,
-            "category": question_data.get("category", ""),
-            "difficulty": question_data.get("difficulty", ""),
+            "category": question_meta.get("category", ""),
+            "difficulty": question_meta.get("difficulty", ""),
             "answer": None,
             "sql": None,
             "duration_s": None,
@@ -146,11 +165,12 @@ async def run_agent_evals(
     Returns:
         Tuple of (run_dir, list_of_results).
     """
-    all_ids = _discover_question_ids()
+    questions_index = _load_questions_index()
+    all_ids = sorted(questions_index.keys(), key=int)
 
     if question_ids:
-        ids_to_run = [qid for qid in question_ids if qid in all_ids]
-        missing = set(question_ids) - set(all_ids)
+        ids_to_run = [qid for qid in question_ids if qid in questions_index]
+        missing = set(question_ids) - set(questions_index)
         if missing:
             logging.warning(f"Question IDs not found, skipping: {missing}")
     else:
@@ -170,6 +190,13 @@ async def run_agent_evals(
         f"concurrency={concurrency}, run_dir={run_dir}"
     )
 
+    # Capture agent model info from settings
+    from src.config import get_settings
+
+    settings = get_settings()
+    agent_model = settings.frontier_model
+    agent_provider = settings.frontier_model_provider
+
     semaphore = asyncio.Semaphore(concurrency)
 
     async with await AtlasTextToSQL.create_async(
@@ -179,7 +206,8 @@ async def run_agent_evals(
         example_queries_dir=BASE_DIR / "src/example_queries",
     ) as atlas:
         tasks = [
-            run_single_question(atlas, qid, run_dir, semaphore) for qid in ids_to_run
+            run_single_question(atlas, qid, questions_index[qid], run_dir, semaphore)
+            for qid in ids_to_run
         ]
         results = await asyncio.gather(*tasks)
 
@@ -193,6 +221,8 @@ async def run_agent_evals(
         "questions_run": len(ids_to_run),
         "succeeded": succeeded,
         "failed": failed,
+        "agent_model": agent_model,
+        "agent_provider": agent_provider,
         "results": results,
     }
     save_json_file(run_dir / "summary.json", summary)
