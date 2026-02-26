@@ -308,30 +308,22 @@ async def classify_query(state: AtlasAgentState, *, lightweight_model: Any) -> d
     """
     question = state["graphql_question"]
 
-    try:
-        chain = lightweight_model.with_structured_output(
-            GraphQLQueryClassification, include_raw=True
-        )
-        prompt = _build_classification_prompt(question)
-        result = await chain.ainvoke(prompt)
-        classification: GraphQLQueryClassification = result["parsed"]
+    # No try/except — errors propagate so LangGraph RetryPolicy can retry
+    # transient failures (rate limits, timeouts). After max retries, the
+    # exception reaches the streaming layer which returns a user-friendly error.
+    # method="function_calling" avoids OpenAI's Structured Output API
+    # (ParsedChatCompletion), which triggers spurious Pydantic serialization
+    # warnings due to unresolved TypeVar on ParsedChatCompletionMessage.parsed.
+    chain = lightweight_model.with_structured_output(
+        GraphQLQueryClassification, method="function_calling"
+    )
+    prompt = _build_classification_prompt(question)
+    classification: GraphQLQueryClassification = await chain.ainvoke(prompt)
 
-        return {
-            "graphql_classification": classification.model_dump(),
-            "graphql_api_target": classification.api_target,
-        }
-    except Exception as e:
-        logger.error("Classification failed: %s", e)
-        fallback = GraphQLQueryClassification(
-            reasoning=f"Classification failed due to error: {e}",
-            query_type="reject",
-            rejection_reason=str(e),
-            api_target=None,
-        )
-        return {
-            "graphql_classification": fallback.model_dump(),
-            "graphql_api_target": None,
-        }
+    return {
+        "graphql_classification": classification.model_dump(),
+        "graphql_api_target": classification.api_target,
+    }
 
 
 def _build_classification_prompt(question: str) -> str:
@@ -372,17 +364,16 @@ async def extract_entities(state: AtlasAgentState, *, lightweight_model: Any) ->
     question = state["graphql_question"]
     query_type = classification.get("query_type", "") if classification else ""
 
-    try:
-        chain = lightweight_model.with_structured_output(
-            GraphQLEntityExtraction, include_raw=True
-        )
-        prompt = _build_extraction_prompt(question, query_type)
-        result = await chain.ainvoke(prompt)
-        extraction: GraphQLEntityExtraction = result["parsed"]
-        return {"graphql_entity_extraction": extraction.model_dump()}
-    except Exception as e:
-        logger.error("Entity extraction failed: %s", e)
-        return {"graphql_entity_extraction": None}
+    # No try/except — errors propagate so LangGraph RetryPolicy can retry
+    # transient failures. After max retries, the exception reaches the
+    # streaming layer which returns a user-friendly error.
+    # method="function_calling" avoids OpenAI ParsedChatCompletion warnings.
+    chain = lightweight_model.with_structured_output(
+        GraphQLEntityExtraction, method="function_calling"
+    )
+    prompt = _build_extraction_prompt(question, query_type)
+    extraction: GraphQLEntityExtraction = await chain.ainvoke(prompt)
+    return {"graphql_entity_extraction": extraction.model_dump()}
 
 
 def _build_extraction_prompt(question: str, query_type: str) -> str:
@@ -684,14 +675,22 @@ async def build_and_execute_graphql(
     state: AtlasAgentState,
     *,
     graphql_client: AtlasGraphQLClient,
+    country_pages_client: AtlasGraphQLClient | None = None,
 ) -> dict:
     """Build a GraphQL query and execute it against the Atlas API.
+
+    Routes to the appropriate API endpoint based on ``graphql_api_target``:
+    - ``"country_pages"`` → uses ``country_pages_client`` (falls back to
+      ``graphql_client`` if not provided)
+    - ``"explore"`` or any other value → uses ``graphql_client``
 
     Never raises — catches all exceptions and records errors in state.
 
     Args:
         state: Current agent state with resolved params.
-        graphql_client: HTTP client for the Atlas GraphQL API.
+        graphql_client: HTTP client for the Atlas Explore API.
+        country_pages_client: Optional HTTP client for the Country Pages API.
+            Defaults to ``graphql_client`` when not provided.
 
     Returns:
         Dict with ``graphql_raw_response``, ``graphql_query``,
@@ -713,6 +712,16 @@ async def build_and_execute_graphql(
         }
 
     query_type = classification["query_type"]
+    api_target = (
+        classification.get("api_target") or state.get("graphql_api_target") or "explore"
+    )
+
+    # Route to the correct client based on api_target
+    client = (
+        country_pages_client
+        if (api_target == "country_pages" and country_pages_client is not None)
+        else graphql_client
+    )
 
     try:
         query_string, variables = build_graphql_query(query_type, resolved_params)
@@ -727,7 +736,7 @@ async def build_and_execute_graphql(
 
     start = time.monotonic()
     try:
-        data = await graphql_client.execute(query_string, variables)
+        data = await client.execute(query_string, variables)
         elapsed_ms = int((time.monotonic() - start) * 1000)
         return {
             "graphql_raw_response": data,
