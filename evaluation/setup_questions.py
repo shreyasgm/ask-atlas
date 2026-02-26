@@ -59,7 +59,7 @@ async def call_openai_api(
         ]
 
         completion = await client.beta.chat.completions.parse(
-            model=settings.query_model,
+            model=settings.frontier_model,
             messages=messages,
             response_format=SQLResponse,
         )

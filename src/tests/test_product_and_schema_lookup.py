@@ -17,7 +17,7 @@ settings = get_settings()
 def llm():
     """Initialize the language model using configured model."""
     return create_llm(
-        settings.query_model, settings.query_model_provider, temperature=0
+        settings.frontier_model, settings.frontier_model_provider, temperature=0
     )
 
 

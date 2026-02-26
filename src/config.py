@@ -5,11 +5,16 @@ Centralizes all configuration loaded from environment variables with type valida
 Non-secret defaults (model names, providers) live in model_config.py at the project root.
 """
 
-from pathlib import Path
-from pydantic_settings import BaseSettings
-from pydantic import Field, AliasChoices
+import logging
+from enum import Enum
 from functools import lru_cache
+from pathlib import Path
+
 from langchain_core.language_models import BaseChatModel
+from pydantic import Field, AliasChoices
+from pydantic_settings import BaseSettings
+
+logger = logging.getLogger(__name__)
 
 # Project root directory (parent of src/)
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -24,11 +29,21 @@ _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)
 
 _MODEL_DEFAULTS = {
-    "query_model": getattr(_mod, "QUERY_MODEL", "gpt-5.2"),
-    "query_model_provider": getattr(_mod, "QUERY_MODEL_PROVIDER", "openai"),
-    "metadata_model": getattr(_mod, "METADATA_MODEL", "gpt-5-mini"),
-    "metadata_model_provider": getattr(_mod, "METADATA_MODEL_PROVIDER", "openai"),
+    "frontier_model": getattr(_mod, "FRONTIER_MODEL", "gpt-5.2"),
+    "frontier_model_provider": getattr(_mod, "FRONTIER_MODEL_PROVIDER", "openai"),
+    "lightweight_model": getattr(_mod, "LIGHTWEIGHT_MODEL", "gpt-5-mini"),
+    "lightweight_model_provider": getattr(_mod, "LIGHTWEIGHT_MODEL_PROVIDER", "openai"),
+    "agent_mode": getattr(_mod, "AGENT_MODE", "auto"),
+    "prompt_model_assignments": getattr(_mod, "PROMPT_MODEL_ASSIGNMENTS", {}),
 }
+
+
+class AgentMode(str, Enum):
+    """System operating mode controlling which tool pipelines are available."""
+
+    AUTO = "auto"
+    GRAPHQL_SQL = "graphql_sql"
+    SQL_ONLY = "sql_only"
 
 
 class Settings(BaseSettings):
@@ -64,29 +79,55 @@ class Settings(BaseSettings):
     )
 
     # LLM Configuration — models and providers (defaults from model_config.py)
-    query_model: str = Field(
-        _MODEL_DEFAULTS["query_model"],
-        validation_alias=AliasChoices("QUERY_MODEL", "QUERY_LLM", "query_model"),
-        description="Model for SQL query generation",
-    )
-    query_model_provider: str = Field(
-        _MODEL_DEFAULTS["query_model_provider"],
-        validation_alias=AliasChoices("QUERY_MODEL_PROVIDER", "query_model_provider"),
-        description="Provider for the query model ('openai', 'anthropic', or 'google-genai')",
-    )
-    metadata_model: str = Field(
-        _MODEL_DEFAULTS["metadata_model"],
+    # Accept old env var names (QUERY_MODEL, QUERY_LLM, METADATA_MODEL, METADATA_LLM)
+    # for backward compatibility, with the new names taking priority.
+    frontier_model: str = Field(
+        _MODEL_DEFAULTS["frontier_model"],
         validation_alias=AliasChoices(
-            "METADATA_MODEL", "METADATA_LLM", "metadata_model"
+            "FRONTIER_MODEL", "QUERY_MODEL", "QUERY_LLM", "frontier_model"
         ),
-        description="Model for metadata extraction",
+        description="Frontier model for complex reasoning (SQL generation, agent orchestration)",
     )
-    metadata_model_provider: str = Field(
-        _MODEL_DEFAULTS["metadata_model_provider"],
+    frontier_model_provider: str = Field(
+        _MODEL_DEFAULTS["frontier_model_provider"],
         validation_alias=AliasChoices(
-            "METADATA_MODEL_PROVIDER", "metadata_model_provider"
+            "FRONTIER_MODEL_PROVIDER",
+            "QUERY_MODEL_PROVIDER",
+            "frontier_model_provider",
         ),
-        description="Provider for the metadata model ('openai', 'anthropic', or 'google-genai')",
+        description="Provider for the frontier model ('openai', 'anthropic', or 'google-genai')",
+    )
+    lightweight_model: str = Field(
+        _MODEL_DEFAULTS["lightweight_model"],
+        validation_alias=AliasChoices(
+            "LIGHTWEIGHT_MODEL",
+            "METADATA_MODEL",
+            "METADATA_LLM",
+            "lightweight_model",
+        ),
+        description="Lightweight model for extraction and classification tasks",
+    )
+    lightweight_model_provider: str = Field(
+        _MODEL_DEFAULTS["lightweight_model_provider"],
+        validation_alias=AliasChoices(
+            "LIGHTWEIGHT_MODEL_PROVIDER",
+            "METADATA_MODEL_PROVIDER",
+            "lightweight_model_provider",
+        ),
+        description="Provider for the lightweight model ('openai', 'anthropic', or 'google-genai')",
+    )
+
+    # Agent mode
+    agent_mode: AgentMode = Field(
+        _MODEL_DEFAULTS["agent_mode"],
+        validation_alias=AliasChoices("AGENT_MODE", "agent_mode"),
+        description="Agent operating mode: 'auto', 'graphql_sql', or 'sql_only'",
+    )
+
+    # Per-prompt model assignments
+    prompt_model_assignments: dict[str, str] = Field(
+        default_factory=lambda: dict(_MODEL_DEFAULTS["prompt_model_assignments"]),
+        description="Maps each prompt key to 'frontier' or 'lightweight'",
     )
 
     # Agent Configuration
@@ -172,4 +213,35 @@ def create_llm(model: str, provider: str, **kwargs) -> BaseChatModel:
         raise ValueError(
             f"Unsupported LLM provider: {provider!r}. "
             "Use 'openai', 'anthropic', or 'google-genai'."
+        )
+
+
+def get_prompt_model(prompt_key: str) -> BaseChatModel:
+    """Get the LLM instance for a specific prompt.
+
+    Looks up the model type assignment for the given prompt key
+    and returns the corresponding frontier or lightweight model.
+
+    Args:
+        prompt_key: The prompt identifier (must exist in prompt_model_assignments).
+
+    Returns:
+        A LangChain chat model instance configured for the prompt's tier.
+
+    Raises:
+        KeyError: If prompt_key is not found in prompt_model_assignments.
+    """
+    settings = get_settings()
+    assignments = settings.prompt_model_assignments
+    if prompt_key not in assignments:
+        raise KeyError(
+            f"Unknown prompt key: {prompt_key!r}. "
+            f"Available keys: {sorted(assignments.keys())}"
+        )
+    tier = assignments[prompt_key]
+    if tier == "frontier":
+        return create_llm(settings.frontier_model, settings.frontier_model_provider)
+    else:
+        return create_llm(
+            settings.lightweight_model, settings.lightweight_model_provider
         )
