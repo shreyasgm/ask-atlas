@@ -18,13 +18,14 @@ from src.sql_pipeline import (
     load_example_queries,
     PIPELINE_NODES as SQL_PIPELINE_NODES,
 )
+from src.docs_pipeline import DOCS_PIPELINE_NODES
 from src.graphql_pipeline import GRAPHQL_PIPELINE_NODES
 from src.graph import build_atlas_graph
 from src.config import get_settings, create_llm, AgentMode
 
 from src.persistence import AsyncCheckpointerManager
 
-ALL_PIPELINE_NODES = SQL_PIPELINE_NODES | GRAPHQL_PIPELINE_NODES
+ALL_PIPELINE_NODES = SQL_PIPELINE_NODES | GRAPHQL_PIPELINE_NODES | DOCS_PIPELINE_NODES
 
 # Define BASE_DIR
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -78,6 +79,12 @@ GRAPHQL_PIPELINE_SEQUENCE = [
     "format_graphql_results",
 ]
 
+DOCS_PIPELINE_SEQUENCE = [
+    "extract_docs_question",
+    "select_and_synthesize",
+    "format_docs_results",
+]
+
 NODE_LABELS = {
     "extract_tool_question": "Extracting question",
     "extract_products": "Identifying products",
@@ -95,6 +102,10 @@ NODE_LABELS = {
     "resolve_ids": "Resolving entity IDs",
     "build_and_execute_graphql": "Querying Atlas API",
     "format_graphql_results": "Formatting results",
+    # Docs pipeline
+    "extract_docs_question": "Extracting question",
+    "select_and_synthesize": "Looking up documentation",
+    "format_docs_results": "Preparing response",
 }
 
 
@@ -240,6 +251,17 @@ def _extract_pipeline_state(node_name: str, state_snapshot: dict) -> dict:
     elif node_name == "format_graphql_results":
         base["atlas_links"] = state_snapshot.get("graphql_atlas_links") or []
         base["query_index"] = state_snapshot.get("_query_index", 0)
+
+    # --- Docs pipeline nodes ---
+    elif node_name == "extract_docs_question":
+        base["question"] = state_snapshot.get("docs_question", "")
+
+    elif node_name == "select_and_synthesize":
+        base["selected_files"] = state_snapshot.get("docs_selected_files", [])
+        base["has_synthesis"] = bool(state_snapshot.get("docs_synthesis"))
+
+    elif node_name == "format_docs_results":
+        pass  # no additional data needed
 
     return base
 
@@ -408,8 +430,14 @@ class AtlasTextToSQL:
     async def create_async(
         cls,
         db_uri: str | None = None,
-        table_descriptions_json: str | Path = BASE_DIR / "db_table_descriptions.json",
-        table_structure_json: str | Path = BASE_DIR / "db_table_structure.json",
+        table_descriptions_json: str | Path = BASE_DIR
+        / "src"
+        / "schema"
+        / "db_table_descriptions.json",
+        table_structure_json: str | Path = BASE_DIR
+        / "src"
+        / "schema"
+        / "db_table_structure.json",
         queries_json: str | Path = BASE_DIR
         / "src"
         / "example_queries"
@@ -536,6 +564,7 @@ class AtlasTextToSQL:
             services_cache=services_catalog,
             agent_mode=AgentMode(_settings.agent_mode),
             budget_tracker=budget_tracker,
+            docs_dir=BASE_DIR / "technical_docs",
         )
 
         return instance
@@ -736,6 +765,14 @@ class AtlasTextToSQL:
                 idx = GRAPHQL_PIPELINE_SEQUENCE.index(current_node)
                 if idx + 1 < len(GRAPHQL_PIPELINE_SEQUENCE):
                     return GRAPHQL_PIPELINE_SEQUENCE[idx + 1]
+                return None
+            except ValueError:
+                pass
+            # Check Docs pipeline sequence
+            try:
+                idx = DOCS_PIPELINE_SEQUENCE.index(current_node)
+                if idx + 1 < len(DOCS_PIPELINE_SEQUENCE):
+                    return DOCS_PIPELINE_SEQUENCE[idx + 1]
             except ValueError:
                 pass
             return None
@@ -812,11 +849,13 @@ class AtlasTextToSQL:
                             if next_node and next_node not in (
                                 "format_results",
                                 "format_graphql_results",
+                                "format_docs_results",
                             ):
                                 yield stream_mode, _make_node_start(next_node)
                             elif next_node in (
                                 "format_results",
                                 "format_graphql_results",
+                                "format_docs_results",
                             ):
                                 # We need terminal node's node_start now since
                                 # it produces a ToolMessage

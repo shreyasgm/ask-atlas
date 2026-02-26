@@ -12,8 +12,8 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 
 # Common constants
 EVALUATION_BASE_DIR = BASE_DIR / "evaluation"
-DB_DESCRIPTIONS_FILE = BASE_DIR / "db_table_descriptions.json"
-DB_STRUCTURE_FILE = BASE_DIR / "db_table_structure.json"
+DB_DESCRIPTIONS_FILE = BASE_DIR / "src" / "schema" / "db_table_descriptions.json"
+DB_STRUCTURE_FILE = BASE_DIR / "src" / "schema" / "db_table_structure.json"
 
 # Configure logging
 LOGS_DIR = EVALUATION_BASE_DIR / "logs"
