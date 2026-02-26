@@ -23,7 +23,7 @@ This guide describes how to systematically collect ground truth Q&A pairs from t
 ### URL Structure
 
 - **Base URL**: `https://atlas.hks.harvard.edu/explore`
-- **Six visualization types**, each with a URL slug:
+- **Seven visualization types** (six base types, with Growth Opportunity having both graph and table views), each with a URL slug:
 
 | # | Slug | Full URL Pattern | Content |
 |---|------|-----------------|---------|
@@ -75,6 +75,8 @@ Most visualizations support two perspectives toggled via Products/Locations butt
 | **Products** | Product breakdown by sector | "What did Kenya export in 2024?" |
 | **Locations** | Trade partner breakdown by region | "Where did Kenya export to in 2024?" |
 
+**Total value distinction**: In Products mode, the total value includes both goods and services (e.g., "$16B" for Kenya). In Locations mode, the total shows goods-only (e.g., "$8.2B" for Kenya), because bilateral services trade data is excluded. This is important for data accuracy when collecting ground truth — the same country can show different total export figures depending on the mode.
+
 ### Tooltip Data (Treemap)
 
 Hovering over a product in the treemap shows:
@@ -98,7 +100,7 @@ Hovering over a product in the treemap shows:
 
 - **The site is a JavaScript SPA** (React). Static HTTP fetches will not work for page content.
 - **The Explore pages use a different GraphQL API** from Country pages — these are two completely separate APIs with different schemas:
-  - Explore API: `POST /api/graphql` (26 query types, explicit HS revisions, bilateral trade, groups, better introspection)
+  - Explore API: `POST /api/graphql` (27 query types, explicit HS revisions, bilateral trade, groups, better introspection)
   - Country Pages API: `POST /api/countries/graphql` (25 query types, `countryProfile` with derived narrative metrics)
   - Both are available on production (`atlas.hks.harvard.edu`) and staging (`staging.atlas.growthlab-dev.com`), with identical schemas within each type.
 - **Canvas-based visualizations**: treemap and product space are rendered on `<canvas>`, so tooltip data is not accessible via DOM queries. Use the GraphQL API.
@@ -109,7 +111,7 @@ Hovering over a product in the treemap shows:
 
 ## 2. GraphQL API Reference (Explore Endpoint)
 
-> **NOTE:** The Explore API documented here (`/api/graphql`) is a separate API from the Country Pages API (`/api/countries/graphql`). Both are available on production (`atlas.hks.harvard.edu`) and staging (`staging.atlas.growthlab-dev.com`), with identical schemas within each API type. The Country Pages API provides unique derived metrics (`countryProfile`, lookback, etc.) not present in this API. See `docs/backend_redesign_analysis.md` for full details on how both APIs complement each other. **Rate limit (per Atlas `llms.txt`): ≤ 120 req/min (2 req/sec) for automated access. Include a `User-Agent` header.**
+> **NOTE:** The Explore API documented here (`/api/graphql`) is a separate API from the Country Pages API (`/api/countries/graphql`). Both are available on production (`atlas.hks.harvard.edu`) and staging (`staging.atlas.growthlab-dev.com`), with identical schemas within each API type. The Explore API has **27 query types** and **40 custom types**; the Country Pages API has **25 query types** and **49 custom types**. The Country Pages API provides unique derived metrics (`countryProfile`, lookback, etc.) not present in this API. See `docs/backend_redesign_analysis.md` for full details on how both APIs complement each other. **Rate limit (per Atlas `llms.txt`): ≤ 120 req/min (2 req/sec) for automated access. Include a `User-Agent` header.**
 
 ### Endpoints
 
@@ -131,14 +133,17 @@ No authentication headers required. Introspection enabled. Per the Atlas `llms.t
 
 | Aspect | Explore API (`/api/graphql`) | Country Pages API (`/api/countries/graphql`) |
 |--------|------------------------------|----------------------------------------------|
+| Query count | 27 query types, 40 custom types | 25 query types, 49 custom types |
 | ID format | Numeric integers (`countryId: 404`) | String IDs (`location: "location-404"`) |
 | Year params | `yearMin` / `yearMax` ranges | `year`, `minYear` / `maxYear` |
-| Product class | `HS92`, `HS12`, `HS22`, `SITC` | `HS`, `SITC` |
-| Services | `servicesClass: unilateral` param | Bundled into product class |
+| Product class | `HS92`, `HS12`, `HS22`, `SITC` (explicit revisions) | `HS`, `SITC` (generic) |
+| Product levels | 2, 4, **6** digit | section, twoDigit, fourDigit |
+| Services | `servicesClass: unilateral` (explicit param) | Bundled into product class |
+| Arg descriptions | Human-readable for ALL arguments | `None` for all arguments |
 | Focus | Raw trade data, bilateral flows | Analytical profiles, recommendations |
-| Unique features | Data dictionary, groups, bilateral trade, 6-digit, HS22, argument descriptions in introspection | `countryProfile` (46 derived fields), `countryLookback`, peer comparisons |
+| Unique features | Bilateral trade, groups, product relatedness (`productProduct`), 6-digit products, HS22, code conversion, data quality flags, percentile thresholds, download catalog, argument descriptions | `countryProfile` (46 derived fields), `countryLookback`, peer comparisons, policy enums, narrative-ready data |
 
-### Available Query Types (26 total)
+### Available Query Types (27 total)
 
 #### Core Trade Data
 
@@ -149,6 +154,13 @@ No authentication headers required. Introspection enabled. Per the Atlas `llms.t
 | `productYear` | `productClass, servicesClass, productLevel!, productId, yearMin, yearMax` | `[ProductYear]` | Global product-level data |
 | `countryCountryYear` | `productClass, servicesClass, countryId, partnerCountryId, yearMin, yearMax` | `[CountryCountryYear]` | Bilateral trade totals |
 | `countryCountryProductYear` | `countryId, partnerCountryId, yearMin/Max, productClass, servicesClass, productLevel, productId, productIds` | `[CountryCountryProductYear]` | Bilateral trade by product |
+| `countryCountryProductYearGrouped` | Same as `countryCountryProductYear` | `[CountryCountryProductYearGrouped]` | Grouped bilateral trade (returns `productIds` + `data` arrays) |
+
+#### Product Relatedness
+
+| Query | Arguments | Returns | Purpose |
+|-------|-----------|---------|---------|
+| `productProduct` | `productClass!, productLevel!` | `[ProductProduct]` | Product-to-product relatedness strengths (product space edges); fields: `productId, targetId, strength, productLevel` |
 
 #### Group / Regional Data
 
@@ -180,6 +192,9 @@ No authentication headers required. Introspection enabled. Per the Atlas `llms.t
 | `dataAvailability` | *(none)* | `[DataAvailability]` | Year ranges per classification |
 | `conversionPath` | `sourceCode!, sourceClassification!, targetClassification!` | `[ConversionClassifications]` | HS/SITC code conversion |
 | `conversionSources` | `targetCode!, targetClassification!, sourceClassification!` | `[ConversionClassifications]` | Reverse code lookup |
+| `conversionWeights` | `sitc1962, sitc1976, sitc1988, hs1992, hs1997, hs2002, hs2007, hs2012, hs2017, hs2022` | `[ConversionWeights]` | Weighted conversion between classifications |
+| `downloadsTable` | *(none)* | `[DownloadsTable]` | Data download catalog (70 entries) |
+| `banner` | *(none)* | `[Banner]` | Site announcement banners (currently empty) |
 | `metadata` | *(none)* | `Metadata` | Server/ingestion info |
 
 ### Key Type Schemas
@@ -225,13 +240,22 @@ exportValue, exportValueReported
 importValue, importValueReported
 ```
 
-#### `CountryCountryProductYear`
+#### `CountryCountryProductYear` (11 fields)
 
 ```
-countryId, partnerCountryId, productId, productLevel, year
+countryId, locationLevel, partnerCountryId, partnerLevel
+productId, productLevel, year
 exportValue, importValue
 exportValueReported, importValueReported
 ```
+
+#### `ProductProduct` (4 fields)
+
+```
+productId, targetId, strength, productLevel
+```
+
+Purpose: Encodes the product space network edges. Each row is a pair of products with a `strength` value indicating how related they are (based on co-export patterns).
 
 #### `Product`
 
@@ -279,11 +303,14 @@ gdppcConstCagr3/5/10/15
 | `ServicesClass` | `unilateral` |
 | `ComplexityLevel` | `low`, `moderate`, `high` |
 | `LocationLevel` | `country`, `group` |
-| `GroupType` | `continent`, `political`, `region`, `subregion`, `trade`, `wdi_income_level`, `wdi_region`, `world` |
+| `GroupType` | `continent`, `political`, `region`, `rock_song`, `subregion`, `trade`, `wdi_income_level`, `wdi_region`, `world` |
 | `ProductType` | `good`, `service` |
 | `ProductStatus` | `absent`, `lost`, `new`, `present` |
 | `IncomeLevel` | `high`, `upper_middle`, `lower_middle`, `low` |
 | `ClassificationEnum` | `SITC1962`, `SITC1976`, `SITC1988`, `HS1992`, `HS1997`, `HS2002`, `HS2007`, `HS2012`, `HS2017`, `HS2022` |
+| `DownloadTableDataType` | `unilateral`, `bilateral`, `product`, `classification`, `product_space`, `rankings` |
+| `DownloadTableFacet` | `CPY`, `CY`, `PY`, `CCY`, `CCPY` |
+| `DownloadTableRepo` | `rankings`, `hs92`, `hs12`, `hs22`, `sitc`, `services_unilateral`, `classification`, `product_space` |
 
 ### Working Sample Queries
 
@@ -310,6 +337,21 @@ gdppcConstCagr3/5/10/15
 ```
 
 **Note on product IDs**: The Explore API uses internal numeric product IDs (e.g., 726 for Coffee/0901), NOT the HS code directly. Use `productHs92(productLevel: 4)` to get the mapping from HS code → product ID.
+
+**Product ID mapping for selected products** (retrieved from the `productHs92` query):
+
+| HS92 Code | Internal Product ID | Product Name |
+|-----------|-------------------|-------------|
+| 0901 | 726 | Coffee |
+| 0902 | 727 | Tea |
+| 2601 | 1506 | Iron ores |
+| 2710 | 1584 | Petroleum oils, refined |
+| 3004 | 1748 | Medicaments |
+| 6109 | 2801 | T-shirts |
+| 8542 | 3595 | Electronic integrated circuits |
+| 8703 | 3667 | Cars |
+
+These IDs are used in URLs (e.g., `product=product-HS92-726` for Coffee) and API queries (e.g., `productId: 726`).
 
 **Global product data for Coffee, 2020-2024:**
 
@@ -421,13 +463,20 @@ Instead, Explore pages provide data points that country pages **cannot** answer:
 | 11 | **Product status** (new/lost/present/absent) for specific products | API | `countryProductYear.productStatus` | Partial — new-products page shows count, not per-product |
 | 12 | **Complexity Outlook Gain (COG)** per product | API | `countryProductYear.cog` | No |
 | 13 | **Global market share per product** | API | `countryProductYear.globalMarketShare` | No — country pages show sector-level market share only |
-| 14 | **Feasibility table** (ranked products with distance, COG, PCI, global size, 5yr growth) | Feasibility table view | Multiple API fields | Partial — country page product-table shows similar but with diamond ratings, not numbers |
+| 14 | **Feasibility table** (ranked products with distance, COG, PCI, global size, 5yr growth) | Feasibility table view | Multiple API fields | Partial — country page product-table shows similar but with diamond ratings, not numbers. Explore table shows **all** opportunity products (not just "Top 50") and is available for **all countries** including frontier economies (USA, Germany, etc.) where the country page version is hidden. |
 | 15 | **Product classification across HS revisions** | API | `conversionPath`, `conversionSources` | No |
 | 16 | **Regional/group trade aggregates** | API | `groupYear`, `locationGroup` | No |
 | 17 | **Regional export CAGR** (3/5/10/15 year) | API | `locationGroup.exportValueCagr5` etc. | No |
 | 18 | **Country-level time series** (GDP, ECI, exports year-by-year) | Trade Over Time | `countryYear` with year range | Partial — country pages show sparklines but not extractable values |
 | 19 | **Export CAGR** (5-year, constant dollars) for individual products | API | `productYear.exportValueConstCagr5` | No |
 | 20 | **Product classification** (natural resource flag, green product flag) | API | `productHs92.naturalResource`, `greenProduct` | No |
+| 21 | **Export RCA population-relative (RPOP)** | API | `countryProductYear.exportRpop` | No |
+| 22 | **Product-to-product relatedness strength** | API | `productProduct.strength` | No — product space edges are pre-computed only in the Country Pages API |
+| 23 | **Bilateral reported vs mirror values** | API | `countryCountryYear.exportValueReported`, `importValueReported` | No |
+| 24 | **Year deflators** | API | `year.deflator` | No — needed to compute constant-dollar values |
+| 25 | **Percentile distributions for complexity variables** | API | `countryYearThresholds` | No |
+| 26 | **Country data quality flags** | API | `dataFlags` | No |
+| 27 | **Sector-level global market share over time** | Marketshare chart | Derived: `countryProductYear.exportValue / productYear.exportValue` per sector per year | No |
 
 ### What to Skip (Already in Country Pages)
 
@@ -575,6 +624,7 @@ Each template specifies:
 | 23 | What was {country}'s GDP per capita in {year}? | **API**: `countryYear.gdppc` | easy | `/explore/overtime?year={year}` |
 | 24 | What was {country}'s ECI in {year}? | **API**: `countryYear.eci` | easy | `/explore/overtime?year={year}` |
 | 25 | How has {country}'s ECI changed from {year1} to {year2}? | **API**: `countryYear.eci` for both years | medium | `/explore/overtime?startYear={year1}&endYear={year2}` |
+| 26 | What is {country}'s global market share in {sector} in {year}? | **API**: Derive from `countryProductYear.exportValue / productYear.exportValue` per sector | medium | `/explore/marketshare?year={year}` |
 
 ---
 
@@ -586,9 +636,9 @@ Each template specifies:
 
 | # | Question Template | Extraction | Difficulty | Explore URL |
 |---|------------------|------------|------------|-------------|
-| 26 | What are the top 5 growth opportunity products for {country} ranked by opportunity gain? | **API**: `countryProductYear` sorted by `cog` | hard | `/explore/feasibility/table?year=2024` |
-| 27 | What is the global market size of {country}'s top growth opportunity product? | **API**: `productYear.exportValue` for top COG product | medium | `/explore/feasibility/table?year=2024` |
-| 28 | What is the 5-year growth rate of {product} globally according to the Atlas? | **API**: `productYear.exportValueConstCagr5` | medium | `/explore/feasibility/table?year=2024` |
+| 27 | What are the top 5 growth opportunity products for {country} ranked by opportunity gain? | **API**: `countryProductYear` sorted by `cog` | hard | `/explore/feasibility/table?year=2024` |
+| 28 | What is the global market size of {country}'s top growth opportunity product? | **API**: `productYear.exportValue` for top COG product | medium | `/explore/feasibility/table?year=2024` |
+| 29 | What is the 5-year growth rate of {product} globally according to the Atlas? | **API**: `productYear.exportValueConstCagr5` | medium | `/explore/feasibility/table?year=2024` |
 
 ---
 
@@ -600,10 +650,10 @@ Each template specifies:
 
 | # | Question Template | Extraction | Difficulty | Explore URL |
 |---|------------------|------------|------------|-------------|
-| 29 | What is the total export value of {region/group}? | **API**: `groupYear.exportValue` | medium | N/A (API only) |
-| 30 | What is the 5-year export growth rate for {region}? | **API**: `locationGroup.exportValueCagr5` | medium | N/A (API only) |
-| 31 | What is the non-oil export growth rate for {region}? | **API**: `locationGroup.exportValueNonOilCagr5` | medium | N/A (API only) |
-| 32 | Which countries belong to {group} according to the Atlas? | **API**: `locationGroup.members` | easy | N/A (API only) |
+| 30 | What is the total export value of {region/group}? | **API**: `groupYear.exportValue` | medium | N/A (API only) |
+| 31 | What is the 5-year export growth rate for {region}? | **API**: `locationGroup.exportValueCagr5` | medium | N/A (API only) |
+| 32 | What is the non-oil export growth rate for {region}? | **API**: `locationGroup.exportValueNonOilCagr5` | medium | N/A (API only) |
+| 33 | Which countries belong to {group} according to the Atlas? | **API**: `locationGroup.members` | easy | N/A (API only) |
 
 ---
 
@@ -613,11 +663,12 @@ Each template specifies:
 
 | # | Question Template | Extraction | Difficulty | Explore URL |
 |---|------------------|------------|------------|-------------|
-| 33 | Is {product} classified as a natural resource on the Atlas? | **API**: `productHs92.naturalResource` | easy | N/A (API only) |
-| 34 | Is {product} classified as a green product on the Atlas? | **API**: `productHs92.greenProduct` | easy | N/A (API only) |
-| 35 | What HS 2012 code corresponds to {product} (HS 1992 code {code})? | **API**: `conversionPath` | hard | N/A (API only) |
-| 36 | How many 4-digit HS92 products does the Atlas track? | **API**: `productHs92(productLevel: 4)` count | easy | N/A (API only) |
-| 37 | What years of trade data are available for HS 1992 on the Atlas? | **API**: `dataAvailability` | easy | N/A (API only) |
+| 34 | Is {product} classified as a natural resource on the Atlas? | **API**: `productHs92.naturalResource` | easy | N/A (API only) |
+| 35 | Is {product} classified as a green product on the Atlas? | **API**: `productHs92.greenProduct` | easy | N/A (API only) |
+| 36 | What HS 2012 code corresponds to {product} (HS 1992 code {code})? | **API**: `conversionPath` | hard | N/A (API only) |
+| 37 | How many 4-digit HS92 products does the Atlas track? | **API**: `productHs92(productLevel: 4)` count | easy | N/A (API only) |
+| 38 | What years of trade data are available for HS 1992 on the Atlas? | **API**: `dataAvailability` | easy | N/A (API only) |
+| 39 | Does the Atlas flag any data quality issues for {country}? | **API**: `dataFlags(countryId: {id})` | easy | N/A (API only) |
 
 ---
 
@@ -629,11 +680,11 @@ Each template specifies:
 | Global Product Statistics | 5 | 10–15 |
 | Bilateral Trade | 5 | 10–15 |
 | Import Composition | 4 | 8–12 |
-| Trade Time Series & Growth | 5 | 10–15 |
+| Trade Time Series & Growth | 6 | 12–18 |
 | Feasibility & Growth Opportunities | 3 | 6–9 |
 | Regional & Group Aggregates | 4 | 8–12 |
-| Product Classification & Metadata | 5 | 5–10 |
-| **Total** | **37** | **~70–105** |
+| Product Classification & Metadata | 6 | 6–12 |
+| **Total** | **39** | **~75–110** |
 
 ---
 
@@ -768,6 +819,8 @@ COUNTRIES = {
 
 # Selected products (HS92 code → internal product ID)
 # Get mapping from: productHs92(productLevel: 4)
+# Known IDs: Coffee=726, Tea=727, Iron ores=1506, Petroleum=1584,
+#             Medicaments=1748, T-shirts=2801, Electronic ICs=3595, Cars=3667
 PRODUCTS = {}  # Populated at runtime from API
 
 async def fetch_product_catalog(client):
@@ -836,13 +889,129 @@ async def fetch_country_year_series(client, country_id, year_min, year_max):
 
 ### Layer 2: Browser Verification (Spot-Check — ~5%)
 
-Explore pages have **no narrative text** — everything is data-driven. Browser interaction is only needed for:
+Explore pages have **no narrative text** — everything is data-driven. Browser spot-checks verify that API-collected ground truth values match what the website actually displays. This catches cases where the API returns raw data that the frontend transforms, rounds, or filters before display.
 
-1. **Tooltip verification**: Hover over treemap products to confirm RCA/PCI/distance values match API
-2. **Feasibility table verification**: Read the HTML table to confirm it matches API data
-3. **URL pattern verification**: Confirm that Explore URLs render the expected data
+**Estimated browser work**: 8–12 page visits across the checks below.
 
-**Estimated browser work**: 5–10 page visits for spot-checking.
+#### Why Spot-Check?
+
+The API returns raw numeric values, but the website may:
+- Round or format values differently (e.g., `$1,387,000,000` → `$1.39B`)
+- Apply filters the API doesn't (e.g., excluding services from Locations mode totals)
+- Use derived metrics (e.g., share = `exportValue / total`, constant-dollar = `exportValue / deflator`)
+- Display normalized or discretized versions (e.g., diamond ratings instead of raw distance)
+
+Spot-checks confirm the ground truth answers match the user-visible experience.
+
+#### Check 1: Treemap Tooltip Values (3–4 page visits)
+
+The treemap is canvas-rendered — data is not in the DOM. Verify by hovering over specific products to trigger the tooltip overlay.
+
+**How to do it:**
+
+1. Navigate to `/explore/treemap?year=2024&exporter=country-404` (Kenya)
+2. Hover over a large, easily findable product rectangle (e.g., Tea)
+3. Read the basic tooltip: **Product name**, **HS code**, **Sector**, **Export Value**, **Share**
+4. Click "Show more" in the tooltip to expand it
+5. Read the expanded fields: **RCA**, **Distance**, **PCI**
+6. Compare each value against the API result from `countryProductYear` for the same country, product, and year
+
+**What to compare:**
+
+| Tooltip Field | API Field | Expected Match |
+|---------------|-----------|---------------|
+| Export Value | `countryProductYear.exportValue` | Same value after rounding (e.g., API `1387000000` → tooltip `$1.39B`) |
+| Share | `exportValue / sum(all exportValues)` | Within 0.01% |
+| RCA | `countryProductYear.exportRca` | Exact or rounded to 2 decimal places |
+| Distance | `countryProductYear.distance` | Exact or rounded to 3 decimal places |
+| PCI | `countryProductYear.normalizedPci` | Exact or rounded to 3 decimal places |
+
+**Recommended spot-check pairs** (pick 3–4):
+
+| Country | Product | Why |
+|---------|---------|-----|
+| Kenya (404) | Tea (0902, ID 727) | Large rectangle, easy to find |
+| Kenya (404) | Coffee (0901, ID 726) | Second-largest, key reference product |
+| Brazil (76) | Iron ores (2601, ID 1506) | Commodity-heavy country |
+| India (356) | T-shirts (6109, ID 2801) | Smaller product, tests precision |
+
+#### Check 2: Feasibility Table Values (2–3 page visits)
+
+The feasibility table is the **only Explore page with DOM-accessible data** — it renders as an HTML `<table>`. This makes it the easiest to verify programmatically.
+
+**How to do it:**
+
+1. Navigate to `/explore/feasibility/table?year=2024&exporter=country-404&productLevel=4` (Kenya)
+2. The table loads with all opportunity products (products where the country does NOT have RCA > 1)
+3. Read the first 5–10 rows and compare against API values
+
+**What to compare:**
+
+| Table Column | API Field | Match Type |
+|-------------|-----------|-----------|
+| Product Name + HS code | `productHs92.nameEn` + `code` | Exact |
+| Global Size (USD) | `productYear.exportValue` | Same after rounding (e.g., `$2.61B`) |
+| Global Growth 5 YR | `productYear.exportValueConstCagr5` | Same percentage (e.g., `↑ 13.1%`) |
+| "Nearby" Distance (diamonds) | `countryProductYear.distance` | Ordinal — 7 diamond levels; more diamonds = smaller distance value |
+| Opportunity Gain (diamonds) | `countryProductYear.cog` | Ordinal — 7 diamond levels; more diamonds = higher COG |
+| Product Complexity (diamonds) | `countryProductYear.normalizedPci` | Ordinal — 7 diamond levels; more diamonds = higher PCI |
+
+**Diamond rating note:** The distance, COG, and PCI columns use 7-level diamond ratings (e.g., ◆◆◆◆◆◇◇), NOT exact numbers. Don't expect an exact match between the raw API value and the diamond count — instead verify that higher API values correspond to more filled diamonds and that the sort order is consistent.
+
+**Global Size and Global Growth 5 YR** are displayed as exact formatted values ($USD and percentage) and should match the API data after rounding.
+
+**Recommended spot-checks:**
+
+| Country | Notes |
+|---------|-------|
+| Kenya (404) | Default test country; moderate number of opportunity products |
+| Turkiye (792) | More complex economy; tests a different product mix |
+| USA (840) | Frontier economy — verify the table is available (country pages hide it for frontier countries) |
+
+#### Check 3: Header Total Values (2–3 page visits)
+
+Each Explore page shows a total value in the header. This is a quick sanity check.
+
+**How to do it:**
+
+1. Navigate to `/explore/treemap?year=2024&exporter=country-404` (Kenya, Products mode)
+2. Read the total value (e.g., "$16B") — this is goods + services
+3. Compare against `sum(countryProductYear.exportValue)` or `countryYear.exportValue` from the API
+4. Switch to Locations mode (click "Locations" toggle; URL adds `view=markets`)
+5. Read the new total (e.g., "$8.2B") — this is goods only (services bilateral data excluded)
+6. Compare against `sum(countryCountryYear.exportValue)` from the API
+
+**Important:** The goods+services vs goods-only difference is expected behavior, not a discrepancy. Verify that Products mode total > Locations mode total for countries with significant services exports.
+
+#### Check 4: URL Parameter Fidelity (1–2 page visits)
+
+Verify that the URL parameters in the ground truth `atlas_url` field actually render the correct data.
+
+**How to do it:**
+
+1. Pick 2–3 ground truth entries that have specific `atlas_url` values
+2. Open each URL in a browser
+3. Confirm the page loads the correct country, year, product, and trade direction
+4. Confirm the visualization matches what the question asks about
+
+**Example URLs to verify:**
+
+| URL | Should Show |
+|-----|------------|
+| `/explore/treemap?year=2024&exporter=country-404&tradeDirection=imports` | Kenya's imports by product, 2024 |
+| `/explore/treemap?year=2024&exporter=country-76&importer=country-156&view=markets` | Brazil's exports to China |
+| `/explore/feasibility/table?year=2024&exporter=country-792&productLevel=4` | Turkiye's growth opportunities |
+
+#### Handling Discrepancies
+
+If a browser value doesn't match the API value:
+
+1. **Rounding differences** (e.g., API says `$1,387,432,100`, tooltip says `$1.39B`): Expected — document the rounding convention but don't flag as error
+2. **Small percentage differences** (< 1%): Likely floating-point or aggregation-order differences — acceptable
+3. **Large value mismatches** (> 5% or wrong order of magnitude): Investigate — could indicate wrong product ID mapping, wrong year, or an API-to-frontend transformation not accounted for
+4. **Missing data**: If the API returns a value but the tooltip/table doesn't show it (or vice versa), check if a filter is applied (e.g., `productLevel`, `servicesClass`, `tradeDirection`)
+
+Document any discrepancies as comments in the ground truth `results.json` and adjust values if the browser is the authoritative source for user-visible answers.
 
 ### Step-by-Step Procedure
 
@@ -867,10 +1036,11 @@ Explore pages have **no narrative text** — everything is data-driven. Browser 
 - Append new question entries
 - Verify total count
 
-**Step 5: Spot-check via browser**
-- Visit 3–5 Explore pages
-- Verify tooltip values match API data
-- Verify feasibility table matches
+**Step 5: Spot-check via browser** (see Layer 2 above for full details)
+- **Treemap tooltips** (3–4 visits): Hover over specific products for Kenya, Brazil, India; compare export value, RCA, distance, PCI against API values
+- **Feasibility table** (2–3 visits): Read the HTML table for Kenya, Turkiye, USA; compare Global Size and Global Growth 5 YR columns against API values; verify diamond ratings sort correctly
+- **Header totals** (2–3 visits): Confirm Products mode total (goods+services) and Locations mode total (goods-only) match API aggregates
+- **URL fidelity** (1–2 visits): Open ground truth `atlas_url` values in a browser and confirm the correct country/year/product loads
 
 ---
 
@@ -878,8 +1048,8 @@ Explore pages have **no narrative text** — everything is data-driven. Browser 
 
 ### Expected Question Count
 
-- **37 question templates** × 2–3 instantiations each ≈ **~70–105 questions**
-- After deduplication and focusing on unique data points: **~80 questions**
+- **39 question templates** × 2–3 instantiations each ≈ **~75–110 questions**
+- After deduplication and focusing on unique data points: **~85 questions**
 
 ### Collection Time
 
@@ -889,7 +1059,7 @@ Explore pages have **no narrative text** — everything is data-driven. Browser 
 | **1 — API** | Write collection script | ~45–60 min | Extend existing script |
 | **1 — API** | Run script for all combinations | ~2–3 min | Fully parallelizable |
 | **1 — API** | Generate question/results files | ~15–20 min | Template-based |
-| **2 — Verify** | Browser spot-checks (5–10 pages) | ~15–20 min | Much less than country pages |
+| **2 — Verify** | Browser spot-checks (8–12 pages) | ~20–30 min | Treemap tooltips, feasibility table, header totals, URL fidelity |
 | **3 — Integrate** | Update eval_questions.json | ~10 min | One batch operation |
 | | **Total** | **~1.5–2 hours** | |
 
@@ -898,9 +1068,9 @@ Explore pages have **no narrative text** — everything is data-driven. Browser 
 | Dimension | Country Pages | Explore Pages |
 |-----------|--------------|---------------|
 | Narrative text (browser only) | ~15% of data points | ~0% (all data via API) |
-| Browser page visits needed | ~30–40 | ~5–10 (spot-checks only) |
+| Browser page visits needed | ~30–40 | ~8–12 (spot-checks only) |
 | API endpoints | 1 (`/api/countries/graphql`) | 1 (`/api/graphql`) |
 | Unique query types needed | ~6 | ~8–10 |
 | New question categories | 11 | 8 |
-| Estimated questions | ~109 (done) | ~80 |
+| Estimated questions | ~109 (done) | ~85 |
 | Time estimate | ~1.5–3 hours | ~1.5–2 hours |
