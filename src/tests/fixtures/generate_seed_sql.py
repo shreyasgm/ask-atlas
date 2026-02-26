@@ -49,7 +49,7 @@ BILATERAL_DATA_SCHEMAS = {"hs92"}
 INSERT_BATCH_SIZE = 100
 OUTPUT_FILE = Path(__file__).parent / "seed.sql"
 BASE_DIR = Path(__file__).resolve().parents[3]
-STRUCTURE_FILE = BASE_DIR / "db_table_structure.json"
+STRUCTURE_FILE = BASE_DIR / "src" / "schema" / "db_table_structure.json"
 
 # Load environment
 load_dotenv(BASE_DIR / ".env")

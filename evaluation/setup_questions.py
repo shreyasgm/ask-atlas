@@ -122,8 +122,12 @@ async def main():
     logging.info("Starting evaluation setup...")
 
     # Load database schema files
-    db_descriptions = load_json_file(BASE_DIR / "db_table_descriptions.json")
-    db_structure = load_json_file(BASE_DIR / "db_table_structure.json")
+    db_descriptions = load_json_file(
+        BASE_DIR / "src" / "schema" / "db_table_descriptions.json"
+    )
+    db_structure = load_json_file(
+        BASE_DIR / "src" / "schema" / "db_table_structure.json"
+    )
     db_descriptions_text = json.dumps(db_descriptions, indent=2)
     db_structure_text = json.dumps(db_structure, indent=2)
 

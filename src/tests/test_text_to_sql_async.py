@@ -1116,8 +1116,14 @@ class TestIntegrationAtlasTextToSQL:
         """Multi-turn conversation with streaming: second question should
         be informed by context from the first."""
         async with await AtlasTextToSQL.create_async(
-            table_descriptions_json=base_dir / "db_table_descriptions.json",
-            table_structure_json=base_dir / "db_table_structure.json",
+            table_descriptions_json=base_dir
+            / "src"
+            / "schema"
+            / "db_table_descriptions.json",
+            table_structure_json=base_dir
+            / "src"
+            / "schema"
+            / "db_table_structure.json",
             queries_json=base_dir / "src/example_queries/queries.json",
             example_queries_dir=base_dir / "src/example_queries",
         ) as agent:

@@ -200,8 +200,11 @@ async def run_agent_evals(
     semaphore = asyncio.Semaphore(concurrency)
 
     async with await AtlasTextToSQL.create_async(
-        table_descriptions_json=BASE_DIR / "db_table_descriptions.json",
-        table_structure_json=BASE_DIR / "db_table_structure.json",
+        table_descriptions_json=BASE_DIR
+        / "src"
+        / "schema"
+        / "db_table_descriptions.json",
+        table_structure_json=BASE_DIR / "src" / "schema" / "db_table_structure.json",
         queries_json=BASE_DIR / "src/example_queries/queries.json",
         example_queries_dir=BASE_DIR / "src/example_queries",
     ) as atlas:
