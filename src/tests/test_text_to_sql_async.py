@@ -493,10 +493,10 @@ class TestCreateAsync:
                 atlas_db_url="postgresql://test:5432/db",
                 max_results_per_query=15,
                 max_queries_per_question=3,
-                metadata_model="test-model",
-                metadata_model_provider="openai",
-                query_model="test-model",
-                query_model_provider="openai",
+                lightweight_model="test-model",
+                lightweight_model_provider="openai",
+                frontier_model="test-model",
+                frontier_model_provider="openai",
             )
             mock_engine.return_value = MagicMock()
             mock_async_engine.return_value = MagicMock()
@@ -540,10 +540,10 @@ class TestCreateAsync:
                 atlas_db_url="postgresql://test:5432/db",
                 max_results_per_query=15,
                 max_queries_per_question=3,
-                metadata_model="test-model",
-                metadata_model_provider="openai",
-                query_model="test-model",
-                query_model_provider="openai",
+                lightweight_model="test-model",
+                lightweight_model_provider="openai",
+                frontier_model="test-model",
+                frontier_model_provider="openai",
             )
             mock_engine.return_value = MagicMock()
             mock_async_engine.return_value = MagicMock()
