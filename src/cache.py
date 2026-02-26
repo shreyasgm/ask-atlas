@@ -1,15 +1,23 @@
 """In-process caching for expensive deterministic operations.
 
-Provides TTL-based caches for product details lookups, text search, and
-table DDL reflection.  The ``CacheRegistry`` tracks hit/miss counters for
-observability (exposed via ``/debug/caches``).
+Provides two cache styles:
 
-Async cached functions use ``cachetools-async`` which includes built-in
-request deduplication (stampede prevention): concurrent identical lookups
-trigger only one underlying call.
+1. **Per-query TTLCache** — for product details lookups, text search, and
+   table DDL reflection.  Uses ``cachetools-async`` with built-in stampede
+   prevention (concurrent identical lookups trigger only one underlying call).
+
+2. **CatalogCache** — lazy-loaded, TTL-based caches for entire GraphQL
+   catalog datasets (countries, products, services).  Fetched once on first
+   access, indexed for O(1) lookups by multiple keys, with stampede
+   prevention via ``asyncio.Lock``.
+
+The ``CacheRegistry`` tracks all caches for observability (``/debug/caches``).
 """
 
+import asyncio
 import logging
+import time
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from cachetools import TTLCache
@@ -59,13 +67,14 @@ def table_info_key(schemas: list[str]) -> frozenset:
 
 
 class CacheRegistry:
-    """Registry of named TTLCache instances with hit/miss counters."""
+    """Registry of named TTLCache and CatalogCache instances."""
 
     def __init__(self) -> None:
         self._caches: dict[str, TTLCache] = {}
         self._hits: dict[str, int] = {}
         self._misses: dict[str, int] = {}
         self._config: dict[str, dict[str, Any]] = {}
+        self._catalog_caches: dict[str, "CatalogCache"] = {}
 
     def create(self, name: str, *, maxsize: int, ttl: int) -> TTLCache:
         """Create and register a new TTLCache."""
@@ -76,6 +85,10 @@ class CacheRegistry:
         self._config[name] = {"maxsize": maxsize, "ttl": ttl}
         return cache
 
+    def register_catalog(self, catalog: "CatalogCache") -> None:
+        """Register a CatalogCache for observability and clear_all support."""
+        self._catalog_caches[catalog.name] = catalog
+
     def record_hit(self, name: str) -> None:
         """Increment hit counter for *name*."""
         self._hits[name] = self._hits.get(name, 0) + 1
@@ -85,7 +98,7 @@ class CacheRegistry:
         self._misses[name] = self._misses.get(name, 0) + 1
 
     def stats(self) -> dict[str, dict[str, Any]]:
-        """Return per-cache stats: size, maxsize, ttl, hits, misses, hit_rate."""
+        """Return per-cache stats for both TTLCache and CatalogCache instances."""
         result: dict[str, dict[str, Any]] = {}
         for name, cache in self._caches.items():
             hits = self._hits.get(name, 0)
@@ -99,6 +112,8 @@ class CacheRegistry:
                 "size": len(cache),
                 "ttl": self._config[name]["ttl"],
             }
+        for name, catalog in self._catalog_caches.items():
+            result[name] = catalog.stats()
         return result
 
     def clear(self, name: str) -> None:
@@ -107,6 +122,8 @@ class CacheRegistry:
             self._caches[name].clear()
             self._hits[name] = 0
             self._misses[name] = 0
+        if name in self._catalog_caches:
+            self._catalog_caches[name].clear()
 
     def clear_all(self) -> None:
         """Clear every registered cache and reset all counters."""
@@ -114,6 +131,227 @@ class CacheRegistry:
             self._caches[name].clear()
             self._hits[name] = 0
             self._misses[name] = 0
+        for catalog in self._catalog_caches.values():
+            catalog.clear()
+
+
+# ---------------------------------------------------------------------------
+# CatalogCache — lazy-loaded, TTL-based cache for entire catalog datasets
+# ---------------------------------------------------------------------------
+
+
+class _Index:
+    """A named index over catalog entries for O(1) exact lookups."""
+
+    __slots__ = ("data", "key_fn", "normalize_query")
+
+    def __init__(
+        self,
+        key_fn: Callable[[dict[str, Any]], str | None],
+        normalize_query: Callable[[str], str] | None = None,
+    ) -> None:
+        self.key_fn = key_fn
+        self.normalize_query: Callable[[str], str] = normalize_query or (lambda q: q)
+        self.data: dict[str, dict[str, Any]] = {}
+
+    def build(self, entries: list[dict[str, Any]]) -> None:
+        """Rebuild index from a full list of entries."""
+        new_data: dict[str, dict[str, Any]] = {}
+        for entry in entries:
+            key = self.key_fn(entry)
+            if key:
+                new_data[key] = entry
+        self.data = new_data
+
+    def get(self, query: str) -> dict[str, Any] | None:
+        """Exact lookup with query normalization."""
+        return self.data.get(self.normalize_query(query))
+
+    def clear(self) -> None:
+        self.data = {}
+
+
+class CatalogCache:
+    """Lazy-loaded, TTL-based cache for a complete catalog dataset.
+
+    Unlike per-query TTLCache caches, a CatalogCache stores an entire
+    catalog (e.g. all countries, all products) fetched from an external
+    source.  Supports:
+
+    - **Lazy population** on first access (not at import/startup)
+    - **Multiple named indexes** for O(1) exact lookups by different keys
+    - **Text search** (case-insensitive substring match)
+    - **TTL-based invalidation** — re-fetches from source after expiry
+    - **Stampede prevention** — concurrent first-accesses trigger only one fetch
+    - **Direct population** via ``populate()`` for testing / pre-warming
+    """
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        ttl: int,
+        timer: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self.name = name
+        self._ttl = ttl
+        self._timer = timer
+        self._entries: list[dict[str, Any]] = []
+        self._indexes: dict[str, _Index] = {}
+        self._populated_at: float | None = None
+        self._fetcher: Callable[[], Awaitable[list[dict[str, Any]]]] | None = None
+        self._lock: asyncio.Lock = asyncio.Lock()
+
+    # -- Configuration -------------------------------------------------------
+
+    def add_index(
+        self,
+        name: str,
+        *,
+        key_fn: Callable[[dict[str, Any]], str | None],
+        normalize_query: Callable[[str], str] | None = None,
+    ) -> None:
+        """Register a named index.
+
+        Args:
+            name: Index name used in ``lookup()`` calls.
+            key_fn: Extracts the index key from a catalog entry.
+                    Return ``None`` to exclude an entry from the index.
+            normalize_query: Applied to the query string in ``lookup()``
+                             so that lookups are case/whitespace-insensitive.
+        """
+        self._indexes[name] = _Index(key_fn, normalize_query)
+
+    def set_fetcher(
+        self, fetcher: Callable[[], Awaitable[list[dict[str, Any]]]]
+    ) -> None:
+        """Set the async function that fetches catalog data from the source."""
+        self._fetcher = fetcher
+
+    # -- Data access ---------------------------------------------------------
+
+    async def lookup(self, index_name: str, key: str) -> dict[str, Any] | None:
+        """Exact O(1) lookup by a named index.
+
+        Raises:
+            KeyError: If *index_name* was never registered via ``add_index()``.
+            RuntimeError: If the cache has no fetcher and was never populated.
+        """
+        await self._ensure_populated()
+        if index_name not in self._indexes:
+            raise KeyError(
+                f"CatalogCache '{self.name}' has no index named '{index_name}'"
+            )
+        return self._indexes[index_name].get(key)
+
+    async def search(
+        self, field: str, query: str, *, limit: int = 5
+    ) -> list[dict[str, Any]]:
+        """Case-insensitive substring search on a field across all entries.
+
+        Args:
+            field: Entry dict key to search in (e.g. ``"nameShortEn"``).
+            query: Substring to match (case-insensitive).
+            limit: Maximum results to return.
+        """
+        await self._ensure_populated()
+        query_lower = query.strip().lower()
+        results: list[dict[str, Any]] = []
+        for entry in self._entries:
+            value = entry.get(field, "")
+            if isinstance(value, str) and query_lower in value.lower():
+                results.append(entry)
+                if len(results) >= limit:
+                    break
+        return results
+
+    async def get_all(self) -> list[dict[str, Any]]:
+        """Return all catalog entries, populating from source if needed."""
+        await self._ensure_populated()
+        return list(self._entries)
+
+    # -- Direct population (testing / pre-warming) ---------------------------
+
+    def populate(self, entries: list[dict[str, Any]]) -> None:
+        """Directly load entries without a fetcher.
+
+        Rebuilds all indexes.  Resets the TTL timer.
+        """
+        self._entries = list(entries)
+        self._rebuild_indexes()
+        self._populated_at = self._timer()
+
+    # -- Observability -------------------------------------------------------
+
+    @property
+    def is_populated(self) -> bool:
+        """Whether the cache currently holds data (ignores TTL)."""
+        return self._populated_at is not None
+
+    def stats(self) -> dict[str, Any]:
+        """Return cache stats for the registry."""
+        age: float | None = None
+        if self._populated_at is not None:
+            age = round(self._timer() - self._populated_at, 1)
+        return {
+            "populated": self.is_populated,
+            "size": len(self._entries),
+            "ttl": self._ttl,
+            "age_seconds": age,
+            "indexes": list(self._indexes.keys()),
+        }
+
+    # -- Cache management ----------------------------------------------------
+
+    def clear(self) -> None:
+        """Clear all data and reset the TTL timer."""
+        self._entries = []
+        self._populated_at = None
+        for idx in self._indexes.values():
+            idx.clear()
+
+    # -- Internal ------------------------------------------------------------
+
+    @property
+    def _is_valid(self) -> bool:
+        if self._populated_at is None:
+            return False
+        return (self._timer() - self._populated_at) < self._ttl
+
+    async def _ensure_populated(self) -> None:
+        """Populate from fetcher if cache is empty or TTL has expired.
+
+        Uses ``asyncio.Lock`` for stampede prevention: if multiple coroutines
+        call this concurrently, only the first actually fetches; the rest wait
+        and then use the freshly cached data.
+        """
+        if self._is_valid:
+            return
+
+        async with self._lock:
+            # Double-check after acquiring lock (another coroutine may have populated)
+            if self._is_valid:
+                return
+
+            if self._fetcher is None:
+                raise RuntimeError(
+                    f"CatalogCache '{self.name}' has no fetcher and is not populated. "
+                    "Call set_fetcher() or populate() before accessing data."
+                )
+
+            logger.info("Fetching catalog data for '%s'", self.name)
+            entries = await self._fetcher()
+            self._entries = list(entries)
+            self._rebuild_indexes()
+            self._populated_at = self._timer()
+            logger.info(
+                "Populated catalog '%s' with %d entries", self.name, len(self._entries)
+            )
+
+    def _rebuild_indexes(self) -> None:
+        """Rebuild all registered indexes from the current entries."""
+        for idx in self._indexes.values():
+            idx.build(self._entries)
 
 
 # ---------------------------------------------------------------------------
@@ -139,6 +377,54 @@ table_info_cache = registry.create(
     maxsize=TABLE_INFO_MAXSIZE,
     ttl=TABLE_INFO_TTL,
 )
+
+# ---------------------------------------------------------------------------
+# GraphQL catalog caches (lazy-loaded on first access)
+# ---------------------------------------------------------------------------
+
+CATALOG_TTL = 86400  # 24 hours
+
+_name_key = lambda e: (  # noqa: E731
+    (e.get("nameShortEn") or e.get("nameEn", "")).strip().lower() or None
+)
+_name_normalize = lambda q: q.strip().lower()  # noqa: E731
+
+# Country catalog: maps country names / ISO codes → Atlas country IDs
+country_catalog = CatalogCache("country_catalog", ttl=CATALOG_TTL)
+country_catalog.add_index(
+    "iso3",
+    key_fn=lambda e: (e.get("iso3Code") or "").upper() or None,
+    normalize_query=lambda q: q.strip().upper(),
+)
+country_catalog.add_index("name", key_fn=_name_key, normalize_query=_name_normalize)
+country_catalog.add_index(
+    "id",
+    key_fn=lambda e: str(e["countryId"]) if "countryId" in e else None,
+)
+registry.register_catalog(country_catalog)
+
+# Product catalog: dual-indexed by HS code AND by name
+product_catalog = CatalogCache("product_catalog", ttl=CATALOG_TTL)
+product_catalog.add_index(
+    "code",
+    key_fn=lambda e: (e.get("code") or "").strip() or None,
+    normalize_query=lambda q: q.strip(),
+)
+product_catalog.add_index("name", key_fn=_name_key, normalize_query=_name_normalize)
+product_catalog.add_index(
+    "id",
+    key_fn=lambda e: str(e["productId"]) if "productId" in e else None,
+)
+registry.register_catalog(product_catalog)
+
+# Services catalog: service category names and IDs
+services_catalog = CatalogCache("services_catalog", ttl=CATALOG_TTL)
+services_catalog.add_index("name", key_fn=_name_key, normalize_query=_name_normalize)
+services_catalog.add_index(
+    "id",
+    key_fn=lambda e: str(e["productId"]) if "productId" in e else None,
+)
+registry.register_catalog(services_catalog)
 
 
 # ---------------------------------------------------------------------------
