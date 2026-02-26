@@ -4,7 +4,7 @@ Covers:
 - Product classification URL formatting (all 4 classifications)
 - Country page and explore page URL builders
 - Frontier country identification and fallback behavior
-- generate_atlas_links dispatch for all 18 query types
+- generate_atlas_links dispatch for all 20 query types
 - No links for unmapped query types (global_datum, etc.)
 - Resolution notes propagation (single, multiple, empty)
 - Default values and fallback logic (year, start_year, country_name)
@@ -257,6 +257,46 @@ class TestGenerateLinksCountryProfile:
         notes = ["Year not specified in question - defaulted to 2024"]
         links = generate_atlas_links(
             "country_profile",
+            {"country_id": 404, "country_name": "Kenya", "resolution_notes": notes},
+        )
+        assert links[0].resolution_notes == notes
+
+
+class TestGenerateLinksCountryProfileExports:
+    def test_produces_export_basket_link(self):
+        links = generate_atlas_links(
+            "country_profile_exports",
+            {"country_id": 404, "country_name": "Kenya"},
+        )
+        assert len(links) == 1
+        assert links[0].link_type == "country_page"
+        assert links[0].url == f"{ATLAS_BASE_URL}/countries/404/export-basket"
+        assert "Export Basket" in links[0].label
+
+    def test_resolution_notes_propagated(self):
+        notes = ["Defaulted to latest year"]
+        links = generate_atlas_links(
+            "country_profile_exports",
+            {"country_id": 404, "country_name": "Kenya", "resolution_notes": notes},
+        )
+        assert links[0].resolution_notes == notes
+
+
+class TestGenerateLinksCountryProfileComplexity:
+    def test_produces_export_complexity_link(self):
+        links = generate_atlas_links(
+            "country_profile_complexity",
+            {"country_id": 404, "country_name": "Kenya"},
+        )
+        assert len(links) == 1
+        assert links[0].link_type == "country_page"
+        assert links[0].url == f"{ATLAS_BASE_URL}/countries/404/export-complexity"
+        assert "Export Complexity" in links[0].label
+
+    def test_resolution_notes_propagated(self):
+        notes = ["Defaulted to latest year"]
+        links = generate_atlas_links(
+            "country_profile_complexity",
             {"country_id": 404, "country_name": "Kenya", "resolution_notes": notes},
         )
         assert links[0].resolution_notes == notes
@@ -852,6 +892,11 @@ class TestAllQueryTypesDispatch:
         "query_type,params",
         [
             ("country_profile", {"country_id": 404, "country_name": "Kenya"}),
+            ("country_profile_exports", {"country_id": 404, "country_name": "Kenya"}),
+            (
+                "country_profile_complexity",
+                {"country_id": 404, "country_name": "Kenya"},
+            ),
             ("country_lookback", {"country_id": 404, "country_name": "Kenya"}),
             ("new_products", {"country_id": 404, "country_name": "Kenya"}),
             ("country_year", {"country_id": 404, "country_name": "Kenya"}),

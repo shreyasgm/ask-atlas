@@ -305,6 +305,34 @@ def _handle_country_profile(params: dict) -> list[AtlasLink]:
     ]
 
 
+def _handle_country_profile_exports(params: dict) -> list[AtlasLink]:
+    cid = params["country_id"]
+    name = params.get("country_name", str(cid))
+    notes = _get_notes(params)
+    return [
+        AtlasLink(
+            url=country_page_url(cid, "export-basket"),
+            label=f"{name} \u2014 Export Basket",
+            link_type="country_page",
+            resolution_notes=notes,
+        ),
+    ]
+
+
+def _handle_country_profile_complexity(params: dict) -> list[AtlasLink]:
+    cid = params["country_id"]
+    name = params.get("country_name", str(cid))
+    notes = _get_notes(params)
+    return [
+        AtlasLink(
+            url=country_page_url(cid, "export-complexity"),
+            label=f"{name} \u2014 Export Complexity",
+            link_type="country_page",
+            resolution_notes=notes,
+        ),
+    ]
+
+
 def _handle_country_lookback(params: dict) -> list[AtlasLink]:
     cid = params["country_id"]
     name = params.get("country_name", str(cid))
@@ -663,6 +691,8 @@ def _handle_product_table(params: dict) -> list[AtlasLink]:
 _QUERY_TYPE_HANDLERS: dict[str, Callable[[dict], list[AtlasLink]]] = {
     # Country pages
     "country_profile": _handle_country_profile,
+    "country_profile_exports": _handle_country_profile_exports,
+    "country_profile_complexity": _handle_country_profile_complexity,
     "country_lookback": _handle_country_lookback,
     "new_products": _handle_new_products,
     "country_year": _handle_country_year,
