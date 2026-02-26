@@ -2,7 +2,7 @@
 Application configuration using Pydantic Settings.
 
 Centralizes all configuration loaded from environment variables with type validation.
-Non-secret defaults (model names, providers) live in model_config.py at the project root.
+Non-secret defaults (model names, providers) live in src/model_config.py.
 """
 
 import logging
