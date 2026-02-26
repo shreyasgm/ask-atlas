@@ -587,7 +587,7 @@ async def build_and_execute_graphql(
     if (
         not classification
         or classification.get("query_type") == "reject"
-        or not resolved_params
+        or resolved_params is None
     ):
         return {
             "graphql_raw_response": None,
@@ -931,7 +931,7 @@ def _build_data_availability(params: dict) -> tuple[str, dict]:
     query = """
     query {
       dataAvailability {
-        classification
+        productClassification
         yearMin
         yearMax
       }
@@ -980,9 +980,9 @@ def _build_country_profile(params: dict) -> tuple[str, dict]:
     location = params.get("location", "")
     variables = {"location": location}
     query = """
-    query CP($location: ID) {
+    query CP($location: ID!) {
       countryProfile(location: $location) {
-        location
+        location { id shortName }
         latestPopulation { quantity year }
         latestGdp { quantity year }
         latestGdpRank { quantity year }
@@ -1011,16 +1011,12 @@ def _build_country_profile(params: dict) -> tuple[str, dict]:
 def _build_country_lookback(params: dict) -> tuple[str, dict]:
     """Build countryLookback query (Country Pages API)."""
     location = params.get("location", "")
-    variables: dict[str, Any] = {"location": location}
-    if "year_min" in params:
-        variables["minYear"] = params["year_min"]
-    if "year_max" in params:
-        variables["maxYear"] = params["year_max"]
+    variables: dict[str, Any] = {"id": location}
 
     query = """
-    query CL($location: ID, $minYear: Int, $maxYear: Int) {
-      countryLookback(location: $location, minYear: $minYear, maxYear: $maxYear) {
-        location
+    query CL($id: ID!) {
+      countryLookback(id: $id) {
+        location { id shortName }
         exportValue importValue
         eci coi
       }
@@ -1032,11 +1028,12 @@ def _build_country_lookback(params: dict) -> tuple[str, dict]:
 def _build_new_products(params: dict) -> tuple[str, dict]:
     """Build newProductsCountry query (Country Pages API)."""
     location = params.get("location", "")
-    variables = {"location": location}
+    year = params.get("year", 2024)
+    variables: dict[str, Any] = {"location": location, "year": year}
     query = """
-    query NP($location: ID) {
-      newProductsCountry(location: $location) {
-        location
+    query NP($location: ID!, $year: Int!) {
+      newProductsCountry(location: $location, year: $year) {
+        location { id shortName }
         newProductExportValue
         newProductExportValuePerCapita
       }
@@ -1050,9 +1047,13 @@ def _build_global_datum(params: dict) -> tuple[str, dict]:
     query = """
     query {
       globalDatum {
-        latestYear
-        latestGdp
-        latestPopulation
+        globalExportValue
+        latestEciRankTotal
+        latestCoiRankTotal
+        latestExporterRankTotal
+        latestGdpRankTotal
+        latestGdpPppPerCapitaRankTotal
+        latestDiversityRankTotal
       }
     }
     """

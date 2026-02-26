@@ -1011,3 +1011,324 @@ class TestFormatIdsForApi:
         # Original dict should be unchanged
         assert "country_id" in original
         assert "location" not in original
+
+
+# ---------------------------------------------------------------------------
+# Integration tests — real LLM + real Atlas GraphQL API
+# ---------------------------------------------------------------------------
+
+ATLAS_EXPLORE_URL = "https://atlas.hks.harvard.edu/api/graphql"
+ATLAS_COUNTRY_PAGES_URL = "https://atlas.hks.harvard.edu/api/countries/graphql"
+
+
+@pytest.mark.integration
+class TestClassifyAndExtractIntegration:
+    """Run classify_query and extract_entities with a real LLM.
+
+    Verifies that the Pydantic schemas, prompts, and LLM interaction
+    produce reasonable structured output for known trade questions.
+    """
+
+    @pytest.fixture()
+    def lightweight_model(self):
+        from src.config import get_prompt_model
+
+        return get_prompt_model("graphql_classification")
+
+    async def test_kenya_exports_classified_and_extracted(self, lightweight_model):
+        """'What did Kenya export in 2024?' → sensible classification + entities."""
+        state = _base_graphql_state(graphql_question="What did Kenya export in 2024?")
+
+        cls_result = await classify_query(state, lightweight_model=lightweight_model)
+
+        classification = cls_result["graphql_classification"]
+        assert classification["query_type"] != "reject", (
+            f"Expected a trade-related classification, got reject: "
+            f"{classification.get('rejection_reason')}"
+        )
+        assert classification["query_type"] in {
+            "treemap_products",
+            "country_profile",
+            "country_year",
+            "overtime_products",
+        }
+        assert classification["api_target"] in {"explore", "country_pages"}
+
+        # Now run extract_entities with the real classification
+        state.update(cls_result)
+        ext_result = await extract_entities(state, lightweight_model=lightweight_model)
+
+        extraction = ext_result["graphql_entity_extraction"]
+        assert extraction is not None, "Entity extraction returned None"
+        assert extraction["country_name"] is not None
+        assert "kenya" in extraction["country_name"].lower()
+        assert extraction["country_code_guess"] == "KEN"
+
+    async def test_bilateral_trade_question(self, lightweight_model):
+        """'What does the US export to China?' → bilateral classification + both countries."""
+        state = _base_graphql_state(
+            graphql_question="What does the United States export to China?"
+        )
+
+        cls_result = await classify_query(state, lightweight_model=lightweight_model)
+
+        classification = cls_result["graphql_classification"]
+        assert classification["query_type"] != "reject"
+        assert classification["query_type"] in {
+            "treemap_bilateral",
+            "explore_bilateral",
+            "treemap_products",
+        }
+
+        state.update(cls_result)
+        ext_result = await extract_entities(state, lightweight_model=lightweight_model)
+
+        extraction = ext_result["graphql_entity_extraction"]
+        assert extraction is not None
+        # Should identify both countries
+        assert extraction["country_name"] is not None
+        assert extraction["partner_name"] is not None
+
+    async def test_reject_non_trade_question(self, lightweight_model):
+        """A clearly non-trade question should be rejected."""
+        state = _base_graphql_state(graphql_question="What is the meaning of life?")
+
+        cls_result = await classify_query(state, lightweight_model=lightweight_model)
+
+        classification = cls_result["graphql_classification"]
+        assert classification["query_type"] == "reject"
+        assert classification["rejection_reason"] is not None
+
+
+@pytest.mark.integration
+class TestResolveIdsIntegration:
+    """Run resolve_ids with real CatalogCache data and a real LLM.
+
+    Tests that entity resolution correctly maps names/codes to
+    internal Atlas IDs using real catalog data.
+    """
+
+    @pytest.fixture()
+    def lightweight_model(self):
+        from src.config import get_prompt_model
+
+        return get_prompt_model("id_resolution_selection")
+
+    async def test_resolves_kenya_by_code_and_name(self, lightweight_model):
+        """Kenya (KEN) resolves to countryId 404 via cache lookup."""
+        country_cache = _make_country_cache()
+        product_cache = _make_product_cache()
+        services_cache = _make_services_cache()
+
+        state = _base_graphql_state(
+            graphql_question="What did Kenya export in 2024?",
+            graphql_classification=_explore_classification(
+                query_type="treemap_products",
+                api_target="explore",
+            ),
+            graphql_entity_extraction=_explore_extraction(
+                country_name="Kenya",
+                country_code_guess="KEN",
+                year=2024,
+            ),
+        )
+
+        result = await resolve_ids(
+            state,
+            lightweight_model=lightweight_model,
+            country_cache=country_cache,
+            product_cache=product_cache,
+            services_cache=services_cache,
+        )
+
+        params = result["graphql_resolved_params"]
+        assert params is not None
+        assert params["country_id"] == 404
+        assert params["year"] == 2024
+
+    async def test_end_to_end_classify_extract_resolve(self, lightweight_model):
+        """Full LLM pipeline: classify → extract → resolve for a known question."""
+        from src.config import get_prompt_model
+
+        classification_model = get_prompt_model("graphql_classification")
+        country_cache = _make_country_cache()
+        product_cache = _make_product_cache()
+        services_cache = _make_services_cache()
+
+        state = _base_graphql_state(graphql_question="What did Kenya export in 2024?")
+
+        # Step 1: classify
+        cls_result = await classify_query(state, lightweight_model=classification_model)
+        state.update(cls_result)
+        assert state["graphql_classification"]["query_type"] != "reject"
+
+        # Step 2: extract entities
+        ext_result = await extract_entities(
+            state, lightweight_model=classification_model
+        )
+        state.update(ext_result)
+        assert state["graphql_entity_extraction"] is not None
+
+        # Step 3: resolve IDs
+        res_result = await resolve_ids(
+            state,
+            lightweight_model=lightweight_model,
+            country_cache=country_cache,
+            product_cache=product_cache,
+            services_cache=services_cache,
+        )
+
+        params = res_result["graphql_resolved_params"]
+        assert params is not None
+        # Kenya should be resolved regardless of LLM extraction format
+        country_key = "country_id" if "country_id" in params else "location"
+        assert country_key in params
+        if country_key == "country_id":
+            assert params["country_id"] == 404
+        else:
+            assert params["location"] == "location-404"
+
+
+@pytest.mark.integration
+class TestBuildAndExecuteIntegration:
+    """Execute real GraphQL queries against the Atlas API.
+
+    Validates that the query templates produce syntactically valid
+    GraphQL that the Atlas API accepts and returns meaningful data.
+    """
+
+    @pytest.fixture()
+    def explore_client(self):
+        from src.graphql_client import AtlasGraphQLClient
+
+        return AtlasGraphQLClient(
+            base_url=ATLAS_EXPLORE_URL,
+            timeout=15.0,
+            max_retries=1,
+        )
+
+    @pytest.fixture()
+    def country_pages_client(self):
+        from src.graphql_client import AtlasGraphQLClient
+
+        return AtlasGraphQLClient(
+            base_url=ATLAS_COUNTRY_PAGES_URL,
+            timeout=15.0,
+            max_retries=1,
+        )
+
+    async def test_country_profile_against_real_api(self, country_pages_client):
+        """country_profile query for Kenya returns GDP, ECI, and growth data."""
+        state = _base_graphql_state(
+            graphql_classification={
+                "query_type": "country_profile",
+                "api_target": "country_pages",
+                "reasoning": "...",
+                "rejection_reason": None,
+            },
+            graphql_resolved_params={"location": "location-404"},
+        )
+
+        result = await build_and_execute_graphql(
+            state, graphql_client=country_pages_client
+        )
+
+        assert result["last_error"] == "", f"API error: {result['last_error']}"
+        assert result["graphql_raw_response"] is not None
+
+        profile = result["graphql_raw_response"]["countryProfile"]
+        assert profile["location"]["id"] is not None
+        assert profile["latestGdpPerCapita"] is not None
+        assert profile["latestEci"] is not None
+        assert profile["growthProjection"] is not None
+
+    async def test_treemap_products_against_real_api(self, explore_client):
+        """countryProductYear for Kenya returns product-level trade data."""
+        state = _base_graphql_state(
+            graphql_classification=_explore_classification(
+                query_type="treemap_products",
+                api_target="explore",
+            ),
+            graphql_resolved_params={
+                "country_id": 404,
+                "product_level": 4,
+                "product_class": "HS92",
+                "year": 2022,
+            },
+        )
+
+        result = await build_and_execute_graphql(state, graphql_client=explore_client)
+
+        assert result["last_error"] == "", f"API error: {result['last_error']}"
+        response = result["graphql_raw_response"]
+        assert response is not None
+
+        rows = response["countryProductYear"]
+        assert len(rows) > 0, "Expected product-level trade data for Kenya"
+        row = rows[0]
+        assert "exportValue" in row
+        assert "productId" in row
+
+    async def test_country_year_against_real_api(self, explore_client):
+        """countryYear for Kenya returns GDP, ECI, and trade totals."""
+        state = _base_graphql_state(
+            graphql_classification=_explore_classification(
+                query_type="country_year",
+                api_target="explore",
+            ),
+            graphql_resolved_params={
+                "country_id": 404,
+                "year": 2022,
+            },
+        )
+
+        result = await build_and_execute_graphql(state, graphql_client=explore_client)
+
+        assert result["last_error"] == "", f"API error: {result['last_error']}"
+        response = result["graphql_raw_response"]
+        assert response is not None
+
+        rows = response["countryYear"]
+        assert len(rows) > 0
+        row = rows[0]
+        assert row["year"] == 2022
+        assert "exportValue" in row
+        assert "eci" in row
+
+    async def test_data_availability_against_real_api(self, explore_client):
+        """dataAvailability query returns year coverage info."""
+        state = _base_graphql_state(
+            graphql_classification=_explore_classification(
+                query_type="explore_data_availability",
+                api_target="explore",
+            ),
+            graphql_resolved_params={},
+        )
+
+        result = await build_and_execute_graphql(state, graphql_client=explore_client)
+
+        assert result["last_error"] == "", f"API error: {result['last_error']}"
+        response = result["graphql_raw_response"]
+        assert response is not None
+        assert "dataAvailability" in response
+
+    async def test_global_datum_against_real_api(self, country_pages_client):
+        """globalDatum query returns global-level aggregate data."""
+        state = _base_graphql_state(
+            graphql_classification={
+                "query_type": "global_datum",
+                "api_target": "country_pages",
+                "reasoning": "...",
+                "rejection_reason": None,
+            },
+            graphql_resolved_params={},
+        )
+
+        result = await build_and_execute_graphql(
+            state, graphql_client=country_pages_client
+        )
+
+        assert result["last_error"] == "", f"API error: {result['last_error']}"
+        response = result["graphql_raw_response"]
+        assert response is not None
+        assert "globalDatum" in response
