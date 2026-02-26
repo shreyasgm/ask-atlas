@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 import importlib.util  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location(
-    "model_config", BASE_DIR / "model_config.py"
+    "model_config", BASE_DIR / "src" / "model_config.py"
 )
 _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)
