@@ -8,12 +8,14 @@ Usage:
     PYTHONPATH=$(pwd) uv run python evaluation/run_eval.py --questions 1 2 6
     PYTHONPATH=$(pwd) uv run python evaluation/run_eval.py --concurrency 2 --judge-model gpt-5.2
     PYTHONPATH=$(pwd) uv run python evaluation/run_eval.py --skip-judge
+    PYTHONPATH=$(pwd) uv run python evaluation/run_eval.py --smoke
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 from typing import Any
 
 from utils import (
@@ -24,6 +26,10 @@ from utils import (
 from run_agent_evals import run_agent_evals
 from judge import judge_answer
 from report import generate_report, save_report
+
+# Curated smoke-test subset: 1 easy, 2 medium, 2 hard across different categories.
+# These are chosen for fast signal across diverse question types.
+SMOKE_QUESTION_IDS = ["1", "6", "25", "97", "195"]
 
 
 def _load_questions_meta() -> dict[str, dict]:
@@ -81,10 +87,6 @@ async def _judge_all(
         expected_behavior = meta.get("expected_behavior")
         ground_truth = _load_ground_truth(qid)
 
-        # Dispatch: ground truth → refusal → plausibility
-        # judge_answer handles the three-way branch internally;
-        # just pass what we have and let it decide.
-
         async with semaphore:
             try:
                 mode = (
@@ -115,6 +117,35 @@ async def _judge_all(
     return judge_results
 
 
+def _append_history(
+    run_dir_name: str,
+    report: dict[str, Any],
+    agent_model: str,
+    agent_provider: str,
+    judge_model: str,
+    judge_provider: str,
+) -> None:
+    """Append a one-line JSON summary to runs/history.jsonl."""
+    agg = report["aggregate"]
+    entry = {
+        "timestamp": run_dir_name,
+        "questions_run": agg["count"],
+        "avg_score": agg["avg_weighted_score"],
+        "pass_rate": agg["pass_rate"],
+        "pass": agg["pass_count"],
+        "partial": agg["partial_count"],
+        "fail": agg["fail_count"],
+        "agent_model": agent_model,
+        "agent_provider": agent_provider,
+        "judge_model": judge_model,
+        "judge_provider": judge_provider,
+    }
+    history_path = EVALUATION_BASE_DIR / "runs" / "history.jsonl"
+    with open(history_path, "a") as f:
+        f.write(json.dumps(entry, default=str) + "\n")
+    logging.info(f"Appended run summary to {history_path}")
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run full Ask-Atlas evaluation pipeline"
@@ -124,6 +155,11 @@ def _parse_args() -> argparse.Namespace:
         nargs="+",
         type=str,
         help="Specific question IDs (e.g. --questions 1 2 6)",
+    )
+    parser.add_argument(
+        "--smoke",
+        action="store_true",
+        help=f"Run only the smoke-test subset ({len(SMOKE_QUESTION_IDS)} curated questions)",
     )
     parser.add_argument(
         "--concurrency",
@@ -162,9 +198,15 @@ async def main() -> None:
     questions_meta = _load_questions_meta()
     logging.info(f"Loaded metadata for {len(questions_meta)} questions")
 
+    # Resolve question IDs
+    question_ids = args.questions
+    if args.smoke:
+        question_ids = SMOKE_QUESTION_IDS
+        logging.info(f"Smoke-test mode: running {len(question_ids)} curated questions")
+
     # Step 2: Run agent
     run_dir, run_results = await run_agent_evals(
-        question_ids=args.questions,
+        question_ids=question_ids,
         concurrency=args.concurrency,
     )
 
@@ -186,8 +228,28 @@ async def main() -> None:
         logging.info("Skipping judge step (--skip-judge)")
 
     # Step 4: Generate report
-    report = generate_report(run_results, judge_results, questions_meta)
+    report = generate_report(
+        run_results,
+        judge_results,
+        questions_meta,
+        judge_model=args.judge_model,
+        judge_provider=args.judge_provider,
+    )
     json_path, md_path = save_report(report, run_dir)
+
+    # Step 5: Append to history.jsonl
+    if not args.skip_judge:
+        # Read agent model info from summary.json
+        summary_path = run_dir / "summary.json"
+        summary = load_json_file(summary_path) if summary_path.exists() else {}
+        _append_history(
+            run_dir_name=run_dir.name,
+            report=report,
+            agent_model=summary.get("agent_model", "unknown"),
+            agent_provider=summary.get("agent_provider", "unknown"),
+            judge_model=args.judge_model,
+            judge_provider=args.judge_provider,
+        )
 
     # Print summary
     agg = report["aggregate"]
