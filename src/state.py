@@ -4,7 +4,7 @@ Provides a well-typed state schema used by the StateGraph that powers
 the Atlas agent and its inner query pipeline.
 """
 
-from typing import Annotated, Optional
+from typing import Annotated, Literal, Optional
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
@@ -39,6 +39,7 @@ class AtlasAgentState(TypedDict):
         last_error: Most recent error message, or empty string if none.
         retry_count: Number of retries attempted for the current query.
         pipeline_question: Question extracted from the agent's tool_call args.
+        pipeline_context: Optional context extracted from the agent's tool_call args.
         pipeline_products: Product/schema extraction results.
         pipeline_codes: Formatted product codes string for the SQL prompt.
         pipeline_table_info: Table DDL/descriptions for identified schemas.
@@ -51,6 +52,7 @@ class AtlasAgentState(TypedDict):
         override_schema: User-specified classification schema override.
         override_direction: User-specified trade direction override.
         override_mode: User-specified trade mode override (goods/services).
+        override_agent_mode: Per-request agent mode override (auto/sql_only/graphql_sql).
         graphql_question: Question extracted from the GraphQL tool_call args.
         graphql_context: Conversational context for the GraphQL question.
         graphql_classification: Classification result dict (query_type, api_target, etc.).
@@ -69,6 +71,7 @@ class AtlasAgentState(TypedDict):
     retry_count: int
     # Pipeline intermediate state (populated during query execution)
     pipeline_question: str
+    pipeline_context: str
     pipeline_products: Optional[SchemasAndProductsFound]
     pipeline_codes: str
     pipeline_table_info: str
@@ -83,6 +86,8 @@ class AtlasAgentState(TypedDict):
     override_schema: Optional[str]
     override_direction: Optional[str]
     override_mode: Optional[str]
+    # Per-request agent mode override (auto/sql_only/graphql_sql); takes precedence over build-time config
+    override_agent_mode: Optional[str]
     # === GraphQL pipeline state (reset by extract_graphql_question at cycle start) ===
     graphql_question: str
     graphql_context: str
@@ -90,7 +95,7 @@ class AtlasAgentState(TypedDict):
     graphql_entity_extraction: Optional[dict]
     graphql_resolved_params: Optional[dict]
     graphql_query: Optional[str]
-    graphql_api_target: Optional[str]
+    graphql_api_target: Literal["explore", "country_pages"] | None
     graphql_raw_response: Optional[dict]
     graphql_execution_time_ms: int
     graphql_atlas_links: list[dict]
