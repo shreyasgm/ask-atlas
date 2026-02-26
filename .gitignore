@@ -248,7 +248,7 @@ requirements_uv.txt
 
 # Project tracking docs (not for public repo)
 docs/
-technical_docs/
+src/docs/
 atlas_docs/
 
 # Generated test seed data (regenerate with: uv run python src/tests/fixtures/generate_seed_sql.py)
