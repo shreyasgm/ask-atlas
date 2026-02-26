@@ -57,64 +57,96 @@ _GRAPHQL_STATE_DEFAULTS: dict[str, Any] = {
 
 # ---------------------------------------------------------------------------
 # Pydantic schemas — description constants
+# Updated per design doc (docs/backend_redesign_analysis.md)
 # ---------------------------------------------------------------------------
 
 QUERY_TYPE_DESCRIPTION = (
-    "The type of Atlas visualization query this question maps to.\n"
-    "- country_profile : Country overview page with GDP, ECI, growth projections\n"
-    "- country_lookback : Historical growth dynamics and structural change\n"
-    "- new_products : Newly exported products for a country\n"
-    "- treemap_products : Export/import basket by product (treemap)\n"
-    "- treemap_partners : Trade partners breakdown (treemap)\n"
-    "- treemap_bilateral : Bilateral trade by product between two countries\n"
-    "- overtime_products : Trade over time by product\n"
-    "- overtime_partners : Trade over time by partner\n"
-    "- marketshare : Global market share over time\n"
-    "- product_space : Product space network visualization\n"
-    "- feasibility : Growth opportunity scatter plot\n"
-    "- feasibility_table : Growth opportunity table\n"
-    "- country_year : Country-level aggregate data (GDP, ECI, trade totals)\n"
-    "- product_info : Global product-level data (PCI, trade values)\n"
-    "- explore_bilateral : Bilateral trade detailed breakdown\n"
-    "- explore_group : Regional/group trade data\n"
-    "- global_datum : Global-level aggregate data\n"
-    "- explore_data_availability : Year coverage and data availability\n"
-    "- reject : Question cannot be answered by the Atlas GraphQL API"
+    "The Atlas GraphQL query type that best answers the user's question. Choose exactly one:\n"
+    "- reject : Query doesn't fit any GraphQL API type — use when the question requires\n"
+    "           custom SQL aggregation, multi-table joins, or data not available via the Atlas APIs.\n"
+    "- country_profile : Country overview including GDP, population, ECI, top exports,\n"
+    "                    diversification grade, peer comparisons (countryProfile API).\n"
+    "- country_lookback : Growth dynamics over a lookback period — how a country's exports\n"
+    "                     and complexity have changed (countryLookback API).\n"
+    "- new_products : Products a country has started exporting recently (newProductsCountry API).\n"
+    "- treemap_products : What products does a country export in a given year — breakdown\n"
+    "                     by product (countryProductYear API).\n"
+    "- treemap_partners : Where does a country export to — breakdown by trading partner\n"
+    "                     (countryCountryYear API).\n"
+    "- treemap_bilateral : What products does country A export to country B — bilateral\n"
+    "                      product breakdown (countryCountryProductYear API).\n"
+    "- overtime_products : How have a country's product exports changed over time — time\n"
+    "                      series by product (countryProductYear API).\n"
+    "- overtime_partners : How have a country's trading partners changed over time — time\n"
+    "                      series by partner (countryCountryYear API).\n"
+    "- marketshare : A country's share of global exports for a product over time\n"
+    "                (countryProductYear + productYear APIs).\n"
+    "- product_space : Product space network — proximity and relatedness of exported products\n"
+    "                  (countryProductYear + productProduct APIs).\n"
+    "- feasibility : Growth opportunity scatter — products plotted by complexity vs.\n"
+    "                distance/feasibility (countryProductYear + productYear APIs).\n"
+    "- feasibility_table : Growth opportunity table — same data as feasibility in tabular form.\n"
+    "- growth_opportunities : Growth opportunity metrics including COG, distance, RCA\n"
+    "                         for products in a country's product space (productSpace API).\n"
+    "- product_table : Tabular product-level data for a country — export values, RCA,\n"
+    "                  complexity metrics (countryProductYear API).\n"
+    "- country_year : Country aggregate data by year — GDP, ECI, total trade values (countryYear API).\n"
+    "- product_info : Global product-level data — trade value, PCI, number of exporters (productYear API).\n"
+    "- explore_bilateral : Bilateral trade data between two countries (countryCountryProductYear API).\n"
+    "- explore_group : Regional or group-level trade data — continents, income groups,\n"
+    "                  trade blocs (groupYear, groupGroupProductYear APIs).\n"
+    "- global_datum : Global-level questions not tied to a specific country.\n"
+    "- explore_data_availability : Questions about data coverage — which years, products,\n"
+    "                              or countries have data available (dataAvailability API).\n"
+    "\n"
+    "Routing guidance:\n"
+    "- For time-series questions ('how has X changed since Y'), prefer overtime_* or marketshare.\n"
+    "- For growth opportunity / diversification questions, prefer feasibility, feasibility_table, or growth_opportunities.\n"
+    "- For 'what does country X export' snapshot questions, prefer treemap_products or product_table.\n"
+    "- For country overview / profile questions, prefer country_profile."
 )
 
 API_TARGET_DESCRIPTION = (
-    "Which Atlas API endpoint to query.\n"
-    "- explore : Explore API (/api/graphql) — raw trade data, bilateral, product space\n"
-    "- country_pages : Country Pages API (/api/countries/graphql) — profiles, lookback, derived analytics\n"
-    "- null/None : When query_type is 'reject'"
+    "Which Atlas API endpoint to query. Choose one:\n"
+    "- explore : The Explore API at /api/graphql — provides raw trade data, bilateral flows,\n"
+    "            product relatedness, time series, and feasibility/opportunity data. Used by\n"
+    "            treemap_*, overtime_*, marketshare, product_space, feasibility*, product_table,\n"
+    "            country_year, product_info, explore_bilateral, explore_group, global_datum, and\n"
+    "            explore_data_availability query types.\n"
+    "- country_pages : The Country Pages API at /api/countries/graphql — provides derived analytical\n"
+    "                  profiles including countryProfile (46 fields), countryLookback (growth dynamics),\n"
+    "                  newProductsCountry, growth_opportunities (productSpace), peer comparisons, and\n"
+    "                  policy recommendations. Used by country_profile, country_lookback,\n"
+    "                  new_products, and growth_opportunities query types."
 )
 
 PRODUCT_LEVEL_DESCRIPTION = (
-    "Product aggregation level.\n"
-    "- section : Top-level HS section\n"
-    "- twoDigit : 2-digit HS chapter\n"
-    "- fourDigit : 4-digit HS heading (most common)\n"
-    "- sixDigit : 6-digit HS subheading (most detailed)"
+    "Product aggregation level. Choose one:\n"
+    "- section : Broadest grouping (~20 sectors like 'Agriculture', 'Machinery'). Best for high-level overviews.\n"
+    "- twoDigit : HS 2-digit chapters (~97 categories like 'Coffee, tea, spices'). Good for sector-level analysis.\n"
+    "- fourDigit : HS 4-digit headings (~1200 products like 'Coffee, not roasted'). Default and most commonly used.\n"
+    "- sixDigit : Most detailed level (~5000 products). Only available in the Explore API, not Country Pages."
 )
 
 PRODUCT_CLASS_DESCRIPTION = (
-    "Product classification system.\n"
-    "- HS92 : Harmonized System 1992 revision (default, broadest coverage 1995-2024)\n"
-    "- HS12 : Harmonized System 2012 revision (2012-2024)\n"
-    "- HS22 : Harmonized System 2022 revision (2022-2024)\n"
-    "- SITC : Standard International Trade Classification (1962-2024)"
+    "Product classification system. Choose one:\n"
+    "- HS92 : Harmonized System 1992 revision (default). Data available 1995-2024. Most commonly used.\n"
+    "- HS12 : Harmonized System 2012 revision. Data available 2012-2024.\n"
+    "- HS22 : Harmonized System 2022 revision. Data available 2022-2024. Only available in the Explore API\n"
+    "         (not Country Pages or SQL pipeline).\n"
+    "- SITC : Standard International Trade Classification. Data available 1962-2024. Use for long historical time series."
 )
 
 GROUP_TYPE_DESCRIPTION = (
-    "Type of country grouping.\n"
-    "- continent : Continental grouping\n"
-    "- region : Geographic region\n"
-    "- subregion : Geographic subregion\n"
-    "- trade : Trade agreement bloc\n"
-    "- political : Political grouping\n"
-    "- wdi_income_level : World Bank income classification\n"
-    "- wdi_region : World Bank region\n"
-    "- world : Entire world"
+    "Group type for regional/group queries (explore_group query type). Choose one:\n"
+    "- continent : Continental grouping (e.g., Africa, Asia, Europe).\n"
+    "- region : Sub-continental regions.\n"
+    "- subregion : Finer sub-regional groupings.\n"
+    "- trade : Trade blocs (e.g., EU, NAFTA, ASEAN).\n"
+    "- wdi_income_level : World Bank income groups (high, upper_middle, lower_middle, low).\n"
+    "- wdi_region : World Bank regional classifications.\n"
+    "- political : Political groupings.\n"
+    "- world : The entire world as a single group."
 )
 
 
@@ -127,7 +159,8 @@ class GraphQLQueryClassification(BaseModel):
     """Classification of a user question for the Atlas GraphQL API."""
 
     reasoning: str = Field(
-        description="Step-by-step reasoning for the classification decision."
+        description="Step-by-step reasoning for the classification decision.",
+        max_length=300,
     )
     query_type: Literal[
         "country_profile",
@@ -142,6 +175,8 @@ class GraphQLQueryClassification(BaseModel):
         "product_space",
         "feasibility",
         "feasibility_table",
+        "growth_opportunities",
+        "product_table",
         "country_year",
         "product_info",
         "explore_bilateral",
@@ -154,7 +189,7 @@ class GraphQLQueryClassification(BaseModel):
         default=None,
         description="Why the query was rejected. Only set when query_type is 'reject'.",
     )
-    api_target: Optional[str] = Field(
+    api_target: Literal["explore", "country_pages"] | None = Field(
         default=None,
         description=API_TARGET_DESCRIPTION,
     )
@@ -164,7 +199,8 @@ class GraphQLEntityExtraction(BaseModel):
     """Entities extracted from a user question for GraphQL query construction."""
 
     reasoning: str = Field(
-        description="Step-by-step reasoning for entity extraction decisions."
+        description="Step-by-step reasoning for entity extraction decisions.",
+        max_length=300,
     )
     country_name: Optional[str] = Field(
         default=None, description="Primary country mentioned in the question."
@@ -186,7 +222,7 @@ class GraphQLEntityExtraction(BaseModel):
     )
     product_level: Optional[Literal["section", "twoDigit", "fourDigit", "sixDigit"]] = (
         Field(
-            default=None,
+            default="fourDigit",
             description=PRODUCT_LEVEL_DESCRIPTION,
         )
     )
@@ -209,6 +245,10 @@ class GraphQLEntityExtraction(BaseModel):
     group_type: Optional[str] = Field(
         default=None,
         description=GROUP_TYPE_DESCRIPTION,
+    )
+    lookback_years: Literal[3, 5, 10, 15] | None = Field(
+        default=None,
+        description="Lookback period in years for Country Pages growth dynamics (country_lookback query type).",
     )
 
 
@@ -386,6 +426,7 @@ async def resolve_ids(
     question = state["graphql_question"]
 
     resolved: dict[str, Any] = {}
+    resolution_notes: list[str] = []
 
     # Resolve country
     country_name = extraction.get("country_name")
@@ -403,6 +444,11 @@ async def resolve_ids(
         if country:
             resolved["country_id"] = country["countryId"]
             resolved["country_name"] = country.get("nameShortEn", country_name)
+
+    if (country_name or country_code) and "country_id" not in resolved:
+        resolution_notes.append(
+            f"Could not resolve country '{country_name or country_code}' in catalog"
+        )
 
     # Resolve partner country
     partner_name = extraction.get("partner_name")
@@ -438,11 +484,36 @@ async def resolve_ids(
             resolved["product_id"] = product["productId"]
             resolved["product_name"] = product.get("nameShortEn", product_name)
 
+    # If product not found in product_cache, try services_cache
+    if "product_id" not in resolved and (product_name or product_code):
+        service_entry = await _resolve_entity(
+            name=product_name,
+            code_guess=product_code,
+            cache=services_cache,
+            index_name="name",
+            search_field="nameShortEn",
+            llm=lightweight_model,
+            question=question,
+        )
+        if service_entry:
+            resolved["product_id"] = service_entry.get("productId")
+            resolved["product_name"] = service_entry.get("nameShortEn", product_name)
+
+    if (product_name or product_code) and "product_id" not in resolved:
+        resolution_notes.append(
+            f"Could not resolve product '{product_name or product_code}' in catalog"
+        )
+
+    # Include resolution notes in resolved params
+    if resolution_notes:
+        resolved["resolution_notes"] = resolution_notes
+
     # Pass through scalar fields
     for field_name in (
         "year",
         "year_min",
         "year_max",
+        "lookback_years",
         "product_level",
         "product_class",
         "group_name",
@@ -490,32 +561,62 @@ async def _resolve_entity(
     """Resolve an entity name/code to a catalog entry.
 
     Strategy:
-    1. Try exact code lookup via the named index
-    2. Fall back to name search (case-insensitive substring)
-    3. Return the first match (or None if nothing found)
+    1. Step A: Try exact code lookup via the named index
+    2. Step B: Search by name (case-insensitive substring)
+    3. Step C: LLM disambiguation when multiple candidates exist
     """
-    # Step A: Try code guess lookup
+    candidates: list[dict[str, Any]] = []
+
+    # Step A: Code lookup
     if code_guess:
         entry = await cache.lookup(index_name, code_guess)
         if entry:
-            return entry
+            candidates.append(entry)
 
-    # Step B: Try name search
+    # Step B: Name search
     if name:
         results = await cache.search(search_field, name, limit=5)
-        if results:
-            # If exactly one match, use it directly
-            if len(results) == 1:
-                return results[0]
-            # Try exact name match first
-            name_lower = name.strip().lower()
-            for r in results:
-                if (r.get(search_field) or "").strip().lower() == name_lower:
-                    return r
-            # Fall back to first result
-            return results[0]
+        # Deduplicate against Step A results
+        existing_ids = {id(c) for c in candidates}
+        for r in results:
+            if id(r) not in existing_ids:
+                candidates.append(r)
 
-    return None
+    if not candidates:
+        return None
+
+    if len(candidates) == 1:
+        return candidates[0]
+
+    # Try exact name match first (fast path, no LLM needed)
+    if name:
+        name_lower = name.strip().lower()
+        for c in candidates:
+            if (c.get(search_field) or "").strip().lower() == name_lower:
+                return c
+
+    # Step C: LLM selects best from multiple candidates
+    try:
+        options = "\n".join(
+            f"{i+1}. {c.get(search_field, c.get('nameShortEn', 'unknown'))} "
+            f"(code: {c.get('code', c.get('iso3Code', 'N/A'))})"
+            for i, c in enumerate(candidates)
+        )
+        prompt = (
+            f'Given the question: "{question}"\n\n'
+            f"Which entity is the best match?\n{options}\n\n"
+            f"Reply with just the number (1-{len(candidates)}) or 0 if none match."
+        )
+        response = await llm.ainvoke(prompt)
+        text = response.content.strip()
+        idx = int(text) - 1
+        if 0 <= idx < len(candidates):
+            return candidates[idx]
+    except Exception:
+        logger.debug("LLM entity selection failed, falling back to first result")
+
+    # Fallback to first result
+    return candidates[0]
 
 
 # ---------------------------------------------------------------------------
@@ -603,7 +704,7 @@ async def build_and_execute_graphql(
     except (ValueError, KeyError) as e:
         logger.error("Failed to build GraphQL query: %s", e)
         return {
-            "graphql_raw_response": None,
+            "graphql_raw_response": {"error": "build_failed", "detail": str(e)},
             "graphql_query": None,
             "graphql_execution_time_ms": 0,
             "last_error": f"Failed to build query: {e}",
@@ -623,7 +724,7 @@ async def build_and_execute_graphql(
         elapsed_ms = int((time.monotonic() - start) * 1000)
         logger.warning("GraphQL budget exhausted: %s", e)
         return {
-            "graphql_raw_response": None,
+            "graphql_raw_response": {"error": "budget_exhausted", "detail": str(e)},
             "graphql_query": query_string,
             "graphql_execution_time_ms": elapsed_ms,
             "last_error": f"GraphQL API budget exhausted: {e}",
@@ -632,7 +733,7 @@ async def build_and_execute_graphql(
         elapsed_ms = int((time.monotonic() - start) * 1000)
         logger.error("GraphQL error: %s", e)
         return {
-            "graphql_raw_response": None,
+            "graphql_raw_response": {"error": "graphql_error", "detail": str(e)},
             "graphql_query": query_string,
             "graphql_execution_time_ms": elapsed_ms,
             "last_error": f"GraphQL query failed: {e}",
@@ -641,7 +742,7 @@ async def build_and_execute_graphql(
         elapsed_ms = int((time.monotonic() - start) * 1000)
         logger.error("Unexpected error executing GraphQL query: %s", e)
         return {
-            "graphql_raw_response": None,
+            "graphql_raw_response": {"error": "unexpected_error", "detail": str(e)},
             "graphql_query": query_string,
             "graphql_execution_time_ms": elapsed_ms,
             "last_error": f"Unexpected error: {e}",
@@ -672,6 +773,7 @@ async def format_graphql_results(state: AtlasAgentState) -> dict:
 
     # Determine content and atlas links
     atlas_links: list[dict] = []
+    entity_extraction = state.get("graphql_entity_extraction")
 
     if query_type == "reject":
         reason = classification.get("rejection_reason", "Question not supported")
@@ -679,6 +781,13 @@ async def format_graphql_results(state: AtlasAgentState) -> dict:
             f"This question could not be answered via the Atlas GraphQL API. "
             f"Rejection reason: {reason}"
         )
+    elif query_type != "reject" and entity_extraction is None and classification:
+        content = (
+            "Entity extraction failed — could not parse entities from the question. "
+            "Please try rephrasing your question."
+        )
+    elif isinstance(raw_response, dict) and "error" in raw_response:
+        content = f"Error executing GraphQL query: {raw_response['error']} — {raw_response.get('detail', '')}"
     elif last_error or raw_response is None:
         content = (
             f"Error executing GraphQL query: {last_error or 'No response received'}"
@@ -974,6 +1083,13 @@ def _build_group_year(params: dict) -> tuple[str, dict]:
 
 # --- Country Pages API query builders ---
 
+_LOOKBACK_YEAR_MAP = {
+    3: "ThreeYears",
+    5: "FiveYears",
+    10: "TenYears",
+    15: "FifteenYears",
+}
+
 
 def _build_country_profile(params: dict) -> tuple[str, dict]:
     """Build countryProfile query (Country Pages API)."""
@@ -1013,12 +1129,24 @@ def _build_country_lookback(params: dict) -> tuple[str, dict]:
     location = params.get("location", "")
     variables: dict[str, Any] = {"id": location}
 
+    lookback = params.get("lookback_years")
+    if lookback and lookback in _LOOKBACK_YEAR_MAP:
+        variables["yearRange"] = _LOOKBACK_YEAR_MAP[lookback]
+
     query = """
-    query CL($id: ID!) {
-      countryLookback(id: $id) {
-        location { id shortName }
-        exportValue importValue
-        eci coi
+    query CL($id: ID!, $yearRange: LookBackYearRange) {
+      countryLookback(id: $id, yearRange: $yearRange) {
+        id
+        eciRankChange eciChange
+        exportValueConstGrowthCagr
+        exportValueGrowthNonOilConstCagr
+        diversityRankChange diversityChange
+        exportValueGrowthClassification
+        gdpPcConstantCagrRegionalDifference
+        gdpChangeConstantCagr
+        gdpPerCapitaChangeConstantCagr
+        gdpGrowthConstant
+        largestContributingExportProduct { shortName code }
       }
     }
     """
@@ -1036,6 +1164,66 @@ def _build_new_products(params: dict) -> tuple[str, dict]:
         location { id shortName }
         newProductExportValue
         newProductExportValuePerCapita
+      }
+    }
+    """
+    return query, variables
+
+
+def _build_growth_opportunities(params: dict) -> tuple[str, dict]:
+    """Build growth opportunities query (Country Pages productSpace API)."""
+    location = params.get("location", "")
+    year = params.get("year")
+    variables: dict[str, Any] = {"id": location}
+    if year:
+        variables["year"] = int(year)
+    query = """
+    query GO($id: ID!, $year: Int) {
+      productSpace(id: $id, year: $year) {
+        product { id shortName code }
+        exportValue exportRca
+        cog cogRank distance distanceRank
+      }
+    }
+    """
+    return query, variables
+
+
+def _build_product_table(params: dict) -> tuple[str, dict]:
+    """Build product table query (Explore API countryProductYear)."""
+    variables: dict[str, Any] = {
+        "countryId": params.get("country_id"),
+        "productLevel": _product_level_to_int(params.get("product_level", "fourDigit")),
+        "productClass": params.get("product_class", "HS92"),
+    }
+    year = params.get("year")
+    if year:
+        variables["yearMin"] = year
+        variables["yearMax"] = year
+    else:
+        variables["yearMin"] = params.get("year_min", 2024)
+        variables["yearMax"] = params.get("year_max", 2024)
+
+    if "product_id" in params:
+        variables["productId"] = params["product_id"]
+
+    query = """
+    query PT($countryId: Int, $productLevel: Int!, $productClass: ProductClass,
+              $productId: Int, $yearMin: Int, $yearMax: Int) {
+      countryProductYear(
+        countryId: $countryId
+        productLevel: $productLevel
+        productClass: $productClass
+        productId: $productId
+        yearMin: $yearMin
+        yearMax: $yearMax
+      ) {
+        countryId productId productLevel year
+        exportValue importValue globalMarketShare
+        exportRca exportRpop
+        isNew productStatus
+        cog distance
+        normalizedPci normalizedCog normalizedDistance normalizedExportRca
       }
     }
     """
@@ -1101,9 +1289,11 @@ _QUERY_BUILDERS: dict[str, Callable[[dict], tuple[str, dict]]] = {
     "explore_bilateral": _build_country_country_product_year,
     "explore_group": _build_group_year,
     "explore_data_availability": _build_data_availability,
+    "product_table": _build_product_table,
     # Country Pages API queries
     "country_profile": _build_country_profile,
     "country_lookback": _build_country_lookback,
     "new_products": _build_new_products,
     "global_datum": _build_global_datum,
+    "growth_opportunities": _build_growth_opportunities,
 }

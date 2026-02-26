@@ -199,6 +199,7 @@ def _explore_extraction(**overrides) -> dict:
         "year_max": None,
         "group_name": None,
         "group_type": None,
+        "lookback_years": None,
     }
     base.update(overrides)
     return base
@@ -293,7 +294,7 @@ class TestGraphQLQueryClassification:
         assert {"api_target", "query_type", "reasoning", "rejection_reason"} == fields
 
     def test_all_query_types_present(self):
-        """The query_type literal must include all 18 valid types + reject."""
+        """The query_type literal must include all 20 valid types + reject."""
         import typing
 
         field_info = GraphQLQueryClassification.model_fields["query_type"]
@@ -311,6 +312,8 @@ class TestGraphQLQueryClassification:
             "product_space",
             "feasibility",
             "feasibility_table",
+            "growth_opportunities",
+            "product_table",
             "country_year",
             "product_info",
             "explore_bilateral",
@@ -728,7 +731,8 @@ class TestBuildAndExecuteGraphQL:
         # Should not raise
         result = await build_and_execute_graphql(state, graphql_client=mock_client)
 
-        assert result["graphql_raw_response"] is None
+        assert isinstance(result["graphql_raw_response"], dict)
+        assert "error" in result["graphql_raw_response"]
         assert "Bad query syntax" in result["last_error"]
 
     async def test_catches_budget_exhausted_with_specific_message(self):
@@ -748,7 +752,8 @@ class TestBuildAndExecuteGraphQL:
 
         result = await build_and_execute_graphql(state, graphql_client=mock_client)
 
-        assert result["graphql_raw_response"] is None
+        assert isinstance(result["graphql_raw_response"], dict)
+        assert result["graphql_raw_response"]["error"] == "budget_exhausted"
         assert "budget" in result["last_error"].lower()
 
     async def test_skips_for_rejected_queries(self):
@@ -793,7 +798,8 @@ class TestBuildAndExecuteGraphQL:
         ):
             result = await build_and_execute_graphql(state, graphql_client=mock_client)
 
-        assert result["graphql_raw_response"] is None
+        assert isinstance(result["graphql_raw_response"], dict)
+        assert result["graphql_raw_response"]["error"] == "build_failed"
         assert "Missing required param" in result["last_error"]
         mock_client.execute.assert_not_called()
 
@@ -810,6 +816,7 @@ class TestFormatGraphQLResults:
         atlas_links = [{"url": "https://atlas.example.com", "label": "link"}]
         state = _base_graphql_state(
             graphql_classification=_explore_classification(),
+            graphql_entity_extraction=_explore_extraction(),
             graphql_raw_response={"countryProductYear": [{"exportValue": 1000}]},
             graphql_atlas_links=atlas_links,
             last_error="",
@@ -830,6 +837,7 @@ class TestFormatGraphQLResults:
     async def test_error_returns_error_message_and_discards_links(self):
         state = _base_graphql_state(
             graphql_classification=_explore_classification(),
+            graphql_entity_extraction=_explore_extraction(),
             graphql_raw_response=None,
             last_error="GraphQL query failed: Bad request",
             graphql_atlas_links=[{"url": "https://atlas.example.com", "label": "link"}],
@@ -1332,3 +1340,395 @@ class TestBuildAndExecuteIntegration:
         response = result["graphql_raw_response"]
         assert response is not None
         assert "globalDatum" in response
+
+    async def test_country_lookback_with_year_range_real_api(
+        self, country_pages_client
+    ):
+        """countryLookback with yearRange: FiveYears for Kenya returns growth dynamics."""
+        state = _base_graphql_state(
+            graphql_classification={
+                "query_type": "country_lookback",
+                "api_target": "country_pages",
+                "reasoning": "...",
+                "rejection_reason": None,
+            },
+            graphql_resolved_params={
+                "location": "location-404",
+                "lookback_years": 5,
+            },
+        )
+
+        result = await build_and_execute_graphql(
+            state, graphql_client=country_pages_client
+        )
+
+        assert result["last_error"] == "", f"API error: {result['last_error']}"
+        response = result["graphql_raw_response"]
+        assert response is not None
+        lookback = response["countryLookback"]
+        assert lookback["id"] is not None
+        assert "eciRankChange" in lookback
+        assert "exportValueConstGrowthCagr" in lookback
+
+
+# ---------------------------------------------------------------------------
+# 10. Schema validation tests (Fixes 2.1, 2.2, 2.3, 2.4)
+# ---------------------------------------------------------------------------
+
+
+class TestSchemaValidation:
+    """Tests for Pydantic schema field constraints."""
+
+    def test_api_target_rejects_invalid_string(self):
+        """api_target must be 'explore', 'country_pages', or None — not arbitrary strings."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            GraphQLQueryClassification(
+                reasoning="x",
+                query_type="reject",
+                api_target="invalid",
+            )
+
+    def test_api_target_accepts_valid_values(self):
+        """api_target accepts 'explore', 'country_pages', and None."""
+        for target in ("explore", "country_pages", None):
+            c = GraphQLQueryClassification(
+                reasoning="x",
+                query_type="reject",
+                api_target=target,
+            )
+            assert c.api_target == target
+
+    def test_product_level_defaults_to_four_digit(self):
+        """product_level defaults to 'fourDigit' when not specified."""
+        extraction = GraphQLEntityExtraction(reasoning="x")
+        assert extraction.product_level == "fourDigit"
+
+    def test_lookback_years_accepts_valid_values(self):
+        """lookback_years accepts 3, 5, 10, 15."""
+        extraction = GraphQLEntityExtraction(reasoning="x", lookback_years=5)
+        assert extraction.lookback_years == 5
+
+    def test_lookback_years_rejects_invalid_value(self):
+        """lookback_years=7 is not a valid choice."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            GraphQLEntityExtraction(reasoning="x", lookback_years=7)
+
+
+# ---------------------------------------------------------------------------
+# 11. resolve_ids additional tests (Fixes 2.7, 2.8, 2.9, 2.10)
+# ---------------------------------------------------------------------------
+
+
+class TestResolveIdsExtended:
+    """Extended tests for resolve_ids fixes."""
+
+    async def test_services_cache_fallback_when_product_cache_misses(self):
+        """When product_cache misses, services_cache is tried as fallback."""
+        country_cache = _make_country_cache()
+        product_cache = _make_product_cache()  # Only goods
+        services_cache = CatalogCache("test_services", ttl=3600)
+        services_cache.add_index(
+            "name",
+            key_fn=lambda e: (e.get("nameShortEn") or "").strip().lower() or None,
+            normalize_query=lambda q: q.strip().lower(),
+        )
+        services_cache.add_index(
+            "id",
+            key_fn=lambda e: str(e["productId"]) if "productId" in e else None,
+        )
+        services_cache.populate(
+            [
+                {"productId": 1234, "nameShortEn": "Travel & tourism"},
+            ]
+        )
+        mock_llm = MagicMock()
+
+        state = _base_graphql_state(
+            graphql_question="Kenya's travel and tourism exports?",
+            graphql_classification=_explore_classification(),
+            graphql_entity_extraction=_explore_extraction(
+                product_name="Travel & tourism",
+                product_code_guess=None,
+            ),
+        )
+
+        result = await resolve_ids(
+            state,
+            lightweight_model=mock_llm,
+            country_cache=country_cache,
+            product_cache=product_cache,
+            services_cache=services_cache,
+        )
+
+        assert result["graphql_resolved_params"]["product_id"] == 1234
+
+    async def test_lookback_years_passes_through_to_resolved(self):
+        """lookback_years from extraction passes through to resolved params."""
+        country_cache = _make_country_cache()
+        product_cache = _make_product_cache()
+        services_cache = _make_services_cache()
+        mock_llm = MagicMock()
+
+        state = _base_graphql_state(
+            graphql_question="Kenya growth dynamics over 10 years?",
+            graphql_classification=_explore_classification(
+                query_type="country_lookback",
+                api_target="country_pages",
+            ),
+            graphql_entity_extraction=_explore_extraction(lookback_years=10),
+        )
+
+        result = await resolve_ids(
+            state,
+            lightweight_model=mock_llm,
+            country_cache=country_cache,
+            product_cache=product_cache,
+            services_cache=services_cache,
+        )
+
+        assert result["graphql_resolved_params"]["lookback_years"] == 10
+
+    async def test_resolution_notes_for_unresolved_country(self):
+        """Unresolved country adds a resolution note."""
+        country_cache = _make_country_cache()
+        product_cache = _make_product_cache()
+        services_cache = _make_services_cache()
+        mock_llm = MagicMock()
+
+        state = _base_graphql_state(
+            graphql_question="Narnia's exports?",
+            graphql_classification=_explore_classification(),
+            graphql_entity_extraction=_explore_extraction(
+                country_name="Narnia",
+                country_code_guess="NAR",
+            ),
+        )
+
+        result = await resolve_ids(
+            state,
+            lightweight_model=mock_llm,
+            country_cache=country_cache,
+            product_cache=product_cache,
+            services_cache=services_cache,
+        )
+
+        notes = result["graphql_resolved_params"].get("resolution_notes", [])
+        assert any("Narnia" in n for n in notes)
+
+    async def test_llm_disambiguation_selects_best_match(self):
+        """LLM disambiguates when multiple candidates match."""
+        # Create cache with two similar entries
+        country_cache = CatalogCache("test_country_ambig", ttl=3600)
+        country_cache.add_index(
+            "iso3",
+            key_fn=lambda e: (e.get("iso3Code") or "").upper() or None,
+            normalize_query=lambda q: q.strip().upper(),
+        )
+        country_cache.add_index(
+            "name",
+            key_fn=lambda e: (e.get("nameShortEn") or "").strip().lower() or None,
+            normalize_query=lambda q: q.strip().lower(),
+        )
+        country_cache.add_index(
+            "id",
+            key_fn=lambda e: str(e["countryId"]) if "countryId" in e else None,
+        )
+        country_cache.populate(
+            [
+                {"countryId": 792, "iso3Code": "TUR", "nameShortEn": "Turkiye"},
+                {"countryId": 795, "iso3Code": "TKM", "nameShortEn": "Turkmenistan"},
+            ]
+        )
+        product_cache = _make_product_cache()
+        services_cache = _make_services_cache()
+
+        # Mock LLM to return "1" (select first candidate: Turkiye)
+        mock_llm = MagicMock()
+        mock_response = MagicMock()
+        mock_response.content = "1"
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
+
+        state = _base_graphql_state(
+            graphql_question="What does Turkey export?",
+            graphql_classification=_explore_classification(),
+            graphql_entity_extraction=_explore_extraction(
+                country_name="Turk",
+                country_code_guess=None,
+            ),
+        )
+
+        result = await resolve_ids(
+            state,
+            lightweight_model=mock_llm,
+            country_cache=country_cache,
+            product_cache=product_cache,
+            services_cache=services_cache,
+        )
+
+        # LLM selected "1" → Turkiye (792)
+        assert result["graphql_resolved_params"]["country_id"] == 792
+
+        # Now mock LLM to return "2" (select second: Turkmenistan)
+        mock_response_2 = MagicMock()
+        mock_response_2.content = "2"
+        mock_llm.ainvoke = AsyncMock(return_value=mock_response_2)
+
+        result2 = await resolve_ids(
+            state,
+            lightweight_model=mock_llm,
+            country_cache=country_cache,
+            product_cache=product_cache,
+            services_cache=services_cache,
+        )
+
+        assert result2["graphql_resolved_params"]["country_id"] == 795
+
+
+# ---------------------------------------------------------------------------
+# 12. Builder tests (Fixes 2.5, 2.11)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildersExtended:
+    """Extended tests for new and updated query builders."""
+
+    def test_country_lookback_includes_year_range(self):
+        """lookback_years=5 maps to yearRange='FiveYears' in variables."""
+        query, variables = build_graphql_query(
+            "country_lookback",
+            {"location": "location-404", "lookback_years": 5},
+        )
+        assert variables["yearRange"] == "FiveYears"
+        assert "countryLookback" in query
+
+    def test_country_lookback_omits_year_range_when_missing(self):
+        """Without lookback_years, yearRange is not in variables."""
+        query, variables = build_graphql_query(
+            "country_lookback",
+            {"location": "location-404"},
+        )
+        assert "yearRange" not in variables
+        assert "countryLookback" in query
+
+    def test_growth_opportunities_builder(self):
+        """growth_opportunities builder produces productSpace query."""
+        query, variables = build_graphql_query(
+            "growth_opportunities",
+            {"location": "location-404", "year": 2024},
+        )
+        assert "productSpace" in query
+        assert variables["id"] == "location-404"
+        assert variables["year"] == 2024
+
+    def test_product_table_builder(self):
+        """product_table builder produces countryProductYear query."""
+        query, variables = build_graphql_query(
+            "product_table",
+            {
+                "country_id": 404,
+                "product_level": "fourDigit",
+                "product_class": "HS92",
+                "year": 2024,
+            },
+        )
+        assert "countryProductYear" in query
+        assert variables["countryId"] == 404
+        assert variables["productLevel"] == 4
+
+    def test_all_query_types_have_builders(self):
+        """Every query type in the dispatch table should be present."""
+        from src.graphql_pipeline import _QUERY_BUILDERS
+
+        expected_builder_types = {
+            "treemap_products",
+            "treemap_partners",
+            "treemap_bilateral",
+            "overtime_products",
+            "overtime_partners",
+            "marketshare",
+            "product_space",
+            "feasibility",
+            "feasibility_table",
+            "growth_opportunities",
+            "product_table",
+            "country_year",
+            "product_info",
+            "explore_bilateral",
+            "explore_group",
+            "explore_data_availability",
+            "country_profile",
+            "country_lookback",
+            "new_products",
+            "global_datum",
+        }
+        assert set(_QUERY_BUILDERS.keys()) == expected_builder_types
+
+
+# ---------------------------------------------------------------------------
+# 13. Error handling tests (Fixes 2.12, 2.13)
+# ---------------------------------------------------------------------------
+
+
+class TestErrorHandlingExtended:
+    """Tests for improved error handling."""
+
+    async def test_build_and_execute_writes_error_dict_to_raw_response(self):
+        """GraphQL errors write error dict (not None) to graphql_raw_response."""
+        mock_client = MagicMock()
+        mock_client.execute = AsyncMock(
+            side_effect=GraphQLError("Schema validation error")
+        )
+
+        state = _base_graphql_state(
+            graphql_classification=_explore_classification(),
+            graphql_resolved_params={
+                "country_id": 404,
+                "product_level": 4,
+                "product_class": "HS92",
+                "year": 2024,
+            },
+        )
+
+        result = await build_and_execute_graphql(state, graphql_client=mock_client)
+
+        raw = result["graphql_raw_response"]
+        assert isinstance(raw, dict)
+        assert "error" in raw
+        assert raw["error"] == "graphql_error"
+        assert "Schema validation error" in raw["detail"]
+
+    async def test_format_results_shows_extraction_failure(self):
+        """When extraction is None but classification is not reject, shows extraction failure."""
+        state = _base_graphql_state(
+            graphql_classification=_explore_classification(),
+            graphql_entity_extraction=None,
+            graphql_raw_response=None,
+            last_error="",
+        )
+
+        result = await format_graphql_results(state)
+
+        content = result["messages"][0].content
+        assert "Entity extraction failed" in content
+
+    async def test_format_results_handles_error_dict_in_raw_response(self):
+        """Error dicts in raw_response are displayed as error messages."""
+        state = _base_graphql_state(
+            graphql_classification=_explore_classification(),
+            graphql_entity_extraction=_explore_extraction(),
+            graphql_raw_response={
+                "error": "budget_exhausted",
+                "detail": "limit reached",
+            },
+            last_error="GraphQL API budget exhausted: limit reached",
+        )
+
+        result = await format_graphql_results(state)
+
+        content = result["messages"][0].content
+        assert "budget_exhausted" in content
+        assert "limit reached" in content
