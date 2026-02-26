@@ -301,8 +301,8 @@ class AtlasTextToSQL:
     #     self.example_queries = load_example_queries(queries_json, example_queries_dir)
     #
     #     # Initialize language models using settings
-    #     self.metadata_llm = create_llm(settings.metadata_model, settings.metadata_model_provider, temperature=0)
-    #     self.query_llm = create_llm(settings.query_model, settings.query_model_provider, temperature=0)
+    #     self.metadata_llm = create_llm(settings.lightweight_model, settings.lightweight_model_provider, temperature=0)
+    #     self.query_llm = create_llm(settings.frontier_model, settings.frontier_model_provider, temperature=0)
     #
     #     self.max_results = max_results
     #     self.max_queries = max_queries
@@ -501,10 +501,14 @@ class AtlasTextToSQL:
             queries_json, example_queries_dir
         )
         instance.metadata_llm = create_llm(
-            _settings.metadata_model, _settings.metadata_model_provider, temperature=0
+            _settings.lightweight_model,
+            _settings.lightweight_model_provider,
+            temperature=0,
         )
         instance.query_llm = create_llm(
-            _settings.query_model, _settings.query_model_provider, temperature=0
+            _settings.frontier_model,
+            _settings.frontier_model_provider,
+            temperature=0,
         )
         instance.max_results = max_results
         instance.max_queries = max_queries

@@ -31,10 +31,29 @@ Model aliases (short names that work in each provider's API):
     Tiny:       gemini-2.5-flash-lite  — cheapest
 """
 
-# --- Query model (SQL generation) ---
-QUERY_MODEL = "gpt-5.2"
-QUERY_MODEL_PROVIDER = "openai"
+# --- Frontier model (complex reasoning, agent orchestration, SQL generation) ---
+FRONTIER_MODEL = "gpt-5.2"
+FRONTIER_MODEL_PROVIDER = "openai"
 
-# --- Metadata model (product/schema extraction) ---
-METADATA_MODEL = "gpt-5-mini"
-METADATA_MODEL_PROVIDER = "openai"
+# --- Lightweight model (extraction, classification, selection) ---
+LIGHTWEIGHT_MODEL = "gpt-5-mini"
+LIGHTWEIGHT_MODEL_PROVIDER = "openai"
+
+# --- Agent mode ---
+# "auto" (default), "graphql_sql", or "sql_only"
+AGENT_MODE = "auto"
+
+# --- Per-prompt model assignment ---
+# Maps each prompt to "frontier" or "lightweight".
+# Override individual entries to experiment with model routing.
+PROMPT_MODEL_ASSIGNMENTS = {
+    "agent_system_prompt": "frontier",
+    "graphql_classification": "lightweight",
+    "graphql_entity_extraction": "lightweight",
+    "id_resolution_selection": "lightweight",
+    "sql_generation": "frontier",
+    "product_extraction": "lightweight",
+    "product_code_selection": "lightweight",
+    "document_selection": "lightweight",
+    "documentation_synthesis": "lightweight",
+}

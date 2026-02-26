@@ -686,7 +686,9 @@ if __name__ == "__main__":
     from src.config import get_settings, create_llm
 
     settings = get_settings()
-    llm = create_llm(settings.query_model, settings.query_model_provider, temperature=0)
+    llm = create_llm(
+        settings.frontier_model, settings.frontier_model_provider, temperature=0
+    )
     analyzer = ProductAndSchemaLookup(
         llm=llm,
         connection=settings.atlas_db_url,
