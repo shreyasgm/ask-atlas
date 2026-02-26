@@ -3,7 +3,7 @@
 Layer 1: GraphQL API collection script for Atlas country page eval data.
 
 Queries the Atlas GraphQL API for all 8 countries and generates
-question.json + results.json files for API-sourced data points.
+results.json ground truth files for API-sourced data points.
 IDs start at 61 (1-60 are existing DB-query questions).
 
 Usage:
@@ -23,7 +23,6 @@ import httpx
 
 ENDPOINT = "https://atlas.hks.harvard.edu/api/countries/graphql"
 BASE_DIR = Path(__file__).resolve().parent
-QUESTIONS_DIR = BASE_DIR / "questions"
 RESULTS_DIR = BASE_DIR / "results"
 
 COUNTRIES: dict[str, dict] = {
@@ -155,31 +154,11 @@ def pct_str(value: float) -> str:
     return f"{value * 100:.1f}%"
 
 
-def write_question(qid: int, question: dict) -> None:
-    """Write evaluation/questions/{qid}/question.json."""
-    d = QUESTIONS_DIR / str(qid)
-    d.mkdir(parents=True, exist_ok=True)
-    (d / "question.json").write_text(json.dumps(question, indent=2) + "\n")
-
-
 def write_result(qid: int, result: dict) -> None:
     """Write evaluation/results/{qid}/ground_truth/results.json."""
     d = RESULTS_DIR / str(qid) / "ground_truth"
     d.mkdir(parents=True, exist_ok=True)
     (d / "results.json").write_text(json.dumps(result, indent=2) + "\n")
-
-
-def make_question(
-    qid: int, text: str, category: str, difficulty: str, atlas_url: str
-) -> dict:
-    return {
-        "question_id": str(qid),
-        "user_question": text,
-        "category": category,
-        "difficulty": difficulty,
-        "source": "atlas_country_page",
-        "atlas_url": atlas_url,
-    }
 
 
 def make_result(qid: int, atlas_url: str, data: list[dict]) -> dict:
@@ -267,11 +246,9 @@ def emit(
     url: str,
     data: list[dict],
 ) -> None:
-    """Write one question+result pair and track for eval_questions.json."""
+    """Write ground truth result and track question for eval_questions.json."""
     qid = next_id()
-    q = make_question(qid, text, category_name, difficulty, url)
     r = make_result(qid, url, data)
-    write_question(qid, q)
     write_result(qid, r)
     ALL_QUESTIONS.append(
         {

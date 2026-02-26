@@ -373,6 +373,10 @@ Content-Type: application/json
 
 No authentication required. Introspection enabled. Rate limit: ≤ 120 req/min (2 req/sec). Include `User-Agent` header.
 
+> **Note:** The Atlas API is best used to access data for stand-alone economic analysis, not to support other software applications. See the [official API documentation](https://github.com/harvard-growth-lab/api-docs/blob/main/atlas.md) for full terms.
+
+**GraphiQL interface:** Navigating to [`https://atlas.hks.harvard.edu/api/graphql`](https://atlas.hks.harvard.edu/api/graphql) in a browser opens the **GraphiQL interface**. The "Docs" menu in the top right of the page opens the **Documentation Explorer**, which allows you to browse all queries, types, field descriptions, and arguments interactively. This is the definitive, always-up-to-date schema reference.
+
 ### All Query Types (27 total)
 
 The full API exposes 27 query types — 2 more than previously documented (the existing `explore_page_collection_guide.md` lists 26). The complete list:
@@ -393,7 +397,7 @@ The full API exposes 27 query types — 2 more than previously documented (the e
 |-------|-----------|---------|---------|
 | `countryCountryProductYearGrouped` | Same as `countryCountryProductYear` | `[CountryCountryProductYearGrouped]` | Grouped bilateral trade (returns `productIds` + `data` arrays) |
 | `productProduct` | `productClass!, productLevel!` | `[ProductProduct]` | Product-to-product relatedness strengths (product space edges) |
-| `banner` | *(none)* | `[Banner]` | Site announcement banners (currently empty) |
+| `banner` | *(none)* | `[Banner]` | Site announcement banners (6 fields: `bannerId`, `startTime`, `endTime`, `text`, `ctaText`, `ctaLink`) |
 
 #### Group / Regional Data (4 queries)
 
@@ -431,7 +435,7 @@ The full API exposes 27 query types — 2 more than previously documented (the e
 
 ### Key Type Schemas
 
-#### `CountryProductYear` (richest type — 24 fields)
+#### `CountryProductYear` (richest type — 22 fields)
 
 ```
 countryId, locationLevel, productId, productLevel, year
@@ -501,7 +505,7 @@ isShown, globalExportThreshold, showFeasibility
 naturalResource, greenProduct
 ```
 
-#### `LocationCountry` (21 fields)
+#### `LocationCountry` (22 fields)
 
 ```
 countryId, locationLevel, iso3Code, iso2Code, legacyCountryId
@@ -513,7 +517,7 @@ countryProject, rankingsOverride, cpOverride
 inRankings, inCp, inMv
 ```
 
-#### `LocationGroup` (31 fields)
+#### `LocationGroup` (32 fields)
 
 ```
 groupId, groupName, groupType, members
@@ -524,6 +528,173 @@ exportValueCagr3/5/10/15
 exportValueNonOilCagr3/5/10/15
 gdpCagr3/5/10/15, gdpConstCagr3/5/10/15
 gdppcConstCagr3/5/10/15
+```
+
+#### `GroupYear` (8 fields)
+
+```
+groupId: ID
+groupType: GroupType
+year: Int
+population: Float
+gdp: Float
+gdpPpp: Float
+exportValue: Float
+importValue: Float
+```
+
+#### `GroupGroupProductYear` (11 fields)
+
+```
+groupId: ID
+groupType: GroupType
+locationLevel: LocationLevel
+partnerGroupId: ID
+partnerType: GroupType
+partnerLevel: LocationLevel
+productId: ID
+productLevel: Int
+year: Int
+exportValue: Float
+importValue: Float
+```
+
+#### `CountryGroupProductYear` (9 fields)
+
+```
+locationLevel: LocationLevel
+partnerLevel: LocationLevel
+productId: ID
+productLevel: Int
+year: Int
+exportValue: Float
+importValue: Float
+countryId: ID
+partnerGroupId: ID
+```
+
+#### `GroupCountryProductYear` (9 fields)
+
+```
+locationLevel: LocationLevel
+partnerLevel: LocationLevel
+productId: ID
+productLevel: Int
+year: Int
+exportValue: Float
+importValue: Float
+groupId: ID
+partnerCountryId: ID
+```
+
+#### `DataFlags` (20 fields)
+
+```
+countryId: ID
+formerCountry: Boolean
+countryProject: Boolean
+rankingsOverride: Boolean
+cpOverride: Boolean
+year: Boolean
+minPopulation: Boolean
+population: Int
+minAvgExport: Boolean
+avgExport3: Float
+complexityCurrentYearCoverage: Boolean
+complexityLookbackYearsCoverage: Boolean
+imfAnyCoverage: Boolean
+imfCurrentYearsCoverage: Boolean
+imfLookbackYearsCoverage: Boolean
+rankingsEligible: Boolean
+countryProfilesEligible: Boolean
+inRankings: Boolean
+inCp: Boolean
+inMv: Boolean
+```
+
+#### `CountryYearThresholds` (18 fields)
+
+```
+countryId: ID
+year: Int
+variable: String
+mean: Float
+median: Float
+min: Float
+max: Float
+std: Float
+percentile10: Float
+percentile20: Float
+percentile25: Float
+percentile30: Float
+percentile40: Float
+percentile50: Float
+percentile60: Float
+percentile70: Float
+percentile75: Float
+percentile80: Float
+percentile90: Float
+```
+
+#### `ConversionWeights` (19 fields)
+
+```
+sitc1962: String
+sitc1976: String
+weightSitc1962Sitc1976: Float
+sitc1988: String
+weightSitc1976Sitc1988: Float
+hs1992: String
+weightSitc1988Hs1992: Float
+hs1997: String
+weightHs1992Hs1997: Float
+hs2002: String
+weightHs1997Hs2002: Float
+hs2007: String
+weightHs2002Hs2007: Float
+hs2012: String
+weightHs2007Hs2012: Float
+hs2017: String
+weightHs2012Hs2017: Float
+hs2022: String
+weightHs2017Hs2022: Float
+```
+
+#### `DownloadsTable` (17+ fields)
+
+```
+tableId: ID!
+tableName: String
+tableDataType: DownloadTableDataType
+repo: DownloadTableRepo
+complexityData: Boolean
+productLevel: Int
+facet: DownloadTableFacet
+yearMin: Int
+yearMax: Int
+displayName: String
+productClassificationHs92: Boolean
+productClassificationHs12: Boolean
+productClassificationHs22: Boolean
+productClassificationSitc: Boolean
+productClassificationServicesUnilateral: Boolean
+dvFileId: Int
+dvFileName: String
+dvFileSize: String
+dvPublicationDate: String
+doi: String
+columns: [DownloadsColumn]
+```
+
+#### `Banner` (6 fields)
+
+```
+bannerId: Int!
+startTime: DateTime
+endTime: DateTime
+text: String
+ctaText: String
+ctaLink: String
 ```
 
 ### Enum Values
@@ -552,12 +723,15 @@ gdppcConstCagr3/5/10/15
 | HS22 | 2022–2024 |
 | SITC | 1962–2024 |
 
-### Server Metadata
+### Server Metadata (4 fields)
+
+The `Metadata` type has 4 fields: `serverName`, `ingestionCommit`, `ingestionDate`, and `apiCommit`.
 
 ```
 serverName: rhea
 ingestionCommit: ffab5de
 ingestionDate: 2026-02-01
+apiCommit: (string — commit hash for the API code)
 ```
 
 ---
@@ -686,7 +860,7 @@ The Atlas has **two separate GraphQL APIs** with different schemas, both availab
 |--------|------------------------------|----------------------------------------------|
 | **Query count** | 27 | 25 |
 | **Custom types** | 40 | 49 |
-| **ID format** | Numeric integers (`countryId: 404`) | String IDs (`location: "location-404"`) |
+| **ID format** | Numeric integers (`countryId: 404`) — [M49 codes](https://unstats.un.org/unsd/methodology/m49/) as designated by the UN (which coincide with ISO 3166-1 numeric codes for most countries) | String IDs (`location: "location-404"`) |
 | **Year params** | `yearMin` / `yearMax` ranges | `year`, `minYear` / `maxYear` |
 | **Product class** | `HS92`, `HS12`, `HS22`, `SITC` (explicit revisions) | `HS`, `SITC` (generic) |
 | **Product levels** | 2, 4, **6** digit | section, twoDigit, fourDigit |
@@ -707,8 +881,8 @@ The Atlas has **two separate GraphQL APIs** with different schemas, both availab
 | **Data quality flags** | `dataFlags` with detailed eligibility criteria per country |
 | **Percentile thresholds** | `countryYearThresholds` — percentile distributions for complexity variables |
 | **Argument descriptions** | All arguments have human-readable descriptions via introspection |
-| **Country metadata** | `LocationCountry` has 21 fields (more than Country Pages' `Location` with 15) |
-| **Group CAGR stats** | `LocationGroup` has 31 fields including 3/5/10/15-year CAGR for export, non-oil export, GDP |
+| **Country metadata** | `LocationCountry` has 22 fields (more than Country Pages' `Location` with 15) |
+| **Group CAGR stats** | `LocationGroup` has 32 fields including 3/5/10/15-year CAGR for export, non-oil export, GDP |
 
 ### Country Pages API Unique Features (not in Explore)
 
@@ -730,7 +904,7 @@ The Atlas has **two separate GraphQL APIs** with different schemas, both availab
 | Country-level GDP, ECI | `countryYear.gdppc, eci` | `countryYear.gdppc, eci` | Either (equivalent) |
 | Product catalog | `productHs92` (21 fields) | `allProducts` (10 fields) | Explore (more fields) |
 | Product complexity (PCI) | `productYear.pci` | `allProductYear.pci` | Either |
-| Country metadata | `locationCountry` (21 fields) | `allLocations` (15 fields) | Explore (more fields) |
+| Country metadata | `locationCountry` (22 fields) | `allLocations` (15 fields) | Explore (more fields) |
 
 **General guidance**: Prefer the Explore API for raw trade data — it has more fields, better introspection, and explicit HS revision support. Use the Country Pages API for derived analytical metrics (growth projections, diversification grades, strategic approach, narrative descriptions) that would be expensive to recompute.
 

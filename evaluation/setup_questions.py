@@ -2,8 +2,7 @@
 """
 Initial setup script that:
 1. Sets up directory structure for each question
-2. Creates question.json files
-3. Generates initial placeholder SQL queries using GPT-4
+2. Generates initial placeholder SQL queries using GPT-4
 """
 
 import asyncio
@@ -17,7 +16,6 @@ import json
 from utils import (
     BASE_DIR,
     load_json_file,
-    save_json_file,
     setup_directories,
     logging,
 )
@@ -87,15 +85,6 @@ async def setup_question(
 
         # Create directory structure
         dirs = setup_directories(question_id)
-
-        # Save question.json with updated structure
-        question_json = {
-            "question_id": question_id,
-            "user_question": question["text"],
-            "category": categories[question["category_id"]]["name"],
-            "difficulty": question["difficulty"],
-        }
-        save_json_file(dirs["question_dir"] / "question.json", question_json)
 
         # Check if SQL files already exist
         existing_sql_files = list(dirs["queries_dir"].glob("*.sql"))
