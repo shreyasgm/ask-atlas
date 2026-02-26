@@ -137,7 +137,7 @@ class TestTableInfoCaching:
 
     def test_second_call_same_schemas_skips_db_reflection(self):
         """Table DDL doesn't change — second call should be cached."""
-        from src.generate_query import get_table_info_for_schemas
+        from src.sql_pipeline import get_table_info_for_schemas
 
         mock_db = MagicMock()
         mock_db.get_table_info.return_value = "CREATE TABLE ..."
@@ -157,7 +157,7 @@ class TestTableInfoCaching:
 
     def test_schema_order_does_not_cause_extra_reflection(self):
         """["hs92", "sitc"] and ["sitc", "hs92"] should share cache."""
-        from src.generate_query import get_table_info_for_schemas
+        from src.sql_pipeline import get_table_info_for_schemas
 
         mock_db = MagicMock()
         mock_db.get_table_info.return_value = "CREATE TABLE ..."

@@ -3,18 +3,14 @@ import asyncio
 import json
 import logging
 import time
-from functools import partial
 from pathlib import Path
 
 from langchain_core.language_models import BaseLanguageModel
-from langchain_core.messages import SystemMessage, ToolMessage
+from langchain_core.messages import ToolMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import FewShotPromptTemplate, PromptTemplate
 from langchain_core.runnables import Runnable
 from langchain_core.tools import tool
-from langgraph.checkpoint.base import BaseCheckpointSaver
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
@@ -216,10 +212,15 @@ Always use these product codes provided, and do not try to search for products b
 
 class QueryToolInput(BaseModel):
     question: str = Field(description="A question about international trade data")
+    context: str = Field(
+        default="",
+        description="Additional technical context (e.g., metric definitions, data caveats) "
+        "that may help answer the query accurately. Optional.",
+    )
 
 
 @tool("query_tool", args_schema=QueryToolInput)
-def _query_tool_schema(question: str) -> str:
+def _query_tool_schema(question: str, context: str = "") -> str:
     """A tool that generates and executes SQL queries on the trade database.
     Input should be a natural language question about trade data."""
     raise NotImplementedError("Schema-only tool; execution routes through graph nodes.")
@@ -358,7 +359,8 @@ async def extract_tool_question(state: AtlasAgentState) -> dict:
             len(last_msg.tool_calls),
         )
     question = last_msg.tool_calls[0]["args"]["question"]
-    return {"pipeline_question": question}
+    context = last_msg.tool_calls[0]["args"].get("context", "")
+    return {"pipeline_question": question, "pipeline_context": context}
 
 
 async def extract_products_node(
@@ -670,42 +672,24 @@ PIPELINE_NODES = frozenset(
 
 
 # ---------------------------------------------------------------------------
-# Agent + graph construction
+# System prompt builder
 # ---------------------------------------------------------------------------
 
 
-def create_sql_agent(
-    llm: BaseLanguageModel,
-    db: SQLDatabaseWithSchemas,
-    engine: Engine,
-    table_descriptions: Dict,
-    example_queries: List[Dict[str, str]] = [],
-    top_k_per_query: int = 15,
-    max_uses: int = 3,
-    checkpointer: BaseCheckpointSaver | None = None,
-    async_engine: AsyncEngine | None = None,
-):
-    """
-    Creates a StateGraph agent for handling complex SQL queries.
+def build_sql_only_system_prompt(max_uses: int, top_k_per_query: int) -> str:
+    """Build the SQL-only agent system prompt.
 
-    The outer agent loop uses *llm* to decide when to query the database.
-    When the LLM produces a ``tool_calls`` entry for ``query_tool``, control
-    flows through an explicit pipeline of nodes that extract products, look up
-    codes, generate SQL, execute it, and return the results as a ToolMessage.
+    Returns the full AGENT_PREFIX f-string content identical to what
+    the legacy create_sql_agent() used.
 
     Args:
-        llm: Language model for the agent
-        db: Database connection in SQLDatabaseWithSchemas format
-        engine: SQLAlchemy engine
-        table_descriptions: Dictionary of table descriptions keyed by schema
-        example_queries: List of example question/query pairs
-        top_k_per_query: Maximum rows to return per query
-        max_uses: Maximum number of queries the agent can execute
-        checkpointer: Optional checkpoint saver for conversation persistence.
-            Falls back to MemorySaver when not provided.
+        max_uses: Maximum number of queries the agent can execute.
+        top_k_per_query: Maximum rows returned per query.
+
+    Returns:
+        System prompt string for SQL-only mode.
     """
-    # Create the system message
-    AGENT_PREFIX = f"""You are Ask-Atlas - an expert agent designed to answer complex questions about international trade data using a postgres database of international trade data (including both goods and services trade). You have access to a tool that can generate and execute SQL queries on the database given a natural language question.
+    return f"""You are Ask-Atlas - an expert agent designed to answer complex questions about international trade data using a postgres database of international trade data (including both goods and services trade). You have access to a tool that can generate and execute SQL queries on the database given a natural language question.
 
 **Your Primary Goal and Workflow:**
 
@@ -780,105 +764,3 @@ If a user asks a normative policy question, such as what products a country shou
 - Instead of just listing out the DB results, try to interpret the results in a way that answers the user's question directly.
 - When responding to the user, your responses should be in markdown format, capable of rendering mathjax. Escape dollar signs properly to avoid rendering errors (e.g., `\\$`).
 """
-
-    async def agent_node(state: AtlasAgentState) -> dict:
-        # Build system prompt dynamically to include any active overrides
-        prompt_text = AGENT_PREFIX
-        overrides_parts: list[str] = []
-        if state.get("override_schema"):
-            overrides_parts.append(
-                f"- Classification schema: **{state['override_schema']}**"
-            )
-        if state.get("override_direction"):
-            overrides_parts.append(
-                f"- Trade direction: **{state['override_direction']}**"
-            )
-        if state.get("override_mode"):
-            overrides_parts.append(f"- Trade mode: **{state['override_mode']}**")
-
-        if overrides_parts:
-            prompt_text += "\n\n**Active User Overrides:**\n" + "\n".join(
-                overrides_parts
-            )
-            prompt_text += "\n\nThese overrides take precedence over what the question implies. If the question contradicts an override, briefly note the conflict but follow the override."
-
-        system_prompt = SystemMessage(content=prompt_text)
-        model_with_tools = llm.bind_tools([_query_tool_schema])
-        response = await model_with_tools.ainvoke([system_prompt] + state["messages"])
-        return {"messages": [response]}
-
-    def route_after_agent(state: AtlasAgentState) -> str:
-        last_msg = state["messages"][-1]
-        if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
-            if state.get("queries_executed", 0) >= max_uses:
-                return "max_queries_exceeded"
-            return "extract_tool_question"
-        return END
-
-    # Build the graph
-    builder = StateGraph(AtlasAgentState)
-
-    # Agent node
-    builder.add_node("agent", agent_node)
-
-    # Pipeline nodes (bound with dependencies via functools.partial)
-    builder.add_node("extract_tool_question", extract_tool_question)
-    builder.add_node(
-        "extract_products",
-        partial(extract_products_node, llm=llm, engine=engine),
-    )
-    _lookup_kwargs = {"llm": llm, "engine": engine}
-    if async_engine is not None:
-        _lookup_kwargs["async_engine"] = async_engine
-    builder.add_node(
-        "lookup_codes",
-        partial(lookup_codes_node, **_lookup_kwargs),
-    )
-    builder.add_node(
-        "get_table_info",
-        partial(get_table_info_node, db=db, table_descriptions=table_descriptions),
-    )
-    builder.add_node(
-        "generate_sql",
-        partial(
-            generate_sql_node,
-            llm=llm,
-            example_queries=example_queries,
-            max_results=top_k_per_query,
-        ),
-    )
-    builder.add_node(
-        "validate_sql",
-        partial(validate_sql_node, table_descriptions=table_descriptions),
-    )
-    builder.add_node(
-        "execute_sql",
-        partial(
-            execute_sql_node,
-            async_engine=async_engine if async_engine is not None else engine,
-        ),
-    )
-    builder.add_node("format_results", format_results_node)
-    builder.add_node("max_queries_exceeded", max_queries_exceeded_node)
-
-    # Routing after SQL validation
-    def route_after_validation(state: AtlasAgentState) -> str:
-        if state.get("last_error"):
-            return "format_results"
-        return "execute_sql"
-
-    # Edges
-    builder.add_edge(START, "agent")
-    builder.add_conditional_edges("agent", route_after_agent)
-    builder.add_edge("extract_tool_question", "extract_products")
-    builder.add_edge("extract_products", "lookup_codes")
-    builder.add_edge("lookup_codes", "get_table_info")
-    builder.add_edge("get_table_info", "generate_sql")
-    builder.add_edge("generate_sql", "validate_sql")
-    builder.add_conditional_edges("validate_sql", route_after_validation)
-    builder.add_edge("execute_sql", "format_results")
-    builder.add_edge("format_results", "agent")
-    builder.add_edge("max_queries_exceeded", "agent")
-
-    memory = checkpointer if checkpointer is not None else MemorySaver()
-    return builder.compile(checkpointer=memory)

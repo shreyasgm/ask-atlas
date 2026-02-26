@@ -12,7 +12,7 @@ from langchain_core.tools import tool
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
-from src.generate_query import QueryToolInput, max_queries_exceeded_node
+from src.sql_pipeline import QueryToolInput, max_queries_exceeded_node
 from src.state import AtlasAgentState
 from src.tests.fake_model import FakeToolCallingModel
 
@@ -49,7 +49,7 @@ def build_test_graph(
     """
 
     @tool("query_tool", args_schema=QueryToolInput)
-    def dummy_tool(question: str) -> str:
+    def dummy_tool(question: str, context: str = "") -> str:
         """A trade data query tool."""
         return "stub result"
 
