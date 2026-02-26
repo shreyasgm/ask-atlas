@@ -8,7 +8,7 @@ RUN uv sync --frozen --no-dev --no-install-project
 
 # App code + data files
 COPY src/ ./src/
-COPY model_config.py db_table_descriptions.json db_table_structure.json LICENSE README.md ./
+COPY db_table_descriptions.json db_table_structure.json LICENSE README.md ./
 
 # Install the project itself (registers src package in venv)
 RUN uv sync --frozen --no-dev
@@ -24,7 +24,7 @@ RUN groupadd --gid 1000 atlas && useradd --uid 1000 --gid atlas --create-home at
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/src/ /app/src/
-COPY --from=builder /app/model_config.py /app/
+COPY --from=builder /app/src/model_config.py /app/src/
 COPY --from=builder /app/db_table_descriptions.json /app/db_table_structure.json /app/
 COPY --from=builder /app/pyproject.toml /app/
 
