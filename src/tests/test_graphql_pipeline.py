@@ -345,14 +345,9 @@ class TestClassifyQuery:
             api_target="country_pages",
         )
         mock_llm = MagicMock()
-        mock_chain = AsyncMock(
-            return_value={
-                "parsed": classification,
-                "raw": MagicMock(),
-                "parsing_error": None,
-            }
+        mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
+            return_value=classification
         )
-        mock_llm.with_structured_output.return_value.ainvoke = mock_chain
 
         state = _base_graphql_state(graphql_question="Tell me about Kenya")
 
@@ -363,12 +358,13 @@ class TestClassifyQuery:
             result["graphql_classification"]["reasoning"] == "Country profile question"
         )
         assert result["graphql_api_target"] == "country_pages"
-        # Verify with_structured_output was called with the schema
+        # Verify with_structured_output was called with function_calling method
         mock_llm.with_structured_output.assert_called_once_with(
-            GraphQLQueryClassification, include_raw=True
+            GraphQLQueryClassification, method="function_calling"
         )
 
-    async def test_llm_exception_falls_back_to_rejection(self):
+    async def test_llm_error_propagates_for_retry(self):
+        """LLM errors propagate (not caught) so LangGraph RetryPolicy can retry."""
         mock_llm = MagicMock()
         mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
             side_effect=Exception("LLM error")
@@ -376,11 +372,8 @@ class TestClassifyQuery:
 
         state = _base_graphql_state(graphql_question="some question")
 
-        result = await classify_query(state, lightweight_model=mock_llm)
-
-        assert result["graphql_classification"]["query_type"] == "reject"
-        assert "LLM error" in result["graphql_classification"]["rejection_reason"]
-        assert result["graphql_api_target"] is None
+        with pytest.raises(Exception, match="LLM error"):
+            await classify_query(state, lightweight_model=mock_llm)
 
 
 # ---------------------------------------------------------------------------
@@ -410,14 +403,9 @@ class TestExtractEntities:
             group_type=None,
         )
         mock_llm = MagicMock()
-        mock_chain = AsyncMock(
-            return_value={
-                "parsed": extraction,
-                "raw": MagicMock(),
-                "parsing_error": None,
-            }
+        mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
+            return_value=extraction
         )
-        mock_llm.with_structured_output.return_value.ainvoke = mock_chain
 
         state = _base_graphql_state(
             graphql_question="What coffee did Kenya export in 2024?",
@@ -431,9 +419,9 @@ class TestExtractEntities:
         assert ext["country_code_guess"] == "KEN"
         assert ext["product_code_guess"] == "0901"
         assert ext["year"] == 2024
-        # Verify the schema was used
+        # Verify function_calling method is used (avoids ParsedChatCompletion warnings)
         mock_llm.with_structured_output.assert_called_once_with(
-            GraphQLEntityExtraction, include_raw=True
+            GraphQLEntityExtraction, method="function_calling"
         )
 
     async def test_skips_when_rejected(self):
@@ -449,7 +437,8 @@ class TestExtractEntities:
         assert result["graphql_entity_extraction"] is None
         mock_llm.with_structured_output.assert_not_called()
 
-    async def test_llm_exception_returns_none(self):
+    async def test_llm_error_propagates_for_retry(self):
+        """LLM errors propagate (not caught) so LangGraph RetryPolicy can retry."""
         mock_llm = MagicMock()
         mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
             side_effect=Exception("LLM failure")
@@ -460,9 +449,8 @@ class TestExtractEntities:
             graphql_classification=_explore_classification(),
         )
 
-        result = await extract_entities(state, lightweight_model=mock_llm)
-
-        assert result["graphql_entity_extraction"] is None
+        with pytest.raises(Exception, match="LLM failure"):
+            await extract_entities(state, lightweight_model=mock_llm)
 
 
 # ---------------------------------------------------------------------------

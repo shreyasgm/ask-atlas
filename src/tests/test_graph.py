@@ -249,3 +249,63 @@ class TestAutoModeBudget:
         tool_names = [t.name for t in bound_tools_list]
         assert "query_tool" in tool_names
         assert "atlas_graphql" not in tool_names
+
+
+# ---------------------------------------------------------------------------
+# Tests: RetryPolicy configured on GraphQL LLM nodes
+# ---------------------------------------------------------------------------
+
+
+class TestRetryPolicyConfiguration:
+    """Verify LangGraph RetryPolicy is attached to GraphQL nodes that make LLM calls."""
+
+    def _build_real_graph(self):
+        """Build graph without patching classify_query so RetryPolicy config is preserved."""
+        mock_db = _make_mock_db()
+        mock_engine = _make_mock_engine()
+        fake_model = FakeToolCallingModel(responses=[AIMessage(content="done")])
+
+        with patch("src.sql_pipeline.ProductAndSchemaLookup"):
+            return build_atlas_graph(
+                llm=fake_model,
+                lightweight_llm=fake_model,
+                db=mock_db,
+                engine=mock_engine,
+                table_descriptions={},
+                example_queries=[],
+                top_k_per_query=15,
+                max_uses=3,
+                checkpointer=MemorySaver(),
+                agent_mode=AgentMode.SQL_ONLY,
+            )
+
+    def test_classify_query_has_retry_policy(self):
+        """classify_query makes an LLM call and should have RetryPolicy."""
+        graph = self._build_real_graph()
+        node = graph.nodes["classify_query"]
+        assert node.retry_policy is not None, "classify_query should have RetryPolicy"
+        policy = node.retry_policy[0]
+        assert policy.max_attempts == 3
+
+    def test_extract_entities_has_retry_policy(self):
+        """extract_entities makes an LLM call and should have RetryPolicy."""
+        graph = self._build_real_graph()
+        node = graph.nodes["extract_entities"]
+        assert node.retry_policy is not None, "extract_entities should have RetryPolicy"
+        policy = node.retry_policy[0]
+        assert policy.max_attempts == 3
+
+    def test_resolve_ids_has_retry_policy(self):
+        """resolve_ids contains an LLM disambiguation call and should have RetryPolicy."""
+        graph = self._build_real_graph()
+        node = graph.nodes["resolve_ids"]
+        assert node.retry_policy is not None, "resolve_ids should have RetryPolicy"
+
+    def test_build_and_execute_has_no_retry_policy(self):
+        """build_and_execute_graphql handles retries internally via the GraphQL client."""
+        graph = self._build_real_graph()
+        node = graph.nodes["build_and_execute_graphql"]
+        assert node.retry_policy is None, (
+            "build_and_execute_graphql should NOT have RetryPolicy "
+            "(GraphQL client handles HTTP retries)"
+        )
