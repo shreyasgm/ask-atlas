@@ -1,16 +1,15 @@
 """Tests for the Atlas link generation module.
 
 Covers:
-- AtlasLink dataclass construction
 - Product classification URL formatting (all 4 classifications)
-- Country page URL builders (all subpage types)
-- Explore page URL builders (all 7 viz types + variants)
-- Frontier country fallback behavior
-- generate_atlas_links dispatch for all query types
-- No links for unmapped query types
-- Resolution notes propagation
-- Edge cases (missing params, defaults)
-- Multiple links per query type
+- Country page and explore page URL builders
+- Frontier country identification and fallback behavior
+- generate_atlas_links dispatch for all 18 query types
+- No links for unmapped query types (global_datum, etc.)
+- Resolution notes propagation (single, multiple, empty)
+- Default values and fallback logic (year, start_year, country_name)
+- Error paths (missing required params, invalid classification)
+- Cross-handler invariants (bilateral URL equivalence)
 - ProductClassificationRegistry lookup by code and name
 """
 
@@ -21,8 +20,6 @@ from src.atlas_links import (
     DEFAULT_PRODUCT_LEVEL,
     DEFAULT_START_YEAR,
     DEFAULT_YEAR,
-    FRONTIER_COUNTRY_IDS,
-    PRODUCT_CLASSIFICATION_PREFIXES,
     AtlasLink,
     ProductClassificationRegistry,
     ProductRecord,
@@ -44,35 +41,6 @@ from src.atlas_links import (
 
 
 class TestAtlasLink:
-    def test_basic_construction(self):
-        link = AtlasLink(
-            url="https://atlas.hks.harvard.edu/countries/404",
-            label="Kenya - Country Profile",
-            link_type="country_page",
-        )
-        assert link.url == "https://atlas.hks.harvard.edu/countries/404"
-        assert link.label == "Kenya - Country Profile"
-        assert link.link_type == "country_page"
-        assert link.resolution_notes == []
-
-    def test_with_resolution_notes(self):
-        notes = ["Country 'Turkey' resolved to Turkiye (792)"]
-        link = AtlasLink(
-            url="https://atlas.hks.harvard.edu/countries/792",
-            label="Turkiye - Country Profile",
-            link_type="country_page",
-            resolution_notes=notes,
-        )
-        assert link.resolution_notes == notes
-
-    def test_explore_page_type(self):
-        link = AtlasLink(
-            url="https://atlas.hks.harvard.edu/explore/treemap?year=2024",
-            label="Treemap",
-            link_type="explore_page",
-        )
-        assert link.link_type == "explore_page"
-
     def test_frozen_dataclass(self):
         link = AtlasLink(
             url="https://example.com",
@@ -127,9 +95,6 @@ class TestProductClassificationFormatting:
                 year=2024, product_classification="INVALID", product_id=1
             )
 
-    def test_all_four_classifications_registered(self):
-        assert set(PRODUCT_CLASSIFICATION_PREFIXES) == {"HS92", "HS12", "HS22", "SITC"}
-
 
 # ---------------------------------------------------------------------------
 # Country page URL builders
@@ -137,54 +102,14 @@ class TestProductClassificationFormatting:
 
 
 class TestCountryPageURLs:
-    """Test all 12 country page subpage URL patterns."""
+    """Test country page URL builder — both branches (with/without subpage)."""
 
-    def test_country_profile(self):
+    def test_profile_no_subpage(self):
         assert country_page_url(404) == f"{ATLAS_BASE_URL}/countries/404"
 
-    def test_export_basket(self):
-        url = country_page_url(404, "export-basket")
-        assert url == f"{ATLAS_BASE_URL}/countries/404/export-basket"
-
-    def test_export_complexity(self):
-        url = country_page_url(404, "export-complexity")
-        assert url == f"{ATLAS_BASE_URL}/countries/404/export-complexity"
-
-    def test_growth_dynamics(self):
+    def test_with_subpage(self):
         url = country_page_url(404, "growth-dynamics")
         assert url == f"{ATLAS_BASE_URL}/countries/404/growth-dynamics"
-
-    def test_market_share(self):
-        url = country_page_url(404, "market-share")
-        assert url == f"{ATLAS_BASE_URL}/countries/404/market-share"
-
-    def test_new_products(self):
-        url = country_page_url(404, "new-products")
-        assert url == f"{ATLAS_BASE_URL}/countries/404/new-products"
-
-    def test_product_space(self):
-        url = country_page_url(404, "product-space")
-        assert url == f"{ATLAS_BASE_URL}/countries/404/product-space"
-
-    def test_paths(self):
-        url = country_page_url(404, "paths")
-        assert url == f"{ATLAS_BASE_URL}/countries/404/paths"
-
-    def test_strategic_approach(self):
-        url = country_page_url(404, "strategic-approach")
-        assert url == f"{ATLAS_BASE_URL}/countries/404/strategic-approach"
-
-    def test_growth_opportunities(self):
-        url = country_page_url(404, "growth-opportunities")
-        assert url == f"{ATLAS_BASE_URL}/countries/404/growth-opportunities"
-
-    def test_product_table(self):
-        url = country_page_url(404, "product-table")
-        assert url == f"{ATLAS_BASE_URL}/countries/404/product-table"
-
-    def test_summary(self):
-        url = country_page_url(404, "summary")
-        assert url == f"{ATLAS_BASE_URL}/countries/404/summary"
 
     def test_different_country_ids(self):
         assert "/countries/840" in country_page_url(840)
@@ -317,9 +242,6 @@ class TestFrontierCountries:
 
     def test_ethiopia_is_not_frontier(self):
         assert not is_frontier_country(231)
-
-    def test_frontier_set_is_nonempty(self):
-        assert len(FRONTIER_COUNTRY_IDS) > 0
 
 
 # ---------------------------------------------------------------------------
@@ -866,38 +788,144 @@ class TestProductClassificationRegistry:
 
 
 # ---------------------------------------------------------------------------
-# End-to-end: SSE-emitted fields coverage
+# Edge cases and invariants
 # ---------------------------------------------------------------------------
 
 
-class TestSSEFieldsCoverage:
-    """Verify all fields needed for SSE emission are present and correct."""
+class TestErrorPaths:
+    def test_missing_country_id_raises_key_error(self):
+        """Handlers that require country_id should fail fast on missing param."""
+        with pytest.raises(KeyError):
+            generate_atlas_links("country_profile", {"country_name": "Kenya"})
 
-    def test_all_sse_fields_present(self):
+    def test_missing_partner_id_raises_key_error(self):
+        with pytest.raises(KeyError):
+            generate_atlas_links(
+                "treemap_bilateral",
+                {"country_id": 404, "country_name": "Kenya", "year": 2024},
+            )
+
+    def test_invalid_classification_through_dispatch(self):
+        """ValueError from URL builder should propagate through dispatch."""
+        with pytest.raises(ValueError, match="Unknown product classification"):
+            generate_atlas_links(
+                "product_info",
+                {
+                    "product_id": 726,
+                    "product_classification": "INVALID",
+                    "product_name": "Coffee",
+                    "year": 2024,
+                },
+            )
+
+
+class TestCrossHandlerInvariants:
+    def test_treemap_bilateral_and_explore_bilateral_produce_same_url(self):
+        """These two query types should generate identical URLs for the same entities."""
+        params = {
+            "country_id": 404,
+            "country_name": "Kenya",
+            "partner_id": 840,
+            "partner_name": "USA",
+            "year": 2024,
+        }
+        treemap_links = generate_atlas_links("treemap_bilateral", params)
+        explore_links = generate_atlas_links("explore_bilateral", params)
+        assert treemap_links[0].url == explore_links[0].url
+
+    def test_frontier_fallback_preserves_specified_year(self):
+        """A non-default year must survive the frontier fallback path."""
         links = generate_atlas_links(
-            "country_profile",
-            {"country_id": 404, "country_name": "Kenya"},
+            "growth_opportunities",
+            {"country_id": 840, "country_name": "USA", "year": 2020},
         )
-        link = links[0]
-        # All 4 SSE fields
-        assert isinstance(link.url, str)
-        assert isinstance(link.label, str)
-        assert link.link_type in ("country_page", "explore_page")
-        assert isinstance(link.resolution_notes, list)
+        assert "year=2020" in links[0].url
 
-    def test_serializable_to_dict(self):
-        """AtlasLink should be convertible to a dict matching the SSE schema."""
-        from dataclasses import asdict
-
+    def test_overtime_uses_year_when_year_max_absent(self):
+        """_get_year_range falls back from year_max to year to DEFAULT_YEAR."""
         links = generate_atlas_links(
-            "treemap_products",
-            {
-                "country_id": 404,
-                "country_name": "Kenya",
-                "year": 2024,
-                "resolution_notes": ["Test note"],
-            },
+            "overtime_products",
+            {"country_id": 404, "country_name": "Kenya", "year": 2020},
         )
-        d = asdict(links[0])
-        assert set(d.keys()) == {"url", "label", "link_type", "resolution_notes"}
-        assert d["resolution_notes"] == ["Test note"]
+        assert "year=2020" in links[0].url
+        assert "endYear=2020" in links[0].url
+        assert f"startYear={DEFAULT_START_YEAR}" in links[0].url
+
+
+class TestAllQueryTypesDispatch:
+    """Parametrized smoke test: every registered query type produces valid links."""
+
+    @pytest.mark.parametrize(
+        "query_type,params",
+        [
+            ("country_profile", {"country_id": 404, "country_name": "Kenya"}),
+            ("country_lookback", {"country_id": 404, "country_name": "Kenya"}),
+            ("new_products", {"country_id": 404, "country_name": "Kenya"}),
+            ("country_year", {"country_id": 404, "country_name": "Kenya"}),
+            ("growth_opportunities", {"country_id": 404, "country_name": "Kenya"}),
+            ("product_table", {"country_id": 404, "country_name": "Kenya"}),
+            (
+                "treemap_products",
+                {"country_id": 404, "country_name": "Kenya", "year": 2024},
+            ),
+            (
+                "treemap_partners",
+                {"country_id": 404, "country_name": "Kenya", "year": 2024},
+            ),
+            (
+                "treemap_bilateral",
+                {
+                    "country_id": 404,
+                    "country_name": "Kenya",
+                    "partner_id": 840,
+                    "partner_name": "USA",
+                    "year": 2024,
+                },
+            ),
+            (
+                "product_info",
+                {
+                    "product_id": 726,
+                    "product_classification": "HS92",
+                    "product_name": "Coffee",
+                    "year": 2024,
+                },
+            ),
+            (
+                "explore_bilateral",
+                {
+                    "country_id": 404,
+                    "country_name": "Kenya",
+                    "partner_id": 840,
+                    "partner_name": "USA",
+                    "year": 2024,
+                },
+            ),
+            (
+                "explore_group",
+                {"group_id": 5, "group_name": "BRICS", "year": 2024},
+            ),
+            ("overtime_products", {"country_id": 404, "country_name": "Kenya"}),
+            ("overtime_partners", {"country_id": 404, "country_name": "Kenya"}),
+            ("marketshare", {"country_id": 404, "country_name": "Kenya"}),
+            (
+                "product_space",
+                {"country_id": 404, "country_name": "Kenya", "year": 2024},
+            ),
+            (
+                "feasibility",
+                {"country_id": 404, "country_name": "Kenya", "year": 2024},
+            ),
+            (
+                "feasibility_table",
+                {"country_id": 404, "country_name": "Kenya", "year": 2024},
+            ),
+        ],
+    )
+    def test_produces_valid_links(self, query_type, params):
+        links = generate_atlas_links(query_type, params)
+        assert len(links) >= 1, f"{query_type} produced no links"
+        for link in links:
+            assert link.url.startswith(ATLAS_BASE_URL), f"Bad URL prefix: {link.url}"
+            assert link.label, f"Empty label for {query_type}"
+            assert link.link_type in ("country_page", "explore_page")
