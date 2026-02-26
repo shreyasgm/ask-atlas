@@ -59,7 +59,10 @@ def project_paths(base_dir):
     return {
         "queries_json": base_dir / "src/example_queries/queries.json",
         "example_queries_dir": base_dir / "src/example_queries",
-        "table_descriptions_json": base_dir / "db_table_descriptions.json",
+        "table_descriptions_json": base_dir
+        / "src"
+        / "schema"
+        / "db_table_descriptions.json",
     }
 
 

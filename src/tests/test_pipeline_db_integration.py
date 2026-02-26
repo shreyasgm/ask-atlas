@@ -54,7 +54,9 @@ def db_instance(db_engine):
 @pytest.fixture(scope="module")
 def table_descriptions(base_dir):
     """Load real table descriptions JSON."""
-    return load_table_descriptions(base_dir / "db_table_descriptions.json")
+    return load_table_descriptions(
+        base_dir / "src" / "schema" / "db_table_descriptions.json"
+    )
 
 
 # ---------------------------------------------------------------------------

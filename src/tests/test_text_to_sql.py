@@ -13,8 +13,11 @@ pytestmark = [pytest.mark.db, pytest.mark.asyncio(loop_scope="module")]
 async def atlas_sql(base_dir):
     instance = await AtlasTextToSQL.create_async(
         db_uri=settings.atlas_db_url,
-        table_descriptions_json=base_dir / "db_table_descriptions.json",
-        table_structure_json=base_dir / "db_table_structure.json",
+        table_descriptions_json=base_dir
+        / "src"
+        / "schema"
+        / "db_table_descriptions.json",
+        table_structure_json=base_dir / "src" / "schema" / "db_table_structure.json",
         queries_json=base_dir / "src/example_queries/queries.json",
         example_queries_dir=base_dir / "src/example_queries",
         max_results=settings.max_results_per_query,
@@ -118,7 +121,7 @@ async def test_stream_contract(atlas_sql):
 @pytest.mark.filterwarnings("ignore::pytest.PytestWarning")
 def test_json_loading(base_dir):
     """Test the JSON loading functionality"""
-    test_file = base_dir / "db_table_descriptions.json"
+    test_file = base_dir / "src" / "schema" / "db_table_descriptions.json"
 
     result = AtlasTextToSQL._load_json_as_dict(test_file)
     assert isinstance(result, dict)
