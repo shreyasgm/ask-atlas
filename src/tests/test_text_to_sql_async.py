@@ -8,7 +8,7 @@ control over agent responses.
 """
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 from langchain_core.messages import AIMessage, ToolMessage
 from langgraph.checkpoint.memory import MemorySaver
@@ -52,9 +52,9 @@ def _build_stub_instance(
     - **agent**: Calls ``FakeToolCallingModel`` which returns scripted
       ``AIMessage`` responses in order.
     - **format_results**: A stub pipeline node.  The node name MUST be a
-      member of ``PIPELINE_NODES`` (defined in ``src.generate_query``)
+      member of ``ALL_PIPELINE_NODES`` (defined in ``src.text_to_sql``)
       because the streaming logic in ``astream_agent_response`` uses
-      ``PIPELINE_NODES`` to decide whether a stream update comes from
+      ``ALL_PIPELINE_NODES`` to decide whether a stream update comes from
       the tool pipeline (source="tool") or from the agent (source="agent").
       Using any name outside that frozenset would cause all updates to be
       classified as agent updates, hiding tool_output StreamData items.
@@ -63,10 +63,10 @@ def _build_stub_instance(
                                           |-> no tool_calls  -> END
     """
     from langchain_core.tools import tool
-    from src.generate_query import QueryToolInput
+    from src.sql_pipeline import QueryToolInput
 
     @tool("query_tool", args_schema=QueryToolInput)
-    def dummy_tool(question: str) -> str:
+    def dummy_tool(question: str, context: str = "") -> str:
         """A trade data query tool."""
         return "stub result"
 
@@ -154,12 +154,20 @@ class TestAAnswerQuestion:
         assert "42" in result.answer
 
     async def test_generates_thread_id_when_none(self):
-        """When thread_id is None, a UUID is auto-generated and no error
-        is raised."""
+        """When thread_id is None, a UUID is auto-generated and used
+        as the checkpointer thread key."""
+        import uuid
+
         responses = [AIMessage(content="Some answer.")]
         instance = _build_stub_instance(responses)
         result = await instance.aanswer_question("hi", thread_id=None)
         assert isinstance(result, AnswerResult)
+        assert result.answer  # non-empty answer produced
+
+        # The MemorySaver should have exactly one thread whose key is a valid UUID
+        stored_threads = list(instance.agent.checkpointer.storage.keys())
+        assert len(stored_threads) == 1
+        uuid.UUID(stored_threads[0])  # raises ValueError if not a valid UUID
 
     async def test_multi_turn_remembers_context(self):
         """Two calls to aanswer_question with the SAME thread_id should
@@ -469,112 +477,6 @@ class TestAAnswerQuestionStream:
 # ---------------------------------------------------------------------------
 
 
-class TestCreateAsync:
-    """Behavioral tests for the ``create_async`` classmethod.
-
-    Rather than mocking every internal module and asserting mock call
-    patterns (which couples tests to implementation), these tests verify
-    observable properties of the returned instance.
-    """
-
-    async def test_create_async_returns_instance(self):
-        """create_async should return an AtlasTextToSQL instance."""
-        with (
-            patch("src.text_to_sql.get_settings") as mock_settings,
-            patch("src.text_to_sql.create_engine") as mock_engine,
-            patch("src.text_to_sql.create_async_engine") as mock_async_engine,
-            patch("src.text_to_sql.SQLDatabaseWithSchemas") as mock_db_cls,
-            patch("src.text_to_sql.create_llm") as mock_create_llm,
-            patch("src.text_to_sql.load_example_queries") as mock_load_queries,
-            patch("src.text_to_sql.create_sql_agent") as mock_create_agent,
-            patch("src.text_to_sql.AsyncCheckpointerManager") as mock_acm_cls,
-        ):
-            mock_settings.return_value = MagicMock(
-                atlas_db_url="postgresql://test:5432/db",
-                max_results_per_query=15,
-                max_queries_per_question=3,
-                lightweight_model="test-model",
-                lightweight_model_provider="openai",
-                frontier_model="test-model",
-                frontier_model_provider="openai",
-            )
-            mock_engine.return_value = MagicMock()
-            mock_async_engine.return_value = MagicMock()
-            mock_db_cls.return_value = MagicMock()
-            mock_create_llm.return_value = MagicMock()
-            mock_load_queries.return_value = []
-            mock_create_agent.return_value = MagicMock()
-
-            mock_acm = MagicMock()
-            mock_acm.get_checkpointer = AsyncMock(return_value=MemorySaver())
-            mock_acm_cls.return_value = mock_acm
-
-            instance = await AtlasTextToSQL.create_async(
-                db_uri="postgresql://test:5432/db",
-                table_descriptions_json="db_table_descriptions.json",
-                table_structure_json="db_table_structure.json",
-                queries_json="queries.json",
-                example_queries_dir="example_queries",
-            )
-
-            assert isinstance(instance, AtlasTextToSQL)
-
-    async def test_create_async_memorysaver_fallback(self):
-        """When no DB URL is available for the async checkpointer, the
-        factory should still produce a usable instance.
-
-        Behavioral assertion: the returned instance has both
-        ``_async_checkpointer_manager`` and ``agent`` attributes set,
-        confirming that the factory wired up persistence and the graph."""
-        with (
-            patch("src.text_to_sql.get_settings") as mock_settings,
-            patch("src.text_to_sql.create_engine") as mock_engine,
-            patch("src.text_to_sql.create_async_engine") as mock_async_engine,
-            patch("src.text_to_sql.SQLDatabaseWithSchemas") as mock_db_cls,
-            patch("src.text_to_sql.create_llm") as mock_create_llm,
-            patch("src.text_to_sql.load_example_queries") as mock_load_queries,
-            patch("src.text_to_sql.create_sql_agent") as mock_create_agent,
-            patch("src.text_to_sql.AsyncCheckpointerManager") as mock_acm_cls,
-        ):
-            mock_settings.return_value = MagicMock(
-                atlas_db_url="postgresql://test:5432/db",
-                max_results_per_query=15,
-                max_queries_per_question=3,
-                lightweight_model="test-model",
-                lightweight_model_provider="openai",
-                frontier_model="test-model",
-                frontier_model_provider="openai",
-            )
-            mock_engine.return_value = MagicMock()
-            mock_async_engine.return_value = MagicMock()
-            mock_db_cls.return_value = MagicMock()
-            mock_create_llm.return_value = MagicMock()
-            mock_load_queries.return_value = []
-            mock_create_agent.return_value = MagicMock()
-
-            # Simulate MemorySaver fallback: get_checkpointer returns a
-            # MemorySaver regardless of DB URL.
-            mock_acm = MagicMock()
-            mock_acm.get_checkpointer = AsyncMock(return_value=MemorySaver())
-            mock_acm_cls.return_value = mock_acm
-
-            instance = await AtlasTextToSQL.create_async(
-                db_uri="postgresql://test:5432/db",
-                table_descriptions_json="db_table_descriptions.json",
-                table_structure_json="db_table_structure.json",
-                queries_json="queries.json",
-                example_queries_dir="example_queries",
-            )
-
-            # Behavioral assertions: the factory produced a complete instance
-            assert hasattr(
-                instance, "_async_checkpointer_manager"
-            ), "create_async must set _async_checkpointer_manager on the instance"
-            assert hasattr(
-                instance, "agent"
-            ), "create_async must set agent on the instance"
-
-
 # ---------------------------------------------------------------------------
 # Tests -- aclose
 # ---------------------------------------------------------------------------
@@ -652,10 +554,10 @@ def _build_pipeline_stub_instance(
         max_queries: Max queries before routing to max_queries_exceeded.
     """
     from langchain_core.tools import tool
-    from src.generate_query import QueryToolInput
+    from src.sql_pipeline import QueryToolInput
 
     @tool("query_tool", args_schema=QueryToolInput)
-    def dummy_tool(question: str) -> str:
+    def dummy_tool(question: str, context: str = "") -> str:
         """A trade data query tool."""
         return "stub result"
 

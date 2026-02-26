@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from langchain_core.messages import AIMessage, ToolMessage
 
 from src.error_handling import QueryExecutionError
-from src.generate_query import (
+from src.sql_pipeline import (
     execute_sql_node,
     extract_products_node,
     extract_tool_question,
@@ -84,6 +84,7 @@ def _base_state(**overrides) -> dict:
         "last_error": "",
         "retry_count": 0,
         "pipeline_question": "",
+        "pipeline_context": "",
         "pipeline_products": None,
         "pipeline_codes": "",
         "pipeline_table_info": "",
@@ -114,7 +115,8 @@ class TestExtractToolQuestion:
 
         result = await extract_tool_question(state)
 
-        assert result == {"pipeline_question": "Top exporters of cotton?"}
+        assert result["pipeline_question"] == "Top exporters of cotton?"
+        assert "pipeline_context" in result
 
     async def test_uses_last_message(self):
         """When multiple messages exist, the node reads the *last* one."""
@@ -140,7 +142,27 @@ class TestExtractToolQuestion:
 
         result = await extract_tool_question(state)
 
-        assert result == {"pipeline_question": ""}
+        assert result["pipeline_question"] == ""
+        assert "pipeline_context" in result
+
+    async def test_extracts_context_from_tool_call(self):
+        """When tool_call args include a context field, it is extracted."""
+        msg = AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "id": "call_ctx",
+                    "name": "query_tool",
+                    "args": {
+                        "question": "Coffee exports?",
+                        "context": "Previous data showed X",
+                    },
+                }
+            ],
+        )
+        state = _base_state(messages=[msg])
+        result = await extract_tool_question(state)
+        assert result["pipeline_context"] == "Previous data showed X"
 
     async def test_extracts_first_question_from_parallel_tool_calls(self):
         """When the LLM emits multiple parallel tool_calls, only the first question is used."""
@@ -152,7 +174,8 @@ class TestExtractToolQuestion:
 
         result = await extract_tool_question(state)
 
-        assert result == {"pipeline_question": "First question?"}
+        assert result["pipeline_question"] == "First question?"
+        assert "pipeline_context" in result
 
 
 # ---------------------------------------------------------------------------
@@ -179,7 +202,7 @@ class TestExtractProductsNode:
         mock_llm = MagicMock()
         mock_engine = MagicMock()
 
-        with patch("src.generate_query.ProductAndSchemaLookup") as MockLookup:
+        with patch("src.sql_pipeline.ProductAndSchemaLookup") as MockLookup:
             mock_instance = MagicMock()
             mock_instance.aextract_schemas_and_product_mentions_direct = AsyncMock(
                 return_value=canned
@@ -207,7 +230,7 @@ class TestExtractProductsNode:
         mock_llm = MagicMock()
         mock_engine = MagicMock()
 
-        with patch("src.generate_query.ProductAndSchemaLookup") as MockLookup:
+        with patch("src.sql_pipeline.ProductAndSchemaLookup") as MockLookup:
             mock_instance = MagicMock()
             mock_instance.aextract_schemas_and_product_mentions_direct = AsyncMock(
                 return_value=canned
@@ -235,7 +258,7 @@ class TestExtractProductsNode:
         mock_llm = MagicMock()
         mock_engine = MagicMock()
 
-        with patch("src.generate_query.ProductAndSchemaLookup") as MockLookup:
+        with patch("src.sql_pipeline.ProductAndSchemaLookup") as MockLookup:
             mock_instance = MagicMock()
             mock_instance.aextract_schemas_and_product_mentions_direct = AsyncMock(
                 return_value=canned
@@ -261,7 +284,7 @@ class TestExtractProductsNode:
         mock_llm = MagicMock()
         mock_engine = MagicMock()
 
-        with patch("src.generate_query.ProductAndSchemaLookup") as MockLookup:
+        with patch("src.sql_pipeline.ProductAndSchemaLookup") as MockLookup:
             mock_instance = MagicMock()
             mock_instance.aextract_schemas_and_product_mentions_direct = AsyncMock(
                 return_value=canned
@@ -318,7 +341,7 @@ class TestLookupCodesNode:
         mock_llm = MagicMock()
         mock_engine = MagicMock()
 
-        with patch("src.generate_query.ProductAndSchemaLookup") as MockLookup:
+        with patch("src.sql_pipeline.ProductAndSchemaLookup") as MockLookup:
             mock_instance = MagicMock()
             mock_instance.get_candidate_codes.return_value = candidates
             mock_instance.aselect_final_codes_direct = AsyncMock(
@@ -406,7 +429,7 @@ class TestLookupCodesNode:
         mock_llm = MagicMock()
         mock_engine = MagicMock()
 
-        with patch("src.generate_query.ProductAndSchemaLookup") as MockLookup:
+        with patch("src.sql_pipeline.ProductAndSchemaLookup") as MockLookup:
             mock_instance = MagicMock()
             mock_instance.get_candidate_codes.return_value = candidates
             mock_instance.aselect_final_codes_direct = AsyncMock(
@@ -443,7 +466,7 @@ class TestGetTableInfoNode:
             "hs92": [{"table_name": "country_year", "context_str": "Year-level data"}]
         }
 
-        with patch("src.generate_query.get_table_info_for_schemas") as mock_get:
+        with patch("src.sql_pipeline.get_table_info_for_schemas") as mock_get:
             mock_get.return_value = (
                 "Table: hs92.country_year\nDescription: Year-level data\n"
             )
@@ -466,7 +489,7 @@ class TestGetTableInfoNode:
         mock_db = MagicMock()
         mock_table_desc = {}
 
-        with patch("src.generate_query.get_table_info_for_schemas") as mock_get:
+        with patch("src.sql_pipeline.get_table_info_for_schemas") as mock_get:
             mock_get.return_value = ""
 
             state = _base_state(pipeline_products=None)
@@ -490,7 +513,7 @@ class TestGetTableInfoNode:
         mock_db = MagicMock()
         mock_table_desc = {}
 
-        with patch("src.generate_query.get_table_info_for_schemas") as mock_get:
+        with patch("src.sql_pipeline.get_table_info_for_schemas") as mock_get:
             mock_get.return_value = "table info for both schemas"
 
             state = _base_state(pipeline_products=products_found)
@@ -517,7 +540,7 @@ class TestGenerateSqlNode:
     async def test_generates_sql_query(self):
         mock_llm = MagicMock()
 
-        with patch("src.generate_query.create_query_generation_chain") as mock_create:
+        with patch("src.sql_pipeline.create_query_generation_chain") as mock_create:
             mock_chain = MagicMock()
             mock_chain.ainvoke = AsyncMock(
                 return_value="SELECT * FROM hs92.country_year LIMIT 5"
@@ -549,7 +572,7 @@ class TestGenerateSqlNode:
         mock_llm = MagicMock()
         codes_str = "\n- wheat (Schema: hs92): 1001\n"
 
-        with patch("src.generate_query.create_query_generation_chain") as mock_create:
+        with patch("src.sql_pipeline.create_query_generation_chain") as mock_create:
             mock_chain = MagicMock()
             mock_chain.ainvoke = AsyncMock(
                 return_value="SELECT * FROM hs92.country_product_year_4 WHERE product_code = '1001'"
@@ -581,7 +604,7 @@ class TestGenerateSqlNode:
         """An empty-string codes value should be converted to None."""
         mock_llm = MagicMock()
 
-        with patch("src.generate_query.create_query_generation_chain") as mock_create:
+        with patch("src.sql_pipeline.create_query_generation_chain") as mock_create:
             mock_chain = MagicMock()
             mock_chain.ainvoke = AsyncMock(return_value="SELECT 1")
             mock_create.return_value = mock_chain
@@ -610,7 +633,7 @@ class TestGenerateSqlNode:
         mock_llm = MagicMock()
         examples = [{"question": "Top exporters?", "query": "SELECT country FROM ..."}]
 
-        with patch("src.generate_query.create_query_generation_chain") as mock_create:
+        with patch("src.sql_pipeline.create_query_generation_chain") as mock_create:
             mock_chain = MagicMock()
             mock_chain.ainvoke = AsyncMock(return_value="SELECT 1")
             mock_create.return_value = mock_chain
@@ -656,7 +679,7 @@ class TestExecuteSqlNode:
         )
 
         with patch(
-            "src.generate_query.execute_with_retry",
+            "src.sql_pipeline.execute_with_retry",
             side_effect=lambda fn, *a, **kw: fn(),
         ):
             result = await execute_sql_node(state, async_engine=engine)
@@ -671,7 +694,7 @@ class TestExecuteSqlNode:
         state = _base_state(pipeline_sql="SELECT * FROM hs92.country_year WHERE 1=0")
 
         with patch(
-            "src.generate_query.execute_with_retry",
+            "src.sql_pipeline.execute_with_retry",
             side_effect=lambda fn, *a, **kw: fn(),
         ):
             result = await execute_sql_node(state, async_engine=engine)
@@ -685,7 +708,7 @@ class TestExecuteSqlNode:
         state = _base_state(pipeline_sql="CREATE TABLE tmp (id int)")
 
         with patch(
-            "src.generate_query.execute_with_retry",
+            "src.sql_pipeline.execute_with_retry",
             side_effect=lambda fn, *a, **kw: fn(),
         ):
             result = await execute_sql_node(state, async_engine=engine)
@@ -699,7 +722,7 @@ class TestExecuteSqlNode:
         state = _base_state(pipeline_sql="SELECT bad syntax")
 
         with patch(
-            "src.generate_query.execute_with_retry",
+            "src.sql_pipeline.execute_with_retry",
             side_effect=QueryExecutionError("syntax error at position 7"),
         ):
             result = await execute_sql_node(state, async_engine=mock_engine)
@@ -713,7 +736,7 @@ class TestExecuteSqlNode:
         state = _base_state(pipeline_sql="SELECT 1")
 
         with patch(
-            "src.generate_query.execute_with_retry",
+            "src.sql_pipeline.execute_with_retry",
             side_effect=RuntimeError("connection lost"),
         ):
             result = await execute_sql_node(state, async_engine=mock_engine)
@@ -730,7 +753,7 @@ class TestExecuteSqlNode:
         state = _base_state(pipeline_sql="SELECT iso3_code, export_value FROM t")
 
         with patch(
-            "src.generate_query.execute_with_retry",
+            "src.sql_pipeline.execute_with_retry",
             side_effect=lambda fn, *a, **kw: fn(),
         ):
             result = await execute_sql_node(state, async_engine=engine)
@@ -770,7 +793,7 @@ class TestExecuteSqlNodeStructuredData:
         state = _base_state(pipeline_sql="SELECT country, value FROM t LIMIT 2")
 
         with patch(
-            "src.generate_query.execute_with_retry",
+            "src.sql_pipeline.execute_with_retry",
             side_effect=lambda fn, *a, **kw: fn(),
         ):
             result = await execute_sql_node(state, async_engine=engine)
@@ -787,7 +810,7 @@ class TestExecuteSqlNodeStructuredData:
         state = _base_state(pipeline_sql="SELECT * FROM t WHERE 1=0")
 
         with patch(
-            "src.generate_query.execute_with_retry",
+            "src.sql_pipeline.execute_with_retry",
             side_effect=lambda fn, *a, **kw: fn(),
         ):
             result = await execute_sql_node(state, async_engine=engine)
@@ -801,7 +824,7 @@ class TestExecuteSqlNodeStructuredData:
         state = _base_state(pipeline_sql="SELECT bad")
 
         with patch(
-            "src.generate_query.execute_with_retry",
+            "src.sql_pipeline.execute_with_retry",
             side_effect=QueryExecutionError("syntax error"),
         ):
             result = await execute_sql_node(state, async_engine=mock_engine)
@@ -816,7 +839,7 @@ class TestExecuteSqlNodeStructuredData:
         state = _base_state(pipeline_sql="INSERT INTO t VALUES (1)")
 
         with patch(
-            "src.generate_query.execute_with_retry",
+            "src.sql_pipeline.execute_with_retry",
             side_effect=lambda fn, *a, **kw: fn(),
         ):
             result = await execute_sql_node(state, async_engine=engine)
