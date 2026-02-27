@@ -1,16 +1,42 @@
-# Product Space and Relatedness
-
-**Purpose:** Technical reference for product proximity, distance, density, COG/COI metrics, the 8-cluster product space visualization, and the Growth Opportunity feasibility scatter — all as implemented in the Atlas of Economic Complexity.
-
-**When to load this document:** Load when the user asks which products a country should diversify into, how
-nearby or feasible a product is for a country, what proximity/distance/density
-means as a strategic concept, how the Growth Opportunity feasibility scatter
-is constructed, or what the 8 product space clusters represent. Also load for
-`productProduct` query usage or `product_product_4` table structure. For
-country-level diversification strategy context, also load `strategic_approaches.md`.
-Do NOT load for metric formula derivations alone (see `metrics_glossary.md`) or
-for reproducing the product space visualization (see `explore_page_reproduction.md`).
-
+---
+title: Product Space and Relatedness
+purpose: >
+  Technical reference for product proximity, distance, density, COG/COI metrics,
+  the 8-cluster product space visualization, and the Growth Opportunity
+  feasibility scatter — all as implemented in the Atlas of Economic Complexity.
+keywords:
+  - product space
+  - proximity
+  - distance
+  - density
+  - COG
+  - COI
+  - opportunity gain
+  - feasibility scatter
+  - diversification
+  - product clusters
+  - product_product
+  - productProduct
+  - relatedness
+  - adjacent possible
+  - stepping stone
+  - core vs periphery
+when_to_load: >
+  Load when the user asks which products a country should diversify into, how
+  nearby or feasible a product is for a country, what proximity/distance/density
+  means as a strategic concept, how the Growth Opportunity feasibility scatter is
+  constructed, or what the 8 product space clusters represent. Also load for
+  `productProduct` query usage or `product_product_4` table structure. For
+  country-level diversification strategy context, also load
+  strategic_approaches.md.
+when_not_to_load: >
+  Do not load for metric formula derivations alone (see metrics_glossary.md) or
+  for reproducing the product space visualization (see
+  explore_page_reproduction.md).
+related_docs:
+  - strategic_approaches.md
+  - metrics_glossary.md
+  - explore_page_reproduction.md
 ---
 
 ## Conceptual Foundation

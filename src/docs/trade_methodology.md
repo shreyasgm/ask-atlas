@@ -1,14 +1,37 @@
-# Trade Data Methodology
-
-**Purpose:** Explains how the Harvard Growth Lab constructs the Atlas of Economic Complexity trade dataset — reconciling exporter/importer reporting discrepancies and harmonizing product classifications across HS vintages.
-
-**When to load this document:** Load when the user explicitly asks why Atlas trade values differ from raw UN Comtrade
-or WTO data, how mirror statistics work, how CIF/FOB adjustments are applied, how
-product codes are harmonized across HS revisions, or which external data sources
-feed the Atlas pipeline. Do NOT load for questions about which classification to use
-(see `classification_systems.md`) or for CIF/FOB value differences in a specific
-query (see `inflation_and_valuation.md`).
-
+---
+title: Trade Data Methodology
+purpose: >
+  Explains how the Harvard Growth Lab constructs the Atlas of Economic Complexity
+  trade dataset — reconciling exporter/importer reporting discrepancies and
+  harmonizing product classifications across HS vintages.
+keywords:
+  - trade data
+  - mirroring
+  - CIF/FOB
+  - mirror statistics
+  - Comtrade
+  - reconciliation
+  - reliability scores
+  - product concordance
+  - HS vintage
+  - Lukaszuk-Torun
+  - classification harmonization
+  - data sources
+  - WTO
+  - UN Comtrade
+  - data discrepancy
+when_to_load: >
+  Load when the user explicitly asks why Atlas trade values differ from raw UN
+  Comtrade or WTO data, how mirror statistics work, how CIF/FOB adjustments are
+  applied, how product codes are harmonized across HS revisions, or which external
+  data sources feed the Atlas pipeline.
+when_not_to_load: >
+  Do not load for questions about which classification to use (see
+  classification_systems.md) or for CIF/FOB value differences in a specific query
+  (see inflation_and_valuation.md).
+related_docs:
+  - classification_systems.md
+  - inflation_and_valuation.md
 ---
 
 ## Data Sources

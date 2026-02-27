@@ -1,14 +1,35 @@
-# Services Trade Data
-
-**Purpose:** Technical reference for services trade data in the Atlas of Economic Complexity — DB schemas, service category taxonomy, year and country coverage, key differences from goods trade, and how to write correct SQL queries.
-
-**When to load this document:** Load when the user asks about services exports or imports (tourism, transport,
-ICT, financial services), why the Atlas treemap total changes when switching from
-"Products" to "Locations" view, whether bilateral services data is available
-between two countries, or why services lack RCA/ECI/product-space metrics. Also
-load when combining goods and services into a total export figure. Do NOT load
-for goods trade methodology (see `trade_methodology.md`).
-
+---
+title: Services Trade Data
+purpose: >
+  Technical reference for services trade data in the Atlas of Economic Complexity
+  — DB schemas, service category taxonomy, year and country coverage, key
+  differences from goods trade, and how to write correct SQL queries.
+keywords:
+  - services trade
+  - services exports
+  - services imports
+  - tourism
+  - transport
+  - ICT
+  - financial services
+  - EBOPS
+  - services_unilateral
+  - services_bilateral
+  - Products vs Locations discrepancy
+  - bilateral services
+  - services RCA
+  - services complexity
+  - goods vs services
+when_to_load: >
+  Load when the user asks about services exports or imports (tourism, transport,
+  ICT, financial services), why the Atlas treemap total changes when switching
+  from "Products" to "Locations" view, whether bilateral services data is
+  available between two countries, or why services lack RCA/ECI/product-space
+  metrics. Also load when combining goods and services into a total export figure.
+when_not_to_load: >
+  Do not load for goods trade methodology (see trade_methodology.md).
+related_docs:
+  - trade_methodology.md
 ---
 
 ## Two Services Schemas

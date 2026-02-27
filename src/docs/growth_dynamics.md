@@ -1,16 +1,21 @@
-# Growth Dynamics
-
-**Purpose:** Technical reference for the Export Growth Dynamics visualization on Atlas Country Pages and the related growth metrics available through the Country Pages GraphQL API.
-
-**When to load this document:** Load when the user asks about a country's historical export growth rate or GDP
-growth over a specific period, what the Growth Dynamics bubble chart shows (axes,
-bubble sizing, ECI reference line), non-oil export CAGR, or how to use the
-`countryLookback` or `countryProductLookback` API for historical growth data.
-Also load for `StructuralTransformationStep` or `ExportValueGrowthClassification`
-enum values. Do NOT load for forward-looking income growth projections (see
-`strategic_approaches.md`) or for complete country page reproduction recipes
-(see `country_page_reproduction.md`).
-
+---
+title: Growth Dynamics
+purpose: >
+  Technical reference for the Export Growth Dynamics visualization on Atlas Country
+  Pages and the related growth metrics available through the Country Pages GraphQL API.
+keywords: [growth dynamics, CAGR, export growth, GDP growth, ECI, countryLookback, countryProductLookback, bubble chart, scatter, non-oil, structural transformation, growth projection, lookback]
+when_to_load: >
+  Load when the user asks about a country's historical export growth rate or GDP
+  growth over a specific period, what the Growth Dynamics bubble chart shows (axes,
+  bubble sizing, ECI reference line), non-oil export CAGR, or how to use the
+  `countryLookback` or `countryProductLookback` API for historical growth data.
+  Also load for `StructuralTransformationStep` or `ExportValueGrowthClassification`
+  enum values.
+when_not_to_load: >
+  Do NOT load for forward-looking income growth projections (see
+  `strategic_approaches.md`) or for complete country page reproduction recipes
+  (see `country_page_reproduction.md`).
+related_docs: [strategic_approaches.md, country_page_reproduction.md]
 ---
 
 ## 1. The Growth Dynamics Visualization

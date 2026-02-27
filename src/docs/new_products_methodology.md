@@ -1,15 +1,20 @@
-# New Products Methodology
-
-**Purpose:** Defines how the Atlas identifies, measures, and compares "new products" for a country — products in which a country has newly developed a revealed comparative advantage — as shown on the Country Pages new-products section.
-
-**When to load this document:** Load when the user asks how Atlas identifies new products, what `product_status`
-field values mean (new/present/lost/absent), how lookback periods (3/5/10/15
-years) work, what `is_new` captures vs. `product_status`, or how to query
-`country_product_lookback` tables. Also load for `newProductsCountry` or
-`newProductsComparisonCountries` GraphQL query details. Do NOT load for
-diversification grades (see `strategic_approaches.md`) or for general product
-space diversification analysis (see `product_space_and_relatedness.md`).
-
+---
+title: New Products Methodology
+purpose: >
+  Defines how the Atlas identifies, measures, and compares "new products" for a
+  country -- products in which a country has newly developed a revealed comparative
+  advantage -- as shown on the Country Pages new-products section.
+keywords: [new products, product_status, is_new, RCA, lookback, diversification, country_product_lookback, newProductsCountry, newProductsComparisonCountries, diversificationGrade, comparative advantage, peer comparison]
+when_to_load: >
+  Load when the user asks how Atlas identifies new products, what `product_status`
+  field values mean (new/present/lost/absent), how lookback periods (3/5/10/15
+  years) work, what `is_new` captures vs. `product_status`, or how to query
+  `country_product_lookback` tables. Also load for `newProductsCountry` or
+  `newProductsComparisonCountries` GraphQL query details.
+when_not_to_load: >
+  Do NOT load for diversification grades (see `strategic_approaches.md`) or for
+  general product space diversification analysis (see `product_space_and_relatedness.md`).
+related_docs: [strategic_approaches.md, product_space_and_relatedness.md]
 ---
 
 ## 1. Definition of a "New Product"

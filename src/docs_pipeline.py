@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import yaml
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.messages import ToolMessage
 from langchain_core.tools import tool
@@ -63,79 +64,61 @@ class DocEntry:
     purpose: str
     when_to_load: str
     full_path: Path
+    content: str = ""
+    keywords: tuple[str, ...] = ()
+    when_not_to_load: str = ""
+    related_docs: tuple[str, ...] = ()
 
 
-def _parse_doc_header(text: str) -> tuple[str, str, str]:
-    """Parse title, purpose, and when-to-load from a doc's header.
+def _parse_yaml_frontmatter(text: str) -> dict[str, Any]:
+    """Parse YAML frontmatter from a markdown file.
+
+    Expects the file to begin with ``---``, followed by YAML, closed by
+    another ``---``.  Returns the parsed dict (empty dict on any failure).
 
     Args:
         text: Full text content of the markdown file.
 
     Returns:
-        Tuple of (title, purpose, when_to_load).
+        Dict of frontmatter fields.
     """
-    title = ""
-    purpose = ""
-    when_to_load = ""
+    if not text.startswith("---"):
+        return {}
+    # Find the closing ---
+    end = text.find("---", 3)
+    if end == -1:
+        return {}
+    yaml_block = text[3:end]
+    try:
+        parsed = yaml.safe_load(yaml_block)
+        return parsed if isinstance(parsed, dict) else {}
+    except yaml.YAMLError:
+        return {}
 
-    lines = text.split("\n")
 
-    # Find first H1 line for title
-    for line in lines:
-        if line.startswith("# "):
-            title = line[2:].strip()
-            break
+def _extract_body(text: str) -> str:
+    """Return the markdown body after the YAML frontmatter block.
 
-    # Find **Purpose:** paragraph
-    in_purpose = False
-    purpose_lines: list[str] = []
-    for line in lines:
-        if line.startswith("**Purpose:**"):
-            in_purpose = True
-            # Grab the rest of this line after the marker
-            rest = line[len("**Purpose:**") :].strip()
-            if rest:
-                purpose_lines.append(rest)
-            continue
-        if in_purpose:
-            if line.startswith("**When to load") or line.startswith("---"):
-                in_purpose = False
-                continue
-            if line.strip():
-                purpose_lines.append(line.strip())
-            else:
-                # Empty line ends the purpose paragraph
-                in_purpose = False
-    purpose = " ".join(purpose_lines)
+    Args:
+        text: Full text content of the markdown file.
 
-    # Find **When to load this document:** paragraph
-    in_when = False
-    when_lines: list[str] = []
-    for line in lines:
-        if line.startswith("**When to load this document:**"):
-            in_when = True
-            rest = line[len("**When to load this document:**") :].strip()
-            if rest:
-                when_lines.append(rest)
-            continue
-        if in_when:
-            if line.startswith("---"):
-                in_when = False
-                continue
-            if line.strip():
-                when_lines.append(line.strip())
-            else:
-                in_when = False
-    when_to_load = " ".join(when_lines)
-
-    return title, purpose, when_to_load
+    Returns:
+        Body text with leading/trailing whitespace stripped.
+    """
+    if not text.startswith("---"):
+        return text
+    end = text.find("---", 3)
+    if end == -1:
+        return text
+    return text[end + 3 :].strip()
 
 
 def load_docs_manifest(docs_dir: Path) -> list[DocEntry]:
     """Scan a directory of markdown docs and build the manifest.
 
-    Parses each ``.md`` file's header to extract title, purpose,
-    and when-to-load guidance.  Returns a list of ``DocEntry`` instances.
+    Parses each ``.md`` file's YAML frontmatter to extract title, purpose,
+    when-to-load guidance, keywords, negative signals, and related docs.
+    Also pre-loads the full body text so no per-invocation file I/O is needed.
 
     Args:
         docs_dir: Path to the directory containing technical documentation.
@@ -155,17 +138,28 @@ def load_docs_manifest(docs_dir: Path) -> list[DocEntry]:
             logger.warning("Could not read documentation file: %s", md_file)
             continue
 
-        title, purpose, when_to_load = _parse_doc_header(text)
+        fm = _parse_yaml_frontmatter(text)
+        title = fm.get("title", "")
         if not title:
             title = md_file.stem.replace("_", " ").title()
+
+        raw_keywords = fm.get("keywords", [])
+        keywords = tuple(raw_keywords) if isinstance(raw_keywords, list) else ()
+
+        raw_related = fm.get("related_docs", [])
+        related_docs = tuple(raw_related) if isinstance(raw_related, list) else ()
 
         entries.append(
             DocEntry(
                 filename=md_file.name,
                 title=title,
-                purpose=purpose,
-                when_to_load=when_to_load,
+                purpose=fm.get("purpose", ""),
+                when_to_load=fm.get("when_to_load", ""),
                 full_path=md_file,
+                content=_extract_body(text),
+                keywords=keywords,
+                when_not_to_load=fm.get("when_not_to_load", ""),
+                related_docs=related_docs,
             )
         )
 
@@ -175,6 +169,9 @@ def load_docs_manifest(docs_dir: Path) -> list[DocEntry]:
 def _format_manifest_for_prompt(manifest: list[DocEntry]) -> str:
     """Format the manifest as a numbered list for the selection LLM prompt.
 
+    Includes keywords and negative signals when available to improve
+    selection accuracy.
+
     Args:
         manifest: List of DocEntry instances.
 
@@ -183,11 +180,16 @@ def _format_manifest_for_prompt(manifest: list[DocEntry]) -> str:
     """
     parts: list[str] = []
     for i, entry in enumerate(manifest):
-        parts.append(
-            f"[{i}] {entry.title}\n"
-            f"    Purpose: {entry.purpose}\n"
-            f"    When to load: {entry.when_to_load}"
-        )
+        lines = [
+            f"[{i}] {entry.title}",
+            f"    Purpose: {entry.purpose}",
+        ]
+        if entry.keywords:
+            lines.append(f"    Keywords: {', '.join(entry.keywords)}")
+        lines.append(f"    When to load: {entry.when_to_load}")
+        if entry.when_not_to_load:
+            lines.append(f"    When NOT to load: {entry.when_not_to_load}")
+        parts.append("\n".join(lines))
     return "\n\n".join(parts)
 
 
@@ -233,6 +235,9 @@ def _docs_tool_schema(question: str, context: str = "") -> str:
 # Pydantic model for structured selection
 # ---------------------------------------------------------------------------
 
+# Default kept for backwards compatibility and tests that don't pass max_docs.
+DEFAULT_MAX_DOCS = 2
+
 
 class DocsSelection(BaseModel):
     """LLM output: which documents to load from the manifest."""
@@ -242,10 +247,39 @@ class DocsSelection(BaseModel):
     )
     selected_indices: list[int] = Field(
         description=(
-            "Zero-based indices of the 1-2 most relevant documents from the manifest. "
-            "Select at most 2 documents."
+            "Zero-based indices of the most relevant documents from the manifest."
         ),
-        max_length=2,
+    )
+
+
+def _make_docs_selection_model(max_docs: int) -> type[DocsSelection]:
+    """Create a DocsSelection subclass with a dynamic max_length constraint.
+
+    Args:
+        max_docs: Maximum number of documents the LLM may select.
+
+    Returns:
+        A Pydantic model class with the appropriate max_length on selected_indices.
+    """
+    return type(
+        "DocsSelection",
+        (BaseModel,),
+        {
+            "__annotations__": {
+                "reasoning": str,
+                "selected_indices": list[int],
+            },
+            "reasoning": Field(
+                description="Brief explanation of why these documents are relevant."
+            ),
+            "selected_indices": Field(
+                description=(
+                    f"Zero-based indices of the 1-{max_docs} most relevant documents "
+                    f"from the manifest. Select at most {max_docs} documents."
+                ),
+                max_length=max_docs,
+            ),
+        },
     )
 
 
@@ -281,6 +315,7 @@ async def select_and_synthesize(
     *,
     lightweight_model: BaseLanguageModel,
     manifest: list[DocEntry],
+    max_docs: int = DEFAULT_MAX_DOCS,
 ) -> dict:
     """Select relevant docs and synthesize a response.
 
@@ -299,6 +334,7 @@ async def select_and_synthesize(
         state: Current agent state with docs_question and docs_context.
         lightweight_model: Lightweight LLM for selection and synthesis.
         manifest: Pre-loaded documentation manifest.
+        max_docs: Maximum number of documents to select (default 2).
 
     Returns:
         Dict with docs_selected_files and docs_synthesis.
@@ -317,10 +353,12 @@ async def select_and_synthesize(
             question=question,
             context_block=context_block,
             manifest=manifest_text,
+            max_docs=max_docs,
         )
 
-        selection_llm = lightweight_model.with_structured_output(DocsSelection)
-        selection: DocsSelection = await selection_llm.ainvoke(selection_prompt)
+        selection_model = _make_docs_selection_model(max_docs)
+        selection_llm = lightweight_model.with_structured_output(selection_model)
+        selection = await selection_llm.ainvoke(selection_prompt)
 
         valid_indices = [
             i for i in selection.selected_indices if 0 <= i < len(manifest)
@@ -340,16 +378,19 @@ async def select_and_synthesize(
 
     selected_filenames = [e.filename for e in selected_entries]
 
-    # --- Step B: Load selected files ---
+    # --- Step B: Assemble selected doc contents ---
     docs_content_parts: list[str] = []
     for entry in selected_entries:
-        try:
-            content = entry.full_path.read_text(encoding="utf-8")
-            docs_content_parts.append(
-                f"--- {entry.title} ({entry.filename}) ---\n\n{content}"
-            )
-        except OSError:
-            logger.warning("Could not read doc file: %s", entry.full_path)
+        body = entry.content
+        if not body:
+            # Fallback: read from disk if content wasn't pre-loaded
+            try:
+                text = entry.full_path.read_text(encoding="utf-8")
+                body = _extract_body(text)
+            except OSError:
+                logger.warning("Could not read doc file: %s", entry.full_path)
+                continue
+        docs_content_parts.append(f"--- {entry.title} ({entry.filename}) ---\n\n{body}")
 
     docs_content = "\n\n".join(docs_content_parts)
     if not docs_content:

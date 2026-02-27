@@ -1,15 +1,19 @@
-# Country Entities and Coverage
-
-**Purpose:** Reference for how countries, territories, historical entities, and country groups are represented in Atlas data, including identifier formats across SQL and GraphQL interfaces.
-
-**When to load this document:** Load when a country name might not match Atlas UN Comtrade naming conventions
-(e.g., "Taiwan" = "Chinese Taipei"), when country identifier format matters
-for API query construction (M49 integer vs. ISO alpha-3 vs. `"location-404"`
-string), when asking about country group membership (regions, income levels,
-trade blocs), or when historical entities (Soviet Union, Yugoslavia) are
-involved. Also load when the user asks why a country is excluded from rankings —
-this doc covers `in_rankings` eligibility criteria.
-
+---
+title: Country Entities and Coverage
+purpose: >
+  Reference for how countries, territories, historical entities, and country groups
+  are represented in Atlas data, including identifier formats across SQL and GraphQL
+  interfaces.
+keywords: [country, territory, M49, ISO, country_id, location, group, region, income level, rankings, in_rankings, historical entity, Soviet Union, naming, Taiwan, Chinese Taipei, identifier format]
+when_to_load: >
+  Load when a country name might not match Atlas UN Comtrade naming conventions
+  (e.g., "Taiwan" = "Chinese Taipei"), when country identifier format matters
+  for API query construction (M49 integer vs. ISO alpha-3 vs. `"location-404"`
+  string), when asking about country group membership (regions, income levels,
+  trade blocs), or when historical entities (Soviet Union, Yugoslavia) are
+  involved. Also load when the user asks why a country is excluded from rankings --
+  this doc covers `in_rankings` eligibility criteria.
+related_docs: []
 ---
 
 ## Total Coverage

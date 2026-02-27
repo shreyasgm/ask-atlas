@@ -1,15 +1,40 @@
-# Country Page Reproduction Guide
-
-**Purpose:** SQL and GraphQL recipes for reproducing every data point shown on Atlas Country Pages, covering all 12 subpage sections.
-
-**When to load this document:** Load when the agent is constructing a GraphQL query for the Country Pages API
-(`/api/countries/graphql`) and needs to know which query name and fields correspond
-to a specific Country Page section (export basket, growth dynamics, strategic
-approach, new products, etc.). Also load when the agent needs to distinguish between
-what is available via the Country Pages API vs. the Explore API. Do NOT load for
-understanding what metrics mean (see `metrics_glossary.md`) or for Explore
-page queries (see `explore_page_reproduction.md`).
-
+---
+title: Country Page Reproduction Guide
+purpose: >
+  SQL and GraphQL recipes for reproducing every data point shown on Atlas Country
+  Pages, covering all 12 subpage sections.
+keywords:
+  - country page
+  - Country Pages API
+  - GraphQL recipe
+  - SQL recipe
+  - export basket
+  - growth dynamics
+  - strategic approach
+  - new products
+  - treemap
+  - product space
+  - growth opportunities
+  - market share
+  - export complexity
+  - country profile
+  - diversification
+  - countryProfile
+  - countryLookback
+  - treeMap
+when_to_load: >
+  Load when the agent is constructing a GraphQL query for the Country Pages API
+  (`/api/countries/graphql`) and needs to know which query name and fields
+  correspond to a specific Country Page section (export basket, growth dynamics,
+  strategic approach, new products, etc.). Also load when the agent needs to
+  distinguish between what is available via the Country Pages API vs. the Explore
+  API.
+when_not_to_load: >
+  Do not load for understanding what metrics mean (see metrics_glossary.md) or
+  for Explore page queries (see explore_page_reproduction.md).
+related_docs:
+  - metrics_glossary.md
+  - explore_page_reproduction.md
 ---
 
 ## System Overview

@@ -39,6 +39,10 @@ FRONTIER_MODEL_PROVIDER = "openai"
 LIGHTWEIGHT_MODEL = "gpt-5-mini"
 LIGHTWEIGHT_MODEL_PROVIDER = "openai"
 
+# --- Docs pipeline ---
+# Maximum documents the docs tool can select per invocation.
+MAX_DOCS_PER_SELECTION = 3
+
 # --- Agent mode ---
 # "auto" (default), "graphql_sql", "sql_only", or "graphql_only"
 AGENT_MODE = "auto"

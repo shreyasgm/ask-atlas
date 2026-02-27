@@ -1,16 +1,19 @@
-# GraphQL API Guide
-
-**Purpose:** Reference for the two Atlas GraphQL APIs — when to use each, how IDs and arguments differ, and how to construct valid queries.
-
-**When to load this document:** Load when the agent must decide which GraphQL API to use (Explore vs. Country
-Pages API), needs to confirm ID format (integer M49 vs. "location-404" string),
-is uncertain about argument names (yearMin/yearMax vs. minYear/maxYear), or when
-the question involves data available only in the API (HS22, product space
-coordinates). Also load when troubleshooting a GraphQL query or when the agent
-needs to understand what data is exclusive to each endpoint. NOTE: This document
-is marked for review once the GraphQL pipeline is fully implemented (see GitHub
-issue).
-
+---
+title: GraphQL API Guide
+purpose: >
+  Reference for the two Atlas GraphQL APIs -- when to use each, how IDs and
+  arguments differ, and how to construct valid queries.
+keywords: [GraphQL, API, Explore API, Country Pages API, endpoint, countryId, location, yearMin, yearMax, ID format, query catalog, response size, rate limit, countryProfile, countryLookback, countryProductYear, bilateral, HS22]
+when_to_load: >
+  Load when the agent must decide which GraphQL API to use (Explore vs. Country
+  Pages API), needs to confirm ID format (integer M49 vs. "location-404" string),
+  is uncertain about argument names (yearMin/yearMax vs. minYear/maxYear), or when
+  the question involves data available only in the API (HS22, product space
+  coordinates). Also load when troubleshooting a GraphQL query or when the agent
+  needs to understand what data is exclusive to each endpoint. NOTE: This document
+  is marked for review once the GraphQL pipeline is fully implemented (see GitHub
+  issue).
+related_docs: []
 ---
 
 ## Two Separate APIs

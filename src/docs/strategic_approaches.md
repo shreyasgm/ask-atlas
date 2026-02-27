@@ -1,16 +1,39 @@
-# Strategic Approaches to Economic Diversification
-
-**Purpose:** Technical reference for the Atlas's country classification framework — four strategic approaches, diversification grades, growth projections, and the complexity-income relationship.
-
-**When to load this document:** Load whenever a question involves economic diversification — whether about a
-country's recommended strategic approach (Light Touch, Parsimonious IP, Strategic
-Bets, Technological Frontier), what diversification grades mean, how 10-year
-income growth projections are modeled, or how complexity relates to growth
-potential. This is the primary reference for any country-level diversification
-question. Do NOT load for product-level opportunity analysis (where specific
-products to target → also load `product_space_and_relatedness.md`) or for
-historical realized growth rates (see `growth_dynamics.md`).
-
+---
+title: Strategic Approaches to Economic Diversification
+purpose: >
+  Technical reference for the Atlas's country classification framework — four
+  strategic approaches, diversification grades, growth projections, and the
+  complexity-income relationship.
+keywords:
+  - strategic approach
+  - Light Touch
+  - Parsimonious Industrial Policy
+  - Strategic Bets
+  - Technological Frontier
+  - diversification grade
+  - growth projection
+  - complexity-income relationship
+  - COI
+  - ECI
+  - policy recommendation
+  - countryProfile
+  - allCountryProfiles
+  - frontier countries
+  - growth opportunities unavailable
+when_to_load: >
+  Load whenever a question involves economic diversification — whether about a
+  country's recommended strategic approach (Light Touch, Parsimonious IP,
+  Strategic Bets, Technological Frontier), what diversification grades mean, how
+  10-year income growth projections are modeled, or how complexity relates to
+  growth potential. This is the primary reference for any country-level
+  diversification question.
+when_not_to_load: >
+  Do not load for product-level opportunity analysis (where specific products to
+  target; also load product_space_and_relatedness.md) or for historical realized
+  growth rates (see growth_dynamics.md).
+related_docs:
+  - product_space_and_relatedness.md
+  - growth_dynamics.md
 ---
 
 ## The Four Strategic Approaches

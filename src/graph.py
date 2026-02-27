@@ -81,6 +81,7 @@ def build_atlas_graph(
     agent_mode: AgentMode = AgentMode.AUTO,
     budget_tracker: GraphQLBudgetTracker | None = None,
     docs_dir: Path | None = None,
+    max_docs_per_selection: int = 2,
 ) -> CompiledStateGraph:
     """Build the full Atlas agent graph with SQL, optional GraphQL, and docs pipelines.
 
@@ -265,6 +266,7 @@ def build_atlas_graph(
             select_and_synthesize,
             lightweight_model=lightweight_llm,
             manifest=_docs_manifest,
+            max_docs=max_docs_per_selection,
         ),
         retry_policy=_llm_retry,
     )
