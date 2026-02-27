@@ -184,6 +184,13 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Skip the LLM judge step (agent run + report only)",
     )
+    parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["auto", "sql_only", "graphql_sql", "graphql_only"],
+        default=None,
+        help="Agent mode override for all questions (default: use configured mode)",
+    )
     return parser.parse_args()
 
 
@@ -208,6 +215,7 @@ async def main() -> None:
     run_dir, run_results = await run_agent_evals(
         question_ids=question_ids,
         concurrency=args.concurrency,
+        agent_mode=args.mode,
     )
 
     if not run_results:
