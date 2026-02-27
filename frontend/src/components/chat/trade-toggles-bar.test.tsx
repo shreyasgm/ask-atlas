@@ -4,7 +4,12 @@ import { describe, expect, it, vi } from 'vitest';
 import type { TradeOverrides } from '@/types/chat';
 import TradeTogglesBar from './trade-toggles-bar';
 
-const NULL_OVERRIDES: TradeOverrides = { direction: null, mode: null, schema: null };
+const NULL_OVERRIDES: TradeOverrides = {
+  direction: null,
+  mode: null,
+  schema: null,
+  systemMode: null,
+};
 
 function renderBar(
   overrides: TradeOverrides = NULL_OVERRIDES,
@@ -42,7 +47,7 @@ describe('TradeTogglesBar', () => {
   it('clicking Auto calls handler with null', async () => {
     const user = userEvent.setup();
     const onModeChange = vi.fn();
-    renderBar({ direction: null, mode: 'goods', schema: null }, { onModeChange });
+    renderBar({ direction: null, mode: 'goods', schema: null, systemMode: null }, { onModeChange });
 
     const autoButtons = screen.getAllByRole('button', { name: 'Auto' });
     await user.click(autoButtons[0]);
@@ -59,13 +64,18 @@ describe('TradeTogglesBar', () => {
   });
 
   it('reflects active schema via aria-pressed', () => {
-    renderBar({ direction: null, mode: null, schema: 'sitc' });
+    renderBar({ direction: null, mode: null, schema: 'sitc', systemMode: null });
     expect(screen.getByRole('button', { name: 'SITC' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'HS92' })).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('hides classification toggle when mode is services', () => {
-    const { container } = renderBar({ direction: null, mode: 'services', schema: null });
+    const { container } = renderBar({
+      direction: null,
+      mode: 'services',
+      schema: null,
+      systemMode: null,
+    });
     // Only Auto, Goods, Services = 3 buttons
     const buttons = screen.getAllByRole('button');
     expect(buttons).toHaveLength(3);

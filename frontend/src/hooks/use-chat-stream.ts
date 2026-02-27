@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import type {
+  AtlasLink,
   ChatMessage,
   EntitiesData,
+  GraphqlSummary,
   PipelineStep,
   QueryAggregateStats,
   TradeOverrides,
   TurnSummary,
 } from '@/types/chat';
 import { API_BASE_URL } from '@/config';
+import { classifyPipelineNode } from '@/utils/pipeline-type';
 import { getSessionId } from '@/utils/session';
 
 interface UseChatStreamOptions {
@@ -85,11 +88,27 @@ function createMessage(
 ): ChatMessage {
   messageCounter++;
   return {
+    atlasLinks: [],
     content,
+    docsConsulted: [],
+    graphqlSummaries: [],
     id: `msg-${Date.now()}-${messageCounter}`,
     isStreaming,
     queryResults: [],
     role,
+  };
+}
+
+function emptyEntities(): EntitiesData {
+  return {
+    countries: [],
+    docsConsulted: [],
+    graphqlClassification: null,
+    graphqlEntities: null,
+    lookupCodes: '',
+    products: [],
+    resolutionNotes: [],
+    schemas: [],
   };
 }
 
@@ -106,6 +125,8 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
   const abortControllerRef = useRef<AbortController | null>(null);
   const initialQuerySent = useRef(false);
   const historyLoaded = useRef<string | null>(null);
+  // Session-level cache: threadId → array of pipelineSteps (one per assistant turn)
+  const pipelineStepsCache = useRef<Map<string, Array<Array<PipelineStep>>>>(new Map());
   const onConversationChangeRef = useRef(options?.onConversationChange);
   onConversationChangeRef.current = options?.onConversationChange;
   const onOverridesLoadedRef = useRef(options?.onOverridesLoaded);
@@ -159,6 +180,9 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
       if (overrides?.mode) {
         body.override_mode = overrides.mode;
       }
+      if (overrides?.systemMode) {
+        body.mode = overrides.systemMode;
+      }
 
       (async () => {
         // rAF batching: accumulate tokens in a local variable and flush
@@ -166,6 +190,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
         // automatic batching from merging all setState calls into one render.
         let contentAcc = '';
         let rafId: null | number = null;
+        let streamThreadId: null | string = null;
 
         function flushContent() {
           setMessages((prev) =>
@@ -218,26 +243,64 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
 
             switch (event) {
               case 'agent_talk':
-                if (!contentAcc) {
-                  setPipelineSteps([]);
-                }
                 contentAcc += parsed.content ?? '';
                 break;
 
+              case 'atlas_links': {
+                const links: Array<AtlasLink> = parsed.atlas_links ?? [];
+                if (links.length > 0) {
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantMsg.id
+                        ? { ...m, atlasLinks: [...m.atlasLinks, ...links] }
+                        : m,
+                    ),
+                  );
+                }
+                break;
+              }
+
               case 'done':
                 stopRaf();
+                // Snapshot pipeline steps onto the assistant message before clearing
+                setPipelineSteps((currentSteps) => {
+                  if (currentSteps.length > 0) {
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === assistantMsg.id
+                          ? {
+                              ...m,
+                              content: contentAcc,
+                              isStreaming: false,
+                              pipelineSteps: currentSteps,
+                            }
+                          : m,
+                      ),
+                    );
+                    // Cache steps for this thread so they survive thread switches
+                    if (streamThreadId) {
+                      const cached = pipelineStepsCache.current.get(streamThreadId) ?? [];
+                      cached.push(currentSteps);
+                      pipelineStepsCache.current.set(streamThreadId, cached);
+                    }
+                  } else {
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === assistantMsg.id
+                          ? { ...m, content: contentAcc, isStreaming: false }
+                          : m,
+                      ),
+                    );
+                  }
+                  return []; // Clear global steps
+                });
                 setIsStreaming(false);
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === assistantMsg.id
-                      ? { ...m, content: contentAcc, isStreaming: false }
-                      : m,
-                  ),
-                );
-                if (parsed.total_queries != null) {
+                if (parsed.total_queries != null || parsed.total_graphql_queries != null) {
                   setQueryStats({
                     totalExecutionTimeMs: parsed.total_execution_time_ms ?? 0,
-                    totalQueries: parsed.total_queries,
+                    totalGraphqlQueries: parsed.total_graphql_queries ?? 0,
+                    totalGraphqlTimeMs: parsed.total_graphql_time_ms ?? 0,
+                    totalQueries: parsed.total_queries ?? 0,
                     totalRows: parsed.total_rows ?? 0,
                     totalTimeMs: parsed.total_time_ms ?? 0,
                   });
@@ -251,6 +314,8 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
                   {
                     label: parsed.label,
                     node: parsed.node,
+                    pipelineType: classifyPipelineNode(parsed.node),
+                    queryIndex: parsed.query_index ?? 0,
                     startedAt: Date.now(),
                     status: 'active' as const,
                   },
@@ -258,9 +323,16 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
                 break;
 
               case 'pipeline_state':
-                setPipelineSteps((prev) =>
-                  prev.map((step) =>
-                    step.node === parsed.stage
+                setPipelineSteps((prev) => {
+                  // Find the LAST step with matching node that is still active
+                  const targetIdx = prev.findLastIndex(
+                    (s) => s.node === parsed.stage && s.status === 'active',
+                  );
+                  if (targetIdx === -1) {
+                    return prev;
+                  }
+                  return prev.map((step, i) =>
+                    i === targetIdx
                       ? {
                           ...step,
                           completedAt: Date.now(),
@@ -268,34 +340,129 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
                           status: 'completed' as const,
                         }
                       : step,
-                  ),
-                );
+                  );
+                });
 
+                // --- SQL pipeline stages ---
                 if (parsed.stage === 'extract_products' && parsed.products) {
                   setEntitiesData((prev) => ({
+                    ...(prev ?? emptyEntities()),
                     countries: (parsed.countries ?? []).map(
                       (c: { iso3_code: string; name: string }) => ({
                         iso3Code: c.iso3_code,
                         name: c.name,
                       }),
                     ),
-                    lookupCodes: prev?.lookupCodes ?? '',
                     products: parsed.products,
                     schemas: parsed.schemas ?? [],
                   }));
-                } else if (parsed.stage === 'lookup_codes' && parsed.lookup_codes) {
-                  setEntitiesData((prev) =>
-                    prev
-                      ? { ...prev, lookupCodes: parsed.lookup_codes }
-                      : {
-                          countries: [],
-                          lookupCodes: parsed.lookup_codes,
-                          products: [],
-                          schemas: [],
+                } else if (parsed.stage === 'lookup_codes' && parsed.codes) {
+                  setEntitiesData((prev) => ({
+                    ...(prev ?? emptyEntities()),
+                    lookupCodes: parsed.codes,
+                  }));
+                }
+
+                // --- GraphQL pipeline stages ---
+                if (parsed.stage === 'classify_query') {
+                  setEntitiesData((prev) => ({
+                    ...(prev ?? emptyEntities()),
+                    graphqlClassification: {
+                      apiTarget: '',
+                      isRejected: parsed.is_rejected ?? false,
+                      queryType: parsed.query_type ?? '',
+                      rejectionReason: parsed.rejection_reason ?? '',
+                    },
+                  }));
+                } else if (parsed.stage === 'extract_entities') {
+                  setEntitiesData((prev) => ({
+                    ...(prev ?? emptyEntities()),
+                    graphqlEntities: parsed.entities ?? {},
+                  }));
+                } else if (parsed.stage === 'resolve_ids') {
+                  const resolved = parsed.resolved_ids ?? {};
+                  const notes: Array<string> = [];
+                  for (const [key, val] of Object.entries(resolved)) {
+                    if (val != null) {
+                      notes.push(`${key}: ${String(val)}`);
+                    }
+                  }
+                  setEntitiesData((prev) => ({
+                    ...(prev ?? emptyEntities()),
+                    resolutionNotes: notes,
+                  }));
+                } else if (parsed.stage === 'build_and_execute_graphql') {
+                  // Update classification with api_target and build a graphql summary
+                  setEntitiesData((prev) => {
+                    const updated = { ...(prev ?? emptyEntities()) };
+                    if (updated.graphqlClassification) {
+                      updated.graphqlClassification = {
+                        ...updated.graphqlClassification,
+                        apiTarget: parsed.api_target ?? '',
+                      };
+                    }
+                    return updated;
+                  });
+                  // Build GraphQL summary and attach to message
+                  setMessages((prevMsgs) =>
+                    prevMsgs.map((m) => {
+                      if (m.id !== assistantMsg.id) {
+                        return m;
+                      }
+                      const summary: GraphqlSummary = {
+                        apiTarget: parsed.api_target ?? '',
+                        classification: {
+                          apiTarget: parsed.api_target ?? '',
+                          isRejected: parsed.is_rejected ?? false,
+                          queryType: parsed.query_type ?? '',
+                          rejectionReason: parsed.rejection_reason ?? '',
                         },
+                        entities: parsed.entities ?? {},
+                        executionTimeMs: parsed.execution_time_ms ?? 0,
+                        links: [],
+                      };
+                      return {
+                        ...m,
+                        graphqlSummaries: [...m.graphqlSummaries, summary],
+                      };
+                    }),
+                  );
+                } else if (parsed.stage === 'format_graphql_results') {
+                  // Attach atlas_links to the last GraphQL summary on the message
+                  const links: Array<AtlasLink> = parsed.atlas_links ?? [];
+                  if (links.length > 0) {
+                    setMessages((prevMsgs) =>
+                      prevMsgs.map((m) => {
+                        if (m.id !== assistantMsg.id || m.graphqlSummaries.length === 0) {
+                          return m;
+                        }
+                        const last = m.graphqlSummaries.at(-1)!;
+                        return {
+                          ...m,
+                          graphqlSummaries: [
+                            ...m.graphqlSummaries.slice(0, -1),
+                            { ...last, links },
+                          ],
+                        };
+                      }),
+                    );
+                  }
+                }
+
+                // --- Docs pipeline stages ---
+                if (parsed.stage === 'select_and_synthesize' && parsed.selected_files) {
+                  setEntitiesData((prev) => ({
+                    ...(prev ?? emptyEntities()),
+                    docsConsulted: parsed.selected_files,
+                  }));
+                  setMessages((prevMsgs) =>
+                    prevMsgs.map((m) =>
+                      m.id === assistantMsg.id ? { ...m, docsConsulted: parsed.selected_files } : m,
+                    ),
                   );
                 }
 
+                // --- SQL query tracking (existing) ---
                 if (parsed.stage === 'generate_sql' && parsed.sql) {
                   setMessages((prev) =>
                     prev.map((m) =>
@@ -343,6 +510,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
 
               case 'thread_id': {
                 const id = parsed.thread_id;
+                streamThreadId = id;
                 setThreadId(id);
                 // Mark as loaded so the history effect doesn't try to fetch
                 // — messages for this thread are being streamed live.
@@ -479,6 +647,29 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
                 sql: q.sql,
               }));
             }
+            // Hydrate atlas links from turn summary
+            if (ts.atlas_links && ts.atlas_links.length > 0) {
+              assistantMessages[i].atlasLinks = ts.atlas_links;
+            }
+            // Hydrate docs consulted from turn summary
+            if (ts.docs_consulted && ts.docs_consulted.length > 0) {
+              assistantMessages[i].docsConsulted = ts.docs_consulted;
+            }
+            // Hydrate graphql summaries from turn summary
+            if (ts.graphql_summaries && ts.graphql_summaries.length > 0) {
+              assistantMessages[i].graphqlSummaries = ts.graphql_summaries.map((gs) => ({
+                apiTarget: gs.api_target,
+                classification: {
+                  apiTarget: gs.api_target,
+                  isRejected: gs.classification.is_rejected,
+                  queryType: gs.classification.query_type,
+                  rejectionReason: gs.classification.rejection_reason,
+                },
+                entities: gs.entities,
+                executionTimeMs: gs.execution_time_ms,
+                links: gs.links,
+              }));
+            }
           }
 
           // Set entities from the last summary that has them
@@ -491,8 +682,12 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
                   name: c.name,
                 }),
               ),
+              docsConsulted: [],
+              graphqlClassification: null,
+              graphqlEntities: null,
               lookupCodes: '',
               products: lastWithEntities.entities.products,
+              resolutionNotes: [],
               schemas: lastWithEntities.entities.schemas,
             });
           }
@@ -504,13 +699,28 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
             0,
           );
           const totalQueries = turnSummaries.reduce((sum, ts) => sum + ts.queries.length, 0);
-          if (totalQueries > 0) {
+          const totalGraphqlTimeMs = turnSummaries.reduce(
+            (sum, ts) => sum + (ts.total_graphql_time_ms ?? 0),
+            0,
+          );
+          if (totalQueries > 0 || totalGraphqlTimeMs > 0) {
             setQueryStats({
               totalExecutionTimeMs: totalExecMs,
+              totalGraphqlQueries: 0,
+              totalGraphqlTimeMs: totalGraphqlTimeMs,
               totalQueries,
               totalRows,
               totalTimeMs: 0,
             });
+          }
+        }
+
+        // Restore cached pipeline steps from this session
+        const cachedSteps = pipelineStepsCache.current.get(urlThreadId);
+        if (cachedSteps && cachedSteps.length > 0) {
+          const assistantMsgs = loaded.filter((m) => m.role === 'assistant');
+          for (let i = 0; i < Math.min(assistantMsgs.length, cachedSteps.length); i++) {
+            assistantMsgs[i].pipelineSteps = cachedSteps[i];
           }
         }
 
@@ -524,6 +734,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
             direction: (raw.override_direction as TradeOverrides['direction']) ?? null,
             mode: (raw.override_mode as TradeOverrides['mode']) ?? null,
             schema: (raw.override_schema as TradeOverrides['schema']) ?? null,
+            systemMode: null,
           });
         }
       } catch {

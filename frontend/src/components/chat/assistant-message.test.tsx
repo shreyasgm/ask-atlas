@@ -6,7 +6,10 @@ import AssistantMessage from './assistant-message';
 
 function makeMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
   return {
+    atlasLinks: [],
     content: '',
+    docsConsulted: [],
+    graphqlSummaries: [],
     id: 'msg-1',
     isStreaming: false,
     queryResults: [],

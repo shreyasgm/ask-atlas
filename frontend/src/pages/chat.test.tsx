@@ -10,6 +10,20 @@ import type {
   TradeOverrides,
 } from '@/types/chat';
 
+function msg(overrides: Partial<ChatMessage>): ChatMessage {
+  return {
+    atlasLinks: [],
+    content: '',
+    docsConsulted: [],
+    graphqlSummaries: [],
+    id: 'test',
+    isStreaming: false,
+    queryResults: [],
+    role: 'user',
+    ...overrides,
+  };
+}
+
 // Mock the hooks
 const mockSendMessage = vi.fn();
 const mockClearChat = vi.fn();
@@ -19,6 +33,7 @@ const mockResetAll = vi.fn();
 const mockSetMode = vi.fn();
 const mockSetOverrides = vi.fn();
 const mockSetSchema = vi.fn();
+const mockSetSystemMode = vi.fn();
 
 let mockHookReturn: {
   clearChat: typeof mockClearChat;
@@ -39,6 +54,7 @@ let mockToggleReturn: {
   setMode: typeof mockSetMode;
   setOverrides: typeof mockSetOverrides;
   setSchema: typeof mockSetSchema;
+  setSystemMode: typeof mockSetSystemMode;
 };
 
 vi.mock('@/hooks/use-chat-stream', () => ({
@@ -83,6 +99,7 @@ beforeEach(() => {
   mockSetMode.mockReset();
   mockSetOverrides.mockReset();
   mockSetSchema.mockReset();
+  mockSetSystemMode.mockReset();
   mockHookReturn = {
     clearChat: mockClearChat,
     entitiesData: null,
@@ -96,11 +113,12 @@ beforeEach(() => {
     threadId: null,
   };
   mockToggleReturn = {
-    overrides: { direction: null, mode: null, schema: null },
+    overrides: { direction: null, mode: null, schema: null, systemMode: null },
     resetAll: mockResetAll,
     setMode: mockSetMode,
     setOverrides: mockSetOverrides,
     setSchema: mockSetSchema,
+    setSystemMode: mockSetSystemMode,
   };
 });
 
@@ -138,13 +156,7 @@ describe('ChatPage - sidebar branding', () => {
 describe('ChatPage - messages', () => {
   it('renders user message', () => {
     mockHookReturn.messages = [
-      {
-        content: 'What are the top exports of Brazil?',
-        id: '1',
-        isStreaming: false,
-        queryResults: [],
-        role: 'user',
-      },
+      msg({ content: 'What are the top exports of Brazil?', id: '1', role: 'user' }),
     ];
     renderChat();
     const allMatches = screen.getAllByText('What are the top exports of Brazil?');
@@ -154,13 +166,7 @@ describe('ChatPage - messages', () => {
 
   it('renders assistant message with content', () => {
     mockHookReturn.messages = [
-      {
-        content: 'Top exports of Brazil include soybeans.',
-        id: '2',
-        isStreaming: false,
-        queryResults: [],
-        role: 'assistant',
-      },
+      msg({ content: 'Top exports of Brazil include soybeans.', id: '2', role: 'assistant' }),
     ];
     renderChat();
     expect(screen.getByText(/soybeans/)).toBeInTheDocument();
@@ -168,13 +174,7 @@ describe('ChatPage - messages', () => {
 
   it('renders markdown in assistant message', () => {
     mockHookReturn.messages = [
-      {
-        content: 'Results include **soybeans** and *iron ore*.',
-        id: '2',
-        isStreaming: false,
-        queryResults: [],
-        role: 'assistant',
-      },
+      msg({ content: 'Results include **soybeans** and *iron ore*.', id: '2', role: 'assistant' }),
     ];
     renderChat();
     const strong = screen.getByText('soybeans');
@@ -183,10 +183,9 @@ describe('ChatPage - messages', () => {
 
   it('renders SQL block from queryResults', () => {
     mockHookReturn.messages = [
-      {
+      msg({
         content: 'Results below.',
         id: '2',
-        isStreaming: false,
         queryResults: [
           {
             columns: ['product', 'value'],
@@ -200,7 +199,7 @@ describe('ChatPage - messages', () => {
           },
         ],
         role: 'assistant',
-      },
+      }),
     ];
     renderChat();
     expect(screen.getByText(/sql query/i)).toBeInTheDocument();
@@ -209,10 +208,9 @@ describe('ChatPage - messages', () => {
   it('renders query result table with data after expanding SQL block', async () => {
     const user = userEvent.setup();
     mockHookReturn.messages = [
-      {
+      msg({
         content: 'Results below.',
         id: '2',
-        isStreaming: false,
         queryResults: [
           {
             columns: ['product', 'value'],
@@ -226,7 +224,7 @@ describe('ChatPage - messages', () => {
           },
         ],
         role: 'assistant',
-      },
+      }),
     ];
     renderChat();
 
@@ -241,21 +239,12 @@ describe('ChatPage - messages', () => {
 
   it('renders source attribution when queryResults present', () => {
     mockHookReturn.messages = [
-      {
+      msg({
         content: 'Results below.',
         id: '2',
-        isStreaming: false,
-        queryResults: [
-          {
-            columns: [],
-            executionTimeMs: 0,
-            rowCount: 0,
-            rows: [],
-            sql: 'SELECT 1',
-          },
-        ],
+        queryResults: [{ columns: [], executionTimeMs: 0, rowCount: 0, rows: [], sql: 'SELECT 1' }],
         role: 'assistant',
-      },
+      }),
     ];
     renderChat();
     expect(screen.getByText(/source: atlas of economic complexity/i)).toBeInTheDocument();
@@ -275,6 +264,7 @@ describe('ChatPage - streaming', () => {
       {
         label: 'Generating SQL query',
         node: 'generate_sql',
+        pipelineType: 'sql',
         startedAt: Date.now(),
         status: 'active',
       },
@@ -298,6 +288,7 @@ describe('ChatPage - interactions', () => {
       direction: null,
       mode: null,
       schema: null,
+      systemMode: null,
     });
   });
 
@@ -312,20 +303,13 @@ describe('ChatPage - interactions', () => {
       direction: null,
       mode: null,
       schema: null,
+      systemMode: null,
     });
   });
 
   it('clear button calls clearChat', async () => {
     const user = userEvent.setup();
-    mockHookReturn.messages = [
-      {
-        content: 'test',
-        id: '1',
-        isStreaming: false,
-        queryResults: [],
-        role: 'user',
-      },
-    ];
+    mockHookReturn.messages = [msg({ content: 'test', id: '1', role: 'user' })];
     renderChat();
 
     const clearButton = screen.getByRole('button', { name: /clear/i });
@@ -342,15 +326,7 @@ describe('ChatPage - trade toggles', () => {
 
   it('clearChat resets toggles', async () => {
     const user = userEvent.setup();
-    mockHookReturn.messages = [
-      {
-        content: 'test',
-        id: '1',
-        isStreaming: false,
-        queryResults: [],
-        role: 'user',
-      },
-    ];
+    mockHookReturn.messages = [msg({ content: 'test', id: '1', role: 'user' })];
     renderChat();
 
     const clearButton = screen.getByRole('button', { name: /clear/i });
