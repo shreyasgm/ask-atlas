@@ -70,6 +70,26 @@ describe('AssistantMessage', () => {
     expect(sourceText.className).not.toMatch(/\bml-4\b/);
   });
 
+  it('renders inline LaTeX math via $...$ delimiters', () => {
+    const msg = makeMessage({
+      content: 'The formula is $E = mc^2$ in physics.',
+    });
+    const { container } = render(<AssistantMessage message={msg} />);
+    // rehype-katex wraps math in <span class="katex">
+    const katexSpan = container.querySelector('.katex');
+    expect(katexSpan).toBeInTheDocument();
+  });
+
+  it('renders display LaTeX math via $$...$$ delimiters', () => {
+    const msg = makeMessage({
+      content: 'Below is a formula:\n\n$$\\sum_{i=1}^{n} x_i$$',
+    });
+    const { container } = render(<AssistantMessage message={msg} />);
+    // Display math renders katex inside a block-level container
+    const katexElements = container.querySelectorAll('.katex');
+    expect(katexElements.length).toBeGreaterThan(0);
+  });
+
   it('hides query result table until SQL collapsible is expanded', async () => {
     const user = userEvent.setup();
     const msg = makeMessage({
