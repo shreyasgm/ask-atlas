@@ -1,5 +1,11 @@
 import { useCallback, useState } from 'react';
-import type { ClassificationSchema, TradeDirection, TradeMode, TradeOverrides } from '@/types/chat';
+import type {
+  ClassificationSchema,
+  SystemMode,
+  TradeDirection,
+  TradeMode,
+  TradeOverrides,
+} from '@/types/chat';
 
 interface UseTradeTogglesReturn {
   overrides: TradeOverrides;
@@ -8,9 +14,10 @@ interface UseTradeTogglesReturn {
   setMode: (v: TradeMode | null) => void;
   setOverrides: (o: TradeOverrides) => void;
   setSchema: (v: ClassificationSchema | null) => void;
+  setSystemMode: (v: SystemMode | null) => void;
 }
 
-const INITIAL: TradeOverrides = { direction: null, mode: null, schema: null };
+const INITIAL: TradeOverrides = { direction: null, mode: null, schema: null, systemMode: null };
 
 export function useTradeToggles(): UseTradeTogglesReturn {
   const [overrides, setOverridesState] = useState<TradeOverrides>(INITIAL);
@@ -31,6 +38,10 @@ export function useTradeToggles(): UseTradeTogglesReturn {
     setOverridesState((prev) => ({ ...prev, schema: v }));
   }, []);
 
+  const setSystemMode = useCallback((v: SystemMode | null) => {
+    setOverridesState((prev) => ({ ...prev, systemMode: v }));
+  }, []);
+
   const resetAll = useCallback(() => {
     setOverridesState(INITIAL);
   }, []);
@@ -39,5 +50,5 @@ export function useTradeToggles(): UseTradeTogglesReturn {
     setOverridesState(o);
   }, []);
 
-  return { overrides, resetAll, setDirection, setMode, setOverrides, setSchema };
+  return { overrides, resetAll, setDirection, setMode, setOverrides, setSchema, setSystemMode };
 }

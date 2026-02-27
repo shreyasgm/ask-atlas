@@ -6,16 +6,22 @@ import QueryContextCard from './query-context-card';
 
 const ENTITIES: EntitiesData = {
   countries: [{ iso3Code: 'IND', name: 'India' }],
+  docsConsulted: [],
+  graphqlClassification: null,
+  graphqlEntities: null,
   lookupCodes: 'name_to_code',
   products: [
     { codes: ['0901'], name: 'Coffee', schema: 'HS92' },
     { codes: ['0902'], name: 'Tea', schema: 'HS92' },
   ],
+  resolutionNotes: [],
   schemas: ['HS92'],
 };
 
 const STATS: QueryAggregateStats = {
   totalExecutionTimeMs: 1500,
+  totalGraphqlQueries: 0,
+  totalGraphqlTimeMs: 0,
   totalQueries: 3,
   totalRows: 42,
   totalTimeMs: 2100,
@@ -27,18 +33,22 @@ describe('QueryContextCard', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('shows country ISO3 codes and product codes in collapsed state', () => {
+  it('shows country names and product names with codes in collapsed state', () => {
     render(<QueryContextCard entitiesData={ENTITIES} queryStats={null} />);
-    expect(screen.getByText('IND')).toBeInTheDocument();
-    expect(screen.getByText('0901')).toBeInTheDocument();
-    expect(screen.getByText('0902')).toBeInTheDocument();
+    expect(screen.getByText('India')).toBeInTheDocument();
+    expect(screen.getByText('Coffee (0901)')).toBeInTheDocument();
+    expect(screen.getByText('Tea (0902)')).toBeInTheDocument();
   });
 
   it('uses the actual schema name in the collapsed products label', () => {
     const hs12Entities: EntitiesData = {
       countries: [],
+      docsConsulted: [],
+      graphqlClassification: null,
+      graphqlEntities: null,
       lookupCodes: '',
       products: [{ codes: ['8541'], name: 'Semiconductors', schema: 'HS12' }],
+      resolutionNotes: [],
       schemas: ['HS12'],
     };
     render(<QueryContextCard entitiesData={hs12Entities} queryStats={null} />);
@@ -48,27 +58,35 @@ describe('QueryContextCard', () => {
   it('hides country row when no countries are present', () => {
     const noCountry: EntitiesData = {
       countries: [],
+      docsConsulted: [],
+      graphqlClassification: null,
+      graphqlEntities: null,
       lookupCodes: 'name_to_code',
       products: [{ codes: ['0901'], name: 'Coffee', schema: 'HS92' }],
+      resolutionNotes: [],
       schemas: ['HS92'],
     };
     render(<QueryContextCard entitiesData={noCountry} queryStats={null} />);
-    expect(screen.queryByText('IND')).not.toBeInTheDocument();
+    expect(screen.queryByText('India')).not.toBeInTheDocument();
     // Products should still render
-    expect(screen.getByText('0901')).toBeInTheDocument();
+    expect(screen.getByText('Coffee (0901)')).toBeInTheDocument();
   });
 
   it('hides products row when no products are present', () => {
     const noProducts: EntitiesData = {
       countries: [{ iso3Code: 'IND', name: 'India' }],
+      docsConsulted: [],
+      graphqlClassification: null,
+      graphqlEntities: null,
       lookupCodes: '',
       products: [],
+      resolutionNotes: [],
       schemas: ['HS92'],
     };
     render(<QueryContextCard entitiesData={noProducts} queryStats={null} />);
     expect(screen.queryByText(/Products/)).not.toBeInTheDocument();
     // Country should still render
-    expect(screen.getByText('IND')).toBeInTheDocument();
+    expect(screen.getByText('India')).toBeInTheDocument();
   });
 
   it('expands on click to show full product names, country names, and stats', async () => {
@@ -77,13 +95,13 @@ describe('QueryContextCard', () => {
 
     await user.click(screen.getByRole('button', { name: /expand query context/i }));
 
-    // Country shows full name
-    expect(screen.getByText('India (IND)')).toBeInTheDocument();
-    // Products show code + name
-    expect(screen.getByText('0901 Coffee')).toBeInTheDocument();
-    expect(screen.getByText('0902 Tea')).toBeInTheDocument();
+    // Country shows name
+    expect(screen.getByText('India')).toBeInTheDocument();
+    // Products show name (code)
+    expect(screen.getByText('Coffee (0901)')).toBeInTheDocument();
+    expect(screen.getByText('Tea (0902)')).toBeInTheDocument();
     // Stats rendered
-    expect(screen.getByText(/3 queries/)).toBeInTheDocument();
+    expect(screen.getByText(/3 SQL queries/)).toBeInTheDocument();
     expect(screen.getByText(/42 rows/)).toBeInTheDocument();
   });
 
@@ -91,8 +109,12 @@ describe('QueryContextCard', () => {
     const user = userEvent.setup();
     const schemaOnly: EntitiesData = {
       countries: [],
+      docsConsulted: [],
+      graphqlClassification: null,
+      graphqlEntities: null,
       lookupCodes: '',
       products: [],
+      resolutionNotes: [],
       schemas: ['HS92'],
     };
     render(<QueryContextCard entitiesData={schemaOnly} queryStats={STATS} />);

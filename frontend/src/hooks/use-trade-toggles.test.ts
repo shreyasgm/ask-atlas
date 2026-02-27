@@ -5,7 +5,12 @@ import { useTradeToggles } from './use-trade-toggles';
 describe('useTradeToggles', () => {
   it('initial state is all null (auto-detect)', () => {
     const { result } = renderHook(() => useTradeToggles());
-    expect(result.current.overrides).toEqual({ direction: null, mode: null, schema: null });
+    expect(result.current.overrides).toEqual({
+      direction: null,
+      mode: null,
+      schema: null,
+      systemMode: null,
+    });
   });
 
   it('resetAll returns all to null', () => {
@@ -16,14 +21,24 @@ describe('useTradeToggles', () => {
       result.current.setSchema('sitc');
     });
     act(() => result.current.resetAll());
-    expect(result.current.overrides).toEqual({ direction: null, mode: null, schema: null });
+    expect(result.current.overrides).toEqual({
+      direction: null,
+      mode: null,
+      schema: null,
+      systemMode: null,
+    });
   });
 
   it('individual setters do not affect other fields', () => {
     const { result } = renderHook(() => useTradeToggles());
     act(() => result.current.setDirection('exports'));
     act(() => result.current.setSchema('hs12'));
-    expect(result.current.overrides).toEqual({ direction: 'exports', mode: null, schema: 'hs12' });
+    expect(result.current.overrides).toEqual({
+      direction: 'exports',
+      mode: null,
+      schema: 'hs12',
+      systemMode: null,
+    });
   });
 
   it('setMode("services") clears schema to null', () => {

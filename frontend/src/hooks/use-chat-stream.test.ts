@@ -180,8 +180,7 @@ describe('useChatStream', () => {
     });
   });
 
-  it('tracks node_start as active pipeline step', async () => {
-    // No agent_talk — steps persist until stream ends so waitFor can observe them
+  it('snapshots pipeline steps onto assistant message on done', async () => {
     globalThis.fetch = mockFetchWithEvents([
       { data: JSON.stringify({ thread_id: THREAD_ID }), event: 'thread_id' },
       {
@@ -211,15 +210,22 @@ describe('useChatStream', () => {
     });
 
     await waitFor(() => {
-      expect(result.current.pipelineSteps.length).toBeGreaterThanOrEqual(1);
-      const step = result.current.pipelineSteps.find((s) => s.node === 'generate_sql');
-      expect(step).toBeDefined();
-      expect(step?.label).toBe('Generating SQL query');
+      expect(result.current.isStreaming).toBe(false);
     });
+
+    // Global steps should be cleared after done
+    expect(result.current.pipelineSteps).toEqual([]);
+
+    // Steps should be snapshotted onto the assistant message
+    const assistant = result.current.messages.find((m) => m.role === 'assistant');
+    expect(assistant?.pipelineSteps).toBeDefined();
+    expect(assistant?.pipelineSteps).toHaveLength(1);
+    expect(assistant?.pipelineSteps?.[0].node).toBe('generate_sql');
+    expect(assistant?.pipelineSteps?.[0].label).toBe('Generating SQL query');
+    expect(assistant?.pipelineSteps?.[0].queryIndex).toBe(1);
   });
 
   it('marks pipeline step completed on pipeline_state', async () => {
-    // No agent_talk — steps persist until stream ends so waitFor can observe completed status
     globalThis.fetch = mockFetchWithEvents([
       { data: JSON.stringify({ thread_id: THREAD_ID }), event: 'thread_id' },
       {
@@ -253,12 +259,16 @@ describe('useChatStream', () => {
     });
 
     await waitFor(() => {
-      const step = result.current.pipelineSteps.find((s) => s.node === 'generate_sql');
-      expect(step?.status).toBe('completed');
+      expect(result.current.isStreaming).toBe(false);
     });
+
+    // Check the snapshotted steps on the assistant message
+    const assistant = result.current.messages.find((m) => m.role === 'assistant');
+    const step = assistant?.pipelineSteps?.find((s) => s.node === 'generate_sql');
+    expect(step?.status).toBe('completed');
   });
 
-  it('clears pipeline steps when first agent_talk arrives', async () => {
+  it('persists pipeline steps through agent_talk and snapshots on done', async () => {
     // Events: node_start → pipeline_state (completed) → agent_talk → done
     const events = [
       { data: JSON.stringify({ thread_id: THREAD_ID }), event: 'thread_id' },
@@ -301,8 +311,14 @@ describe('useChatStream', () => {
       expect(result.current.isStreaming).toBe(false);
     });
 
-    // Pipeline steps should have been cleared when agent_talk arrived
+    // Global pipeline steps should be cleared on done
     expect(result.current.pipelineSteps).toEqual([]);
+
+    // Steps should be snapshotted onto the assistant message
+    const assistant = result.current.messages.find((m) => m.role === 'assistant');
+    expect(assistant?.pipelineSteps).toHaveLength(1);
+    expect(assistant?.pipelineSteps?.[0].node).toBe('generate_sql');
+    expect(assistant?.pipelineSteps?.[0].status).toBe('completed');
   });
 
   it('sets isStreaming to false on done event', async () => {
@@ -431,7 +447,7 @@ describe('useChatStream', () => {
       },
       {
         data: JSON.stringify({
-          lookup_codes: '8541,8542',
+          codes: '8541,8542',
           stage: 'lookup_codes',
         }),
         event: 'pipeline_state',
@@ -531,12 +547,75 @@ describe('useChatStream', () => {
     });
 
     await waitFor(() => {
-      const step = result.current.pipelineSteps.find((s) => s.node === 'generate_sql');
-      expect(step).toBeDefined();
-      expect(step?.startedAt).toEqual(expect.any(Number));
-      expect(step?.completedAt).toEqual(expect.any(Number));
-      expect(step?.detail).toEqual(expect.objectContaining({ sql: 'SELECT 1' }));
+      expect(result.current.isStreaming).toBe(false);
     });
+
+    // Check snapshotted steps on assistant message
+    const assistant = result.current.messages.find((m) => m.role === 'assistant');
+    const step = assistant?.pipelineSteps?.find((s) => s.node === 'generate_sql');
+    expect(step).toBeDefined();
+    expect(step?.startedAt).toEqual(expect.any(Number));
+    expect(step?.completedAt).toEqual(expect.any(Number));
+    expect(step?.detail).toEqual(expect.objectContaining({ sql: 'SELECT 1' }));
+  });
+
+  it('handles duplicate node names with pipeline_state updating only the last active', async () => {
+    // Simulates two SQL query cycles: generate_sql appears twice
+    const events = [
+      { data: JSON.stringify({ thread_id: THREAD_ID }), event: 'thread_id' },
+      {
+        data: JSON.stringify({ label: 'Generating SQL', node: 'generate_sql', query_index: 1 }),
+        event: 'node_start',
+      },
+      {
+        data: JSON.stringify({ sql: 'SELECT 1', stage: 'generate_sql' }),
+        event: 'pipeline_state',
+      },
+      {
+        data: JSON.stringify({ label: 'Generating SQL', node: 'generate_sql', query_index: 2 }),
+        event: 'node_start',
+      },
+      {
+        data: JSON.stringify({ sql: 'SELECT 2', stage: 'generate_sql' }),
+        event: 'pipeline_state',
+      },
+      {
+        data: JSON.stringify({
+          thread_id: THREAD_ID,
+          total_execution_time_ms: 0,
+          total_queries: 0,
+          total_rows: 0,
+          total_time_ms: 0,
+        }),
+        event: 'done',
+      },
+    ];
+    globalThis.fetch = mockFetchWithEvents(events);
+
+    const { result } = renderHook(() => useChatStream());
+
+    act(() => {
+      result.current.sendMessage('hello');
+    });
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    const assistant = result.current.messages.find((m) => m.role === 'assistant');
+    expect(assistant?.pipelineSteps).toHaveLength(2);
+
+    // First step should have detail from first pipeline_state
+    expect(assistant?.pipelineSteps?.[0].queryIndex).toBe(1);
+    expect(assistant?.pipelineSteps?.[0].detail).toEqual(
+      expect.objectContaining({ sql: 'SELECT 1' }),
+    );
+
+    // Second step should have detail from second pipeline_state
+    expect(assistant?.pipelineSteps?.[1].queryIndex).toBe(2);
+    expect(assistant?.pipelineSteps?.[1].detail).toEqual(
+      expect.objectContaining({ sql: 'SELECT 2' }),
+    );
   });
 
   it('sends X-Session-Id header with chat stream requests', async () => {
@@ -582,7 +661,12 @@ describe('useChatStream', () => {
   it('includes override fields in request body when provided', async () => {
     globalThis.fetch = mockFetchWithEvents(STANDARD_EVENTS);
 
-    const overrides: TradeOverrides = { direction: 'exports', mode: 'goods', schema: 'hs12' };
+    const overrides: TradeOverrides = {
+      direction: 'exports',
+      mode: 'goods',
+      schema: 'hs12',
+      systemMode: null,
+    };
     const { result } = renderHook(() => useChatStream());
 
     act(() => {
@@ -685,6 +769,7 @@ describe('useChatStream', () => {
       direction: 'exports',
       mode: 'goods',
       schema: 'hs12',
+      systemMode: null,
     });
   });
 

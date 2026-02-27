@@ -247,6 +247,13 @@ def _extract_pipeline_state(node_name: str, state_snapshot: dict) -> dict:
         base["success"] = raw_response is not None and "errors" not in (
             raw_response or {}
         )
+        # Enrich with classification + entity summary for frontend
+        classification = state_snapshot.get("graphql_classification") or {}
+        base["query_type"] = classification.get("query_type", "")
+        base["is_rejected"] = classification.get("query_type") == "reject"
+        base["rejection_reason"] = classification.get("rejection_reason", "")
+        entity_extraction = state_snapshot.get("graphql_entity_extraction") or {}
+        base["entities"] = entity_extraction
 
     elif node_name == "format_graphql_results":
         base["atlas_links"] = state_snapshot.get("graphql_atlas_links") or []
@@ -307,6 +314,9 @@ def _build_turn_summary(
     queries: list[dict],
     resolved_products: dict | None,
     atlas_links: list[dict] | None = None,
+    docs_consulted: list[str] | None = None,
+    graphql_summaries: list[dict] | None = None,
+    total_graphql_time_ms: int = 0,
 ) -> dict:
     """Build a turn summary dict from pipeline results.
 
@@ -314,10 +324,14 @@ def _build_turn_summary(
         queries: List of executed query dicts from the turn.
         resolved_products: Product resolution data, or None.
         atlas_links: Optional list of Atlas visualization links from GraphQL pipeline.
+        docs_consulted: Optional list of documentation files consulted.
+        graphql_summaries: Optional list of GraphQL query summaries.
+        total_graphql_time_ms: Total execution time for GraphQL queries.
 
     Returns:
         A summary dict with entities, queries, total_rows, total_execution_time_ms,
-        and optionally atlas_links.
+        and optionally atlas_links, docs_consulted, graphql_summaries,
+        total_graphql_time_ms.
     """
     summary = {
         "entities": resolved_products,
@@ -327,6 +341,12 @@ def _build_turn_summary(
     }
     if atlas_links:
         summary["atlas_links"] = atlas_links
+    if docs_consulted:
+        summary["docs_consulted"] = docs_consulted
+    if graphql_summaries:
+        summary["graphql_summaries"] = graphql_summaries
+    if total_graphql_time_ms > 0:
+        summary["total_graphql_time_ms"] = total_graphql_time_ms
     return summary
 
 

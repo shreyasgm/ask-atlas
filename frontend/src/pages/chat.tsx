@@ -12,7 +12,8 @@ export default function ChatPage() {
     refresh,
   } = useConversations();
 
-  const { overrides, resetAll, setMode, setOverrides, setSchema } = useTradeToggles();
+  const { overrides, resetAll, setMode, setOverrides, setSchema, setSystemMode } =
+    useTradeToggles();
 
   const {
     clearChat: clearChatStream,
@@ -55,6 +56,7 @@ export default function ChatPage() {
         onModeChange={setMode}
         onSchemaChange={setSchema}
         onSend={handleSend}
+        onSystemModeChange={setSystemMode}
         overrides={overrides}
         pipelineSteps={pipelineSteps}
         queryStats={queryStats}

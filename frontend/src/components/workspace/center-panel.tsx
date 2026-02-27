@@ -4,6 +4,7 @@ import type {
   EntitiesData,
   PipelineStep,
   QueryAggregateStats,
+  SystemMode,
   TradeMode,
   TradeOverrides,
 } from '@/types/chat';
@@ -22,6 +23,7 @@ interface CenterPanelProps {
   onModeChange: (v: TradeMode | null) => void;
   onSchemaChange: (v: ClassificationSchema | null) => void;
   onSend: (text: string) => void;
+  onSystemModeChange: (v: SystemMode | null) => void;
   onToggleSidebar: () => void;
   overrides: TradeOverrides;
   pipelineSteps: Array<PipelineStep>;
@@ -38,6 +40,7 @@ export default function CenterPanel({
   onModeChange,
   onSchemaChange,
   onSend,
+  onSystemModeChange,
   onToggleSidebar,
   overrides,
   pipelineSteps,
@@ -52,6 +55,7 @@ export default function CenterPanel({
       <TradeTogglesBar
         onModeChange={onModeChange}
         onSchemaChange={onSchemaChange}
+        onSystemModeChange={onSystemModeChange}
         overrides={overrides}
       />
       <MessageList

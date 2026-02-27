@@ -6,6 +6,7 @@ import type {
   EntitiesData,
   PipelineStep,
   QueryAggregateStats,
+  SystemMode,
   TradeMode,
   TradeOverrides,
 } from '@/types/chat';
@@ -26,6 +27,7 @@ interface ChatWorkspaceProps {
   onModeChange: (v: TradeMode | null) => void;
   onSchemaChange: (v: ClassificationSchema | null) => void;
   onSend: (text: string) => void;
+  onSystemModeChange: (v: SystemMode | null) => void;
   overrides: TradeOverrides;
   pipelineSteps: Array<PipelineStep>;
   queryStats: QueryAggregateStats | null;
@@ -66,6 +68,7 @@ export default function ChatWorkspace({
   onModeChange,
   onSchemaChange,
   onSend,
+  onSystemModeChange,
   overrides,
   pipelineSteps,
   queryStats,
@@ -125,6 +128,7 @@ export default function ChatWorkspace({
         onModeChange={onModeChange}
         onSchemaChange={onSchemaChange}
         onSend={onSend}
+        onSystemModeChange={onSystemModeChange}
         onToggleSidebar={toggleSidebar}
         overrides={overrides}
         pipelineSteps={pipelineSteps}

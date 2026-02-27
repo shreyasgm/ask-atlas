@@ -56,15 +56,14 @@ export default function MessageList({
               {index === lastAssistantIndex && entitiesData && (
                 <QueryContextCard entitiesData={entitiesData} queryStats={queryStats ?? null} />
               )}
+              {msg.pipelineSteps && msg.pipelineSteps.length > 0 && (
+                <PipelineStepper steps={msg.pipelineSteps} />
+              )}
               <AssistantMessage message={msg} />
             </div>
           );
         })}
-        {isStreaming && pipelineSteps.length > 0 && (
-          <div className="ml-4">
-            <PipelineStepper steps={pipelineSteps} />
-          </div>
-        )}
+        {isStreaming && pipelineSteps.length > 0 && <PipelineStepper steps={pipelineSteps} />}
         {error && (
           <div
             className="flex items-start gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3"
