@@ -45,15 +45,19 @@ GRAPHQL_STATE_DEFAULTS: dict = {
 def _make_graphql_tool_call_message(
     question: str = "What did Kenya export in 2024?",
     tool_call_id: str = "call_gql_001",
+    context: str = "",
 ) -> AIMessage:
     """Create an AIMessage with a single tool_call for graphql_tool."""
+    args: dict = {"question": question}
+    if context:
+        args["context"] = context
     return AIMessage(
         content="",
         tool_calls=[
             {
                 "id": tool_call_id,
                 "name": "graphql_tool",
-                "args": {"question": question},
+                "args": args,
             }
         ],
     )
@@ -244,6 +248,22 @@ class TestExtractGraphQLQuestion:
         result = await extract_graphql_question(state)
 
         assert result["graphql_question"] == "What does Kenya export?"
+        assert result["graphql_context"] == ""
+
+    async def test_extracts_context_from_tool_call(self):
+        """Context arg is extracted into graphql_context state field."""
+        msg = _make_graphql_tool_call_message(
+            question="What does Kenya export?",
+            context="User is comparing Kenya and Brazil exports.",
+        )
+        state = _base_graphql_state(messages=[msg])
+
+        result = await extract_graphql_question(state)
+
+        assert result["graphql_question"] == "What does Kenya export?"
+        assert (
+            result["graphql_context"] == "User is comparing Kenya and Brazil exports."
+        )
 
     async def test_resets_all_graphql_state_fields(self):
         """Prevents cross-turn leakage by resetting all graphql_* fields."""
@@ -375,6 +395,52 @@ class TestClassifyQuery:
         with pytest.raises(Exception, match="LLM error"):
             await classify_query(state, lightweight_model=mock_llm)
 
+    async def test_context_included_in_classification_prompt(self):
+        """When graphql_context is set, it's included in the LLM prompt."""
+        classification = GraphQLQueryClassification(
+            reasoning="Bilateral trade question",
+            query_type="treemap_bilateral",
+            rejection_reason=None,
+            api_target="explore",
+        )
+        mock_llm = MagicMock()
+        mock_chain = AsyncMock(return_value=classification)
+        mock_llm.with_structured_output.return_value.ainvoke = mock_chain
+
+        state = _base_graphql_state(
+            graphql_question="What does it export there?",
+            graphql_context="User previously asked about Kenya's trade with Brazil.",
+        )
+
+        await classify_query(state, lightweight_model=mock_llm)
+
+        prompt = mock_chain.call_args[0][0]
+        assert "Kenya" in prompt
+        assert "Brazil" in prompt
+        assert "What does it export there?" in prompt
+
+    async def test_empty_context_excluded_from_classification_prompt(self):
+        """When graphql_context is empty, no context section appears in prompt."""
+        classification = GraphQLQueryClassification(
+            reasoning="Country profile question",
+            query_type="country_profile",
+            rejection_reason=None,
+            api_target="country_pages",
+        )
+        mock_llm = MagicMock()
+        mock_chain = AsyncMock(return_value=classification)
+        mock_llm.with_structured_output.return_value.ainvoke = mock_chain
+
+        state = _base_graphql_state(
+            graphql_question="Tell me about Kenya",
+            graphql_context="",
+        )
+
+        await classify_query(state, lightweight_model=mock_llm)
+
+        prompt = mock_chain.call_args[0][0]
+        assert "Context from the conversation" not in prompt
+
 
 # ---------------------------------------------------------------------------
 # 4. extract_entities
@@ -451,6 +517,54 @@ class TestExtractEntities:
 
         with pytest.raises(Exception, match="LLM failure"):
             await extract_entities(state, lightweight_model=mock_llm)
+
+    async def test_context_included_in_extraction_prompt(self):
+        """When graphql_context is set, it's included in the LLM prompt."""
+        extraction = GraphQLEntityExtraction(
+            reasoning="Bilateral trade",
+            country_name="Kenya",
+            country_code_guess="KEN",
+            partner_name="Brazil",
+            partner_code_guess="BRA",
+        )
+        mock_llm = MagicMock()
+        mock_chain = AsyncMock(return_value=extraction)
+        mock_llm.with_structured_output.return_value.ainvoke = mock_chain
+
+        state = _base_graphql_state(
+            graphql_question="What does it export there?",
+            graphql_context="User previously asked about Kenya's trade with Brazil.",
+            graphql_classification=_explore_classification(),
+        )
+
+        await extract_entities(state, lightweight_model=mock_llm)
+
+        prompt = mock_chain.call_args[0][0]
+        assert "Kenya" in prompt
+        assert "Brazil" in prompt
+        assert "What does it export there?" in prompt
+
+    async def test_empty_context_excluded_from_extraction_prompt(self):
+        """When graphql_context is empty, no context section appears in prompt."""
+        extraction = GraphQLEntityExtraction(
+            reasoning="Kenya exports",
+            country_name="Kenya",
+            country_code_guess="KEN",
+        )
+        mock_llm = MagicMock()
+        mock_chain = AsyncMock(return_value=extraction)
+        mock_llm.with_structured_output.return_value.ainvoke = mock_chain
+
+        state = _base_graphql_state(
+            graphql_question="What does Kenya export?",
+            graphql_context="",
+            graphql_classification=_explore_classification(),
+        )
+
+        await extract_entities(state, lightweight_model=mock_llm)
+
+        prompt = mock_chain.call_args[0][0]
+        assert "Context from the conversation" not in prompt
 
 
 # ---------------------------------------------------------------------------

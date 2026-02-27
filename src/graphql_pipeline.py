@@ -298,10 +298,12 @@ async def extract_graphql_question(state: AtlasAgentState) -> dict:
             len(last_msg.tool_calls),
         )
     question = last_msg.tool_calls[0]["args"]["question"]
+    context = last_msg.tool_calls[0]["args"].get("context", "")
 
-    # Reset all graphql state fields + set the new question
+    # Reset all graphql state fields + set the new question and context
     result = dict(_GRAPHQL_STATE_DEFAULTS)
     result["graphql_question"] = question
+    result["graphql_context"] = context
     return result
 
 
@@ -321,6 +323,7 @@ async def classify_query(state: AtlasAgentState, *, lightweight_model: Any) -> d
         Dict with ``graphql_classification`` and ``graphql_api_target``.
     """
     question = state["graphql_question"]
+    context = state.get("graphql_context", "")
 
     # No try/except — errors propagate so LangGraph RetryPolicy can retry
     # transient failures (rate limits, timeouts). After max retries, the
@@ -331,7 +334,7 @@ async def classify_query(state: AtlasAgentState, *, lightweight_model: Any) -> d
     chain = lightweight_model.with_structured_output(
         GraphQLQueryClassification, method="function_calling"
     )
-    prompt = _build_classification_prompt(question)
+    prompt = _build_classification_prompt(question, context)
     classification: GraphQLQueryClassification = await chain.ainvoke(prompt)
 
     return {
@@ -340,18 +343,23 @@ async def classify_query(state: AtlasAgentState, *, lightweight_model: Any) -> d
     }
 
 
-def _build_classification_prompt(question: str) -> str:
+def _build_classification_prompt(question: str, context: str = "") -> str:
     """Build the classification prompt for the LLM.
 
     [PLACEHOLDER PROMPT — REQUIRES USER VETTING]
     """
-    return (
+    parts = [
         "You are classifying a user question about international trade and economic data "
-        "to determine which Atlas GraphQL API query type can best answer it.\n\n"
+        "to determine which Atlas GraphQL API query type can best answer it.\n",
+    ]
+    if context:
+        parts.append(f"Context from the conversation:\n{context}\n")
+    parts.append(
         f"Question: {question}\n\n"
         "Classify the question into one of the supported query types. "
         "If the question cannot be answered by the Atlas API, use 'reject'."
     )
+    return "\n".join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -376,6 +384,7 @@ async def extract_entities(state: AtlasAgentState, *, lightweight_model: Any) ->
         return {"graphql_entity_extraction": None}
 
     question = state["graphql_question"]
+    context = state.get("graphql_context", "")
     query_type = classification.get("query_type", "") if classification else ""
 
     # No try/except — errors propagate so LangGraph RetryPolicy can retry
@@ -385,23 +394,26 @@ async def extract_entities(state: AtlasAgentState, *, lightweight_model: Any) ->
     chain = lightweight_model.with_structured_output(
         GraphQLEntityExtraction, method="function_calling"
     )
-    prompt = _build_extraction_prompt(question, query_type)
+    prompt = _build_extraction_prompt(question, query_type, context)
     extraction: GraphQLEntityExtraction = await chain.ainvoke(prompt)
     return {"graphql_entity_extraction": extraction.model_dump()}
 
 
-def _build_extraction_prompt(question: str, query_type: str) -> str:
+def _build_extraction_prompt(question: str, query_type: str, context: str = "") -> str:
     """Build the entity extraction prompt for the LLM.
 
     [PLACEHOLDER PROMPT — REQUIRES USER VETTING]
     """
-    return (
-        "Extract entities from this international trade question.\n\n"
+    parts = ["Extract entities from this international trade question.\n"]
+    if context:
+        parts.append(f"Context from the conversation:\n{context}\n")
+    parts.append(
         f"Question: {question}\n"
         f"Query type: {query_type}\n\n"
         "Extract countries (with ISO3 code guesses), products (with HS code guesses), "
         "years or year ranges, and any other relevant entities."
     )
+    return "\n".join(parts)
 
 
 # ---------------------------------------------------------------------------
