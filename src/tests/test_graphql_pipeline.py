@@ -340,6 +340,7 @@ class TestGraphQLQueryClassification:
             "product_table",
             "country_year",
             "product_info",
+            "bilateral_aggregate",
             "explore_bilateral",
             "explore_group",
             "global_datum",
@@ -347,6 +348,34 @@ class TestGraphQLQueryClassification:
             "reject",
         }
         assert set(args) == expected
+
+    def test_bilateral_aggregate_validates_with_explore_target(self):
+        """bilateral_aggregate is an Explore API query type, so api_target must be 'explore'."""
+        c = GraphQLQueryClassification(
+            reasoning="Total bilateral trade between two countries",
+            query_type="bilateral_aggregate",
+            api_target="explore",
+        )
+        assert c.query_type == "bilateral_aggregate"
+        assert c.api_target == "explore"
+
+    def test_classification_prompt_includes_phase5_routing_heuristics(self):
+        """build_classification_prompt output contains the new Phase 5 routing heuristics."""
+        from src.prompts import build_classification_prompt
+
+        prompt = build_classification_prompt("test question")
+        # Phase 4f: bilateral_aggregate routing
+        assert "bilateral_aggregate" in prompt
+        # Phase 5b: country_profile for diversification grade
+        assert (
+            "Diversification grade, growth projection relative to income -> country_profile"
+            in prompt
+        )
+        # Phase 5b: country_lookback for export growth classification
+        assert (
+            "Export growth classification (promising, troubling, static, mixed) -> country_lookback"
+            in prompt
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1521,6 +1550,45 @@ class TestClassifyAndExtractIntegration:
         assert classification["query_type"] == "reject"
         assert classification["rejection_reason"] is not None
 
+    @pytest.mark.parametrize(
+        "question, expected_types",
+        [
+            pytest.param(
+                "What is Nigeria's diversification grade?",
+                {"country_profile"},
+                id="diversification_grade_routes_to_country_profile",
+            ),
+            pytest.param(
+                "Is Thailand's export growth pattern promising or troubling?",
+                {"country_lookback"},
+                id="export_growth_classification_routes_to_country_lookback",
+            ),
+            pytest.param(
+                "What is the total export value from Brazil to China in 2023?",
+                {"bilateral_aggregate"},
+                id="bilateral_aggregate_trade_value",
+            ),
+        ],
+    )
+    async def test_phase5_routing_improvements(
+        self, lightweight_model, question, expected_types
+    ):
+        """Phase 5 prompt improvements route Country Page metrics and bilateral aggregate correctly."""
+        state = _base_graphql_state(graphql_question=question)
+
+        cls_result = await classify_query(state, lightweight_model=lightweight_model)
+
+        classification = cls_result["graphql_classification"]
+        assert classification["query_type"] != "reject", (
+            f"Expected one of {expected_types} for '{question}', "
+            f"got reject: {classification.get('rejection_reason')}"
+        )
+        assert classification["query_type"] in expected_types, (
+            f"Expected one of {expected_types} for '{question}', "
+            f"got {classification['query_type']!r} "
+            f"(reasoning: {classification.get('reasoning', 'n/a')})"
+        )
+
 
 @pytest.mark.integration
 class TestResolveIdsIntegration:
@@ -2071,6 +2139,7 @@ class TestBuildersExtended:
             "product_table",
             "country_year",
             "product_info",
+            "bilateral_aggregate",
             "explore_bilateral",
             "explore_group",
             "explore_data_availability",
@@ -2082,6 +2151,29 @@ class TestBuildersExtended:
             "global_datum",
         }
         assert set(_QUERY_BUILDERS.keys()) == expected_builder_types
+
+    def test_bilateral_aggregate_includes_partner_filter(self):
+        """bilateral_aggregate builder passes partnerCountryId when partner_id is given."""
+        query, variables = build_graphql_query(
+            "bilateral_aggregate",
+            {"country_id": 76, "partner_id": 156, "year": 2024},
+        )
+        assert "countryCountryYear" in query
+        assert "partnerCountryId" in query
+        assert variables["countryId"] == 76
+        assert variables["partnerCountryId"] == 156
+        assert variables["yearMin"] == 2024
+        assert variables["yearMax"] == 2024
+
+    def test_treemap_partners_omits_partner_when_absent(self):
+        """treemap_partners (countryCountryYear) omits partnerCountryId when not provided."""
+        query, variables = build_graphql_query(
+            "treemap_partners",
+            {"country_id": 404, "year": 2024},
+        )
+        assert "countryCountryYear" in query
+        assert variables["countryId"] == 404
+        assert "partnerCountryId" not in variables
 
 
 # ---------------------------------------------------------------------------
