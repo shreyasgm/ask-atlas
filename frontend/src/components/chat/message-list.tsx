@@ -1,5 +1,4 @@
 import { AlertCircle } from 'lucide-react';
-import { useEffect, useRef } from 'react';
 import type { ChatMessage, EntitiesData, PipelineStep, QueryAggregateStats } from '@/types/chat';
 import AssistantMessage from './assistant-message';
 import PipelineStepper from './pipeline-stepper';
@@ -26,25 +25,10 @@ export default function MessageList({
   pipelineSteps,
   queryStats,
 }: MessageListProps) {
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) {
-      return;
-    }
-    const isNearBottom =
-      container.scrollTop + container.clientHeight >= container.scrollHeight - 100;
-    if (isNearBottom) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, pipelineSteps]);
-
   const lastAssistantIndex = messages.findLastIndex((m) => m.role === 'assistant');
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-4 sm:py-6" ref={containerRef}>
+    <div className="flex-1 overflow-y-auto px-4 py-4 sm:py-6">
       <div className="mx-auto flex max-w-2xl flex-col gap-4">
         <WelcomeMessage />
         {messages.map((msg, index) => {
@@ -73,7 +57,7 @@ export default function MessageList({
             <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
-        <div ref={bottomRef} />
+        <div />
       </div>
     </div>
   );
