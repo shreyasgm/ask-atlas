@@ -900,13 +900,13 @@ The Atlas has **two separate GraphQL APIs** with different schemas, both availab
 
 | Data Point | Explore API | Country Pages API | Prefer |
 |-----------|-------------|-------------------|--------|
-| Country exports by product | `countryProductYear.exportValue` | `treeMap(facet: CPY_C)` | Explore (more fields) |
-| Country-level GDP, ECI | `countryYear.gdppc, eci` | `countryYear.gdppc, eci` | Either (equivalent) |
-| Product catalog | `productHs92` (21 fields) | `allProducts` (10 fields) | Explore (more fields) |
-| Product complexity (PCI) | `productYear.pci` | `allProductYear.pci` | Either |
-| Country metadata | `locationCountry` (22 fields) | `allLocations` (15 fields) | Explore (more fields) |
+| Country exports by product | `countryProductYear.exportValue` | `treeMap(facet: CPY_C)` | **Country Pages** (pre-computed, smaller response, treemap-ready) |
+| Country-level GDP, ECI | `countryYear.gdppc, eci` | `countryYear.gdppc, eci` | **Country Pages** (includes rank + classification fields) |
+| Product catalog | `productHs92` (21 fields) | `allProducts` (10 fields) | **Country Pages** (fewer fields = smaller payload; Explore only if 6-digit or HS22 needed) |
+| Product complexity (PCI) | `productYear.pci` | `allProductYear.pci` | **Country Pages** (same data, consistent with other CP queries) |
+| Country metadata | `locationCountry` (22 fields) | `allLocations` (15 fields) | **Country Pages** (sufficient for most questions; Explore only if extra metadata needed) |
 
-**General guidance**: Prefer the Explore API for raw trade data — it has more fields, better introspection, and explicit HS revision support. Use the Country Pages API for derived analytical metrics (growth projections, diversification grades, strategic approach, narrative descriptions) that would be expensive to recompute.
+**General guidance**: Prefer the Country Pages API when the same data point is available in both APIs. Country Pages responses are pre-computed, smaller, and include narrative-ready labels and classifications — far superior for LLM consumption. The Explore API returns raw, larger payloads that require post-processing. Reserve the Explore API for data it uniquely provides: bilateral trade, 6-digit products, HS 2022, group/regional queries, and product-to-product relatedness edges.
 
 ---
 
