@@ -52,7 +52,7 @@ jobs:
             --network=ask-atlas-vpc \
             --subnet=ask-atlas-subnet \
             --vpc-egress=all-traffic \
-            --set-secrets="ATLAS_DB_URL=atlas-db-url:latest,CHECKPOINT_DB_URL=checkpoint-db-url:latest,OPENAI_API_KEY=openai-api-key:latest" \
+            --set-secrets="ATLAS_DB_URL=atlas-db-url:latest,CHECKPOINT_DB_URL=checkpoint-db-url:latest,OPENAI_API_KEY=openai-api-key:latest,ANTHROPIC_API_KEY=anthropic-api-key:latest" \
             --service-account=85144878117-compute@developer.gserviceaccount.com \
             --allow-unauthenticated \
             --project=${{ secrets.GCP_PROJECT_ID }}
@@ -85,7 +85,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
         env:
-          VITE_API_BASE_URL: https://ask-atlas-backend-k272csz3hq-ue.a.run.app
+          VITE_API_BASE_URL: https://ask-atlas-backend-85144878117.us-east1.run.app
 
       - name: Deploy to Firebase Hosting
         run: npx firebase-tools deploy --only hosting:app --project=${{ secrets.GCP_PROJECT_ID }}
