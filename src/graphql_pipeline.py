@@ -22,6 +22,11 @@ from pydantic import BaseModel, Field, field_validator
 from src.atlas_links import generate_atlas_links
 from src.cache import CatalogCache
 from src.graphql_client import AtlasGraphQLClient, BudgetExhaustedError, GraphQLError
+from src.prompts import (
+    build_classification_prompt,
+    build_extraction_prompt,
+    build_id_resolution_prompt,
+)
 from src.state import AtlasAgentState
 
 logger = logging.getLogger(__name__)
@@ -334,32 +339,13 @@ async def classify_query(state: AtlasAgentState, *, lightweight_model: Any) -> d
     chain = lightweight_model.with_structured_output(
         GraphQLQueryClassification, method="function_calling"
     )
-    prompt = _build_classification_prompt(question, context)
+    prompt = build_classification_prompt(question, context)
     classification: GraphQLQueryClassification = await chain.ainvoke(prompt)
 
     return {
         "graphql_classification": classification.model_dump(),
         "graphql_api_target": classification.api_target,
     }
-
-
-def _build_classification_prompt(question: str, context: str = "") -> str:
-    """Build the classification prompt for the LLM.
-
-    [PLACEHOLDER PROMPT — REQUIRES USER VETTING]
-    """
-    parts = [
-        "You are classifying a user question about international trade and economic data "
-        "to determine which Atlas GraphQL API query type can best answer it.\n",
-    ]
-    if context:
-        parts.append(f"Context from the conversation:\n{context}\n")
-    parts.append(
-        f"Question: {question}\n\n"
-        "Classify the question into one of the supported query types. "
-        "If the question cannot be answered by the Atlas API, use 'reject'."
-    )
-    return "\n".join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -394,26 +380,9 @@ async def extract_entities(state: AtlasAgentState, *, lightweight_model: Any) ->
     chain = lightweight_model.with_structured_output(
         GraphQLEntityExtraction, method="function_calling"
     )
-    prompt = _build_extraction_prompt(question, query_type, context)
+    prompt = build_extraction_prompt(question, query_type, context)
     extraction: GraphQLEntityExtraction = await chain.ainvoke(prompt)
     return {"graphql_entity_extraction": extraction.model_dump()}
-
-
-def _build_extraction_prompt(question: str, query_type: str, context: str = "") -> str:
-    """Build the entity extraction prompt for the LLM.
-
-    [PLACEHOLDER PROMPT — REQUIRES USER VETTING]
-    """
-    parts = ["Extract entities from this international trade question.\n"]
-    if context:
-        parts.append(f"Context from the conversation:\n{context}\n")
-    parts.append(
-        f"Question: {question}\n"
-        f"Query type: {query_type}\n\n"
-        "Extract countries (with ISO3 code guesses), products (with HS code guesses), "
-        "years or year ranges, and any other relevant entities."
-    )
-    return "\n".join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -634,10 +603,10 @@ async def _resolve_entity(
             f"(code: {c.get('code', c.get('iso3Code', 'N/A'))})"
             for i, c in enumerate(candidates)
         )
-        prompt = (
-            f'Given the question: "{question}"\n\n'
-            f"Which entity is the best match?\n{options}\n\n"
-            f"Reply with just the number (1-{len(candidates)}) or 0 if none match."
+        prompt = build_id_resolution_prompt(
+            question=question,
+            options=options,
+            num_candidates=len(candidates),
         )
         response = await llm.ainvoke(prompt)
         text = response.content.strip()

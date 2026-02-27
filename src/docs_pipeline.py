@@ -24,6 +24,7 @@ from langchain_core.messages import ToolMessage
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field
 
+from src.prompts import DOCUMENT_SELECTION_PROMPT, DOCUMENTATION_SYNTHESIS_PROMPT
 from src.state import AtlasAgentState
 
 logger = logging.getLogger(__name__)
@@ -252,40 +253,6 @@ class DocsSelection(BaseModel):
 # Pipeline node functions
 # ---------------------------------------------------------------------------
 
-# -- Prompts — USER REVIEW PENDING (per CLAUDE.md: never modify LLM prompts without approval) --
-
-_SELECTION_PROMPT = """\
-You are a documentation librarian for the Atlas of Economic Complexity.
-Given a user's question and optional context, select the 1 or 2 MOST relevant
-documents from the manifest below. Pick only the single best document if one
-clearly covers the topic; add a second only if the question genuinely spans
-two distinct subjects. Never select more than 2.
-
-**Question:** {question}
-{context_block}
-
-**Document manifest:**
-
-{manifest}
-
-Return the indices of the 1-2 most relevant documents."""
-
-_SYNTHESIS_PROMPT = """\
-You are a technical documentation assistant for the Atlas of Economic Complexity.
-Using ONLY the documentation provided below, answer the question directly and
-concisely. Include specific formulas, column names, year ranges, and caveats
-where they are directly relevant.
-
-**Question:** {question}
-{context_block}
-
-**Documentation:**
-
-{docs_content}
-
-Provide a focused, well-organized response. If the documentation doesn't fully
-answer the question, say what it does cover and note what's missing."""
-
 
 async def extract_docs_question(state: AtlasAgentState) -> dict:
     """Extract question and context from the agent's docs_tool call args.
@@ -346,7 +313,7 @@ async def select_and_synthesize(
 
     try:
         manifest_text = _format_manifest_for_prompt(manifest)
-        selection_prompt = _SELECTION_PROMPT.format(
+        selection_prompt = DOCUMENT_SELECTION_PROMPT.format(
             question=question,
             context_block=context_block,
             manifest=manifest_text,
@@ -393,7 +360,7 @@ async def select_and_synthesize(
 
     # --- Step C: Synthesis ---
     try:
-        synthesis_prompt = _SYNTHESIS_PROMPT.format(
+        synthesis_prompt = DOCUMENTATION_SYNTHESIS_PROMPT.format(
             question=question,
             context_block=context_block,
             docs_content=docs_content,
