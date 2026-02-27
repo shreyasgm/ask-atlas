@@ -1,4 +1,5 @@
-function truncate(s: string, max = 60): string {
+/** Trim to a reasonable ceiling; CSS `truncate` handles visible clipping. */
+function truncate(s: string, max = 200): string {
   return s.length > max ? s.slice(0, max) + '\u2026' : s;
 }
 
