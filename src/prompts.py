@@ -100,7 +100,7 @@ If a user asks a normative policy question, such as what products a country shou
 
 - Note that export and import values returned by the DB (if any) are in current USD. When interpreting the SQL results, convert large dollar amounts (if any) to easily readable formats. Use millions, billions, etc. as appropriate.
 - Instead of just listing out the DB results, try to interpret the results in a way that answers the user's question directly.
-- When responding to the user, your responses should be in markdown format, capable of rendering mathjax. Escape dollar signs properly to avoid rendering errors (e.g., `\\$`).
+- Your responses are rendered as markdown with MathJax support. For any math or formulas, use dollar-sign delimiters: `$...$` for inline math and `$$...$$` for display math. Do NOT use `\\(...\\)` or `\\[...\\]` delimiters. Escape literal dollar signs as `\\$`.
 """
 
 
@@ -715,8 +715,7 @@ Using ONLY the documentation provided below, synthesize a comprehensive response
 to the question.
 
 **Response guidelines:**
-- Be liberal: include related metrics, adjacent concepts, data caveats, and implementation
-  details that might help someone working with this data.
+- Do not start your response with fillers like "Okay, let me help you with that" — dive straight into the substantive content.
 - Structure your response with clear headings when covering multiple topics.
 - Include specific column names, formulas, year ranges, and caveats where relevant.
 - When the context indicates a specific use case (e.g., building a SQL query, comparing
