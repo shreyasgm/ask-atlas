@@ -22,6 +22,7 @@ from src.graphql_pipeline import (
     extract_graphql_question,
     format_graphql_results,
     format_ids_for_api,
+    post_process_response,
     resolve_ids,
 )
 
@@ -1200,6 +1201,238 @@ class TestStripIdPrefix:
     def test_invalid_raises(self):
         with pytest.raises(ValueError):
             _strip_id_prefix("not-a-number-abc")
+
+
+# ---------------------------------------------------------------------------
+# 10. post_process_response
+# ---------------------------------------------------------------------------
+
+
+class TestPostProcessResponse:
+    """Tests for post_process_response — sort, truncate, enrich large API responses."""
+
+    def test_small_response_passes_through_unchanged(self):
+        """Response with <= top_n items returns as-is (no truncation)."""
+        raw = {
+            "countryProductYear": [
+                {"productId": 726, "exportValue": 5000, "year": 2024},
+                {"productId": 897, "exportValue": 3000, "year": 2024},
+            ]
+        }
+        result = post_process_response("treemap_products", raw)
+        assert result == raw
+
+    def test_sorts_by_export_value_descending_and_truncates(self):
+        """treemap_products with 100 items → returns top 20 sorted by exportValue."""
+        items = [
+            {"productId": i, "exportValue": i * 100, "year": 2024} for i in range(100)
+        ]
+        raw = {"countryProductYear": items}
+        result = post_process_response("treemap_products", raw)
+
+        processed_items = result["countryProductYear"]
+        assert len(processed_items) == 20
+        # Top item has highest exportValue (99 * 100 = 9900)
+        assert processed_items[0]["exportValue"] == 9900
+        # Items are sorted descending
+        values = [item["exportValue"] for item in processed_items]
+        assert values == sorted(values, reverse=True)
+
+    def test_enriches_product_ids_with_names_from_cache(self):
+        """productId → adds productName and productCode from cache."""
+        items = [
+            {"productId": i, "exportValue": (100 - i) * 100, "year": 2024}
+            for i in range(30)
+        ]
+        # Include a known product ID (726 = Coffee)
+        items[0]["productId"] = 726
+        items[0]["exportValue"] = 999999
+        raw = {"countryProductYear": items}
+
+        product_cache = _make_product_cache()
+        result = post_process_response(
+            "treemap_products", raw, product_cache=product_cache
+        )
+
+        top_item = result["countryProductYear"][0]
+        assert top_item["productName"] == "Coffee"
+        assert top_item["productCode"] == "0901"
+
+    def test_enriches_country_ids_with_names_from_cache(self):
+        """partnerCountryId → adds partnerName from cache."""
+        items = [
+            {"partnerCountryId": i, "exportValue": (100 - i) * 100, "year": 2024}
+            for i in range(30)
+        ]
+        # Include a known country ID (76 = Brazil)
+        items[0]["partnerCountryId"] = 76
+        items[0]["exportValue"] = 999999
+        raw = {"countryCountryYear": items}
+
+        country_cache = _make_country_cache()
+        result = post_process_response(
+            "treemap_partners", raw, country_cache=country_cache
+        )
+
+        top_item = result["countryCountryYear"][0]
+        assert top_item["partnerName"] == "Brazil"
+
+    def test_feasibility_filter_keeps_only_rca_lt_1(self):
+        """Feasibility query filters to products where exportRca < 1, sorts by cog desc."""
+        items = [
+            {"productId": 1, "exportRca": 0.5, "cog": 0.9, "exportValue": 100},
+            {
+                "productId": 2,
+                "exportRca": 1.5,
+                "cog": 0.8,
+                "exportValue": 200,
+            },  # filtered out
+            {"productId": 3, "exportRca": 0.0, "cog": 0.7, "exportValue": 300},
+            {"productId": 4, "exportRca": 0.3, "cog": 0.95, "exportValue": 50},
+            {
+                "productId": 5,
+                "exportRca": 2.0,
+                "cog": 0.99,
+                "exportValue": 500,
+            },  # filtered out
+        ] + [
+            {"productId": 100 + i, "exportRca": 0.1, "cog": 0.01 * i, "exportValue": 10}
+            for i in range(20)
+        ]
+        raw = {"countryProductYear": items}
+
+        result = post_process_response("feasibility", raw)
+
+        processed = result["countryProductYear"]
+        # RCA >= 1 items should be excluded
+        for item in processed:
+            assert (item.get("exportRca") or 0) < 1
+        # Should be sorted by cog descending
+        cog_values = [item["cog"] for item in processed]
+        assert cog_values == sorted(cog_values, reverse=True)
+
+    def test_includes_metadata(self):
+        """Truncated response includes _postProcessed metadata."""
+        items = [
+            {"productId": i, "exportValue": i * 100, "year": 2024} for i in range(50)
+        ]
+        raw = {"countryProductYear": items}
+
+        result = post_process_response("treemap_products", raw)
+
+        meta = result["_postProcessed"]
+        assert meta["totalItems"] == 50
+        assert meta["shownItems"] == 20
+        assert meta["sortField"] == "exportValue"
+
+    def test_unknown_query_type_passes_through(self):
+        """Query types without post-processing config return raw response unchanged."""
+        raw = {"someData": [{"value": 42}]}
+        result = post_process_response("country_profile", raw)
+        assert result == raw
+
+    def test_handles_null_sort_field_gracefully(self):
+        """Items with null exportValue sort to end."""
+        items = [
+            {"productId": 1, "exportValue": None, "year": 2024},
+            {"productId": 2, "exportValue": 5000, "year": 2024},
+            {"productId": 3, "exportValue": None, "year": 2024},
+            {"productId": 4, "exportValue": 3000, "year": 2024},
+        ] + [
+            {"productId": 10 + i, "exportValue": (30 - i) * 100, "year": 2024}
+            for i in range(20)
+        ]
+        raw = {"countryProductYear": items}
+
+        result = post_process_response("treemap_products", raw)
+
+        processed = result["countryProductYear"]
+        # Non-null values should come first and be sorted descending
+        non_null_values = [
+            item["exportValue"] for item in processed if item["exportValue"] is not None
+        ]
+        assert non_null_values == sorted(non_null_values, reverse=True)
+
+
+# ---------------------------------------------------------------------------
+# 11. Slim query builders
+# ---------------------------------------------------------------------------
+
+
+class TestSlimQueryBuilders:
+    """Tests that slim query builders request only essential fields."""
+
+    def test_treemap_products_requests_only_essential_fields(self):
+        """treemap_products query should have slim fields, not normalized* fields."""
+        query, _ = build_graphql_query(
+            "treemap_products",
+            {
+                "country_id": 404,
+                "product_level": 4,
+                "product_class": "HS92",
+                "year": 2024,
+            },
+        )
+        assert "productId" in query
+        assert "exportValue" in query
+        assert "year" in query
+        # Should NOT contain heavy analytical fields
+        assert "normalizedPci" not in query
+        assert "normalizedCog" not in query
+        assert "normalizedDistance" not in query
+        assert "normalizedExportRca" not in query
+
+    def test_treemap_partners_requests_only_essential_fields(self):
+        """treemap_partners should have slim fields."""
+        query, _ = build_graphql_query(
+            "treemap_partners",
+            {"country_id": 404, "year": 2024},
+        )
+        assert "partnerCountryId" in query
+        assert "exportValue" in query
+        assert "year" in query
+        # Should NOT contain reported values
+        assert "exportValueReported" not in query
+        assert "importValueReported" not in query
+
+    def test_treemap_bilateral_requests_only_essential_fields(self):
+        """treemap_bilateral should have slim fields."""
+        query, _ = build_graphql_query(
+            "treemap_bilateral",
+            {
+                "country_id": 404,
+                "partner_id": 76,
+                "product_level": 4,
+                "product_class": "HS92",
+                "year": 2024,
+            },
+        )
+        assert "productId" in query
+        assert "exportValue" in query
+        # Should NOT contain import reported values
+        assert "importValueReported" not in query
+
+    def test_feasibility_requests_rca_and_complexity_fields(self):
+        """feasibility query should request RCA + complexity fields only."""
+        query, _ = build_graphql_query(
+            "feasibility",
+            {
+                "country_id": 404,
+                "product_level": 4,
+                "product_class": "HS92",
+                "year": 2024,
+            },
+        )
+        assert "productId" in query
+        assert "exportRca" in query
+        assert "cog" in query
+        assert "distance" in query
+        assert "exportValue" in query
+        assert "year" in query
+        # Should NOT contain normalized fields
+        assert "normalizedCog" not in query
+        assert "normalizedDistance" not in query
+        assert "normalizedExportRca" not in query
 
 
 # ---------------------------------------------------------------------------

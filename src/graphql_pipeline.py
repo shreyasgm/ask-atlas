@@ -810,15 +810,25 @@ async def build_and_execute_graphql(
 # ---------------------------------------------------------------------------
 
 
-async def format_graphql_results(state: AtlasAgentState) -> dict:
+async def format_graphql_results(
+    state: AtlasAgentState,
+    *,
+    product_cache: CatalogCache | None = None,
+    country_cache: CatalogCache | None = None,
+) -> dict:
     """Create a ToolMessage from the GraphQL pipeline results.
 
     Handles three cases:
     - Rejection: returns a ToolMessage explaining why the query was rejected.
     - Error: returns an error ToolMessage and discards atlas links.
-    - Success: formats the response data into a ToolMessage.
+    - Success: post-processes and formats the response data into a ToolMessage.
 
     Also handles parallel tool_calls by creating stub messages for extras.
+
+    Args:
+        state: Current agent state with raw GraphQL response.
+        product_cache: Optional product catalog cache for name enrichment.
+        country_cache: Optional country catalog cache for name enrichment.
     """
     last_msg = state["messages"][-1]
     tool_calls = last_msg.tool_calls
@@ -850,10 +860,16 @@ async def format_graphql_results(state: AtlasAgentState) -> dict:
         )
         # Discard links on failure
     else:
-        # Success
+        # Success — post-process then serialize
         import json
 
-        content = json.dumps(raw_response, indent=2, default=str)
+        processed = post_process_response(
+            query_type,
+            raw_response,
+            product_cache=product_cache,
+            country_cache=country_cache,
+        )
+        content = json.dumps(processed, indent=2, default=str)
         atlas_links = state.get("graphql_atlas_links", [])
 
     messages: list[ToolMessage] = [
@@ -871,6 +887,165 @@ async def format_graphql_results(state: AtlasAgentState) -> dict:
         "messages": messages,
         "queries_executed": state.get("queries_executed", 0) + 1,
         "graphql_atlas_links": atlas_links,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Response post-processing — sort, truncate, enrich large responses
+# ---------------------------------------------------------------------------
+
+_POST_PROCESS_RULES: dict[str, dict] = {
+    "treemap_products": {
+        "root": "countryProductYear",
+        "sort": "exportValue",
+        "top_n": 20,
+        "enrich": "product",
+    },
+    "treemap_partners": {
+        "root": "countryCountryYear",
+        "sort": "exportValue",
+        "top_n": 20,
+        "enrich": "country",
+    },
+    "treemap_bilateral": {
+        "root": "countryCountryProductYear",
+        "sort": "exportValue",
+        "top_n": 20,
+        "enrich": "product",
+    },
+    "overtime_products": {
+        "root": "countryProductYear",
+        "sort": "exportValue",
+        "top_n": 20,
+        "enrich": "product",
+    },
+    "overtime_partners": {
+        "root": "countryCountryYear",
+        "sort": "exportValue",
+        "top_n": 20,
+        "enrich": "country",
+    },
+    "marketshare": {
+        "root": "countryProductYear",
+        "sort": "exportValue",
+        "top_n": 20,
+        "enrich": "product",
+    },
+    "product_space": {
+        "root": "countryProductYear",
+        "sort": "exportValue",
+        "top_n": 50,
+        "enrich": "product",
+    },
+    "feasibility": {
+        "root": "countryProductYear",
+        "sort": "cog",
+        "top_n": 20,
+        "enrich": "product",
+        "filter": "rca_lt_1",
+    },
+    "feasibility_table": {
+        "root": "countryProductYear",
+        "sort": "cog",
+        "top_n": 20,
+        "enrich": "product",
+        "filter": "rca_lt_1",
+    },
+    "product_table": {
+        "root": "countryProductYear",
+        "sort": "exportValue",
+        "top_n": 20,
+        "enrich": "product",
+    },
+    "explore_bilateral": {
+        "root": "countryCountryProductYear",
+        "sort": "exportValue",
+        "top_n": 20,
+        "enrich": "product",
+    },
+    "growth_opportunities": {
+        "root": "productSpace",
+        "sort": "cog",
+        "top_n": 20,
+        "enrich": "none",
+    },
+}
+
+_FILTERS: dict[str, Callable] = {
+    "rca_lt_1": lambda item: (item.get("exportRca") or 0) < 1,
+}
+
+
+def post_process_response(
+    query_type: str,
+    raw_response: dict,
+    *,
+    product_cache: CatalogCache | None = None,
+    country_cache: CatalogCache | None = None,
+) -> dict:
+    """Sort, truncate, and enrich large GraphQL responses before sending to the LLM.
+
+    Args:
+        query_type: Classified query type (e.g., "treemap_products").
+        raw_response: Raw GraphQL API response dict.
+        product_cache: Optional product catalog cache for name enrichment.
+        country_cache: Optional country catalog cache for name enrichment.
+
+    Returns:
+        Post-processed response dict, or raw_response if no rules apply.
+    """
+    rules = _POST_PROCESS_RULES.get(query_type)
+    if rules is None:
+        return raw_response
+
+    root_key = rules["root"]
+    items = raw_response.get(root_key)
+    if not isinstance(items, list) or len(items) <= rules["top_n"]:
+        return raw_response
+
+    total_items = len(items)
+
+    # Apply filter if specified
+    filter_name = rules.get("filter")
+    if filter_name and filter_name in _FILTERS:
+        items = [item for item in items if _FILTERS[filter_name](item)]
+
+    # Sort by sort field descending (nulls last)
+    sort_field = rules["sort"]
+    items.sort(
+        key=lambda x: (x.get(sort_field) is not None, x.get(sort_field) or 0),
+        reverse=True,
+    )
+
+    # Truncate
+    top_n = rules["top_n"]
+    items = items[:top_n]
+
+    # Enrich with human-readable names
+    enrich_type = rules.get("enrich", "none")
+    if enrich_type == "product" and product_cache is not None:
+        for item in items:
+            pid = item.get("productId")
+            if pid is not None:
+                entry = product_cache.lookup_sync("id", str(pid))
+                if entry:
+                    item["productName"] = entry.get("nameShortEn", "")
+                    item["productCode"] = entry.get("code", "")
+    elif enrich_type == "country" and country_cache is not None:
+        for item in items:
+            cid = item.get("partnerCountryId")
+            if cid is not None:
+                entry = country_cache.lookup_sync("id", str(cid))
+                if entry:
+                    item["partnerName"] = entry.get("nameShortEn", "")
+
+    return {
+        root_key: items,
+        "_postProcessed": {
+            "totalItems": total_items,
+            "shownItems": len(items),
+            "sortField": sort_field,
+        },
     }
 
 
@@ -1326,20 +1501,159 @@ def _product_level_to_int(level: str | int | None) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Slim query builders — reduced field sets for high-volume responses
+# ---------------------------------------------------------------------------
+
+
+def _build_treemap_cpy(params: dict) -> tuple[str, dict]:
+    """Slim builder for treemap_products — only sort+display fields."""
+    variables: dict[str, Any] = {
+        "countryId": params.get("country_id"),
+        "productLevel": _product_level_to_int(params.get("product_level", "fourDigit")),
+        "productClass": params.get("product_class", "HS92"),
+    }
+    year = params.get("year")
+    if year:
+        variables["yearMin"] = year
+        variables["yearMax"] = year
+    else:
+        variables["yearMin"] = params.get("year_min", 2024)
+        variables["yearMax"] = params.get("year_max", 2024)
+
+    if "product_id" in params:
+        variables["productId"] = params["product_id"]
+
+    query = """
+    query CPY($countryId: Int, $productLevel: Int!, $productClass: ProductClass,
+              $productId: Int, $yearMin: Int, $yearMax: Int) {
+      countryProductYear(
+        countryId: $countryId
+        productLevel: $productLevel
+        productClass: $productClass
+        productId: $productId
+        yearMin: $yearMin
+        yearMax: $yearMax
+      ) {
+        productId year exportValue
+      }
+    }
+    """
+    return query, variables
+
+
+def _build_treemap_ccy(params: dict) -> tuple[str, dict]:
+    """Slim builder for treemap_partners — only sort+display fields."""
+    variables: dict[str, Any] = {"countryId": params.get("country_id")}
+    year = params.get("year")
+    if year:
+        variables["yearMin"] = year
+        variables["yearMax"] = year
+    else:
+        variables["yearMin"] = params.get("year_min", 2024)
+        variables["yearMax"] = params.get("year_max", 2024)
+
+    query = """
+    query CCY($countryId: Int, $yearMin: Int, $yearMax: Int) {
+      countryCountryYear(
+        countryId: $countryId
+        yearMin: $yearMin
+        yearMax: $yearMax
+      ) {
+        countryId partnerCountryId year
+        exportValue importValue
+      }
+    }
+    """
+    return query, variables
+
+
+def _build_treemap_ccpy(params: dict) -> tuple[str, dict]:
+    """Slim builder for treemap_bilateral — only sort+display fields."""
+    variables: dict[str, Any] = {
+        "countryId": params.get("country_id"),
+        "partnerCountryId": params.get("partner_id"),
+        "productLevel": _product_level_to_int(params.get("product_level", "fourDigit")),
+        "productClass": params.get("product_class", "HS92"),
+    }
+    year = params.get("year")
+    if year:
+        variables["yearMin"] = year
+        variables["yearMax"] = year
+    else:
+        variables["yearMin"] = params.get("year_min", 2024)
+        variables["yearMax"] = params.get("year_max", 2024)
+
+    query = """
+    query CCPY($countryId: Int, $partnerCountryId: Int,
+               $productLevel: Int!, $productClass: ProductClass,
+               $yearMin: Int, $yearMax: Int) {
+      countryCountryProductYear(
+        countryId: $countryId
+        partnerCountryId: $partnerCountryId
+        productLevel: $productLevel
+        productClass: $productClass
+        yearMin: $yearMin
+        yearMax: $yearMax
+      ) {
+        productId year exportValue
+      }
+    }
+    """
+    return query, variables
+
+
+def _build_feasibility_cpy(params: dict) -> tuple[str, dict]:
+    """Slim builder for feasibility — RCA + complexity fields only."""
+    variables: dict[str, Any] = {
+        "countryId": params.get("country_id"),
+        "productLevel": _product_level_to_int(params.get("product_level", "fourDigit")),
+        "productClass": params.get("product_class", "HS92"),
+    }
+    year = params.get("year")
+    if year:
+        variables["yearMin"] = year
+        variables["yearMax"] = year
+    else:
+        variables["yearMin"] = params.get("year_min", 2024)
+        variables["yearMax"] = params.get("year_max", 2024)
+
+    if "product_id" in params:
+        variables["productId"] = params["product_id"]
+
+    query = """
+    query CPY($countryId: Int, $productLevel: Int!, $productClass: ProductClass,
+              $productId: Int, $yearMin: Int, $yearMax: Int) {
+      countryProductYear(
+        countryId: $countryId
+        productLevel: $productLevel
+        productClass: $productClass
+        productId: $productId
+        yearMin: $yearMin
+        yearMax: $yearMax
+      ) {
+        productId year exportValue exportRca cog distance
+      }
+    }
+    """
+    return query, variables
+
+
+# ---------------------------------------------------------------------------
 # Query type → builder dispatch table
 # ---------------------------------------------------------------------------
 
 _QUERY_BUILDERS: dict[str, Callable[[dict], tuple[str, dict]]] = {
-    # Explore API queries
-    "treemap_products": _build_country_product_year,
-    "treemap_partners": _build_country_country_year,
-    "treemap_bilateral": _build_country_country_product_year,
+    # Explore API queries (slim builders for high-volume responses)
+    "treemap_products": _build_treemap_cpy,
+    "treemap_partners": _build_treemap_ccy,
+    "treemap_bilateral": _build_treemap_ccpy,
+    "feasibility": _build_feasibility_cpy,
+    "feasibility_table": _build_feasibility_cpy,
+    # Explore API queries (full-field builders)
     "overtime_products": _build_country_product_year,
     "overtime_partners": _build_country_country_year,
     "marketshare": _build_marketshare,
     "product_space": _build_product_space,
-    "feasibility": _build_country_product_year,
-    "feasibility_table": _build_country_product_year,
     "country_year": _build_country_year,
     "product_info": _build_product_year,
     "explore_bilateral": _build_country_country_product_year,
