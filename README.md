@@ -113,33 +113,81 @@ The agent can loop multiple times per question — after seeing results from one
 
 ## Getting Started
 
-```bash
-# Install backend dependencies
-pip install -e ".[dev]"
+### Prerequisites
 
-# Start the FastAPI backend
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/) (Python package manager)
+- Node.js >= 23 and pnpm >= 10
+- Docker (for the local app database)
+- Access to the Atlas trade database (connection string via `ATLAS_DB_URL`)
+- At least one LLM API key (`OPENAI_API_KEY` by default)
+
+### Environment Setup
+
+Copy `.env.example` to `.env` and fill in the required values:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `ATLAS_DB_URL` | Yes | PostgreSQL URI for the Atlas trade data DB (read-only) |
+| `OPENAI_API_KEY` | Yes* | API key for the default LLM provider |
+| `CHECKPOINT_DB_URL` | No | PostgreSQL URI for the app state DB; falls back to in-memory storage if unset |
+| `ANTHROPIC_API_KEY` | No | Required only if switching LLM provider to Anthropic |
+| `GOOGLE_API_KEY` | No | Required only if switching LLM provider to Google |
+
+*Or the equivalent key for whichever provider you configure in `src/model_config.py`.
+
+### Running Locally
+
+```bash
+# 1. Install backend dependencies
+uv sync
+
+# 2. Start the local app database (conversations + checkpoints)
+docker compose up -d
+
+# 3. Start the FastAPI backend
 uv run uvicorn src.api:app --host 0.0.0.0 --port 8000
 
-# In a separate terminal, start the frontend
+# 4. In a separate terminal, start the frontend
 cd frontend && pnpm install && pnpm dev
 ```
+
+The `docker-compose.yml` runs a PostgreSQL instance for app state on port **5435** (configurable via `APP_DB_PORT`). Set `CHECKPOINT_DB_URL=postgresql://ask_atlas_app:devpass@localhost:5435/ask_atlas_app` in your `.env` to use it. If you skip this step, the backend falls back to in-memory storage (conversations won't persist across restarts).
 
 The frontend dev server (port 5173) proxies `/api` requests to the backend (port 8000).
 
 ### Running Tests
 
 ```bash
-# Backend unit tests (no external dependencies)
+# Backend unit tests (mocked LLM + DB, no external deps)
 PYTHONPATH=$(pwd) uv run pytest -m "not db and not integration and not eval"
 
-# Frontend checks (type-check + lint + format + tests)
-cd frontend && pnpm check && pnpm test
+# Frontend checks (type-check + lint + format)
+cd frontend && pnpm check
 
-# Start Docker test DBs for integration tests
-docker compose -f docker-compose.test.yml up -d --wait
+# Frontend tests
+cd frontend && pnpm test
 ```
 
-See `CLAUDE.md` for full developer guidelines including test tiers, code style, and deployment procedures.
+**DB tests** require Docker test databases (separate from the local dev DB above):
+
+```bash
+# Start test DBs — Atlas mock data on port 5433, app DB on port 5434
+docker compose -f docker-compose.test.yml up -d --wait
+
+# Run DB tests
+ATLAS_DB_URL=postgresql://postgres:testpass@localhost:5433/atlas_test \
+CHECKPOINT_DB_URL=postgresql://ask_atlas_app:testpass@localhost:5434/ask_atlas_app \
+PYTHONPATH=$(pwd) uv run pytest -m "db" -v
+```
+
+**Integration tests** hit real LLM APIs and require the corresponding API keys in `.env`:
+
+```bash
+PYTHONPATH=$(pwd) uv run pytest -m "integration" -v
+```
+
+See `CLAUDE.md` for full developer guidelines including all test tiers, code style, and deployment procedures.
 
 ## API Endpoints
 
