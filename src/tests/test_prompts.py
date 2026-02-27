@@ -128,11 +128,12 @@ class TestFormatPlaceholderContracts:
         }
 
     def test_document_selection_prompt_matches_caller(self):
-        """docs_pipeline calls .format(question=..., context_block=..., manifest=...)."""
+        """docs_pipeline calls .format(question=..., context_block=..., manifest=..., max_docs=...)."""
         assert _get_format_fields(prompts.DOCUMENT_SELECTION_PROMPT) == {
             "question",
             "context_block",
             "manifest",
+            "max_docs",
         }
 
     def test_documentation_synthesis_prompt_matches_caller(self):
@@ -429,6 +430,36 @@ class TestProductExtractionEscaping:
 # ---------------------------------------------------------------------------
 # Guard rail: leaf dependency (zero src/ imports)
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Content assertion tests — prompt additions from eval diagnostics
+# ---------------------------------------------------------------------------
+
+
+class TestPromptContentAdditions:
+    """Verify that key prompt additions from eval diagnostic fixes are present."""
+
+    def test_dual_tool_extension_has_pre_computed_fields_guidance(self):
+        """DUAL_TOOL_EXTENSION must instruct the agent to trust pre-computed metrics."""
+        assert "Pre-Computed Fields" in prompts.DUAL_TOOL_EXTENSION
+        assert "diversificationGrade" in prompts.DUAL_TOOL_EXTENSION
+        assert "exportValueConstGrowthCagr" in prompts.DUAL_TOOL_EXTENSION
+
+    def test_agent_system_prompt_has_anti_fabrication_rule(self):
+        """AGENT_SYSTEM_PROMPT must contain the anti-fabrication rule."""
+        assert "fabricate" in prompts.AGENT_SYSTEM_PROMPT
+        assert "tool response" in prompts.AGENT_SYSTEM_PROMPT
+
+    def test_classification_prompt_has_services_example(self):
+        """build_classification_prompt output must include services routing example."""
+        result = prompts.build_classification_prompt("test question")
+        assert "services exports" in result
+
+    def test_classification_prompt_has_services_routing(self):
+        """The GRAPHQL_CLASSIFICATION_PROMPT must route services to treemap_products."""
+        assert "tourism" in prompts.GRAPHQL_CLASSIFICATION_PROMPT
+        assert "treemap_products" in prompts.GRAPHQL_CLASSIFICATION_PROMPT
 
 
 class TestLeafDependency:
