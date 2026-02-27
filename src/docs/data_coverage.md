@@ -1,14 +1,43 @@
-# Data Coverage
-
-**Purpose:** Reference for what trade data is available in the Atlas of Economic Complexity — which classification systems, year ranges, country sets, and data quality flags exist, and where each dataset can be accessed (SQL database vs. GraphQL API).
-
-**When to load this document:** Load when a user explicitly asks about data coverage caveats or limitations — e.g.,
-"why is my query returning no data?", "does Atlas have data before 1995?", "why is
-[country] missing from ECI rankings?", "what data quality flags exist?". Also load
-when a proposed query would fail due to year or classification boundary constraints.
-Do NOT load for routine classification questions (see `classification_systems.md`)
-or for country naming and eligibility mechanics (see `country_entities.md`).
-
+---
+title: Data Coverage
+purpose: >
+  Reference for what trade data is available in the Atlas of Economic Complexity
+  — which classification systems, year ranges, country sets, and data quality
+  flags exist, and where each dataset can be accessed (SQL database vs. GraphQL
+  API).
+keywords:
+  - data coverage
+  - year range
+  - classification system
+  - HS92
+  - HS12
+  - HS22
+  - SITC
+  - services
+  - country inclusion
+  - data quality flags
+  - data_flags
+  - in_rankings
+  - in_cp
+  - missing data
+  - 6-digit
+  - product granularity
+  - schema
+  - SQL database
+  - GraphQL API
+  - data update cycle
+when_to_load: >
+  Load when a user explicitly asks about data coverage caveats or limitations —
+  e.g., "why is my query returning no data?", "does Atlas have data before 1995?",
+  "why is [country] missing from ECI rankings?", "what data quality flags exist?".
+  Also load when a proposed query would fail due to year or classification boundary
+  constraints.
+when_not_to_load: >
+  Do not load for routine classification questions (see classification_systems.md)
+  or for country naming and eligibility mechanics (see country_entities.md).
+related_docs:
+  - classification_systems.md
+  - country_entities.md
 ---
 
 ## Classification Systems and Year Coverage

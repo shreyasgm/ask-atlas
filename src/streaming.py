@@ -585,6 +585,7 @@ class AtlasTextToSQL:
             agent_mode=AgentMode(_settings.agent_mode),
             budget_tracker=budget_tracker,
             docs_dir=BASE_DIR / "src" / "docs",
+            max_docs_per_selection=_settings.max_docs_per_selection,
         )
 
         return instance
