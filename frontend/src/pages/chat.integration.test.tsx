@@ -279,10 +279,10 @@ describe('ChatPage integration (real hook + real components)', () => {
       expect(screen.getByPlaceholderText(/ask about trade data/i)).not.toBeDisabled();
     });
 
-    // Product code pill should render in the collapsed QueryContextCard
-    expect(screen.getByText('0901')).toBeInTheDocument();
-    // Country pill should render
-    expect(screen.getByText('BRA')).toBeInTheDocument();
+    // Product pill should render name (code) in the collapsed QueryContextCard
+    expect(screen.getByText('Coffee (0901)')).toBeInTheDocument();
+    // Country pill should render name
+    expect(screen.getByText('Brazil')).toBeInTheDocument();
   });
 
   it('clear button resets messages', async () => {

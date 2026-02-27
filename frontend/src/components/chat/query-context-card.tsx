@@ -1,6 +1,8 @@
-import { ChevronDown, ChevronUp, Database } from 'lucide-react';
+import { BookOpen, ChevronDown, ChevronUp, Database } from 'lucide-react';
 import { useState } from 'react';
 import type { EntitiesData, QueryAggregateStats } from '@/types/chat';
+import { cn } from '@/lib/utils';
+import { getEntityBadgeClass } from '@/utils/entity-colors';
 
 interface QueryContextCardProps {
   entitiesData: EntitiesData | null;
@@ -17,13 +19,21 @@ export default function QueryContextCard({ entitiesData, queryStats }: QueryCont
   const schema = entitiesData.schemas[0] ?? '';
   const allCodes = entitiesData.products.flatMap((p) => p.codes);
   const countries = entitiesData.countries ?? [];
+  const hasGraphql = entitiesData.graphqlClassification !== null;
+  const hasDocs = entitiesData.docsConsulted.length > 0;
 
   if (expanded) {
+    const validGraphqlEntities = entitiesData.graphqlEntities
+      ? Object.entries(entitiesData.graphqlEntities).filter(
+          ([, val]) => val != null && val !== '' && String(val).length <= 60,
+        )
+      : [];
+
     return (
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-border dark:bg-card">
         <div className="flex">
           <div className="w-1 shrink-0 rounded-l-lg bg-blue-500" />
-          <div className="flex flex-1 flex-col gap-2 px-4 py-3">
+          <div className="flex flex-1 flex-col gap-2.5 px-4 py-3">
             {/* Header */}
             <button
               aria-label="Collapse query context"
@@ -38,16 +48,16 @@ export default function QueryContextCard({ entitiesData, queryStats }: QueryCont
               <ChevronUp className="h-3.5 w-3.5 text-slate-400" />
             </button>
 
-            {/* Country row — hidden when no countries */}
+            {/* Country row */}
             {countries.length > 0 && (
               <div className="flex items-center gap-1.5 text-xs">
                 <span className="font-medium text-slate-600 dark:text-slate-400">Countries:</span>
                 {countries.map((c) => (
                   <span
-                    className="rounded-full bg-green-100 px-2 py-0.5 font-semibold text-green-800 dark:bg-green-950 dark:text-green-300"
+                    className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:bg-green-950 dark:text-green-300"
                     key={c.iso3Code}
                   >
-                    {c.name} ({c.iso3Code})
+                    {c.name}
                   </span>
                 ))}
               </div>
@@ -58,20 +68,18 @@ export default function QueryContextCard({ entitiesData, queryStats }: QueryCont
               <p className="text-xs text-slate-600 dark:text-slate-400">Schema: {schema}</p>
             )}
 
-            {/* Products — hidden when no products */}
+            {/* Products */}
             {entitiesData.products.length > 0 && (
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                  Products:
-                </span>
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="font-medium text-slate-600 dark:text-slate-400">Products:</span>
                 <div className="flex flex-wrap gap-1.5">
                   {entitiesData.products.map((product) =>
                     product.codes.map((code) => (
                       <span
-                        className="rounded border border-blue-200 bg-blue-50 px-2 py-0.5 font-mono text-[11px] font-medium text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                        className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300"
                         key={code}
                       >
-                        {code} {product.name}
+                        {product.name} ({code})
                       </span>
                     )),
                   )}
@@ -79,8 +87,71 @@ export default function QueryContextCard({ entitiesData, queryStats }: QueryCont
               </div>
             )}
 
-            {/* Resolution */}
-            {entitiesData.lookupCodes && (
+            {/* Divider before GraphQL */}
+            {hasGraphql && (countries.length > 0 || schema || entitiesData.products.length > 0) && (
+              <div className="h-px bg-slate-200 dark:bg-border" />
+            )}
+
+            {/* GraphQL Classification */}
+            {hasGraphql && entitiesData.graphqlClassification && (
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 shrink-0 rounded-full bg-violet-500" />
+                  <span className="text-xs font-semibold text-violet-500">GraphQL</span>
+                </div>
+                <div className="flex items-center gap-2 pl-4 text-xs">
+                  <span className="rounded-full bg-violet-100 px-2 py-0.5 font-mono text-[10px] font-medium text-violet-700 dark:bg-violet-950 dark:text-violet-300">
+                    {entitiesData.graphqlClassification.queryType}
+                  </span>
+                  {entitiesData.graphqlClassification.apiTarget && (
+                    <span className="text-[11px] text-slate-500">
+                      {entitiesData.graphqlClassification.apiTarget}
+                    </span>
+                  )}
+                </div>
+                {validGraphqlEntities.length > 0 && (
+                  <div className="flex items-center gap-1.5 pl-4 text-xs">
+                    <span className="text-[11px] font-medium text-slate-500">Entities:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {validGraphqlEntities.map(([key, val]) => (
+                        <span
+                          className={cn(
+                            'rounded-md px-1.5 py-0.5 text-[10px] font-medium',
+                            getEntityBadgeClass(key),
+                          )}
+                          key={key}
+                        >
+                          {String(val)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Divider before Resolution */}
+            {entitiesData.resolutionNotes.length > 0 && (
+              <div className="h-px bg-slate-200 dark:bg-border" />
+            )}
+
+            {/* Resolution notes */}
+            {entitiesData.resolutionNotes.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                  Resolution Notes
+                </span>
+                {entitiesData.resolutionNotes.map((note) => (
+                  <div className="flex gap-1.5 pl-2 text-[11px]" key={note}>
+                    <span className="text-amber-600">•</span>
+                    <span className="leading-[1.4] text-amber-900 dark:text-amber-400">{note}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Legacy resolution (lookup_codes) */}
+            {entitiesData.resolutionNotes.length === 0 && entitiesData.lookupCodes && (
               <div className="flex items-center gap-2 text-[11px]">
                 <span className="text-slate-600 dark:text-slate-400">
                   Resolution: {entitiesData.lookupCodes}
@@ -91,11 +162,55 @@ export default function QueryContextCard({ entitiesData, queryStats }: QueryCont
               </div>
             )}
 
+            {/* Divider before Docs */}
+            {hasDocs && <div className="h-px bg-slate-200 dark:bg-border" />}
+
+            {/* Docs consulted */}
+            {hasDocs && (
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <BookOpen className="h-3 w-3 text-amber-600" />
+                  <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                    Documentation Consulted
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pl-2">
+                  {entitiesData.docsConsulted.map((file) => (
+                    <span
+                      className="rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 font-mono text-[10px] text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                      key={file}
+                    >
+                      {file}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Divider before Stats */}
+            {queryStats && <div className="h-px bg-slate-200 dark:bg-border" />}
+
             {/* Stats */}
             {queryStats && (
               <p className="font-mono text-[10px] text-slate-400">
-                {queryStats.totalQueries} queries &middot; {queryStats.totalRows} rows &middot;{' '}
-                {(queryStats.totalTimeMs / 1000).toFixed(1)}s
+                {queryStats.totalQueries > 0 && (
+                  <>
+                    {queryStats.totalQueries} SQL{' '}
+                    {queryStats.totalQueries === 1 ? 'query' : 'queries'} &middot;{' '}
+                    {queryStats.totalRows} rows &middot;{' '}
+                    {(queryStats.totalExecutionTimeMs / 1000).toFixed(1)}s
+                  </>
+                )}
+                {queryStats.totalQueries > 0 && queryStats.totalGraphqlTimeMs > 0 && '  |  '}
+                {queryStats.totalGraphqlTimeMs > 0 && (
+                  <>
+                    {queryStats.totalGraphqlQueries} GraphQL{' '}
+                    {queryStats.totalGraphqlQueries === 1 ? 'query' : 'queries'} &middot;{' '}
+                    {queryStats.totalGraphqlTimeMs}ms
+                  </>
+                )}
+                {(queryStats.totalQueries > 0 || queryStats.totalGraphqlTimeMs > 0) && '  |  '}
+                Total: {(queryStats.totalTimeMs / 1000).toFixed(1)}s
               </p>
             )}
           </div>
@@ -113,7 +228,7 @@ export default function QueryContextCard({ entitiesData, queryStats }: QueryCont
       type="button"
     >
       <div className="flex flex-col gap-1.5">
-        {/* Country row — hidden when no countries */}
+        {/* Country row */}
         {countries.length > 0 && (
           <div className="flex items-center gap-1.5">
             <Database className="h-3.5 w-3.5 text-blue-500" />
@@ -122,33 +237,63 @@ export default function QueryContextCard({ entitiesData, queryStats }: QueryCont
             </span>
             {countries.map((c) => (
               <span
-                className="rounded-full bg-green-100 px-2 py-0.5 font-mono text-[11px] font-semibold text-green-800 dark:bg-green-950 dark:text-green-300"
+                className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:bg-green-950 dark:text-green-300"
                 key={c.iso3Code}
               >
-                {c.iso3Code}
+                {c.name}
               </span>
             ))}
           </div>
         )}
-        {/* Products row — hidden when no product codes */}
+        {/* Products row */}
         {allCodes.length > 0 && (
           <div className={`flex items-center gap-1.5 ${countries.length > 0 ? 'pl-5' : ''}`}>
             {countries.length === 0 && <Database className="h-3.5 w-3.5 text-blue-500" />}
             <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
               Products ({schema}):
             </span>
-            {allCodes.map((code) => (
-              <span
-                className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 font-mono text-[11px] font-medium text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300"
-                key={code}
-              >
-                {code}
-              </span>
-            ))}
+            <div className="flex flex-wrap gap-1.5">
+              {entitiesData.products.map((product) =>
+                product.codes.map((code) => (
+                  <span
+                    className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                    key={code}
+                  >
+                    {product.name} ({code})
+                  </span>
+                )),
+              )}
+            </div>
           </div>
         )}
-        {/* Fallback: only schema, no countries or products */}
-        {countries.length === 0 && allCodes.length === 0 && (
+        {/* GraphQL + Docs badges row */}
+        {(hasGraphql || hasDocs) && (
+          <div
+            className={`flex items-center gap-2 ${countries.length > 0 || allCodes.length > 0 ? 'pl-5' : ''}`}
+          >
+            {countries.length === 0 && allCodes.length === 0 && (
+              <Database className="h-3.5 w-3.5 text-blue-500" />
+            )}
+            {hasGraphql && entitiesData.graphqlClassification && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 dark:bg-violet-950">
+                <div className="h-1.5 w-1.5 rounded-full bg-violet-500" />
+                <span className="font-mono text-[10px] font-medium text-violet-700 dark:text-violet-300">
+                  {entitiesData.graphqlClassification.queryType}
+                </span>
+              </span>
+            )}
+            {hasDocs && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 dark:bg-amber-950">
+                <BookOpen className="h-2.5 w-2.5 text-amber-600" />
+                <span className="text-[10px] font-medium text-amber-600 dark:text-amber-300">
+                  {entitiesData.docsConsulted.length} docs
+                </span>
+              </span>
+            )}
+          </div>
+        )}
+        {/* Fallback: only schema */}
+        {countries.length === 0 && allCodes.length === 0 && !hasGraphql && !hasDocs && (
           <div className="flex items-center gap-1.5">
             <Database className="h-3.5 w-3.5 text-blue-500" />
             <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{schema}</span>

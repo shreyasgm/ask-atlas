@@ -1,8 +1,9 @@
-import type { ClassificationSchema, TradeMode, TradeOverrides } from '@/types/chat';
+import type { ClassificationSchema, SystemMode, TradeMode, TradeOverrides } from '@/types/chat';
 
 interface TradeTogglesBarProps {
   onModeChange: (v: TradeMode | null) => void;
   onSchemaChange: (v: ClassificationSchema | null) => void;
+  onSystemModeChange?: (v: SystemMode | null) => void;
   overrides: TradeOverrides;
 }
 
@@ -22,6 +23,12 @@ const SCHEMA_OPTIONS: Array<ToggleOption<ClassificationSchema>> = [
   { label: 'HS92', value: 'hs92' },
   { label: 'HS12', value: 'hs12' },
   { label: 'SITC', value: 'sitc' },
+];
+
+const SYSTEM_MODE_OPTIONS: Array<ToggleOption<SystemMode>> = [
+  { label: 'Auto', value: null },
+  { label: 'GQL+SQL', value: 'graphql_sql' },
+  { label: 'SQL Only', value: 'sql_only' },
 ];
 
 function ToggleGroup<T extends string>({
@@ -68,6 +75,7 @@ function ToggleGroup<T extends string>({
 export default function TradeTogglesBar({
   onModeChange,
   onSchemaChange,
+  onSystemModeChange,
   overrides,
 }: TradeTogglesBarProps) {
   const showSchema = overrides.mode !== 'services';
@@ -103,6 +111,26 @@ export default function TradeTogglesBar({
             onChange={onSchemaChange}
             options={SCHEMA_OPTIONS}
             value={overrides.schema}
+            variant="outlined"
+          />
+        </>
+      )}
+
+      {import.meta.env.DEV && onSystemModeChange && (
+        <>
+          <div
+            className="hidden h-4 w-px shrink-0 bg-border sm:block"
+            data-testid="system-mode-divider"
+          />
+
+          <span className="hidden text-[9px] font-semibold tracking-widest text-amber-600 uppercase select-none sm:inline">
+            PIPELINE
+          </span>
+
+          <ToggleGroup
+            onChange={onSystemModeChange}
+            options={SYSTEM_MODE_OPTIONS}
+            value={overrides.systemMode}
             variant="outlined"
           />
         </>

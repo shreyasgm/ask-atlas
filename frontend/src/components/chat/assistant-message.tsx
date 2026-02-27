@@ -4,6 +4,9 @@ import { memo } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { ChatMessage } from '@/types/chat';
+import AtlasLinks from './atlas-links';
+import DocsBlock from './docs-block';
+import GraphqlSummaryBlock from './graphql-summary-block';
 import QueryResultTable from './query-result-table';
 import SqlBlock from './sql-block';
 
@@ -33,6 +36,12 @@ interface AssistantMessageProps {
 }
 
 export default memo(function AssistantMessage({ message }: AssistantMessageProps) {
+  const hasDataSources =
+    message.queryResults.length > 0 ||
+    message.atlasLinks.length > 0 ||
+    message.graphqlSummaries.length > 0 ||
+    message.docsConsulted.length > 0;
+
   return (
     <div className="flex flex-col gap-2">
       {message.content && (
@@ -64,7 +73,15 @@ export default memo(function AssistantMessage({ message }: AssistantMessageProps
         </div>
       ))}
 
-      {message.queryResults.length > 0 && (
+      {message.graphqlSummaries.map((gs, i) => (
+        <GraphqlSummaryBlock key={`gs-${i}`} summary={gs} />
+      ))}
+
+      {message.docsConsulted.length > 0 && <DocsBlock files={message.docsConsulted} />}
+
+      {message.atlasLinks.length > 0 && <AtlasLinks links={message.atlasLinks} />}
+
+      {hasDataSources && (
         <p className="font-mono text-xs text-muted-foreground">
           Source: Atlas of Economic Complexity
         </p>

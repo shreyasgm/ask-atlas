@@ -112,6 +112,9 @@ class TurnSummaryResponse(BaseModel):
     total_rows: int = 0
     total_execution_time_ms: int = 0
     atlas_links: list[dict] = []
+    docs_consulted: list[str] = []
+    graphql_summaries: list[dict] = []
+    total_graphql_time_ms: int = 0
 
 
 class ThreadMessagesResponse(BaseModel):
@@ -501,11 +504,15 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
         total_queries = 0
         total_rows = 0
         total_execution_time_ms = 0
+        total_graphql_queries = 0
+        total_graphql_time_ms = 0
 
         # Turn summary tracking for checkpoint persistence
         stream_queries: list[dict] = []
         stream_entities: dict | None = None
         stream_atlas_links: list[dict] = []
+        stream_docs_consulted: list[str] = []
+        stream_graphql_summaries: list[dict] = []
 
         # First event: thread_id
         event_count += 1
@@ -577,10 +584,41 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                                     "schema_name": stream_data.payload.get("schema"),
                                 }
                             )
+                        elif stage == "build_and_execute_graphql":
+                            total_graphql_queries += 1
+                            exec_ms = stream_data.payload.get("execution_time_ms", 0)
+                            total_graphql_time_ms += exec_ms
+                            stream_graphql_summaries.append(
+                                {
+                                    "api_target": stream_data.payload.get(
+                                        "api_target", ""
+                                    ),
+                                    "classification": {
+                                        "is_rejected": stream_data.payload.get(
+                                            "is_rejected", False
+                                        ),
+                                        "query_type": stream_data.payload.get(
+                                            "query_type", ""
+                                        ),
+                                        "rejection_reason": stream_data.payload.get(
+                                            "rejection_reason", ""
+                                        ),
+                                    },
+                                    "entities": stream_data.payload.get("entities", {}),
+                                    "execution_time_ms": exec_ms,
+                                    "links": [],
+                                }
+                            )
+                        elif stage == "select_and_synthesize":
+                            selected = stream_data.payload.get("selected_files") or []
+                            if selected:
+                                stream_docs_consulted.extend(selected)
                         elif stage == "format_graphql_results":
                             links = stream_data.payload.get("atlas_links") or []
                             if links:
                                 stream_atlas_links.extend(links)
+                                if stream_graphql_summaries:
+                                    stream_graphql_summaries[-1]["links"] = links
                                 # Emit a dedicated atlas_links SSE event
                                 event_count += 1
                                 logger.info(
@@ -633,6 +671,9 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                 stream_queries,
                 stream_entities,
                 atlas_links=stream_atlas_links or None,
+                docs_consulted=stream_docs_consulted or None,
+                graphql_summaries=stream_graphql_summaries or None,
+                total_graphql_time_ms=total_graphql_time_ms,
             )
             config = {"configurable": {"thread_id": thread_id}}
             await atlas_sql.agent.aupdate_state(config, {"turn_summaries": [summary]})
@@ -663,6 +704,8 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                     "total_rows": total_rows,
                     "total_execution_time_ms": total_execution_time_ms,
                     "total_time_ms": total_time_ms,
+                    "total_graphql_queries": total_graphql_queries,
+                    "total_graphql_time_ms": total_graphql_time_ms,
                 }
             ),
         }
