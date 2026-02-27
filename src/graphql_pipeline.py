@@ -126,7 +126,8 @@ QUERY_TYPE_DESCRIPTION = (
     "- For questions specifically about a country's export basket or export composition,\n"
     "  prefer country_profile_exports.\n"
     "- For questions about economic complexity, ECI, COI, or complexity rankings,\n"
-    "  prefer country_profile_complexity."
+    "  prefer country_profile_complexity.\n"
+    "- For questions about services trade, use servicesClass: unilateral in the Explore API."
 )
 
 API_TARGET_DESCRIPTION = (
@@ -1037,20 +1038,32 @@ def post_process_response(
     # Enrich with human-readable names
     enrich_type = rules.get("enrich", "none")
     if enrich_type == "product" and product_cache is not None:
-        for item in items:
-            pid = item.get("productId")
-            if pid is not None:
-                entry = product_cache.lookup_sync("id", str(pid))
-                if entry:
-                    item["productName"] = entry.get("nameShortEn", "")
-                    item["productCode"] = entry.get("code", "")
+        if not product_cache.is_populated:
+            logger.warning(
+                "Product cache not populated — skipping enrichment for %s",
+                query_type,
+            )
+        else:
+            for item in items:
+                pid = item.get("productId")
+                if pid is not None:
+                    entry = product_cache.lookup_sync("id", str(pid))
+                    if entry:
+                        item["productName"] = entry.get("nameShortEn", "")
+                        item["productCode"] = entry.get("code", "")
     elif enrich_type == "country" and country_cache is not None:
-        for item in items:
-            cid = item.get("partnerCountryId")
-            if cid is not None:
-                entry = country_cache.lookup_sync("id", str(cid))
-                if entry:
-                    item["partnerName"] = entry.get("nameShortEn", "")
+        if not country_cache.is_populated:
+            logger.warning(
+                "Country cache not populated — skipping enrichment for %s",
+                query_type,
+            )
+        else:
+            for item in items:
+                cid = item.get("partnerCountryId")
+                if cid is not None:
+                    entry = country_cache.lookup_sync("id", str(cid))
+                    if entry:
+                        item["partnerName"] = entry.get("nameShortEn", "")
 
     return {
         root_key: items,
@@ -1326,7 +1339,7 @@ def _build_group_year(params: dict) -> tuple[str, dict]:
       ) {
         groupId year
         exportValue importValue
-        population gdp gdppc
+        population gdp gdpPpp
       }
     }
     """
@@ -1425,13 +1438,14 @@ def _build_new_products(params: dict) -> tuple[str, dict]:
 def _build_growth_opportunities(params: dict) -> tuple[str, dict]:
     """Build growth opportunities query (Country Pages productSpace API)."""
     location = params.get("location", "")
+    product_class = params.get("product_class", "HS92")
     year = params.get("year")
-    variables: dict[str, Any] = {"id": location}
+    variables: dict[str, Any] = {"location": location, "productClass": product_class}
     if year:
         variables["year"] = int(year)
     query = """
-    query GO($id: ID!, $year: Int) {
-      productSpace(id: $id, year: $year) {
+    query GO($location: ID!, $productClass: ProductClass!, $year: Int) {
+      productSpace(location: $location, productClass: $productClass, year: $year) {
         product { id shortName code }
         exportValue exportRca
         cog cogRank distance distanceRank
