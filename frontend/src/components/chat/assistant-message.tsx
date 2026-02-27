@@ -2,7 +2,9 @@ import type { Components } from 'react-markdown';
 import { Bot } from 'lucide-react';
 import { memo } from 'react';
 import Markdown from 'react-markdown';
+import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
 import type { ChatMessage } from '@/types/chat';
 import AtlasLinks from './atlas-links';
 import DocsBlock from './docs-block';
@@ -51,7 +53,11 @@ export default memo(function AssistantMessage({ message }: AssistantMessageProps
             <span className="text-xs font-semibold text-blue-500">Ask-Atlas Assistant</span>
           </div>
           <div className="flex flex-col gap-1">
-            <Markdown components={MARKDOWN_COMPONENTS} remarkPlugins={[remarkGfm]}>
+            <Markdown
+              components={MARKDOWN_COMPONENTS}
+              rehypePlugins={[rehypeKatex]}
+              remarkPlugins={[remarkGfm, remarkMath]}
+            >
               {message.content}
             </Markdown>
           </div>
