@@ -43,6 +43,9 @@ evaluation
 # Allow files referenced by pyproject.toml (hatchling needs them to build)
 !README.md
 !LICENSE
+# Docs pipeline markdown files (needed at runtime)
+!src/docs/
+!src/docs/*.md
 
 # Data / logs
 data
