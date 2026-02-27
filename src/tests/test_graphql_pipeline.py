@@ -2097,14 +2097,30 @@ class TestBuildersExtended:
         assert "countryLookback" in query
 
     def test_growth_opportunities_builder(self):
-        """growth_opportunities builder produces productSpace query."""
+        """growth_opportunities builder produces productSpace query with correct args."""
         query, variables = build_graphql_query(
             "growth_opportunities",
             {"location": "location-404", "year": 2024},
         )
         assert "productSpace" in query
-        assert variables["id"] == "location-404"
+        assert variables["location"] == "location-404"
+        assert variables["productClass"] == "HS92"
         assert variables["year"] == 2024
+        # Must NOT use the old $id variable
+        assert "$id" not in query
+        assert "id" not in variables
+        # Must use $location and $productClass
+        assert "$location: ID!" in query
+        assert "$productClass: ProductClass!" in query
+
+    def test_growth_opportunities_builder_custom_product_class(self):
+        """growth_opportunities builder respects product_class param."""
+        query, variables = build_graphql_query(
+            "growth_opportunities",
+            {"location": "location-76", "product_class": "SITC"},
+        )
+        assert variables["productClass"] == "SITC"
+        assert "year" not in variables
 
     def test_product_table_builder(self):
         """product_table builder produces countryProductYear query."""
@@ -2240,3 +2256,70 @@ class TestErrorHandlingExtended:
         content = result["messages"][0].content
         assert "budget_exhausted" in content
         assert "limit reached" in content
+
+
+# ---------------------------------------------------------------------------
+# 14. Bug-fix regression tests
+# ---------------------------------------------------------------------------
+
+
+class TestBugFixRegressions:
+    """Regression tests for specific bug fixes."""
+
+    def test_group_year_uses_gdpPpp_not_gdppc(self):
+        """GroupYear query must request gdpPpp (valid field), not gdppc (invalid)."""
+        query, variables = build_graphql_query(
+            "explore_group",
+            {"group_id": 1, "group_type": "continent", "year": 2024},
+        )
+        assert "gdpPpp" in query
+        assert "gdppc" not in query
+
+    def test_post_process_unpopulated_product_cache_no_crash(self):
+        """Unpopulated product cache should not raise RuntimeError."""
+        unpopulated_cache = CatalogCache("empty_product", ttl=3600)
+        unpopulated_cache.add_index(
+            "id",
+            key_fn=lambda e: str(e["productId"]) if "productId" in e else None,
+        )
+        # Don't call populate() — cache is empty
+
+        items = [
+            {"productId": i, "exportValue": (100 - i) * 100, "year": 2024}
+            for i in range(30)
+        ]
+        raw = {"countryProductYear": items}
+
+        # Should NOT raise RuntimeError
+        result = post_process_response(
+            "treemap_products", raw, product_cache=unpopulated_cache
+        )
+
+        # Items returned but without enrichment
+        processed = result["countryProductYear"]
+        assert len(processed) == 20
+        assert "productName" not in processed[0]
+
+    def test_post_process_unpopulated_country_cache_no_crash(self):
+        """Unpopulated country cache should not raise RuntimeError."""
+        unpopulated_cache = CatalogCache("empty_country", ttl=3600)
+        unpopulated_cache.add_index(
+            "id",
+            key_fn=lambda e: str(e["countryId"]) if "countryId" in e else None,
+        )
+        # Don't call populate()
+
+        items = [
+            {"partnerCountryId": i, "exportValue": (100 - i) * 100, "year": 2024}
+            for i in range(30)
+        ]
+        raw = {"countryCountryYear": items}
+
+        # Should NOT raise RuntimeError
+        result = post_process_response(
+            "treemap_partners", raw, country_cache=unpopulated_cache
+        )
+
+        processed = result["countryCountryYear"]
+        assert len(processed) == 20
+        assert "partnerName" not in processed[0]
