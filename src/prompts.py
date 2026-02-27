@@ -130,12 +130,18 @@ pre-calculated metrics and visualizations. This is complementary to `query_tool`
 | Pre-calculated bilateral trade data | Questions requiring WHERE clauses on raw rows |
 | New products a country gained RCA in | Any question atlas_graphql rejects |
 | Growth opportunities and product feasibility | |
+| Diversification grade, growth projection, complexity-income relationship | Cross-country comparisons (e.g., avg ECI across OECD) |
+| Export growth classification (promising/troubling/mixed) | Queries needing services trade schemas |
+| Total bilateral trade value between two countries | |
 
 **Routing Examples:**
 - "What is Kenya's diversification grade?" -> atlas_graphql (derived metric from country profile)
 - "Compare Brazil and India's top 5 exports by value" -> query_tool (custom aggregation + comparison)
 - "How have Kenya's exports changed over the last decade?" -> atlas_graphql (country_lookback / overtime)
 - "What's the average RCA across all African countries for coffee?" -> query_tool (custom cross-country aggregation)
+- "What is Nigeria's diversification grade?" -> atlas_graphql (Country Pages-only metric)
+- "Is Thailand's export growth pattern promising or troubling?" -> atlas_graphql (country_lookback classification)
+- "What is the total export value from Brazil to China?" -> atlas_graphql (bilateral aggregate)
 
 **Multi-tool Strategy:**
 - Decompose complex questions into sub-questions, route each to the best tool.
@@ -328,7 +334,9 @@ PRODUCT_EXTRACTION_PROMPT = """
             * Default to 'hs92' for goods
             * Use 'services_bilateral' for services trade between specific countries
             * Use 'services_unilateral' for services trade of a single country
-        - Only include services schemas if services are explicitly mentioned, otherwise just use the goods schemas
+        - When the question asks about "total exports/imports", "all exports", "overall trade", or a country's aggregate export/import value WITHOUT specifying "goods" or naming a specific goods product: include BOTH the default goods schema (hs92) AND the services schema (services_unilateral for single-country, services_bilateral for two-country questions).
+        - When the question asks about specific goods products (e.g., "cars", "coffee") or specifies a goods classification (HS, SITC): use only the relevant goods schema.
+        - When the question explicitly mentions "services" or service-sector products: use the appropriate services schema.
         - Include specific product classifications if mentioned (e.g., if "HS 2012" is mentioned, include schema 'hs12')
         - Never return more than two schemas unless explicitly required
 
@@ -413,6 +421,15 @@ PRODUCT_EXTRACTION_PROMPT = """
             "countries": []
         }}
         Reason: No specific countries are mentioned, so countries is empty.
+
+        Question: "What is the total value of exports for Brazil in 2018?"
+        Response: {{
+            "classification_schemas": ["hs92", "services_unilateral"],
+            "products": [],
+            "requires_product_lookup": false,
+            "countries": [{{"name": "Brazil", "iso3_code": "BRA"}}]
+        }}
+        Reason: The question asks about "total value of exports" without specifying goods-only, so include both hs92 (goods) and services_unilateral (services) to capture the complete export figure.
         """
 
 # --- PRODUCT_CODE_SELECTION_PROMPT ---
@@ -461,10 +478,13 @@ each query type in detail — read them carefully before classifying.
 - Market share of a product -> marketshare
 - Growth opportunities, diversification, feasibility -> feasibility or feasibility_table
 - Product space / relatedness -> product_space
-- Bilateral trade between two specific countries -> explore_bilateral or treemap_bilateral
+- Product-level bilateral trade between two countries -> explore_bilateral or treemap_bilateral
+- Total/aggregate bilateral trade value between two countries -> bilateral_aggregate
 - Regional/group-level data (Africa, EU, income groups) -> explore_group
 - Global-level aggregate data -> global_datum
 - Data coverage questions (what years/countries available) -> explore_data_availability
+- Diversification grade, growth projection relative to income -> country_profile
+- Export growth classification (promising, troubling, static, mixed) -> country_lookback
 - If the question requires custom SQL aggregation, complex multi-table joins, calculations \
 across many countries, or data not in the Atlas APIs -> reject
 
@@ -654,15 +674,15 @@ Reply with just the number (1-{num_candidates}) of the best match, or 0 if none 
 # --- DOCUMENT_SELECTION_PROMPT ---
 # Presented to the lightweight LLM to select relevant docs from the manifest.
 # Pipeline: docs_pipeline (select_and_synthesize step A)
-# Placeholders: {question}, {context_block}, {manifest}
+# Placeholders: {question}, {context_block}, {manifest}, {max_docs}
 # REQUIRES USER REVIEW
 
 DOCUMENT_SELECTION_PROMPT = """\
 You are a documentation librarian for the Atlas of Economic Complexity.
-Given a user's question and optional context, select the 1 or 2 MOST relevant
+Given a user's question and optional context, select the 1 to {max_docs} MOST relevant
 documents from the manifest below. Pick only the single best document if one
-clearly covers the topic; add a second only if the question genuinely spans
-two distinct subjects. Never select more than 2.
+clearly covers the topic; add more only if the question genuinely spans
+multiple distinct subjects. Never select more than {max_docs}.
 
 **Guidelines:**
 - Select ALL documents that could help answer the question — err on the side of
@@ -680,7 +700,7 @@ two distinct subjects. Never select more than 2.
 
 {manifest}
 
-Return the indices of the 1-2 most relevant documents."""
+Return the indices of the 1-{max_docs} most relevant documents."""
 
 # --- DOCUMENTATION_SYNTHESIS_PROMPT ---
 # Presented to the lightweight LLM after loading selected docs to synthesize

@@ -70,7 +70,8 @@ QUERY_TYPE_DESCRIPTION = (
     "- reject : Query doesn't fit any GraphQL API type — use when the question requires\n"
     "           custom SQL aggregation, multi-table joins, or data not available via the Atlas APIs.\n"
     "- country_profile : Country overview including GDP, population, ECI, top exports,\n"
-    "                    diversification grade, peer comparisons (countryProfile API).\n"
+    "                    diversification grade, growth projection relative to income,\n"
+    "                    peer comparisons (countryProfile API).\n"
     "- country_profile_exports : Country export basket — top exports by product, export\n"
     "                            composition, export diversification (countryProfile API).\n"
     "                            Use when the user asks about what a country exports, its\n"
@@ -80,7 +81,8 @@ QUERY_TYPE_DESCRIPTION = (
     "                               Use when the user asks about a country's economic\n"
     "                               complexity, ECI ranking, or COI.\n"
     "- country_lookback : Growth dynamics over a lookback period — how a country's exports\n"
-    "                     and complexity have changed (countryLookback API).\n"
+    "                     and complexity have changed, export growth classification\n"
+    "                     (promising/troubling/mixed/static) (countryLookback API).\n"
     "- new_products : Products a country has started exporting recently (newProductsCountry API).\n"
     "- treemap_products : What products does a country export in a given year — breakdown\n"
     "                     by product (countryProductYear API).\n"
@@ -105,6 +107,10 @@ QUERY_TYPE_DESCRIPTION = (
     "                  complexity metrics (countryProductYear API).\n"
     "- country_year : Country aggregate data by year — GDP, ECI, total trade values (countryYear API).\n"
     "- product_info : Global product-level data — trade value, PCI, number of exporters (productYear API).\n"
+    "- bilateral_aggregate : Total/aggregate bilateral trade value between two countries —\n"
+    "                        NOT product-level breakdown. Use when the question asks for the\n"
+    "                        total export or import value between two specific countries\n"
+    "                        (countryCountryYear API).\n"
     "- explore_bilateral : Bilateral trade data between two countries (countryCountryProductYear API).\n"
     "- explore_group : Regional or group-level trade data — continents, income groups,\n"
     "                  trade blocs (groupYear, groupGroupProductYear APIs).\n"
@@ -198,6 +204,7 @@ class GraphQLQueryClassification(BaseModel):
         "product_table",
         "country_year",
         "product_info",
+        "bilateral_aggregate",
         "explore_bilateral",
         "explore_group",
         "global_datum",
@@ -957,6 +964,12 @@ _POST_PROCESS_RULES: dict[str, dict] = {
         "top_n": 20,
         "enrich": "product",
     },
+    "bilateral_aggregate": {
+        "root": "countryCountryYear",
+        "sort": "exportValue",
+        "top_n": 20,
+        "enrich": "country",
+    },
     "explore_bilateral": {
         "root": "countryCountryProductYear",
         "sort": "exportValue",
@@ -1124,7 +1137,11 @@ def _build_country_product_year(params: dict) -> tuple[str, dict]:
 
 
 def _build_country_country_year(params: dict) -> tuple[str, dict]:
-    """Build countryCountryYear query (Explore API)."""
+    """Build countryCountryYear query (Explore API).
+
+    Supports optional ``partner_id`` for bilateral aggregate filtering.
+    When absent, returns all partner rows (treemap_partners / overtime_partners).
+    """
     variables: dict[str, Any] = {"countryId": params.get("country_id")}
     year = params.get("year")
     if year:
@@ -1134,10 +1151,14 @@ def _build_country_country_year(params: dict) -> tuple[str, dict]:
         variables["yearMin"] = params.get("year_min", 2024)
         variables["yearMax"] = params.get("year_max", 2024)
 
+    if "partner_id" in params:
+        variables["partnerCountryId"] = params["partner_id"]
+
     query = """
-    query CCY($countryId: Int, $yearMin: Int, $yearMax: Int) {
+    query CCY($countryId: Int, $partnerCountryId: Int, $yearMin: Int, $yearMax: Int) {
       countryCountryYear(
         countryId: $countryId
+        partnerCountryId: $partnerCountryId
         yearMin: $yearMin
         yearMax: $yearMax
       ) {
@@ -1656,6 +1677,7 @@ _QUERY_BUILDERS: dict[str, Callable[[dict], tuple[str, dict]]] = {
     "product_space": _build_product_space,
     "country_year": _build_country_year,
     "product_info": _build_product_year,
+    "bilateral_aggregate": _build_country_country_year,
     "explore_bilateral": _build_country_country_product_year,
     "explore_group": _build_group_year,
     "explore_data_availability": _build_data_availability,
