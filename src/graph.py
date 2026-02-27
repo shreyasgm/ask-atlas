@@ -246,7 +246,14 @@ def build_atlas_graph(
             country_pages_client=country_pages_client,
         ),
     )
-    builder.add_node("format_graphql_results", format_graphql_results)
+    builder.add_node(
+        "format_graphql_results",
+        partial(
+            format_graphql_results,
+            product_cache=product_cache,
+            country_cache=country_cache,
+        ),
+    )
 
     # Docs pipeline nodes
     _docs_dir = docs_dir or Path(__file__).resolve().parent / "docs"

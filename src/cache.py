@@ -249,6 +249,27 @@ class CatalogCache:
             )
         return self._indexes[index_name].get(key)
 
+    def lookup_sync(self, index_name: str, key: str) -> dict[str, Any] | None:
+        """Synchronous O(1) lookup — requires cache to be already populated.
+
+        Use this in synchronous post-processing code that runs after the cache
+        has been populated by prior async pipeline nodes.
+
+        Raises:
+            KeyError: If *index_name* was never registered.
+            RuntimeError: If the cache is not yet populated.
+        """
+        if not self.is_populated:
+            raise RuntimeError(
+                f"CatalogCache '{self.name}' is not populated — "
+                f"call populate() or await lookup() first"
+            )
+        if index_name not in self._indexes:
+            raise KeyError(
+                f"CatalogCache '{self.name}' has no index named '{index_name}'"
+            )
+        return self._indexes[index_name].get(key)
+
     async def search(
         self, field: str, query: str, *, limit: int = 5
     ) -> list[dict[str, Any]]:
