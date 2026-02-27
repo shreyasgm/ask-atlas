@@ -18,7 +18,12 @@ from pydantic import BaseModel, Field
 from src.config import AgentMode
 from src.docs_pipeline import _docs_tool_schema
 from src.graphql_client import GraphQLBudgetTracker
-from src.sql_pipeline import _query_tool_schema, build_sql_only_system_prompt
+from src.prompts import (
+    DOCS_TOOL_EXTENSION,
+    DUAL_TOOL_EXTENSION,
+    build_agent_system_prompt,
+)
+from src.sql_pipeline import _query_tool_schema
 from src.state import AtlasAgentState
 
 # ---------------------------------------------------------------------------
@@ -58,71 +63,6 @@ def _atlas_graphql_schema(question: str, context: str = "") -> str:
     Returns: JSON data from the Atlas API, plus Atlas visualization links when available.
     Input: a natural language question about trade data or economic complexity."""
     raise NotImplementedError("Schema-only tool; execution routes through graph nodes.")
-
-
-# ---------------------------------------------------------------------------
-# Dual-tool system prompt extension
-# ---------------------------------------------------------------------------
-
-
-_DUAL_TOOL_EXTENSION = """
-
-**Additional Tool: Atlas GraphQL API (atlas_graphql)**
-
-You also have access to the `atlas_graphql` tool, which queries the Atlas platform's
-pre-calculated metrics and visualizations. This is complementary to `query_tool`:
-
-| Use `atlas_graphql` for | Use `query_tool` for |
-|-------------------------|----------------------|
-| ECI/PCI rankings and grades | Custom SQL aggregations |
-| Country profiles (GDP, population, diversification grade) | Complex multi-table JOINs |
-| Country lookback (how exports changed over N years) | Time-series queries across many years |
-| Pre-calculated bilateral trade data | Questions requiring WHERE clauses on raw rows |
-| New products a country gained RCA in | Any question atlas_graphql rejects |
-| Growth opportunities and product feasibility | |
-
-**Multi-tool strategy:**
-- Decompose complex questions into sub-questions and route each to the best tool.
-- If `atlas_graphql` returns a rejection message, the query doesn't fit its data model —
-  fall back to `query_tool` for that sub-question.
-- If a result looks surprising, you may verify it with the other tool.
-- Both tools count against your query budget of {max_uses} total uses.
-
-**Atlas visualization links:**
-- When `atlas_graphql` returns data, it may include Atlas visualization links.
-- Include these links in your final response so users can explore interactively.
-
-**GraphQL API budget:** {budget_status}
-"""
-
-
-# ---------------------------------------------------------------------------
-# Documentation tool system prompt extension
-# USER REVIEW PENDING (per CLAUDE.md: never modify LLM prompts without approval)
-# ---------------------------------------------------------------------------
-
-
-_DOCS_TOOL_EXTENSION = """
-
-**Documentation Tool (docs_tool)**
-
-You have access to `docs_tool`, which retrieves in-depth technical documentation about
-economic complexity methodology, metric definitions, data sources, classification systems,
-and how to reproduce Atlas visualizations.
-
-**When to use docs_tool:**
-- The question involves metric definitions or formulas (ECI, PCI, RCA, COI, COG, distance, proximity, etc.) beyond what the system prompt covers
-- The user asks about data methodology (mirror statistics, CIF/FOB, data cleaning, why Atlas values differ from raw Comtrade)
-- The question involves data coverage limits (year ranges, classification availability, missing countries)
-- The user wants to reproduce an Atlas country page or explore page visualization
-- You need guidance on which DB columns or tables to use for a specific metric variant (e.g., normalized vs raw ECI)
-
-**How to use docs_tool effectively:**
-- Call docs_tool BEFORE your data query when you need technical guidance.
-- Pass the docs_tool response as `context` to your subsequent `query_tool` or `atlas_graphql` call — this ensures the data query benefits from the technical documentation.
-- docs_tool does NOT count against your query budget of {max_uses} total data queries.
-- You can call docs_tool multiple times if needed.
-"""
 
 
 # ---------------------------------------------------------------------------
@@ -194,16 +134,16 @@ def make_agent_node(
             tools = [_query_tool_schema, _atlas_graphql_schema, _docs_tool_schema]
 
         # Select system prompt based on effective mode
-        prompt_text = build_sql_only_system_prompt(max_uses, top_k_per_query)
+        prompt_text = build_agent_system_prompt(max_uses, top_k_per_query)
         if effective_mode not in (AgentMode.SQL_ONLY, AgentMode.GRAPHQL_ONLY):
             remaining = budget_tracker.remaining() if budget_tracker else "unknown"
             budget_status = f"Available ({remaining} calls remaining this window)"
-            prompt_text += _DUAL_TOOL_EXTENSION.format(
+            prompt_text += DUAL_TOOL_EXTENSION.format(
                 max_uses=max_uses, budget_status=budget_status
             )
 
         # Docs tool extension — available in ALL modes
-        prompt_text += _DOCS_TOOL_EXTENSION.format(max_uses=max_uses)
+        prompt_text += DOCS_TOOL_EXTENSION.format(max_uses=max_uses)
 
         # Apply override lines (same logic as legacy create_sql_agent)
         overrides_parts: list[str] = []
