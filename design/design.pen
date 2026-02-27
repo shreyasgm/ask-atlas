@@ -6224,6 +6224,16 @@
               ],
               "children": [
                 {
+                  "type": "text",
+                  "id": "8pY9O",
+                  "name": "groupTitle",
+                  "fill": "#6D28D9",
+                  "content": "Atlas API",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "semibold"
+                },
+                {
                   "type": "frame",
                   "id": "MJ6MD",
                   "name": "step1",
@@ -6267,6 +6277,30 @@
                 },
                 {
                   "type": "frame",
+                  "id": "8teQz",
+                  "name": "detail1Wrap",
+                  "width": "fill_container",
+                  "padding": [
+                    0,
+                    0,
+                    0,
+                    18
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "CpyCf",
+                      "name": "detail1Txt",
+                      "fill": "#94A3B8",
+                      "content": "→ country_profile_exports",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "DJoi4",
                   "name": "step2",
                   "width": "fill_container",
@@ -6304,6 +6338,30 @@
                       "iconFontName": "check",
                       "iconFontFamily": "lucide",
                       "fill": "#22C55E"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "qK0HN",
+                  "name": "detail2Wrap",
+                  "width": "fill_container",
+                  "padding": [
+                    0,
+                    0,
+                    0,
+                    18
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "S5PlA",
+                      "name": "detail2Txt",
+                      "fill": "#94A3B8",
+                      "content": "→ Brazil, Coffee, 2022",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -6449,6 +6507,16 @@
                   "height": 1
                 },
                 {
+                  "type": "text",
+                  "id": "e4UgO",
+                  "name": "sqlTitle",
+                  "fill": "#2563EB",
+                  "content": "SQL",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "semibold"
+                },
+                {
                   "type": "frame",
                   "id": "O9Der",
                   "name": "sqlStep1",
@@ -6487,6 +6555,30 @@
                       "iconFontName": "check",
                       "iconFontFamily": "lucide",
                       "fill": "#22C55E"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "irOBC",
+                  "name": "sqlDetail1Wrap",
+                  "width": "fill_container",
+                  "padding": [
+                    0,
+                    0,
+                    0,
+                    18
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "iJZHW",
+                      "name": "sqlDetail1Txt",
+                      "fill": "#94A3B8",
+                      "content": "→ Coffee, Brazil",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
                     }
                   ]
                 },
