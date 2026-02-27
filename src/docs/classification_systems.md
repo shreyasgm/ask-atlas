@@ -1,15 +1,22 @@
-# Classification Systems
-
-**Purpose:** Technical reference for the product classification systems used in the Atlas of Economic Complexity — HS92, HS12, HS22, SITC Rev. 2, and Services — covering year ranges, product counts, hierarchy levels, SQL table naming conventions, GraphQL enum values, and cross-classification conversion queries.
-
-**When to load this document:** Load when the user asks which classification system to use (HS92 vs HS12 vs HS22
-vs SITC), needs the correct SQL schema name or GraphQL enum value for a
-classification, asks about product hierarchy levels (HS2/HS4/HS6 digit levels),
-needs to convert between classification systems, or asks about year coverage and
-API access for a specific classification. Also load for HS22 questions (Explore
-API only — no SQL schema). Do NOT load for year-range availability caveats
-(see `data_coverage.md`) or for metric formula questions.
-
+---
+title: Classification Systems
+purpose: >
+  Technical reference for the product classification systems used in the Atlas of
+  Economic Complexity -- HS92, HS12, HS22, SITC Rev. 2, and Services -- covering
+  year ranges, product counts, hierarchy levels, SQL table naming conventions,
+  GraphQL enum values, and cross-classification conversion queries.
+keywords: [classification, HS92, HS12, HS22, SITC, services, product level, product hierarchy, schema, SQL table naming, ProductClass, productLevel, conversion, concordance, EBOPS]
+when_to_load: >
+  Load when the user asks which classification system to use (HS92 vs HS12 vs HS22
+  vs SITC), needs the correct SQL schema name or GraphQL enum value for a
+  classification, asks about product hierarchy levels (HS2/HS4/HS6 digit levels),
+  needs to convert between classification systems, or asks about year coverage and
+  API access for a specific classification. Also load for HS22 questions (Explore
+  API only -- no SQL schema).
+when_not_to_load: >
+  Do NOT load for year-range availability caveats (see `data_coverage.md`) or for
+  metric formula questions.
+related_docs: [data_coverage.md]
 ---
 
 ## Goods Classifications Overview

@@ -1,15 +1,20 @@
-# Explore Page Reproduction Guide
-
-**Purpose:** Reference for reproducing the 7 Atlas Explore page visualizations using GraphQL queries or equivalent SQL, including exact query names, field lists, argument mappings, and known data quirks.
-
-**When to load this document:** Load when the agent is constructing a GraphQL query for the Explore API
-(`/api/graphql`) and needs to know which query name and fields correspond to
-a specific Explore page visualization (treemap, geomap, overtime, market share,
-product space, feasibility scatter, or feasibility table). Prefer this API over
-the Country Pages API when the same data is available in both. Do NOT load for
-Country Pages API queries (see `country_page_reproduction.md`) or for
-understanding what metrics mean (see `metrics_glossary.md`).
-
+---
+title: Explore Page Reproduction Guide
+purpose: >
+  Reference for reproducing the 7 Atlas Explore page visualizations using GraphQL
+  queries or equivalent SQL, including exact query names, field lists, argument
+  mappings, and known data quirks.
+keywords: [explore, treemap, geomap, overtime, marketshare, productspace, feasibility, visualization, GraphQL, countryProductYear, countryCountryYear, productYear, productProduct, bilateral, sector, bubble, scatter, table]
+when_to_load: >
+  Load when the agent is constructing a GraphQL query for the Explore API
+  (`/api/graphql`) and needs to know which query name and fields correspond to
+  a specific Explore page visualization (treemap, geomap, overtime, market share,
+  product space, feasibility scatter, or feasibility table). Prefer this API over
+  the Country Pages API when the same data is available in both.
+when_not_to_load: >
+  Do NOT load for Country Pages API queries (see `country_page_reproduction.md`)
+  or for understanding what metrics mean (see `metrics_glossary.md`).
+related_docs: [country_page_reproduction.md, metrics_glossary.md]
 ---
 
 ## General Notes

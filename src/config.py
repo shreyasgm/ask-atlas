@@ -35,6 +35,7 @@ _MODEL_DEFAULTS = {
     "lightweight_model_provider": getattr(_mod, "LIGHTWEIGHT_MODEL_PROVIDER", "openai"),
     "agent_mode": getattr(_mod, "AGENT_MODE", "auto"),
     "prompt_model_assignments": getattr(_mod, "PROMPT_MODEL_ASSIGNMENTS", {}),
+    "max_docs_per_selection": getattr(_mod, "MAX_DOCS_PER_SELECTION", 2),
 }
 
 
@@ -130,6 +131,15 @@ class Settings(BaseSettings):
             "GRAPHQL_COUNTRY_PAGES_URL", "graphql_country_pages_url"
         ),
         description="Atlas Country Pages GraphQL API endpoint",
+    )
+
+    # Docs pipeline
+    max_docs_per_selection: int = Field(
+        _MODEL_DEFAULTS["max_docs_per_selection"],
+        validation_alias=AliasChoices(
+            "MAX_DOCS_PER_SELECTION", "max_docs_per_selection"
+        ),
+        description="Maximum documents the docs tool can select per invocation",
     )
 
     # Agent mode

@@ -1,15 +1,20 @@
-# Inflation Adjustment and Trade Valuation
-
-**Purpose:** Reference for how trade values are denominated, how to convert between current and constant (inflation-adjusted) USD, and how CIF/FOB valuation conventions affect Atlas import and export figures.
-
-**When to load this document:** Load when the user asks about constant vs. current USD trade values, the FRED
-PPIACO deflator Atlas uses (how to apply it, which DB table stores it), CIF vs.
-FOB valuation conventions (why import and export values for the same flow differ),
-or GDP variant choices (PPP, constant, per capita). Also load when import/export
-value discrepancies are traced to valuation methodology. Do NOT load for historical
-export growth rate queries (see `growth_dynamics.md`) or for trade data construction
-methodology (see `trade_methodology.md`).
-
+---
+title: Inflation Adjustment and Trade Valuation
+purpose: >
+  Reference for how trade values are denominated, how to convert between current
+  and constant (inflation-adjusted) USD, and how CIF/FOB valuation conventions
+  affect Atlas import and export figures.
+keywords: [inflation, deflator, constant USD, current USD, PPIACO, CIF, FOB, valuation, GDP, PPP, per capita, deflation, real terms, nominal, base year]
+when_to_load: >
+  Load when the user asks about constant vs. current USD trade values, the FRED
+  PPIACO deflator Atlas uses (how to apply it, which DB table stores it), CIF vs.
+  FOB valuation conventions (why import and export values for the same flow differ),
+  or GDP variant choices (PPP, constant, per capita). Also load when import/export
+  value discrepancies are traced to valuation methodology.
+when_not_to_load: >
+  Do NOT load for historical export growth rate queries (see `growth_dynamics.md`)
+  or for trade data construction methodology (see `trade_methodology.md`).
+related_docs: [growth_dynamics.md, trade_methodology.md]
 ---
 
 ## 1. Current vs. Constant USD

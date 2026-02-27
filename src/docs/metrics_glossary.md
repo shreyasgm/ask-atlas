@@ -1,14 +1,38 @@
-# Metrics Glossary
-
-**Purpose:** Technical reference for all economic complexity metrics used in the Atlas of Economic Complexity, including formulas, DB column names, GraphQL field names, and cross-year comparability warnings.
-
-**When to load this document:** Load when a user asks what any metric means in more depth than a brief definition —
-including ECI, PCI, RCA, COI, COG, distance, density, proximity, diversity, ubiquity,
-or normalized variants. Also load when the agent needs the formula for a metric, the
-specific DB column name for a metric variant (e.g., `normalized_pci_rcalt1`), an
-explanation of why values are not comparable across years, or the 2026 continuous-M
-update. This is the primary reference for all metric understanding questions.
-
+---
+title: Metrics Glossary
+purpose: >
+  Technical reference for all economic complexity metrics used in the Atlas of
+  Economic Complexity, including formulas, DB column names, GraphQL field names,
+  and cross-year comparability warnings.
+keywords:
+  - ECI
+  - PCI
+  - RCA
+  - COI
+  - COG
+  - distance
+  - density
+  - proximity
+  - diversity
+  - ubiquity
+  - normalized variants
+  - metric formula
+  - DB column name
+  - cross-year comparability
+  - continuous M
+  - presence matrix
+  - product status
+  - growth projection
+  - product space coordinates
+when_to_load: >
+  Load when a user asks what any metric means in more depth than a brief
+  definition — including ECI, PCI, RCA, COI, COG, distance, density, proximity,
+  diversity, ubiquity, or normalized variants. Also load when the agent needs the
+  formula for a metric, the specific DB column name for a metric variant (e.g.,
+  `normalized_pci_rcalt1`), an explanation of why values are not comparable across
+  years, or the 2026 continuous-M update. This is the primary reference for all
+  metric understanding questions.
+related_docs: []
 ---
 
 ## Computation Pipeline Overview
