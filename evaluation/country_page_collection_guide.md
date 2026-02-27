@@ -76,7 +76,7 @@ Content-Type: application/json
 
 Also available at `https://staging.atlas.growthlab-dev.com/api/countries/graphql` (identical schema).
 
-**Explore API** (used by the Atlas explore pages — preferred for most data queries; [officially documented](https://github.com/harvard-growth-lab/api-docs/blob/main/atlas.md)):
+**Explore API** (used by the Atlas explore pages; [officially documented](https://github.com/harvard-growth-lab/api-docs/blob/main/atlas.md) — use only for data unique to this API: bilateral trade, 6-digit products, HS 2022, group/regional queries; for overlapping data points, prefer the Country Pages API above):
 
 ```
 POST https://atlas.hks.harvard.edu/api/graphql
