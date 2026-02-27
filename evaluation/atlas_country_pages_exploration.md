@@ -872,16 +872,16 @@ The Atlas has **two separate GraphQL APIs** with different schemas. For full det
 
 | Data Point | Country Pages API | Explore API | Prefer |
 |-----------|-------------------|-------------|--------|
-| Country exports by product | `treeMap(facet: CPY_C)` | `countryProductYear.exportValue` | Explore (more fields, 6-digit) |
-| Country-level GDP, ECI | `countryYear.gdpPerCapita, eci` | `countryYear.gdppc, eci` | Either (equivalent) |
-| Product catalog | `allProducts` (10 fields) | `productHs92` (21 fields) | Explore (more fields) |
-| Product complexity (PCI) | `allProductYear.pci` | `productYear.pci` | Either |
-| Country metadata | `allLocations` (15 fields) | `locationCountry` (22 fields) | Explore (more fields) |
+| Country exports by product | `treeMap(facet: CPY_C)` | `countryProductYear.exportValue` | **Country Pages** (pre-computed, smaller response, treemap-ready) |
+| Country-level GDP, ECI | `countryYear.gdpPerCapita, eci` | `countryYear.gdppc, eci` | **Country Pages** (includes rank + classification fields) |
+| Product catalog | `allProducts` (10 fields) | `productHs92` (21 fields) | **Country Pages** (fewer fields = smaller payload; Explore only if 6-digit or HS22 needed) |
+| Product complexity (PCI) | `allProductYear.pci` | `productYear.pci` | **Country Pages** (same data, consistent with other CP queries) |
+| Country metadata | `allLocations` (15 fields) | `locationCountry` (22 fields) | **Country Pages** (sufficient for most questions; Explore only if extra metadata needed) |
 | Derived analytical metrics | `countryProfile` (46 fields) | ❌ Not available | **Country Pages only** |
-| Growth projections | `countryProfile.growthProjection` | `countryYear.growthProj` | Country Pages (has rank + classification) |
-| Product space (country) | `productSpace` (pre-computed x/y) | `countryProductYear` + `productProduct` (must compute) | Country Pages (pre-computed) |
+| Growth projections | `countryProfile.growthProjection` | `countryYear.growthProj` | **Country Pages** (has rank + classification) |
+| Product space (country) | `productSpace` (pre-computed x/y) | `countryProductYear` + `productProduct` (must compute) | **Country Pages** (pre-computed) |
 
-**General guidance**: Prefer the Explore API for raw trade data — it has more fields, better introspection, and explicit HS revision support. Use the Country Pages API for derived analytical metrics (growth projections, diversification grades, strategic approach, narrative descriptions) that would be expensive to recompute.
+**General guidance**: Prefer the Country Pages API when the same data point is available in both APIs. Country Pages responses are pre-computed, smaller, and include narrative-ready labels and classifications — far superior for LLM consumption. The Explore API returns raw, larger payloads that require post-processing. Reserve the Explore API for data it uniquely provides: bilateral trade, 6-digit products, HS 2022, group/regional queries, and product-to-product relatedness edges.
 
 ---
 
