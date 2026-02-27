@@ -300,6 +300,7 @@ class TestAtlasGraphQLClient:
         return AtlasGraphQLClient(
             base_url="https://atlas.cid.harvard.edu/api/graphql",
             timeout=5.0,
+            backoff_base=0.0,
         )
 
     @pytest.fixture()
@@ -318,6 +319,7 @@ class TestAtlasGraphQLClient:
         return AtlasGraphQLClient(
             base_url="https://atlas.cid.harvard.edu/api/graphql",
             timeout=5.0,
+            backoff_base=0.0,
             budget_tracker=budget_tracker,
             circuit_breaker=circuit_breaker,
         )
@@ -620,6 +622,7 @@ class TestAtlasGraphQLClient:
         client = AtlasGraphQLClient(
             base_url="https://example.com/graphql",
             max_retries=1,
+            backoff_base=0.0,
         )
         with patch.object(
             httpx.AsyncClient,
@@ -638,6 +641,7 @@ class TestAtlasGraphQLClient:
         client = AtlasGraphQLClient(
             base_url="https://example.com/graphql",
             max_retries=0,
+            backoff_base=0.0,
         )
         with patch.object(
             httpx.AsyncClient,

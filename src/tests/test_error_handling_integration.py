@@ -7,12 +7,23 @@ No external dependencies required.
 import pytest
 from unittest.mock import MagicMock
 from sqlalchemy.exc import OperationalError
-from tenacity import RetryError
+from tenacity import RetryError, wait_none
 
 from src.error_handling import execute_with_retry, QueryExecutionError
 
 # Read max attempts from the actual retry config so tests stay in sync
 MAX_ATTEMPTS = execute_with_retry.retry.stop.max_attempt_number
+
+# Store original wait strategy so we can restore it after tests
+_original_wait = execute_with_retry.retry.wait
+
+
+@pytest.fixture(autouse=True)
+def _no_backoff_wait():
+    """Replace exponential backoff with no-wait for fast unit tests."""
+    execute_with_retry.retry.wait = wait_none()
+    yield
+    execute_with_retry.retry.wait = _original_wait
 
 
 class TestRetryBehavior:
