@@ -7,7 +7,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from src.agent_node import make_agent_node, resolve_effective_mode
 from src.config import AgentMode
 from src.graphql_client import GraphQLBudgetTracker
-from src.sql_pipeline import build_sql_only_system_prompt
+from src.prompts import build_agent_system_prompt
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -100,7 +100,7 @@ class TestResolveEffectiveMode:
 
 class TestAgentNodeSqlOnly:
     async def test_sql_only_agent_prompt_is_agent_prefix_verbatim(self):
-        """REGRESSION: system prompt in SQL-only mode must equal build_sql_only_system_prompt verbatim."""
+        """REGRESSION: system prompt in SQL-only mode must equal build_agent_system_prompt verbatim."""
         captured_messages = []
         mock_bound = MagicMock()
 
@@ -131,8 +131,8 @@ class TestAgentNodeSqlOnly:
         assert "international trade data" in prompt
         assert "Ask-Atlas" in prompt
 
-        # Must start with build_sql_only_system_prompt (now includes docs_tool extension)
-        expected_base = build_sql_only_system_prompt(3, 15)
+        # Must start with build_agent_system_prompt (now includes docs_tool extension)
+        expected_base = build_agent_system_prompt(3, 15)
         assert prompt.startswith(expected_base)
 
         # Must include docs_tool extension (available in all modes)

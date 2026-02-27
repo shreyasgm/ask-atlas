@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 import logging
 import warnings
 
+from src.prompts import PRODUCT_CODE_SELECTION_PROMPT, PRODUCT_EXTRACTION_PROMPT
+
 logger = logging.getLogger(__name__)
 
 SCHEMA_TO_PRODUCTS_TABLE_MAP = {
@@ -153,114 +155,9 @@ class ProductAndSchemaLookup:
         Usage: extract_schemas_and_product_mentions().invoke({"question": question})
         """
 
-        system = """
-        You are an assistant for a text-to-sql system that uses a database of international trade data.
-
-        Analyze the user's question about trade data to determine which database schemas are needed and what product codes
-        should be looked up.
-
-        Available schemas in the postgres db:
-        - hs92: Trade data for goods, in HS 1992 product classification
-        - hs12: Trade data for goods, in HS 2012 product classification
-        - sitc: Trade data for goods, in SITC product classification
-        - services_unilateral: Trade data for services products with exporter-product-year data. Use this schema if the user asks about services data for a specific country.
-        - services_bilateral: Trade data for services products with exporter-importer-product-year data. Use this schema if the user asks about services trade between two specific countries.
-
-        Guidelines for schema selection:
-        - For questions without a specified product classification:
-            * Default to 'hs92' for goods
-            * Use 'services_bilateral' for services trade between specific countries
-            * Use 'services_unilateral' for services trade of a single country
-        - Only include services schemas if services are explicitly mentioned, otherwise just use the goods schemas
-        - Include specific product classifications if mentioned (e.g., if "HS 2012" is mentioned, include schema 'hs12')
-        - Never return more than two schemas unless explicitly required
-
-        Guidelines for product identification:
-        - "products" here is how international trade data is classified. Product groups like "machinery" are considered products, and should be identified as such. Products could be goods, services, or a mix of both — anything classified by international trade data classification systems (e.g. "cars", "coffee", "information technology", "iron", "tourism", "petroleum gas").
-        - You MUST extract every product mentioned by name in the user's question into the products list, with your best-guess HS/SITC codes. The ONLY exception is when the user provides an explicit numeric code (e.g., "HS 2012" means the classification is already known — do not re-extract it).
-        - If the question mentions no specific products at all (e.g., "What were India's top exports?"), then products should be empty.
-        - Be specific with the codes — suggest the product code at the level most specific to the product mentioned.
-        - Include multiple relevant codes if needed for broad product categories.
-
-        Guidelines for country identification:
-        - Identify all countries mentioned in the user's question.
-        - Provide the country's common name and its ISO 3166-1 alpha-3 code (e.g. "IND" for India, "USA" for United States, "BRA" for Brazil).
-        - If no specific countries are mentioned, return an empty list.
-        - Regions or continents (e.g. "Africa", "Europe") are NOT countries — do not include them.
-
-        Examples:
-
-        Question: "What were US exports of cars and vehicles (HS 87) in 2020?"
-        Response: {{
-            "classification_schemas": ["hs92"],
-            "products": [],
-            "requires_product_lookup": false,
-            "countries": [{{"name": "United States", "iso3_code": "USA"}}]
-        }}
-        Reason: Since no specific product classification is mentioned, default to the schema 'hs92'. The question specifies a product code (HS 87), so no further lookup is needed for the codes. The US is mentioned.
-
-        Question: "What were US exports of cotton and wheat in 2021?"
-        Response: {{
-            "classification_schemas": ["hs92"],
-            "products": [
-                {{
-                    "name": "cotton",
-                    "classification_schema": "hs92",
-                    "codes": ["5201", "5202"]
-                }},
-                {{
-                    "name": "wheat",
-                    "classification_schema": "hs92",
-                    "codes": ["1001"]
-                }}
-            ],
-            "requires_product_lookup": true,
-            "countries": [{{"name": "United States", "iso3_code": "USA"}}]
-        }}
-        Reason: The question mentions two products without codes, so the products need to be looked up in the db. The schema wasn't mentioned, so default to 'hs92'.
-
-        Question: "What services did India export to the US in 2021?"
-        Response: {{
-            "classification_schemas": ["services_bilateral"],
-            "products": [],
-            "requires_product_lookup": false,
-            "countries": [{{"name": "India", "iso3_code": "IND"}}, {{"name": "United States", "iso3_code": "USA"}}]
-        }}
-        Reason: The question specifically asks for services trade between two countries, so use the 'services_bilateral' schema. No products are mentioned, so no further lookup is needed for the codes.
-
-        Question: "Show me trade in both goods and services between US and China in HS 2012."
-        Response: {{
-            "classification_schemas": ["hs12", "services_bilateral"],
-            "products": [],
-            "requires_product_lookup": false,
-            "countries": [{{"name": "United States", "iso3_code": "USA"}}, {{"name": "China", "iso3_code": "CHN"}}]
-        }}
-        Reason: The question mentions two different product classifications, so include both 'hs12' and 'services_bilateral' schemas. No products are mentioned, so no further lookup is needed for the codes.
-
-        Question: "Which country is the world's biggest exporter of fruits and vegetables?"
-        Response: {{
-            "classification_schemas": ["hs92"],
-            "products": [
-                {{
-                    "name": "fruits",
-                    "classification_schema": "hs92",
-                    "codes": ["0801", "0802", "0803", "0804", "0805", "0806", "0807", "0808", "0809", "0810", "0811", "0812", "0813", "0814"]
-                }},
-                {{
-                    "name": "vegetables",
-                    "classification_schema": "hs92",
-                    "codes": ["07"]
-                }}
-            ],
-            "requires_product_lookup": true,
-            "countries": []
-        }}
-        Reason: No specific countries are mentioned, so countries is empty.
-        """
-
         prompt = ChatPromptTemplate.from_messages(
             [
-                ("system", system),
+                ("system", PRODUCT_EXTRACTION_PROMPT),
                 MessagesPlaceholder(variable_name="history", optional=True),
                 ("human", "{question}"),
             ]
@@ -358,18 +255,9 @@ class ProductAndSchemaLookup:
         if not product_search_results:
             return ProductCodesMapping(mappings=[])
 
-        system = """
-        Select the most appropriate product code for each product name based on the context of the user's
-        question and the candidate codes.
-
-        Choose the most accurate match based on the specific context. Include only the products that have clear matches. If a product name is too ambiguous or has no good matches among the candidates, exclude it from the final mapping.
-
-        If no products among the ones provided are relevant to the product mentioned in the user's question, return an empty mapping for that product.
-        """
-
         prompt = ChatPromptTemplate.from_messages(
             [
-                ("system", system),
+                ("system", PRODUCT_CODE_SELECTION_PROMPT),
                 MessagesPlaceholder(variable_name="history", optional=True),
                 (
                     "human",
