@@ -14,6 +14,7 @@ from src.graphql_client import BudgetExhaustedError, GraphQLError
 from src.graphql_pipeline import (
     GraphQLEntityExtraction,
     GraphQLQueryClassification,
+    _strip_id_prefix,
     build_graphql_query,
     build_and_execute_graphql,
     classify_query,
@@ -1137,12 +1138,68 @@ class TestFormatIdsForApi:
         assert result["partner"] == "location-76"
         assert "partner_id" not in result
 
+    def test_explore_api_strips_prefixed_country_id(self):
+        """Catalog may store countryId as 'country-76'; explore needs int 76."""
+        result = format_ids_for_api(
+            {"country_id": "country-76", "year": 2022},
+            "explore",
+        )
+        assert result["country_id"] == 76
+        assert result["year"] == 2022
+
+    def test_explore_api_strips_prefixed_product_id(self):
+        result = format_ids_for_api(
+            {"product_id": "product-726", "country_id": "country-404"},
+            "explore",
+        )
+        assert result["product_id"] == 726
+        assert result["country_id"] == 404
+
+    def test_explore_api_strips_prefixed_partner_id(self):
+        result = format_ids_for_api(
+            {"country_id": 404, "partner_id": "country-76"},
+            "explore",
+        )
+        assert result["partner_id"] == 76
+
+    def test_country_pages_handles_prefixed_ids(self):
+        """Even if catalog gives prefixed IDs, country_pages output is correct."""
+        result = format_ids_for_api(
+            {"country_id": "country-404", "product_id": "product-726"},
+            "country_pages",
+        )
+        assert result["location"] == "location-404"
+        assert result["product"] == "product-HS-726"
+
     def test_does_not_mutate_input_dict(self):
         original = {"country_id": 404, "year": 2024}
         format_ids_for_api(original, "country_pages")
         # Original dict should be unchanged
         assert "country_id" in original
         assert "location" not in original
+
+
+class TestStripIdPrefix:
+    """Tests for _strip_id_prefix helper."""
+
+    def test_integer_passthrough(self):
+        assert _strip_id_prefix(76) == 76
+
+    def test_country_prefix(self):
+        assert _strip_id_prefix("country-76") == 76
+
+    def test_location_prefix(self):
+        assert _strip_id_prefix("location-404") == 404
+
+    def test_product_hs_prefix(self):
+        assert _strip_id_prefix("product-HS-726") == 726
+
+    def test_plain_numeric_string(self):
+        assert _strip_id_prefix("404") == 404
+
+    def test_invalid_raises(self):
+        with pytest.raises(ValueError):
+            _strip_id_prefix("not-a-number-abc")
 
 
 # ---------------------------------------------------------------------------

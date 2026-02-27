@@ -240,7 +240,11 @@ class DocsSelection(BaseModel):
         description="Brief explanation of why these documents are relevant."
     )
     selected_indices: list[int] = Field(
-        description="Zero-based indices of documents to load from the manifest."
+        description=(
+            "Zero-based indices of the 1-2 most relevant documents from the manifest. "
+            "Select at most 2 documents."
+        ),
+        max_length=2,
     )
 
 
@@ -252,9 +256,10 @@ class DocsSelection(BaseModel):
 
 _SELECTION_PROMPT = """\
 You are a documentation librarian for the Atlas of Economic Complexity.
-Given a user's question and optional context, select which documents from the
-manifest below are relevant. Select ALL documents that could help answer the
-question — err on the side of including too many rather than too few.
+Given a user's question and optional context, select the 1 or 2 MOST relevant
+documents from the manifest below. Pick only the single best document if one
+clearly covers the topic; add a second only if the question genuinely spans
+two distinct subjects. Never select more than 2.
 
 **Question:** {question}
 {context_block}
@@ -263,14 +268,13 @@ question — err on the side of including too many rather than too few.
 
 {manifest}
 
-Return the indices of all relevant documents."""
+Return the indices of the 1-2 most relevant documents."""
 
 _SYNTHESIS_PROMPT = """\
 You are a technical documentation assistant for the Atlas of Economic Complexity.
-Using ONLY the documentation provided below, synthesize a comprehensive response
-to the question. Be liberal — include related metrics, adjacent concepts, data
-caveats, and any implementation details that might help someone working with
-this data.
+Using ONLY the documentation provided below, answer the question directly and
+concisely. Include specific formulas, column names, year ranges, and caveats
+where they are directly relevant.
 
 **Question:** {question}
 {context_block}
@@ -279,9 +283,8 @@ this data.
 
 {docs_content}
 
-Provide a thorough, well-organized response. Include specific column names,
-formulas, year ranges, and caveats where relevant. If the documentation
-doesn't fully answer the question, say what it does cover and note what's missing."""
+Provide a focused, well-organized response. If the documentation doesn't fully
+answer the question, say what it does cover and note what's missing."""
 
 
 async def extract_docs_question(state: AtlasAgentState) -> dict:

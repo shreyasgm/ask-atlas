@@ -656,6 +656,34 @@ async def _resolve_entity(
 # ---------------------------------------------------------------------------
 
 
+def _strip_id_prefix(value: Any) -> int:
+    """Extract the numeric ID from a possibly-prefixed catalog value.
+
+    Catalog entries may store IDs as integers (``76``) or as prefixed
+    strings (``"country-76"``, ``"product-HS-726"``).  This helper
+    normalises both forms to a plain ``int``.
+
+    Args:
+        value: Raw ID value from a catalog entry.
+
+    Returns:
+        The numeric integer ID.
+
+    Raises:
+        ValueError: If the numeric part cannot be extracted.
+    """
+    if isinstance(value, int):
+        return value
+    s = str(value)
+    # Strip known prefixes: "country-76", "location-404", "product-HS-726"
+    # Walk from the right to find the trailing integer segment.
+    parts = s.rsplit("-", 1)
+    if len(parts) == 2 and parts[1].isdigit():
+        return int(parts[1])
+    # Fallback: try converting the whole thing
+    return int(s)
+
+
 def format_ids_for_api(
     params: dict[str, Any],
     api_target: str,
@@ -678,16 +706,25 @@ def format_ids_for_api(
     result = dict(params)
 
     if api_target == "country_pages":
-        # Transform integer IDs to prefixed strings
+        # Transform IDs to prefixed strings for the Country Pages API
         if "country_id" in result:
-            country_id = result.pop("country_id")
+            country_id = _strip_id_prefix(result.pop("country_id"))
             result["location"] = f"location-{country_id}"
         if "product_id" in result:
-            product_id = result.pop("product_id")
+            product_id = _strip_id_prefix(result.pop("product_id"))
             result["product"] = f"product-HS-{product_id}"
         if "partner_id" in result:
-            partner_id = result.pop("partner_id")
+            partner_id = _strip_id_prefix(result.pop("partner_id"))
             result["partner"] = f"location-{partner_id}"
+    else:
+        # Explore API: ensure IDs are bare integers (strip any prefixes
+        # that the catalog may have stored)
+        for key in ("country_id", "product_id", "partner_id"):
+            if key in result:
+                try:
+                    result[key] = _strip_id_prefix(result[key])
+                except (ValueError, TypeError):
+                    pass  # leave as-is if conversion fails
 
     return result
 
