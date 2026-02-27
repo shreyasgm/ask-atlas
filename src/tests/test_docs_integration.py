@@ -98,6 +98,11 @@ class TestDocsEciMethodology:
         # Should have selected at least one doc
         assert result["docs_selected_files"], "No documentation files were selected"
 
+        # metrics_glossary.md is the primary ECI reference — it should be selected
+        assert (
+            "metrics_glossary.md" in result["docs_selected_files"]
+        ), f"Expected metrics_glossary.md in selected files, got: {result['docs_selected_files']}"
+
         # Synthesis should mention ECI-related concepts
         synthesis = result["docs_synthesis"].lower()
         assert (
@@ -117,6 +122,11 @@ class TestDocsEciMethodology:
         )
 
         assert result["docs_selected_files"], "No documentation files were selected"
+
+        # metrics_glossary.md is the primary RCA reference — it should be selected
+        assert (
+            "metrics_glossary.md" in result["docs_selected_files"]
+        ), f"Expected metrics_glossary.md in selected files, got: {result['docs_selected_files']}"
 
         synthesis = result["docs_synthesis"].lower()
         assert (

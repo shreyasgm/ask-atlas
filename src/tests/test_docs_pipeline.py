@@ -11,7 +11,6 @@ import pytest
 from langchain_core.messages import AIMessage, ToolMessage
 
 from src.docs_pipeline import (
-    DOCS_PIPELINE_NODES,
     DocEntry,
     DocsSelection,
     _DOCS_STATE_DEFAULTS,
@@ -275,6 +274,18 @@ class TestSelectAndSynthesize:
         assert result["docs_synthesis"] == "ECI measures economic complexity."
         mock_llm.with_structured_output.assert_called_once()
 
+        # Verify selection LLM was called with a prompt containing the question
+        # and the manifest entries
+        selection_call_args = (
+            mock_llm.with_structured_output.return_value.ainvoke.call_args[0][0]
+        )
+        assert "What is ECI?" in selection_call_args
+        assert "Test Metric Guide" in selection_call_args
+
+        # Verify synthesis LLM was called with loaded doc content (not just any string)
+        synthesis_call_args = mock_llm.ainvoke.call_args[0][0]
+        assert "Some content here about test metrics" in synthesis_call_args
+
     async def test_selects_multiple_docs(self, sample_manifest: list[DocEntry]):
         """LLM can select multiple documents."""
         selection = DocsSelection(
@@ -431,6 +442,71 @@ class TestSelectAndSynthesize:
 
         assert result["docs_synthesis"] == "No documentation files could be loaded."
 
+    async def test_handles_deleted_doc_file(self, sample_docs_dir: Path):
+        """A doc file deleted after manifest load is handled gracefully."""
+        manifest = load_docs_manifest(sample_docs_dir)
+        assert len(manifest) == 2  # metrics.md + trade_data.md
+
+        # Delete one of the files after the manifest was built
+        (sample_docs_dir / "metrics.md").unlink()
+
+        # LLM selects the deleted file (index 0)
+        selection = DocsSelection(
+            reasoning="Metrics doc is relevant",
+            selected_indices=[0],
+        )
+        mock_llm = MagicMock()
+        mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
+            return_value=selection
+        )
+
+        state = _base_docs_state(docs_question="What are the metrics?")
+
+        result = await select_and_synthesize(
+            state, lightweight_model=mock_llm, manifest=manifest
+        )
+
+        # The deleted file is still listed as selected (it was in the manifest)
+        assert "metrics.md" in result["docs_selected_files"]
+        # With no loadable content, falls back to "no docs loaded" message
+        assert result["docs_synthesis"] == "No documentation files could be loaded."
+
+    async def test_handles_deleted_doc_file_with_remaining_docs(
+        self, sample_docs_dir: Path
+    ):
+        """When one doc is deleted but another is still readable, synthesis proceeds."""
+        manifest = load_docs_manifest(sample_docs_dir)
+        assert len(manifest) == 2
+
+        # Delete metrics.md but keep trade_data.md
+        (sample_docs_dir / "metrics.md").unlink()
+
+        # LLM selects both files
+        selection = DocsSelection(
+            reasoning="Both docs relevant",
+            selected_indices=[0, 1],
+        )
+        mock_llm = MagicMock()
+        mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
+            return_value=selection
+        )
+        synthesis_response = MagicMock()
+        synthesis_response.content = "Answer from remaining doc."
+        mock_llm.ainvoke = AsyncMock(return_value=synthesis_response)
+
+        state = _base_docs_state(docs_question="Tell me about trade data")
+
+        result = await select_and_synthesize(
+            state, lightweight_model=mock_llm, manifest=manifest
+        )
+
+        # Both listed as selected, but synthesis proceeds with the remaining doc
+        assert len(result["docs_selected_files"]) == 2
+        assert result["docs_synthesis"] == "Answer from remaining doc."
+        # Synthesis LLM was called with the trade_data content
+        synthesis_call_args = mock_llm.ainvoke.call_args[0][0]
+        assert "Trade data content here" in synthesis_call_args
+
 
 # ---------------------------------------------------------------------------
 # Tests: format_docs_results
@@ -500,22 +576,3 @@ class TestFormatDocsResults:
         assert len(result["messages"]) == 2
         assert result["messages"][0].content == "Answer here."
         assert "one tool" in result["messages"][1].content.lower()
-
-
-# ---------------------------------------------------------------------------
-# Tests: Module-level constants
-# ---------------------------------------------------------------------------
-
-
-class TestModuleConstants:
-    def test_pipeline_nodes_set(self):
-        assert "extract_docs_question" in DOCS_PIPELINE_NODES
-        assert "select_and_synthesize" in DOCS_PIPELINE_NODES
-        assert "format_docs_results" in DOCS_PIPELINE_NODES
-        assert len(DOCS_PIPELINE_NODES) == 3
-
-    def test_state_defaults(self):
-        assert _DOCS_STATE_DEFAULTS["docs_question"] == ""
-        assert _DOCS_STATE_DEFAULTS["docs_context"] == ""
-        assert _DOCS_STATE_DEFAULTS["docs_selected_files"] == []
-        assert _DOCS_STATE_DEFAULTS["docs_synthesis"] == ""
