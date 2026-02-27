@@ -90,12 +90,11 @@ describe('getStepDetail', () => {
     expect(getStepDetail('lookup_codes', { codes: 'HS92: 0901' })).toBe('\u2192 HS92: 0901');
   });
 
-  it('generate_sql — shows truncated SQL', () => {
+  it('generate_sql — shows full SQL (CSS handles visual truncation)', () => {
     const longSql =
       "SELECT product_name, export_value FROM hs92.country_year WHERE country_id = 'bra' AND year = 2022 ORDER BY export_value DESC LIMIT 10";
     const result = getStepDetail('generate_sql', { sql: longSql });
-    expect(result).toMatch(/^\u2192 SELECT/);
-    expect(result!.length).toBeLessThanOrEqual(63); // "→ " (2) + 60 + "…" (1)
+    expect(result).toBe(`\u2192 ${longSql}`);
   });
 
   it('validate_sql — shows Valid', () => {
@@ -141,10 +140,10 @@ describe('getStepDetail', () => {
   });
 
   // --- Truncation ---
-  it('truncates strings longer than 60 chars', () => {
-    const longQuestion = 'A'.repeat(80);
+  it('truncates strings longer than 200 chars', () => {
+    const longQuestion = 'A'.repeat(250);
     const result = getStepDetail('extract_graphql_question', { question: longQuestion });
-    expect(result).toBe('A'.repeat(60) + '\u2026');
+    expect(result).toBe('A'.repeat(200) + '\u2026');
   });
 
   // --- Edge cases ---

@@ -110,7 +110,7 @@ export default function PipelineStepper({ steps }: PipelineStepperProps) {
               </button>
             ) : (
               /* Expanded step rows */
-              <div className="flex flex-col">
+              <div className="flex min-w-0 flex-col">
                 <button
                   className="flex w-full items-center gap-2 py-1.5"
                   onClick={() => toggleGroup(gi)}
@@ -128,7 +128,7 @@ export default function PipelineStepper({ steps }: PipelineStepperProps) {
                         <div className={cn('h-2 w-2 shrink-0 rounded-full', colors.dot)} />
                         <span
                           className={cn(
-                            'text-xs',
+                            'min-w-0 truncate text-xs',
                             step.status === 'completed'
                               ? 'text-slate-500 dark:text-slate-400'
                               : cn('font-semibold', colors.text),
@@ -145,7 +145,7 @@ export default function PipelineStepper({ steps }: PipelineStepperProps) {
                         )}
                       </div>
                       {detail && (
-                        <p className="truncate pl-[18px] text-[11px] leading-tight text-slate-400 dark:text-slate-500">
+                        <p className="w-full min-w-0 truncate pl-[18px] text-[11px] leading-tight text-slate-400 dark:text-slate-500">
                           {detail}
                         </p>
                       )}
