@@ -30,6 +30,19 @@ def add_turn_summaries(
     return (existing or []) + (new or [])
 
 
+def add_token_usage(existing: list[dict] | None, new: list[dict] | None) -> list[dict]:
+    """Reducer that accumulates token usage records across graph nodes.
+
+    Args:
+        existing: Previously accumulated usage records (may be None).
+        new: New usage records to append (may be None).
+
+    Returns:
+        Combined list of all token usage records.
+    """
+    return (existing or []) + (new or [])
+
+
 class AtlasAgentState(TypedDict):
     """State carried through each node of the Atlas agent graph.
 
@@ -86,6 +99,8 @@ class AtlasAgentState(TypedDict):
     pipeline_execution_time_ms: int
     # Accumulated per-turn pipeline summaries (persisted in checkpoint)
     turn_summaries: Annotated[list[dict], add_turn_summaries]
+    # Accumulated LLM token usage records (per-node granularity)
+    token_usage: Annotated[list[dict], add_token_usage]
     # Trade toggle overrides (None = auto-detect)
     override_schema: Optional[str]
     override_direction: Optional[str]

@@ -285,6 +285,9 @@ class AnswerResult:
         schemas_used: List of classification schemas used in queries.
         total_rows: Sum of row_count across all queries.
         total_execution_time_ms: Sum of execution_time_ms across all queries.
+        token_usage: Aggregated token usage by pipeline, or None.
+        cost: Estimated cost breakdown by pipeline, or None.
+        tool_call_counts: Tool invocation counts by name, or None.
     """
 
     answer: str
@@ -293,6 +296,9 @@ class AnswerResult:
     schemas_used: list[str]
     total_rows: int
     total_execution_time_ms: int
+    token_usage: dict | None = None
+    cost: dict | None = None
+    tool_call_counts: dict[str, int] | None = None
 
 
 @dataclass
@@ -683,6 +689,15 @@ class AtlasTextToSQL:
         summary = _build_turn_summary(queries, resolved_products)
         await self.agent.aupdate_state(config, {"turn_summaries": [summary]})
 
+        # Collect token usage from final state
+        from src.token_usage import aggregate_usage, count_tool_calls, estimate_cost
+
+        raw_usage = last_state.get("token_usage", [])
+        token_usage = aggregate_usage(raw_usage) if raw_usage else None
+        cost = estimate_cost(raw_usage) if raw_usage else None
+        all_messages = last_state.get("messages", [])
+        tool_counts = count_tool_calls(all_messages) if all_messages else None
+
         return AnswerResult(
             answer=self._extract_text(message.content),
             queries=queries,
@@ -690,6 +705,9 @@ class AtlasTextToSQL:
             schemas_used=schemas_used,
             total_rows=sum(q["row_count"] for q in queries),
             total_execution_time_ms=sum(q["execution_time_ms"] for q in queries),
+            token_usage=token_usage,
+            cost=cost,
+            tool_call_counts=tool_counts,
         )
 
     async def astream_agent_response(

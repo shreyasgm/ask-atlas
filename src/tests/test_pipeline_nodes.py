@@ -214,11 +214,9 @@ class TestExtractProductsNode:
                 state, llm=mock_llm, engine=mock_engine
             )
 
-        assert result == {"pipeline_products": canned}
+        assert result["pipeline_products"] == canned
+        assert "token_usage" in result
         MockLookup.assert_called_once_with(llm=mock_llm, connection=mock_engine)
-        mock_instance.aextract_schemas_and_product_mentions_direct.assert_awaited_once_with(
-            "US exports of cotton?"
-        )
 
     async def test_no_products_found(self):
         canned = SchemasAndProductsFound(
@@ -556,7 +554,8 @@ class TestGenerateSqlNode:
                 state, llm=mock_llm, example_queries=[], max_results=15
             )
 
-        assert result == {"pipeline_sql": "SELECT * FROM hs92.country_year LIMIT 5"}
+        assert result["pipeline_sql"] == "SELECT * FROM hs92.country_year LIMIT 5"
+        assert "token_usage" in result
         mock_create.assert_called_once_with(
             llm=mock_llm,
             codes=None,
@@ -567,7 +566,6 @@ class TestGenerateSqlNode:
             mode_constraint=None,
             context="",
         )
-        mock_chain.ainvoke.assert_awaited_once_with({"question": "Brazil exports?"})
 
     async def test_passes_codes_when_present(self):
         mock_llm = MagicMock()
@@ -1271,3 +1269,111 @@ class TestValidateSqlNode:
         )
 
         assert result["last_error"] == ""
+
+
+# ---------------------------------------------------------------------------
+# Token usage tracking
+# ---------------------------------------------------------------------------
+
+
+class TestAgentNodeTokenUsage:
+    """Verify the agent node includes token_usage in its return dict."""
+
+    async def test_agent_node_returns_token_usage(self):
+        from src.agent_node import make_agent_node
+        from src.config import AgentMode
+
+        # Create a mock LLM that returns an AIMessage with usage_metadata
+        canned_response = AIMessage(
+            content="Let me look that up.",
+            tool_calls=[
+                {
+                    "id": "call_test",
+                    "name": "query_tool",
+                    "args": {"question": "Test question"},
+                }
+            ],
+            usage_metadata={
+                "input_tokens": 500,
+                "output_tokens": 100,
+                "total_tokens": 600,
+            },
+            response_metadata={"model_name": "gpt-5.2"},
+        )
+
+        mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value = mock_llm
+        mock_llm.ainvoke = AsyncMock(return_value=canned_response)
+
+        agent_fn = make_agent_node(
+            llm=mock_llm,
+            agent_mode=AgentMode.SQL_ONLY,
+            max_uses=5,
+            top_k_per_query=15,
+        )
+
+        from langchain_core.messages import HumanMessage
+
+        state = {
+            "messages": [HumanMessage(content="What did Brazil export?")],
+            "override_schema": None,
+            "override_direction": None,
+            "override_mode": None,
+            "override_agent_mode": None,
+        }
+
+        result = await agent_fn(state)
+
+        assert "token_usage" in result
+        assert len(result["token_usage"]) == 1
+        usage = result["token_usage"][0]
+        assert usage["tool_pipeline"] == "agent"
+        assert usage["input_tokens"] == 500
+        assert usage["output_tokens"] == 100
+        assert usage["model_name"] == "gpt-5.2"
+
+
+class TestGenerateSqlNodeTokenUsage:
+    """Verify generate_sql_node captures token usage via callback handler."""
+
+    async def test_returns_token_usage(self):
+        state = _base_state(
+            pipeline_question="Top 5 exports of Brazil?",
+            pipeline_codes="cotton: 5201",
+            pipeline_table_info="CREATE TABLE hs92.country_year ...",
+        )
+
+        with patch("src.sql_pipeline.create_query_generation_chain") as mock_chain_fn:
+            mock_chain = AsyncMock()
+
+            # Make ainvoke accept config kwarg and return SQL
+            async def _fake_ainvoke(input_dict, **kwargs):
+                # Simulate the callback handler being populated
+                config = kwargs.get("config", {})
+                callbacks = config.get("callbacks", [])
+                for cb in callbacks:
+                    if hasattr(cb, "total_usage"):
+                        # Simulate setting total_usage on the handler
+                        cb.total_usage = {
+                            "input_tokens": 2000,
+                            "output_tokens": 300,
+                            "total_tokens": 2300,
+                        }
+                return "SELECT * FROM hs92.country_year LIMIT 5"
+
+            mock_chain.ainvoke = _fake_ainvoke
+            mock_chain_fn.return_value = mock_chain
+
+            result = await generate_sql_node(
+                state,
+                llm=MagicMock(),
+                example_queries=[],
+                max_results=15,
+            )
+
+        assert "token_usage" in result
+        assert len(result["token_usage"]) == 1
+        usage = result["token_usage"][0]
+        assert usage["tool_pipeline"] == "query_tool"
+        assert usage["node"] == "generate_sql"
+        assert result["pipeline_sql"] == "SELECT * FROM hs92.country_year LIMIT 5"

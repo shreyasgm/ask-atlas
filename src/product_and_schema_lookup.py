@@ -187,18 +187,22 @@ class ProductAndSchemaLookup:
         return chain.invoke({"question": question})
 
     async def aextract_schemas_and_product_mentions_direct(
-        self, question: str
+        self,
+        question: str,
+        callbacks: list | None = None,
     ) -> SchemasAndProductsFound:
         """Async variant: run product/schema extraction and return the result directly.
 
         Args:
             question: The user's trade-related question.
+            callbacks: Optional list of callback handlers (e.g. for token tracking).
 
         Returns:
             SchemasAndProductsFound with identified schemas and products.
         """
         chain = self.extract_schemas_and_product_mentions()
-        return await chain.ainvoke({"question": question})
+        config = {"callbacks": callbacks} if callbacks else {}
+        return await chain.ainvoke({"question": question}, config=config)
 
     def select_final_codes_direct(
         self,
@@ -223,12 +227,14 @@ class ProductAndSchemaLookup:
         self,
         question: str,
         product_search_results: List[ProductSearchResult],
+        callbacks: list | None = None,
     ) -> ProductCodesMapping:
         """Async variant: select final product codes and return the result directly.
 
         Args:
             question: The user's trade-related question.
             product_search_results: Combined search results from LLM and DB.
+            callbacks: Optional list of callback handlers (e.g. for token tracking).
 
         Returns:
             ProductCodesMapping with the final selected codes.
@@ -236,7 +242,8 @@ class ProductAndSchemaLookup:
         if not product_search_results:
             return ProductCodesMapping(mappings=[])
         chain = self.select_final_codes(product_search_results)
-        return await chain.ainvoke({"question": question})
+        config = {"callbacks": callbacks} if callbacks else {}
+        return await chain.ainvoke({"question": question}, config=config)
 
     def select_final_codes(
         self,
