@@ -12,7 +12,8 @@ const GRAPHQL_NODES = new Set([
 const DOCS_NODES = new Set([
   'extract_docs_question',
   'format_docs_results',
-  'select_and_synthesize',
+  'select_docs',
+  'synthesize_docs',
 ]);
 
 export function classifyPipelineNode(node: string): PipelineType {
