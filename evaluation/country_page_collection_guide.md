@@ -28,6 +28,7 @@ This guide describes how to systematically collect ground truth Q&A pairs from t
 - **ID format**: `"location-{m49_code}"` (e.g., `"location-404"` for Kenya)
 - **Rate limit**: ≤ 120 req/min, include `User-Agent` header
 - **No authentication required**
+- **Product classification: `HS` and `SITC` only.** The Country Pages API `ProductClass` enum has exactly two values: `HS` (equivalent to HS92) and `SITC`. There is no `HS12` or `HS22` — passing either will return a GraphQL validation error. All product data from this API is HS 1992 data.
 
 ### Technical Notes
 
