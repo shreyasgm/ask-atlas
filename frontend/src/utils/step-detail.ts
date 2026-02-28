@@ -1,5 +1,5 @@
-/** Trim to a reasonable ceiling to prevent extremely long text in the UI. */
-function truncate(s: string, max = 200): string {
+/** Safety ceiling — CSS line-clamp handles the visual truncation. */
+function truncate(s: string, max = 2000): string {
   return s.length > max ? s.slice(0, max) + '\u2026' : s;
 }
 
@@ -130,7 +130,7 @@ export function getStepDetail(
     }
 
     // --- Docs pipeline ---
-    case 'select_and_synthesize': {
+    case 'select_docs': {
       const files = detail.selected_files;
       if (!Array.isArray(files) || files.length === 0) {
         return null;

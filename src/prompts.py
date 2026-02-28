@@ -20,6 +20,18 @@ Design rules
 """
 
 # =========================================================================
+# Data-year coverage constants
+# Update these when the SQL data refresh lands or GraphQL coverage changes.
+# =========================================================================
+
+SQL_DATA_MAX_YEAR: int = 2022
+"""Latest year available in the SQL (postgres) trade-data tables."""
+
+GRAPHQL_DATA_MAX_YEAR: int = 2024
+"""Latest year available via the Atlas GraphQL APIs."""
+
+
+# =========================================================================
 # 1. Agent System Prompt (base)
 #    Moved verbatim from sql_pipeline.py:build_sql_only_system_prompt
 #    Pipeline: agent_node
@@ -118,7 +130,7 @@ If a user asks a normative policy question, such as what products a country shou
 # Appended to the agent system prompt when both query_tool AND atlas_graphql
 # are available (GRAPHQL_SQL mode).
 # Pipeline: agent_node
-# Placeholders: {max_uses}, {budget_status}
+# Placeholders: {max_uses}, {budget_status}, {sql_max_year}, {graphql_max_year}
 # REQUIRES USER REVIEW
 
 DUAL_TOOL_EXTENSION = """
@@ -154,6 +166,14 @@ pre-calculated metrics and visualizations. This is complementary to `query_tool`
 - "What are Kenya's top growth opportunity products?" -> atlas_graphql
   (pre-computed feasibility rankings with correct RCA filtering and COG sorting)
 - "What are Sub-Saharan Africa's total exports?" -> atlas_graphql (regional/group aggregate data)
+
+**Data Coverage:**
+- `query_tool` (SQL): trade data through {sql_max_year} only.
+- `atlas_graphql` (GraphQL APIs): trade data through {graphql_max_year}.
+- When the user asks about "the latest year", "most recent data", or a year after {sql_max_year},
+  prefer `atlas_graphql` — SQL cannot return data beyond {sql_max_year}.
+- If you must use SQL and the requested year exceeds {sql_max_year}, return the latest
+  available data and note the limitation in your response.
 
 **Trusting Pre-Computed Fields:**
 - When atlas_graphql returns pre-computed labels or metrics (e.g., `diversificationGrade`,
@@ -233,14 +253,14 @@ docs_tool does NOT count against your query budget of {max_uses} data queries.
 
 # --- SQL_GENERATION_PROMPT ---
 # The base prefix for the SQL generation few-shot chain.
-# Placeholders: {top_k}, {table_info}
+# Placeholders: {top_k}, {table_info}, {sql_max_year}
 
 SQL_GENERATION_PROMPT = """
 You are a SQL expert that writes queries for a postgres database containing international trade data. Your task is to create a syntactically correct SQL query to answer the user's question about trade data.
 
 Notes on these tables:
 - Unless otherwise specified, do not return more than {top_k} rows.
-- If a time period is not specified, assume the query is about the latest available year in the database.
+- If a time period is not specified, assume the query is about the latest available year in the database (currently {sql_max_year} for goods, varies by schema for services).
 - Never use the `location_level` or `partner_level` columns in your query. Just ignore those columns.
 - `product_id` and `product_code` are **NOT** the same thing. `product_id` is an internal ID used by the db, but when looking up specific product codes, use `product_code`, which contains the actual official product codes. Similarly, `country_id` and `iso3_code` are **NOT** the same thing, and if you need to look up specific countries, use `iso3_code`. Use the `product_id` and `country_id` variables for joins, but not for looking up official codes in `WHERE` clauses.
 - What this means concretely is that the query should never have a `WHERE` clause that filters on `product_id` or `country_id`. Use `product_code` and `iso3_code` instead in `WHERE` clauses.
@@ -716,7 +736,7 @@ Reply with just the number (1-{num_candidates}) of the best match, or 0 if none 
 
 # --- DOCUMENT_SELECTION_PROMPT ---
 # Presented to the lightweight LLM to select relevant docs from the manifest.
-# Pipeline: docs_pipeline (select_and_synthesize step A)
+# Pipeline: docs_pipeline (select_docs node)
 # Placeholders: {question}, {context_block}, {manifest}, {max_docs}
 # REQUIRES USER REVIEW
 
@@ -748,7 +768,7 @@ Return the indices of the 1-{max_docs} most relevant documents."""
 # --- DOCUMENTATION_SYNTHESIS_PROMPT ---
 # Presented to the lightweight LLM after loading selected docs to synthesize
 # a focused response.
-# Pipeline: docs_pipeline (select_and_synthesize step C)
+# Pipeline: docs_pipeline (synthesize_docs node)
 # Placeholders: {question}, {context_block}, {docs_content}
 # REQUIRES USER REVIEW
 
@@ -824,7 +844,9 @@ def build_sql_generation_prefix(
     Returns:
         Complete prefix string ready for the few-shot prompt template.
     """
-    prefix = SQL_GENERATION_PROMPT.format(top_k=top_k, table_info=table_info)
+    prefix = SQL_GENERATION_PROMPT.format(
+        top_k=top_k, table_info=table_info, sql_max_year=SQL_DATA_MAX_YEAR
+    )
 
     if codes:
         prefix += SQL_CODES_BLOCK.format(codes=codes)

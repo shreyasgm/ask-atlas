@@ -23,7 +23,8 @@ from src.docs_pipeline import (
     DocEntry,
     _DOCS_STATE_DEFAULTS,
     load_docs_manifest,
-    select_and_synthesize,
+    select_docs,
+    synthesize_docs,
 )
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
@@ -76,6 +77,18 @@ def _base_docs_state(**overrides) -> dict:
     return state
 
 
+async def _run_docs_pipeline(state: dict, lightweight_model, manifest) -> dict:
+    """Run select_docs + synthesize_docs in sequence, simulating graph execution."""
+    select_result = await select_docs(
+        state, lightweight_model=lightweight_model, manifest=manifest
+    )
+    updated_state = {**state, **select_result}
+    synth_result = await synthesize_docs(
+        updated_state, lightweight_model=lightweight_model, manifest=manifest
+    )
+    return {**select_result, **synth_result}
+
+
 # ---------------------------------------------------------------------------
 # Tests: ECI methodology question
 # ---------------------------------------------------------------------------
@@ -91,7 +104,7 @@ class TestDocsEciMethodology:
             docs_context="User wants to understand complexity metrics.",
         )
 
-        result = await select_and_synthesize(
+        result = await _run_docs_pipeline(
             state, lightweight_model=lightweight_llm, manifest=docs_manifest
         )
 
@@ -117,7 +130,7 @@ class TestDocsEciMethodology:
             docs_question="What is Revealed Comparative Advantage (RCA)? How is it calculated?",
         )
 
-        result = await select_and_synthesize(
+        result = await _run_docs_pipeline(
             state, lightweight_model=lightweight_llm, manifest=docs_manifest
         )
 
@@ -146,7 +159,7 @@ class TestDocsClassificationSystems:
             docs_question="What is the difference between HS92 and HS12 classification systems? What years does each cover?",
         )
 
-        result = await select_and_synthesize(
+        result = await _run_docs_pipeline(
             state, lightweight_model=lightweight_llm, manifest=docs_manifest
         )
 
@@ -175,7 +188,7 @@ class TestDocsOutOfScope:
             docs_question="What is the weather in Boston today?",
         )
 
-        result = await select_and_synthesize(
+        result = await _run_docs_pipeline(
             state, lightweight_model=lightweight_llm, manifest=docs_manifest
         )
 

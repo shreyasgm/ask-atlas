@@ -279,7 +279,7 @@ def print_result(result: TestResult, idx: int) -> None:
             elif trace.name == "generate_sql" and p.get("sql"):
                 sql_preview = p["sql"][:80].replace("\n", " ")
                 extra = f"  → {sql_preview}..."
-            elif trace.name == "select_and_synthesize" and p.get("selected_files"):
+            elif trace.name == "select_docs" and p.get("selected_files"):
                 extra = f"  → files={p['selected_files']}"
 
             print(

@@ -145,7 +145,7 @@ export default function PipelineStepper({ steps }: PipelineStepperProps) {
                         )}
                       </div>
                       {detail && (
-                        <p className="w-full min-w-0 pl-[18px] text-[11px] leading-tight text-slate-400 dark:text-slate-500">
+                        <p className="line-clamp-5 w-full min-w-0 pl-[18px] text-[11px] leading-tight text-slate-400 dark:text-slate-500">
                           {detail}
                         </p>
                       )}
