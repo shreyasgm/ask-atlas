@@ -178,11 +178,15 @@ class TestDocsPipelineE2E:
             or "product complexity" in extract_state.get("question", "").lower()
         ), f"Expected PCI-related question, got: {extract_state.get('question')}"
 
-        # select_and_synthesize should report selected files
-        assert "select_and_synthesize" in pipeline_states
-        select_state = pipeline_states["select_and_synthesize"]
+        # select_docs should report selected files
+        assert "select_docs" in pipeline_states
+        select_state = pipeline_states["select_docs"]
         assert select_state.get("selected_files"), "No docs were selected"
-        assert select_state.get("has_synthesis") is True, "Synthesis not produced"
+
+        # synthesize_docs should report synthesis completed
+        assert "synthesize_docs" in pipeline_states
+        synth_state = pipeline_states["synthesize_docs"]
+        assert synth_state.get("has_synthesis") is True, "Synthesis not produced"
 
         # At least metrics_glossary.md should be among selected files
         selected = select_state["selected_files"]

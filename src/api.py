@@ -617,7 +617,7 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                                     "links": [],
                                 }
                             )
-                        elif stage == "select_and_synthesize":
+                        elif stage == "select_docs":
                             selected = stream_data.payload.get("selected_files") or []
                             if selected:
                                 stream_docs_consulted.extend(selected)

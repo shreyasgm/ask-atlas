@@ -2,7 +2,7 @@
 
 Provides 3 async node functions that form a linear pipeline:
 
-    extract_docs_question → select_and_synthesize → format_docs_results
+    extract_docs_question → select_docs → synthesize_docs → format_docs_results
 
 When the agent calls ``docs_tool(question="...")``, this pipeline selects
 relevant documentation from ``src/docs/``, synthesizes a focused

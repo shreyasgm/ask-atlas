@@ -128,22 +128,28 @@ describe('getStepDetail', () => {
     );
   });
 
-  it('select_and_synthesize — shows selected files', () => {
-    const result = getStepDetail('select_and_synthesize', {
+  it('select_docs — shows selected files', () => {
+    const result = getStepDetail('select_docs', {
       selected_files: ['methodology.md', 'data-sources.md'],
     });
     expect(result).toBe('\u2192 methodology.md, data-sources.md');
   });
 
-  it('select_and_synthesize — returns null for empty array', () => {
-    expect(getStepDetail('select_and_synthesize', { selected_files: [] })).toBeNull();
+  it('select_docs — returns null for empty array', () => {
+    expect(getStepDetail('select_docs', { selected_files: [] })).toBeNull();
   });
 
-  // --- Truncation ---
-  it('truncates strings longer than 200 chars', () => {
-    const longQuestion = 'A'.repeat(250);
+  // --- Truncation (safety ceiling — CSS line-clamp handles visual clamping) ---
+  it('truncates strings longer than 2000 chars', () => {
+    const longQuestion = 'A'.repeat(2500);
     const result = getStepDetail('extract_graphql_question', { question: longQuestion });
-    expect(result).toBe('A'.repeat(200) + '\u2026');
+    expect(result).toBe('A'.repeat(2000) + '\u2026');
+  });
+
+  it('does not truncate strings under 2000 chars', () => {
+    const question = 'A'.repeat(500);
+    const result = getStepDetail('extract_graphql_question', { question });
+    expect(result).toBe(question);
   });
 
   // --- Edge cases ---

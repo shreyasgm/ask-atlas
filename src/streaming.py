@@ -81,7 +81,8 @@ GRAPHQL_PIPELINE_SEQUENCE = [
 
 DOCS_PIPELINE_SEQUENCE = [
     "extract_docs_question",
-    "select_and_synthesize",
+    "select_docs",
+    "synthesize_docs",
     "format_docs_results",
 ]
 
@@ -104,7 +105,8 @@ NODE_LABELS = {
     "format_graphql_results": "Formatting results",
     # Docs pipeline
     "extract_docs_question": "Extracting question",
-    "select_and_synthesize": "Looking up documentation",
+    "select_docs": "Selecting documents",
+    "synthesize_docs": "Synthesizing response",
     "format_docs_results": "Preparing response",
 }
 
@@ -263,8 +265,10 @@ def _extract_pipeline_state(node_name: str, state_snapshot: dict) -> dict:
     elif node_name == "extract_docs_question":
         base["question"] = state_snapshot.get("docs_question", "")
 
-    elif node_name == "select_and_synthesize":
+    elif node_name == "select_docs":
         base["selected_files"] = state_snapshot.get("docs_selected_files", [])
+
+    elif node_name == "synthesize_docs":
         base["has_synthesis"] = bool(state_snapshot.get("docs_synthesis"))
 
     elif node_name == "format_docs_results":

@@ -450,7 +450,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
                 }
 
                 // --- Docs pipeline stages ---
-                if (parsed.stage === 'select_and_synthesize' && parsed.selected_files) {
+                if (parsed.stage === 'select_docs' && parsed.selected_files) {
                   setEntitiesData((prev) => ({
                     ...(prev ?? emptyEntities()),
                     docsConsulted: parsed.selected_files,
