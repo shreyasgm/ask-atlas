@@ -22,6 +22,8 @@ from src.graphql_client import GraphQLBudgetTracker
 from src.prompts import (
     DOCS_TOOL_EXTENSION,
     DUAL_TOOL_EXTENSION,
+    GRAPHQL_DATA_MAX_YEAR,
+    SQL_DATA_MAX_YEAR,
     build_agent_system_prompt,
 )
 from src.sql_pipeline import _query_tool_schema
@@ -144,7 +146,10 @@ def make_agent_node(
                 remaining = budget_tracker.remaining() if budget_tracker else "unknown"
                 budget_status = f"Available ({remaining} calls remaining this window)"
                 prompt_text += DUAL_TOOL_EXTENSION.format(
-                    max_uses=max_uses, budget_status=budget_status
+                    max_uses=max_uses,
+                    budget_status=budget_status,
+                    sql_max_year=SQL_DATA_MAX_YEAR,
+                    graphql_max_year=GRAPHQL_DATA_MAX_YEAR,
                 )
 
             # Docs tool extension — available in ALL modes
