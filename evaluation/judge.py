@@ -183,33 +183,64 @@ class PlausibilityVerdict(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Data-year coverage constants (mirror src/prompts.py values)
+# ---------------------------------------------------------------------------
+
+_SQL_DATA_MAX_YEAR: int = 2022
+_GRAPHQL_DATA_MAX_YEAR: int = 2024
+
+# ---------------------------------------------------------------------------
 # Prompt templates
 # ---------------------------------------------------------------------------
 
+_GROUND_TRUTH_SYSTEM_TEXT = (
+    "You are an expert evaluator for a trade-data Q&A system. "
+    "Compare the agent's answer to the ground truth data and score it.\n\n"
+    "Scoring rubric (1-5 each):\n"
+    "- **Factual Correctness** (weight 0.35): Are specific numbers, countries, "
+    "products, and years correct?\n"
+    "- **Data Accuracy** (weight 0.30): Do numbers match ground truth within "
+    "reasonable rounding (±2%)?  Penalise fabricated numbers.\n"
+    "- **Completeness** (weight 0.20): Does the answer address all parts of "
+    "the question?\n"
+    "- **Reasoning Quality** (weight 0.15): Is the interpretation, analysis, "
+    "and contextual explanation sound?\n\n"
+    "Be strict on factual accuracy; be lenient on rounding differences."
+)
+
+_GROUND_TRUTH_HUMAN_TEXT = (
+    "**Question**: {question}\n\n"
+    "**Ground truth data** (from verified SQL):\n```json\n{ground_truth}\n```\n\n"
+    "**Agent answer**:\n{agent_answer}\n\n"
+    "Evaluate the agent's answer against the ground truth."
+)
+
+_YEAR_GAP_CAVEAT = (
+    f"\n\nNote: the agent used the SQL database (data through {_SQL_DATA_MAX_YEAR}) "
+    f"while the ground truth may reflect up to {_GRAPHQL_DATA_MAX_YEAR} data. "
+    f"Determine whether a year gap is relevant: if the question explicitly asks about "
+    f"a year {_SQL_DATA_MAX_YEAR} or earlier, score normally with no adjustment. "
+    f"However, if the question asks about a year after {_SQL_DATA_MAX_YEAR}, OR does not "
+    "mention a year at all (implying 'latest available', which differs between the two "
+    "sources), treat the year gap as relevant. "
+    f"When the year gap IS relevant: score data_accuracy 4 if values are plausible for "
+    f"{_SQL_DATA_MAX_YEAR} (correct magnitude/direction); reserve 5 for close matches "
+    f"despite the gap. Do not penalise factual_correctness if the agent correctly "
+    f"stated '{_SQL_DATA_MAX_YEAR}'. "
+    "Still penalise normally for wrong countries/products/metrics or fabricated numbers."
+)
+
 _GROUND_TRUTH_PROMPT = ChatPromptTemplate.from_messages(
     [
-        (
-            "system",
-            "You are an expert evaluator for a trade-data Q&A system. "
-            "Compare the agent's answer to the ground truth data and score it.\n\n"
-            "Scoring rubric (1-5 each):\n"
-            "- **Factual Correctness** (weight 0.35): Are specific numbers, countries, "
-            "products, and years correct?\n"
-            "- **Data Accuracy** (weight 0.30): Do numbers match ground truth within "
-            "reasonable rounding (±2%)?  Penalise fabricated numbers.\n"
-            "- **Completeness** (weight 0.20): Does the answer address all parts of "
-            "the question?\n"
-            "- **Reasoning Quality** (weight 0.15): Is the interpretation, analysis, "
-            "and contextual explanation sound?\n\n"
-            "Be strict on factual accuracy; be lenient on rounding differences.",
-        ),
-        (
-            "human",
-            "**Question**: {question}\n\n"
-            "**Ground truth data** (from verified SQL):\n```json\n{ground_truth}\n```\n\n"
-            "**Agent answer**:\n{agent_answer}\n\n"
-            "Evaluate the agent's answer against the ground truth.",
-        ),
+        ("system", _GROUND_TRUTH_SYSTEM_TEXT),
+        ("human", _GROUND_TRUTH_HUMAN_TEXT),
+    ]
+)
+
+_GROUND_TRUTH_PROMPT_WITH_YEAR_GAP = ChatPromptTemplate.from_messages(
+    [
+        ("system", _GROUND_TRUTH_SYSTEM_TEXT + _YEAR_GAP_CAVEAT),
+        ("human", _GROUND_TRUTH_HUMAN_TEXT),
     ]
 )
 
@@ -280,6 +311,7 @@ async def judge_answer(
     expected_behavior: str | None = None,
     model: str = "gpt-5-mini",
     provider: str = "openai",
+    tools_used: list[str] | None = None,
 ) -> dict:
     """Score an agent answer using an LLM judge.
 
@@ -295,6 +327,7 @@ async def judge_answer(
         expected_behavior: For refusal/edge-case questions, the expected behaviour.
         model: Judge LLM model name.
         provider: Judge LLM provider.
+        tools_used: List of tool names the agent invoked, or None.
 
     Returns:
         Dictionary with scores, verdict, reasoning, and ``judge_mode``.
@@ -303,7 +336,16 @@ async def judge_answer(
 
     if ground_truth_data is not None:
         # Path 1: verified ground truth
-        chain = _GROUND_TRUTH_PROMPT | llm.with_structured_output(JudgeVerdict)
+        # Apply year-gap caveat when the agent used SQL and the years differ
+        apply_caveat = (
+            tools_used is not None
+            and "query_tool" in tools_used
+            and _SQL_DATA_MAX_YEAR < _GRAPHQL_DATA_MAX_YEAR
+        )
+        prompt = (
+            _GROUND_TRUTH_PROMPT_WITH_YEAR_GAP if apply_caveat else _GROUND_TRUTH_PROMPT
+        )
+        chain = prompt | llm.with_structured_output(JudgeVerdict)
         result: JudgeVerdict = await chain.ainvoke(
             {
                 "question": question,
@@ -311,7 +353,10 @@ async def judge_answer(
                 "agent_answer": agent_answer,
             }
         )
-        return result.to_dict()
+        verdict_dict = result.to_dict()
+        if apply_caveat:
+            verdict_dict["year_gap_caveat_applied"] = True
+        return verdict_dict
 
     if expected_behavior is not None:
         # Path 2: expected refusal / limitation acknowledgment

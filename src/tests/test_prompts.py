@@ -79,10 +79,12 @@ class TestFormatPlaceholderContracts:
         }
 
     def test_dual_tool_extension_matches_caller(self):
-        """agent_node.py calls .format(max_uses=..., budget_status=...)."""
+        """agent_node.py calls .format(max_uses=..., budget_status=..., sql_max_year=..., graphql_max_year=...)."""
         assert _get_format_fields(prompts.DUAL_TOOL_EXTENSION) == {
             "max_uses",
             "budget_status",
+            "sql_max_year",
+            "graphql_max_year",
         }
 
     def test_docs_tool_extension_matches_caller(self):
@@ -90,10 +92,11 @@ class TestFormatPlaceholderContracts:
         assert _get_format_fields(prompts.DOCS_TOOL_EXTENSION) == {"max_uses"}
 
     def test_sql_generation_prompt_matches_builder(self):
-        """build_sql_generation_prefix passes top_k + table_info to the base prompt."""
+        """build_sql_generation_prefix passes top_k + table_info + sql_max_year to the base prompt."""
         assert _get_format_fields(prompts.SQL_GENERATION_PROMPT) == {
             "top_k",
             "table_info",
+            "sql_max_year",
         }
 
     def test_sql_conditional_blocks_match_builder(self):
@@ -445,6 +448,10 @@ class TestPromptContentAdditions:
         assert "Pre-Computed Fields" in prompts.DUAL_TOOL_EXTENSION
         assert "diversificationGrade" in prompts.DUAL_TOOL_EXTENSION
         assert "exportValueConstGrowthCagr" in prompts.DUAL_TOOL_EXTENSION
+
+    def test_dual_tool_extension_has_data_coverage_section(self):
+        """DUAL_TOOL_EXTENSION must include the Data Coverage routing guidance."""
+        assert "Data Coverage" in prompts.DUAL_TOOL_EXTENSION
 
     def test_agent_system_prompt_has_anti_fabrication_rule(self):
         """AGENT_SYSTEM_PROMPT must contain the anti-fabrication rule."""
