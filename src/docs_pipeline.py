@@ -434,7 +434,9 @@ async def format_docs_results(state: AtlasAgentState) -> dict:
         synthesis = "No relevant documentation found."
 
     messages: list[ToolMessage] = [
-        ToolMessage(content=synthesis, tool_call_id=tool_calls[0]["id"])
+        ToolMessage(
+            content=synthesis, tool_call_id=tool_calls[0]["id"], name="docs_tool"
+        )
     ]
     # Handle parallel tool_calls (only first is executed)
     for tc in tool_calls[1:]:
@@ -442,6 +444,7 @@ async def format_docs_results(state: AtlasAgentState) -> dict:
             ToolMessage(
                 content="Only one tool can be executed at a time. Please make additional requests sequentially.",
                 tool_call_id=tc["id"],
+                name="docs_tool",
             )
         )
 

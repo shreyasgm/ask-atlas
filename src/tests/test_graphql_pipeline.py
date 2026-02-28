@@ -2104,7 +2104,7 @@ class TestBuildersExtended:
         )
         assert "productSpace" in query
         assert variables["location"] == "location-404"
-        assert variables["productClass"] == "HS92"
+        assert variables["productClass"] == "HS"  # Country Pages uses "HS" not "HS92"
         assert variables["year"] == 2024
         # Must NOT use the old $id variable
         assert "$id" not in query

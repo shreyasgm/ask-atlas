@@ -284,6 +284,15 @@ class GraphQLEntityExtraction(BaseModel):
         default=None,
         description="Lookback period in years for Country Pages growth dynamics (country_lookback query type).",
     )
+    services_class: Optional[Literal["unilateral", "bilateral"]] = Field(
+        default=None,
+        description=(
+            "Set to 'unilateral' when the question asks about total/all exports/products "
+            "or doesn't specifically limit to goods. Set to 'bilateral' for bilateral "
+            "services trade. Leave null when the question explicitly says 'goods' or "
+            "names a specific goods product."
+        ),
+    )
 
     @field_validator("reasoning", mode="before")
     @classmethod
@@ -404,6 +413,7 @@ async def resolve_ids(
     lightweight_model: Any,
     country_cache: CatalogCache,
     product_cache: CatalogCache,
+    group_cache: CatalogCache | None = None,
     services_cache: CatalogCache,
 ) -> dict:
     """Resolve extracted entity names/codes to Atlas internal IDs.
@@ -527,10 +537,30 @@ async def resolve_ids(
         "product_class",
         "group_name",
         "group_type",
+        "services_class",
     ):
         val = extraction.get(field_name)
         if val is not None:
             resolved[field_name] = val
+
+    # Resolve group_name to group_id if a group cache is available
+    group_name = extraction.get("group_name")
+    if group_name and group_cache is not None:
+        group_entry = await _resolve_entity(
+            name=group_name,
+            code_guess=None,
+            cache=group_cache,
+            index_name="name",
+            search_field="groupName",
+            llm=lightweight_model,
+            question=question,
+        )
+        if group_entry:
+            resolved["group_id"] = group_entry["groupId"]
+        else:
+            resolution_notes.append(
+                f"Could not resolve group '{group_name}' in catalog"
+            )
 
     # Generate atlas links BEFORE formatting IDs (links expect canonical form)
     atlas_links: list[dict] = []
@@ -881,13 +911,16 @@ async def format_graphql_results(
         atlas_links = state.get("graphql_atlas_links", [])
 
     messages: list[ToolMessage] = [
-        ToolMessage(content=content, tool_call_id=tool_calls[0]["id"])
+        ToolMessage(
+            content=content, tool_call_id=tool_calls[0]["id"], name="atlas_graphql"
+        )
     ]
     for tc in tool_calls[1:]:
         messages.append(
             ToolMessage(
                 content="Only one query can be executed at a time. Please make additional queries sequentially.",
                 tool_call_id=tc["id"],
+                name="atlas_graphql",
             )
         )
 
@@ -1126,25 +1159,31 @@ def _build_country_product_year(params: dict) -> tuple[str, dict]:
     if "product_id" in params:
         variables["productId"] = params["product_id"]
 
-    query = """
+    services_class = params.get("services_class")
+    if services_class:
+        variables["servicesClass"] = services_class
+
+    sc_var = ", $servicesClass: ServicesClass" if services_class else ""
+    sc_arg = "\n        servicesClass: $servicesClass" if services_class else ""
+    query = f"""
     query CPY($countryId: Int, $productLevel: Int!, $productClass: ProductClass,
-              $productId: Int, $yearMin: Int, $yearMax: Int) {
+              $productId: Int, $yearMin: Int, $yearMax: Int{sc_var}) {{
       countryProductYear(
         countryId: $countryId
         productLevel: $productLevel
         productClass: $productClass
         productId: $productId
         yearMin: $yearMin
-        yearMax: $yearMax
-      ) {
+        yearMax: $yearMax{sc_arg}
+      ) {{
         countryId productId productLevel year
         exportValue importValue globalMarketShare
         exportRca exportRpop
         isNew productStatus
         cog distance
         normalizedPci normalizedCog normalizedDistance normalizedExportRca
-      }
-    }
+      }}
+    }}
     """
     return query, variables
 
@@ -1167,19 +1206,25 @@ def _build_country_country_year(params: dict) -> tuple[str, dict]:
     if "partner_id" in params:
         variables["partnerCountryId"] = params["partner_id"]
 
-    query = """
-    query CCY($countryId: Int, $partnerCountryId: Int, $yearMin: Int, $yearMax: Int) {
+    services_class = params.get("services_class")
+    if services_class:
+        variables["servicesClass"] = services_class
+
+    sc_var = ", $servicesClass: ServicesClass" if services_class else ""
+    sc_arg = "\n        servicesClass: $servicesClass" if services_class else ""
+    query = f"""
+    query CCY($countryId: Int, $partnerCountryId: Int, $yearMin: Int, $yearMax: Int{sc_var}) {{
       countryCountryYear(
         countryId: $countryId
         partnerCountryId: $partnerCountryId
         yearMin: $yearMin
-        yearMax: $yearMax
-      ) {
+        yearMax: $yearMax{sc_arg}
+      ) {{
         countryId partnerCountryId year
         exportValue importValue
         exportValueReported importValueReported
-      }
-    }
+      }}
+    }}
     """
     return query, variables
 
@@ -1200,22 +1245,28 @@ def _build_country_country_product_year(params: dict) -> tuple[str, dict]:
         variables["yearMin"] = params.get("year_min", 2024)
         variables["yearMax"] = params.get("year_max", 2024)
 
-    query = """
+    services_class = params.get("services_class")
+    if services_class:
+        variables["servicesClass"] = services_class
+
+    sc_var = ", $servicesClass: ServicesClass" if services_class else ""
+    sc_arg = "\n        servicesClass: $servicesClass" if services_class else ""
+    query = f"""
     query CCPY($countryId: Int, $partnerCountryId: Int,
                $productLevel: Int!, $productClass: ProductClass,
-               $yearMin: Int, $yearMax: Int) {
+               $yearMin: Int, $yearMax: Int{sc_var}) {{
       countryCountryProductYear(
         countryId: $countryId
         partnerCountryId: $partnerCountryId
         productLevel: $productLevel
         productClass: $productClass
         yearMin: $yearMin
-        yearMax: $yearMax
-      ) {
+        yearMax: $yearMax{sc_arg}
+      ) {{
         countryId partnerCountryId productId productLevel year
         exportValue importValue
-      }
-    }
+      }}
+    }}
     """
     return query, variables
 
@@ -1231,21 +1282,27 @@ def _build_country_year(params: dict) -> tuple[str, dict]:
         variables["yearMin"] = params.get("year_min", 2024)
         variables["yearMax"] = params.get("year_max", 2024)
 
-    query = """
-    query CY($countryId: Int, $yearMin: Int, $yearMax: Int) {
+    services_class = params.get("services_class")
+    if services_class:
+        variables["servicesClass"] = services_class
+
+    sc_var = ", $servicesClass: ServicesClass" if services_class else ""
+    sc_arg = "\n        servicesClass: $servicesClass" if services_class else ""
+    query = f"""
+    query CY($countryId: Int, $yearMin: Int, $yearMax: Int{sc_var}) {{
       countryYear(
         countryId: $countryId
         yearMin: $yearMin
-        yearMax: $yearMax
-      ) {
+        yearMax: $yearMax{sc_arg}
+      ) {{
         countryId year
         exportValue importValue
         population gdp gdppc gdpPpp gdppcPpp
         gdpConst gdpPppConst gdppcConst gdppcPppConst
         eci eciFixed coi
         currentAccount growthProj
-      }
-    }
+      }}
+    }}
     """
     return query, variables
 
@@ -1264,21 +1321,27 @@ def _build_product_year(params: dict) -> tuple[str, dict]:
         variables["yearMin"] = params.get("year_min", 2024)
         variables["yearMax"] = params.get("year_max", 2024)
 
-    query = """
-    query PY($productId: Int, $productLevel: Int!, $yearMin: Int, $yearMax: Int) {
+    services_class = params.get("services_class")
+    if services_class:
+        variables["servicesClass"] = services_class
+
+    sc_var = ", $servicesClass: ServicesClass" if services_class else ""
+    sc_arg = "\n        servicesClass: $servicesClass" if services_class else ""
+    query = f"""
+    query PY($productId: Int, $productLevel: Int!, $yearMin: Int, $yearMax: Int{sc_var}) {{
       productYear(
         productId: $productId
         productLevel: $productLevel
         yearMin: $yearMin
-        yearMax: $yearMax
-      ) {
+        yearMax: $yearMax{sc_arg}
+      ) {{
         productId productLevel year
         exportValue importValue
         exportValueConstGrowth5 importValueConstGrowth5
         exportValueConstCagr5 importValueConstCagr5
         pci complexityEnum
-      }
-    }
+      }}
+    }}
     """
     return query, variables
 
@@ -1382,6 +1445,7 @@ def _build_country_profile(params: dict) -> tuple[str, dict]:
         growthProjectionClassification
         growthProjectionRelativeToIncome
         diversificationGrade diversityRank diversity
+        policyRecommendation
         currentAccount { quantity year }
       }
     }
@@ -1427,8 +1491,10 @@ def _build_new_products(params: dict) -> tuple[str, dict]:
     query NP($location: ID!, $year: Int!) {
       newProductsCountry(location: $location, year: $year) {
         location { id shortName }
+        newProductCount
         newProductExportValue
         newProductExportValuePerCapita
+        newProducts { id code shortName longName }
       }
     }
     """
@@ -1438,7 +1504,7 @@ def _build_new_products(params: dict) -> tuple[str, dict]:
 def _build_growth_opportunities(params: dict) -> tuple[str, dict]:
     """Build growth opportunities query (Country Pages productSpace API)."""
     location = params.get("location", "")
-    product_class = params.get("product_class", "HS92")
+    product_class = params.get("product_class", "HS")
     year = params.get("year")
     variables: dict[str, Any] = {"location": location, "productClass": product_class}
     if year:
@@ -1558,20 +1624,26 @@ def _build_treemap_cpy(params: dict) -> tuple[str, dict]:
     if "product_id" in params:
         variables["productId"] = params["product_id"]
 
-    query = """
+    services_class = params.get("services_class")
+    if services_class:
+        variables["servicesClass"] = services_class
+
+    sc_var = ", $servicesClass: ServicesClass" if services_class else ""
+    sc_arg = "\n        servicesClass: $servicesClass" if services_class else ""
+    query = f"""
     query CPY($countryId: Int, $productLevel: Int!, $productClass: ProductClass,
-              $productId: Int, $yearMin: Int, $yearMax: Int) {
+              $productId: Int, $yearMin: Int, $yearMax: Int{sc_var}) {{
       countryProductYear(
         countryId: $countryId
         productLevel: $productLevel
         productClass: $productClass
         productId: $productId
         yearMin: $yearMin
-        yearMax: $yearMax
-      ) {
+        yearMax: $yearMax{sc_arg}
+      ) {{
         productId year exportValue
-      }
-    }
+      }}
+    }}
     """
     return query, variables
 
@@ -1587,17 +1659,23 @@ def _build_treemap_ccy(params: dict) -> tuple[str, dict]:
         variables["yearMin"] = params.get("year_min", 2024)
         variables["yearMax"] = params.get("year_max", 2024)
 
-    query = """
-    query CCY($countryId: Int, $yearMin: Int, $yearMax: Int) {
+    services_class = params.get("services_class")
+    if services_class:
+        variables["servicesClass"] = services_class
+
+    sc_var = ", $servicesClass: ServicesClass" if services_class else ""
+    sc_arg = "\n        servicesClass: $servicesClass" if services_class else ""
+    query = f"""
+    query CCY($countryId: Int, $yearMin: Int, $yearMax: Int{sc_var}) {{
       countryCountryYear(
         countryId: $countryId
         yearMin: $yearMin
-        yearMax: $yearMax
-      ) {
+        yearMax: $yearMax{sc_arg}
+      ) {{
         countryId partnerCountryId year
         exportValue importValue
-      }
-    }
+      }}
+    }}
     """
     return query, variables
 
@@ -1618,21 +1696,27 @@ def _build_treemap_ccpy(params: dict) -> tuple[str, dict]:
         variables["yearMin"] = params.get("year_min", 2024)
         variables["yearMax"] = params.get("year_max", 2024)
 
-    query = """
+    services_class = params.get("services_class")
+    if services_class:
+        variables["servicesClass"] = services_class
+
+    sc_var = ", $servicesClass: ServicesClass" if services_class else ""
+    sc_arg = "\n        servicesClass: $servicesClass" if services_class else ""
+    query = f"""
     query CCPY($countryId: Int, $partnerCountryId: Int,
                $productLevel: Int!, $productClass: ProductClass,
-               $yearMin: Int, $yearMax: Int) {
+               $yearMin: Int, $yearMax: Int{sc_var}) {{
       countryCountryProductYear(
         countryId: $countryId
         partnerCountryId: $partnerCountryId
         productLevel: $productLevel
         productClass: $productClass
         yearMin: $yearMin
-        yearMax: $yearMax
-      ) {
+        yearMax: $yearMax{sc_arg}
+      ) {{
         productId year exportValue
-      }
-    }
+      }}
+    }}
     """
     return query, variables
 
@@ -1655,20 +1739,26 @@ def _build_feasibility_cpy(params: dict) -> tuple[str, dict]:
     if "product_id" in params:
         variables["productId"] = params["product_id"]
 
-    query = """
+    services_class = params.get("services_class")
+    if services_class:
+        variables["servicesClass"] = services_class
+
+    sc_var = ", $servicesClass: ServicesClass" if services_class else ""
+    sc_arg = "\n        servicesClass: $servicesClass" if services_class else ""
+    query = f"""
     query CPY($countryId: Int, $productLevel: Int!, $productClass: ProductClass,
-              $productId: Int, $yearMin: Int, $yearMax: Int) {
+              $productId: Int, $yearMin: Int, $yearMax: Int{sc_var}) {{
       countryProductYear(
         countryId: $countryId
         productLevel: $productLevel
         productClass: $productClass
         productId: $productId
         yearMin: $yearMin
-        yearMax: $yearMax
-      ) {
+        yearMax: $yearMax{sc_arg}
+      ) {{
         productId year exportValue exportRca cog distance
-      }
-    }
+      }}
+    }}
     """
     return query, variables
 
