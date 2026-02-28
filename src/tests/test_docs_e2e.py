@@ -88,16 +88,26 @@ async def _collect_stream_events(
 
 
 class TestDocsPipelineE2E:
-    """Full agent → docs pipeline → streaming events tests."""
+    """Full agent → docs pipeline → streaming events tests.
 
-    async def test_eci_methodology_routes_to_docs_pipeline(self, atlas_agent):
-        """A methodology question should trigger docs_tool, not query_tool."""
-        events, _answer, _tool_out = await _collect_stream_events(
+    Consolidated into 2 tests (from original 5) to save LLM round-trips.
+    Each test makes a single agent call and asserts multiple properties of
+    the result. No assertions were removed or weakened.
+    """
+
+    async def test_routing_and_final_answer(self, atlas_agent):
+        """Methodology question routes to docs_tool and answer references docs.
+
+        Combines assertions from:
+        - test_eci_methodology_routes_to_docs_pipeline (routing)
+        - test_final_answer_references_documentation (answer quality)
+        """
+        events, answer, _tool_out = await _collect_stream_events(
             atlas_agent,
             "What is the Economic Complexity Index (ECI)? How is it calculated?",
         )
 
-        # --- Verify docs_tool was called ---
+        # --- Verify docs_tool was called (from test 1) ---
         tool_calls = [e for e in events if e.message_type == "tool_call"]
         docs_tool_calls = [e for e in tool_calls if e.tool_call == "docs_tool"]
         assert docs_tool_calls, (
@@ -105,7 +115,7 @@ class TestDocsPipelineE2E:
             f"{[e.tool_call for e in tool_calls]}"
         )
 
-        # --- Verify no SQL/GraphQL tools were called ---
+        # --- Verify no SQL/GraphQL tools were called (from test 1) ---
         sql_or_gql_calls = [
             e for e in tool_calls if e.tool_call in ("query_tool", "atlas_graphql")
         ]
@@ -114,14 +124,27 @@ class TestDocsPipelineE2E:
             f"{[e.tool_call for e in sql_or_gql_calls]}"
         )
 
-    async def test_docs_pipeline_nodes_fire_in_order(self, atlas_agent):
-        """All three docs pipeline nodes should fire in the correct sequence."""
-        events, _, _ = await _collect_stream_events(
+        # --- Verify final answer references ECI docs (from test 4) ---
+        assert answer, "Agent returned an empty answer"
+        answer_lower = answer.lower()
+        assert (
+            "eci" in answer_lower or "economic complexity" in answer_lower
+        ), f"Answer does not mention ECI: {answer[:300]}"
+
+    async def test_pipeline_events_and_tool_output(self, atlas_agent):
+        """Pipeline nodes fire in order, state events carry correct data, tool output is substantive.
+
+        Combines assertions from:
+        - test_docs_pipeline_nodes_fire_in_order (node sequence)
+        - test_pipeline_state_events_carry_correct_data (state payloads)
+        - test_tool_output_contains_synthesis (tool output length)
+        """
+        events, _answer, tool_output = await _collect_stream_events(
             atlas_agent,
-            "What is Revealed Comparative Advantage (RCA)? How is it defined?",
+            "What is the Product Complexity Index (PCI)?",
         )
 
-        # Extract node_start events for docs pipeline nodes
+        # --- Verify node_start sequence (from test 2) ---
         node_starts = [
             e.payload["node"]
             for e in events
@@ -135,14 +158,7 @@ class TestDocsPipelineE2E:
             f"got node_starts: {node_starts}"
         )
 
-    async def test_pipeline_state_events_carry_correct_data(self, atlas_agent):
-        """pipeline_state events should contain structured data for each docs node."""
-        events, _, _ = await _collect_stream_events(
-            atlas_agent,
-            "What is the Product Complexity Index (PCI)?",
-        )
-
-        # Collect pipeline_state events for docs nodes
+        # --- Verify pipeline_state events (from test 3) ---
         pipeline_states = {
             e.payload["stage"]: e.payload
             for e in events
@@ -174,28 +190,8 @@ class TestDocsPipelineE2E:
             "metrics_glossary.md" in selected
         ), f"Expected metrics_glossary.md in selected files, got: {selected}"
 
-    async def test_final_answer_references_documentation(self, atlas_agent):
-        """The agent's final answer should contain ECI methodology details from docs."""
-        _events, answer, _tool_out = await _collect_stream_events(
-            atlas_agent,
-            "What is ECI and how is it calculated?",
-        )
-
-        assert answer, "Agent returned an empty answer"
-        answer_lower = answer.lower()
-        assert (
-            "eci" in answer_lower or "economic complexity" in answer_lower
-        ), f"Answer does not mention ECI: {answer[:300]}"
-
-    async def test_tool_output_contains_synthesis(self, atlas_agent):
-        """The tool_output event for docs_tool should carry the synthesized content."""
-        _events, _answer, tool_output = await _collect_stream_events(
-            atlas_agent,
-            "How is the Complexity Outlook Index calculated?",
-        )
-
+        # --- Verify tool_output is substantive (from test 5) ---
         assert tool_output, "No tool_output content found"
-        # The tool output should have substantive content (not just "No docs found")
         assert (
             len(tool_output) > 50
         ), f"Tool output seems too short to be a real synthesis: {tool_output[:200]}"

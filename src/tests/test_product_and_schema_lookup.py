@@ -84,7 +84,7 @@ def test_extract_schemas_and_product_mentions(product_lookup, logger):
     ), "Should not require product lookup - no product mentions"
 
 
-@pytest.mark.integration
+@pytest.mark.db
 def test_get_official_product_details(product_lookup, logger):
     """Test verification of LLM-suggested codes against database."""
     logger.debug("Running test_get_official_product_details")
@@ -121,7 +121,7 @@ def test_get_official_product_details(product_lookup, logger):
     # TODO: Add test with services codes
 
 
-@pytest.mark.integration
+@pytest.mark.db
 def test_direct_text_search(product_lookup, logger):
     """Test the direct text search functionality with full-text and trigram fallback."""
     logger.debug("Running test_direct_text_search")
