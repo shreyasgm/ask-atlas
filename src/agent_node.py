@@ -25,6 +25,7 @@ from src.prompts import (
 )
 from src.sql_pipeline import _query_tool_schema
 from src.state import AtlasAgentState
+from src.token_usage import make_usage_record_from_msg
 
 # ---------------------------------------------------------------------------
 # atlas_graphql tool schema (schema-only; execution routes through graph nodes)
@@ -167,6 +168,7 @@ def make_agent_node(
         response = await model_with_tools.ainvoke(
             [SystemMessage(content=prompt_text)] + state["messages"]
         )
-        return {"messages": [response]}
+        usage_record = make_usage_record_from_msg("agent", "agent", response)
+        return {"messages": [response], "token_usage": [usage_record]}
 
     return agent_node

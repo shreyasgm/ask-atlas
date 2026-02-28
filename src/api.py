@@ -78,6 +78,9 @@ class ChatResponse(BaseModel):
     schemas_used: list[str] | None = None
     total_rows: int | None = None
     total_execution_time_ms: int | None = None
+    token_usage: dict | None = None
+    cost: dict | None = None
+    tool_call_counts: dict[str, int] | None = None
 
 
 class ConversationSummary(BaseModel):
@@ -471,6 +474,9 @@ async def chat(
         total_execution_time_ms=(
             result.total_execution_time_ms if result.queries else None
         ),
+        token_usage=result.token_usage,
+        cost=result.cost,
+        tool_call_counts=result.tool_call_counts,
     )
 
 
@@ -684,6 +690,31 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                 exc_info=True,
             )
 
+        # Extract token usage from checkpoint state
+        token_usage_data = None
+        cost_data = None
+        tool_call_counts_data = None
+        try:
+            state = await atlas_sql.agent.aget_state(config)
+            raw_usage = state.values.get("token_usage", [])
+            if raw_usage:
+                from src.token_usage import (
+                    aggregate_usage,
+                    count_tool_calls,
+                    estimate_cost,
+                )
+
+                token_usage_data = aggregate_usage(raw_usage)
+                cost_data = estimate_cost(raw_usage)
+                state_messages = state.values.get("messages", [])
+                tool_call_counts_data = count_tool_calls(state_messages)
+        except Exception:
+            logger.warning(
+                "Failed to extract token usage for thread %s",
+                thread_id,
+                exc_info=True,
+            )
+
         # Final event: done with aggregate stats
         total_time_ms = int((time.monotonic() - t_start) * 1000)
         event_count += 1
@@ -695,19 +726,24 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
             total_rows,
             total_time_ms,
         )
+        done_payload = {
+            "thread_id": thread_id,
+            "total_queries": total_queries,
+            "total_rows": total_rows,
+            "total_execution_time_ms": total_execution_time_ms,
+            "total_time_ms": total_time_ms,
+            "total_graphql_queries": total_graphql_queries,
+            "total_graphql_time_ms": total_graphql_time_ms,
+        }
+        if token_usage_data:
+            done_payload["token_usage"] = token_usage_data
+        if cost_data:
+            done_payload["cost"] = cost_data
+        if tool_call_counts_data:
+            done_payload["tool_call_counts"] = tool_call_counts_data
         yield {
             "event": "done",
-            "data": json.dumps(
-                {
-                    "thread_id": thread_id,
-                    "total_queries": total_queries,
-                    "total_rows": total_rows,
-                    "total_execution_time_ms": total_execution_time_ms,
-                    "total_time_ms": total_time_ms,
-                    "total_graphql_queries": total_graphql_queries,
-                    "total_graphql_time_ms": total_graphql_time_ms,
-                }
-            ),
+            "data": json.dumps(done_payload),
         }
 
     return EventSourceResponse(_event_generator())

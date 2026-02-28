@@ -28,6 +28,7 @@ from src.prompts import (
     build_id_resolution_prompt,
 )
 from src.state import AtlasAgentState
+from src.token_usage import make_usage_record_from_callback, make_usage_record_from_msg
 
 logger = logging.getLogger(__name__)
 
@@ -344,6 +345,8 @@ async def classify_query(state: AtlasAgentState, *, lightweight_model: Any) -> d
     Returns:
         Dict with ``graphql_classification`` and ``graphql_api_target``.
     """
+    from langchain_core.callbacks import UsageMetadataCallbackHandler
+
     question = state["graphql_question"]
     context = state.get("graphql_context", "")
 
@@ -357,11 +360,18 @@ async def classify_query(state: AtlasAgentState, *, lightweight_model: Any) -> d
         GraphQLQueryClassification, method="function_calling"
     )
     prompt = build_classification_prompt(question, context)
-    classification: GraphQLQueryClassification = await chain.ainvoke(prompt)
+    usage_handler = UsageMetadataCallbackHandler()
+    classification: GraphQLQueryClassification = await chain.ainvoke(
+        prompt, config={"callbacks": [usage_handler]}
+    )
 
+    usage_record = make_usage_record_from_callback(
+        "classify_query", "atlas_graphql", usage_handler
+    )
     return {
         "graphql_classification": classification.model_dump(),
         "graphql_api_target": classification.api_target,
+        "token_usage": [usage_record],
     }
 
 
@@ -382,6 +392,8 @@ async def extract_entities(state: AtlasAgentState, *, lightweight_model: Any) ->
     Returns:
         Dict with ``graphql_entity_extraction``.
     """
+    from langchain_core.callbacks import UsageMetadataCallbackHandler
+
     classification = state.get("graphql_classification")
     if classification and classification.get("query_type") == "reject":
         return {"graphql_entity_extraction": None}
@@ -398,8 +410,17 @@ async def extract_entities(state: AtlasAgentState, *, lightweight_model: Any) ->
         GraphQLEntityExtraction, method="function_calling"
     )
     prompt = build_extraction_prompt(question, query_type, context)
-    extraction: GraphQLEntityExtraction = await chain.ainvoke(prompt)
-    return {"graphql_entity_extraction": extraction.model_dump()}
+    usage_handler = UsageMetadataCallbackHandler()
+    extraction: GraphQLEntityExtraction = await chain.ainvoke(
+        prompt, config={"callbacks": [usage_handler]}
+    )
+    usage_record = make_usage_record_from_callback(
+        "extract_entities", "atlas_graphql", usage_handler
+    )
+    return {
+        "graphql_entity_extraction": extraction.model_dump(),
+        "token_usage": [usage_record],
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -446,6 +467,7 @@ async def resolve_ids(
 
     resolved: dict[str, Any] = {}
     resolution_notes: list[str] = []
+    usage_sink: list[dict] = []
 
     # Resolve country
     country_name = extraction.get("country_name")
@@ -459,6 +481,7 @@ async def resolve_ids(
             search_field="nameShortEn",
             llm=lightweight_model,
             question=question,
+            usage_sink=usage_sink,
         )
         if country:
             resolved["country_id"] = country["countryId"]
@@ -481,6 +504,7 @@ async def resolve_ids(
             search_field="nameShortEn",
             llm=lightweight_model,
             question=question,
+            usage_sink=usage_sink,
         )
         if partner:
             resolved["partner_id"] = partner["countryId"]
@@ -498,6 +522,7 @@ async def resolve_ids(
             search_field="nameShortEn",
             llm=lightweight_model,
             question=question,
+            usage_sink=usage_sink,
         )
         if product:
             resolved["product_id"] = product["productId"]
@@ -513,6 +538,7 @@ async def resolve_ids(
             search_field="nameShortEn",
             llm=lightweight_model,
             question=question,
+            usage_sink=usage_sink,
         )
         if service_entry:
             resolved["product_id"] = service_entry.get("productId")
@@ -554,6 +580,7 @@ async def resolve_ids(
             search_field="groupName",
             llm=lightweight_model,
             question=question,
+            usage_sink=usage_sink,
         )
         if group_entry:
             resolved["group_id"] = group_entry["groupId"]
@@ -581,10 +608,13 @@ async def resolve_ids(
     # Format IDs for the target API (after link generation)
     resolved = format_ids_for_api(resolved, api_target)
 
-    return {
+    result: dict[str, Any] = {
         "graphql_resolved_params": resolved,
         "graphql_atlas_links": atlas_links,
     }
+    if usage_sink:
+        result["token_usage"] = usage_sink
+    return result
 
 
 async def _resolve_entity(
@@ -596,6 +626,7 @@ async def _resolve_entity(
     search_field: str,
     llm: Any,
     question: str,
+    usage_sink: list[dict] | None = None,
 ) -> dict[str, Any] | None:
     """Resolve an entity name/code to a catalog entry.
 
@@ -603,6 +634,10 @@ async def _resolve_entity(
     1. Step A: Try exact code lookup via the named index
     2. Step B: Search by name (case-insensitive substring)
     3. Step C: LLM disambiguation when multiple candidates exist
+
+    Args:
+        usage_sink: Optional list to append token usage records to when
+            the LLM is invoked for disambiguation.
     """
     candidates: list[dict[str, Any]] = []
 
@@ -647,6 +682,13 @@ async def _resolve_entity(
             num_candidates=len(candidates),
         )
         response = await llm.ainvoke(prompt)
+
+        # Record token usage from the disambiguation LLM call
+        if usage_sink is not None:
+            usage_sink.append(
+                make_usage_record_from_msg("resolve_ids", "atlas_graphql", response)
+            )
+
         text = response.content.strip()
         idx = int(text) - 1
         if 0 <= idx < len(candidates):

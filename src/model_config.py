@@ -31,6 +31,8 @@ Model aliases (short names that work in each provider's API):
     Tiny:       gemini-2.5-flash-lite  — cheapest
 """
 
+from dataclasses import dataclass
+
 # --- Frontier model (complex reasoning, agent orchestration, SQL generation) ---
 FRONTIER_MODEL = "gpt-5.2"
 FRONTIER_MODEL_PROVIDER = "openai"
@@ -61,3 +63,49 @@ PROMPT_MODEL_ASSIGNMENTS = {
     "document_selection": "lightweight",
     "documentation_synthesis": "lightweight",
 }
+
+
+# ---------------------------------------------------------------------------
+# Model pricing (per 1M tokens)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ModelPricing:
+    """Per 1M token pricing for a model."""
+
+    input: float
+    output: float
+    cache_read: float = 0.0
+    cache_creation: float = 0.0
+
+
+MODEL_PRICING: dict[str, ModelPricing] = {
+    # ── Anthropic ── cache_read ≈ 10% of input, cache_creation ≈ 125% of input
+    "claude-opus-4-6-20260204": ModelPricing(
+        5.00, 25.00, cache_read=0.50, cache_creation=6.25
+    ),
+    "claude-sonnet-4-6-20260217": ModelPricing(
+        3.00, 15.00, cache_read=0.30, cache_creation=3.75
+    ),
+    "claude-sonnet-4-20250514": ModelPricing(
+        3.00, 15.00, cache_read=0.30, cache_creation=3.75
+    ),
+    "claude-haiku-4-5-20251001": ModelPricing(
+        1.00, 5.00, cache_read=0.10, cache_creation=1.25
+    ),
+    # ── OpenAI ── cache_read ≈ 10% of input, cache_creation = same as input
+    "gpt-5.3-codex": ModelPricing(1.75, 14.00, cache_read=0.175, cache_creation=1.75),
+    "gpt-5.2": ModelPricing(1.75, 14.00, cache_read=0.175, cache_creation=1.75),
+    "gpt-5": ModelPricing(1.25, 10.00, cache_read=0.125, cache_creation=1.25),
+    "gpt-5-mini": ModelPricing(0.25, 2.00, cache_read=0.025, cache_creation=0.25),
+    "gpt-4.1": ModelPricing(2.00, 8.00, cache_read=0.50, cache_creation=2.00),
+    "gpt-4.1-mini": ModelPricing(0.40, 1.60, cache_read=0.10, cache_creation=0.40),
+    # ── Google ── cache_read ≈ 10% of input, cache_creation = same as input
+    "gemini-3.1-pro": ModelPricing(2.00, 12.00, cache_read=0.20, cache_creation=2.00),
+    "gemini-2.5-pro": ModelPricing(1.25, 10.00, cache_read=0.125, cache_creation=1.25),
+    "gemini-3-flash": ModelPricing(0.50, 3.00, cache_read=0.05, cache_creation=0.50),
+    "gemini-2.5-flash": ModelPricing(0.30, 2.50, cache_read=0.03, cache_creation=0.30),
+}
+
+DEFAULT_PRICING = ModelPricing(1.00, 5.00, cache_read=0.10, cache_creation=1.25)

@@ -80,6 +80,64 @@ def _compute_run_stats(run_results: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _aggregate_costs(run_results: list[dict[str, Any]]) -> dict[str, Any]:
+    """Compute aggregate cost statistics from agent run results.
+
+    Args:
+        run_results: List of per-question result dicts, each optionally
+            containing ``cost``, ``token_usage``, and ``tool_call_counts``.
+
+    Returns:
+        Dict with total cost, average cost, breakdowns by pipeline, and
+        tool call statistics.
+    """
+    costs = [r["cost"]["total_cost_usd"] for r in run_results if r.get("cost")]
+    if not costs:
+        return {}
+
+    # Cost by pipeline
+    pipeline_costs: dict[str, float] = defaultdict(float)
+    pipeline_tokens: dict[str, dict[str, int]] = defaultdict(
+        lambda: {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+    )
+    tool_call_totals: dict[str, int] = defaultdict(int)
+    questions_with_costs = 0
+
+    for r in run_results:
+        cost = r.get("cost")
+        if cost:
+            questions_with_costs += 1
+            for pipeline, amount in cost.get("by_pipeline", {}).items():
+                pipeline_costs[pipeline] += amount
+
+        usage = r.get("token_usage")
+        if usage:
+            for pipeline, totals in usage.get("by_pipeline", {}).items():
+                for key in ("input_tokens", "output_tokens", "total_tokens"):
+                    pipeline_tokens[pipeline][key] += totals.get(key, 0)
+
+        tc = r.get("tool_call_counts")
+        if tc:
+            for tool_name, count in tc.items():
+                tool_call_totals[tool_name] += count
+
+    n = questions_with_costs or 1
+    return {
+        "total_cost_usd": round(sum(costs), 4),
+        "avg_cost_per_question_usd": round(sum(costs) / n, 4),
+        "questions_with_costs": questions_with_costs,
+        "cost_by_pipeline": {k: round(v, 4) for k, v in sorted(pipeline_costs.items())},
+        "avg_cost_by_pipeline": {
+            k: round(v / n, 6) for k, v in sorted(pipeline_costs.items())
+        },
+        "tokens_by_pipeline": dict(sorted(pipeline_tokens.items())),
+        "tool_call_totals": dict(sorted(tool_call_totals.items())),
+        "avg_tool_calls_per_question": {
+            k: round(v / n, 1) for k, v in sorted(tool_call_totals.items())
+        },
+    }
+
+
 def generate_report(
     run_results: list[dict[str, Any]],
     judge_results: dict[str, dict],
@@ -109,6 +167,7 @@ def generate_report(
         verdict = judge_results.get(qid, {})
         meta = questions_meta.get(qid, {})
 
+        run_cost = run.get("cost", {})
         entry = {
             "question_id": qid,
             "question_text": run.get("question_text", meta.get("text", "")),
@@ -123,6 +182,8 @@ def generate_report(
             "judge_comment": verdict.get(
                 "overall_comment", verdict.get("reasoning", "")
             ),
+            "judge_details": verdict,
+            "cost_usd": run_cost.get("total_cost_usd") if run_cost else None,
         }
         per_question.append(entry)
 
@@ -130,6 +191,8 @@ def generate_report(
             all_verdicts.append(verdict)
             by_category[entry["category"]].append(verdict)
             by_difficulty[entry["difficulty"]].append(verdict)
+
+    cost_analysis = _aggregate_costs(run_results)
 
     report = {
         "timestamp": get_timestamp(),
@@ -155,6 +218,9 @@ def generate_report(
         ],
         "per_question": per_question,
     }
+
+    if cost_analysis:
+        report["cost_analysis"] = cost_analysis
 
     return report
 
@@ -231,6 +297,41 @@ def report_to_markdown(report: dict[str, Any]) -> str:
                 f"| {diff} | {stats['count']} | {stats['avg_weighted_score']} | {stats['pass_rate']}% |"
             )
 
+    # Cost analysis
+    cost = report.get("cost_analysis", {})
+    if cost:
+        lines.append("\n## Cost Analysis\n")
+        lines.append("| Metric | Value |")
+        lines.append("|--------|-------|")
+        lines.append(f"| Total cost | ${cost['total_cost_usd']:.4f} |")
+        lines.append(
+            f"| Avg cost per question | ${cost['avg_cost_per_question_usd']:.4f} |"
+        )
+        lines.append(f"| Questions with cost data | {cost['questions_with_costs']} |")
+
+        cost_by_pipe = cost.get("cost_by_pipeline", {})
+        tokens_by_pipe = cost.get("tokens_by_pipeline", {})
+        if cost_by_pipe:
+            lines.append("\n### Cost by Tool Pipeline\n")
+            lines.append("| Pipeline | Total Cost | Avg Cost | Total Tokens |")
+            lines.append("|----------|-----------|----------|-------------|")
+            for pipe in sorted(cost_by_pipe.keys()):
+                tc = cost_by_pipe[pipe]
+                ac = cost.get("avg_cost_by_pipeline", {}).get(pipe, 0)
+                tt = tokens_by_pipe.get(pipe, {}).get("total_tokens", 0)
+                lines.append(f"| {pipe} | ${tc:.4f} | ${ac:.6f} | {tt:,} |")
+
+        tool_totals = cost.get("tool_call_totals", {})
+        if tool_totals:
+            lines.append("\n### Tool Call Counts\n")
+            lines.append("| Tool | Total Calls | Avg per Question |")
+            lines.append("|------|------------|-----------------|")
+            avg_calls = cost.get("avg_tool_calls_per_question", {})
+            for tool_name in sorted(tool_totals.keys()):
+                tc = tool_totals[tool_name]
+                ac = avg_calls.get(tool_name, 0)
+                lines.append(f"| {tool_name} | {tc} | {ac} |")
+
     # Failed questions
     failed = report.get("failed_questions", [])
     if failed:
@@ -244,19 +345,34 @@ def report_to_markdown(report: dict[str, Any]) -> str:
     per_q = report.get("per_question", [])
     if per_q:
         lines.append("\n## Per-Question Details\n")
-        lines.append(
-            "| ID | Difficulty | Category | Verdict | Score | Judge Mode | Duration |"
-        )
-        lines.append(
-            "|----|------------|----------|---------|-------|------------|----------|"
-        )
+        has_cost = report.get("cost_analysis")
+        if has_cost:
+            lines.append(
+                "| ID | Difficulty | Category | Verdict | Score | Judge Mode | Duration | Cost |"
+            )
+            lines.append(
+                "|----|------------|----------|---------|-------|------------|----------|------|"
+            )
+        else:
+            lines.append(
+                "| ID | Difficulty | Category | Verdict | Score | Judge Mode | Duration |"
+            )
+            lines.append(
+                "|----|------------|----------|---------|-------|------------|----------|"
+            )
         for q in per_q:
             dur = f"{q['duration_s']}s" if q["duration_s"] is not None else "n/a"
             mode = q.get("judge_mode", "n/a")
-            lines.append(
+            row = (
                 f"| {q['question_id']} | {q['difficulty']} | {q['category']} "
-                f"| {q['verdict']} | {q['weighted_score']} | {mode} | {dur} |"
+                f"| {q['verdict']} | {q['weighted_score']} | {mode} | {dur}"
             )
+            if has_cost:
+                cost_val = q.get("cost_usd")
+                cost_str = f"${cost_val:.4f}" if cost_val is not None else "n/a"
+                row += f" | {cost_str}"
+            row += " |"
+            lines.append(row)
 
     return "\n".join(lines) + "\n"
 
