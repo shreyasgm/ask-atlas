@@ -332,13 +332,17 @@
       "id": 32,
       "category_id": "economic_complexity",
       "difficulty": "medium",
-      "text": "What has been the trend in the Economic Complexity Index (ECI) of Brazil over the past 15 years?"
+      "text": "What has been the trend in the Economic Complexity Index (ECI) of Brazil over the past 15 years? Use the HS 1992 classification.",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 33,
       "category_id": "economic_complexity",
       "difficulty": "hard",
-      "text": "How does the export basket of Vietnam compare in terms of complexity with its regional peers?"
+      "text": "How does the export basket of Vietnam compare in terms of complexity with its regional peers? Use the HS 1992 classification for goods and also use the services schema.",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 34,
@@ -362,13 +366,17 @@
       "id": 37,
       "category_id": "economic_complexity",
       "difficulty": "hard",
-      "text": "How does the Complexity Outlook Index (COI) of Egypt compare to that of its regional competitors?"
+      "text": "How does the Complexity Outlook Index (COI) of Egypt compare to that of its regional competitors? Use the HS 1992 classification.",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 38,
       "category_id": "economic_complexity",
       "difficulty": "hard",
-      "text": "What are the leading industries driving complexity growth in South Korea's export portfolio, and how do they compare to those of advanced economies?"
+      "text": "What are the leading industries driving complexity growth in South Korea's export portfolio, and how do they compare to those of advanced economies? Use the HS 1992 classification for goods and also use the services schema.",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 39,
@@ -386,7 +394,9 @@
       "id": 41,
       "category_id": "diversification",
       "difficulty": "hard",
-      "text": "What new export opportunities exist for Portugal based on its position in the Product Space, and which sectors are the most promising?"
+      "text": "What new export opportunities exist for Portugal based on its position in the Product Space, and which sectors are the most promising? Use the HS 1992 classification for goods and also use the services schema.",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 42,
@@ -398,13 +408,17 @@
       "id": 43,
       "category_id": "diversification",
       "difficulty": "hard",
-      "text": "Which goods and services sectors offer the best diversification potential for Ghana, considering its current economic complexity?"
+      "text": "Which goods and services sectors offer the best diversification potential for Ghana, considering its current economic complexity? Use the HS 1992 classification for goods and also use the services schema.",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 44,
       "category_id": "diversification",
       "difficulty": "hard",
-      "text": "What is the impact of resource-based exports on the economic complexity of Kazakhstan, and what alternative paths for diversification exist?"
+      "text": "What is the impact of resource-based exports on the economic complexity of Kazakhstan, and what alternative paths for diversification exist? Use the HS 1992 classification.",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 45,
@@ -441,7 +455,9 @@
       "id": 50,
       "category_id": "edge_cases",
       "difficulty": "medium",
-      "text": "What products does Liechtenstein export and what is its ECI?"
+      "text": "What products does Liechtenstein export and what is its ECI? Use the HS 1992 classification for goods and also use the services schema.",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 51,
@@ -517,7 +533,9 @@
       "difficulty": "easy",
       "text": "What is the GDP per capita of Kenya?",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 62,
@@ -525,7 +543,9 @@
       "difficulty": "easy",
       "text": "What is the GDP per capita (PPP) of Kenya?",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 63,
@@ -533,7 +553,9 @@
       "difficulty": "easy",
       "text": "What is the GDP per capita rank of Kenya?",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 64,
@@ -541,7 +563,9 @@
       "difficulty": "easy",
       "text": "What income classification does Kenya have on the Atlas?",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 65,
@@ -549,23 +573,29 @@
       "difficulty": "easy",
       "text": "What is the population of Kenya?",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 66,
       "category_id": "country_profile_overview",
       "difficulty": "easy",
-      "text": "What is the projected GDP per capita growth rate of Kenya over the next decade?",
+      "text": "What is the projected GDP per capita growth rate of Kenya over the next decade? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 67,
       "category_id": "country_profile_overview",
       "difficulty": "easy",
-      "text": "What is Kenya's growth projection rank?",
+      "text": "What is Kenya's growth projection rank? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 68,
@@ -573,7 +603,9 @@
       "difficulty": "easy",
       "text": "What is the GDP per capita of Spain?",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 69,
@@ -581,7 +613,9 @@
       "difficulty": "easy",
       "text": "What is the GDP per capita (PPP) of Spain?",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 70,
@@ -589,7 +623,9 @@
       "difficulty": "easy",
       "text": "What is the GDP per capita rank of Spain?",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 71,
@@ -597,7 +633,9 @@
       "difficulty": "easy",
       "text": "What income classification does Spain have on the Atlas?",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 72,
@@ -605,127 +643,159 @@
       "difficulty": "easy",
       "text": "What is the population of Spain?",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 73,
       "category_id": "country_profile_overview",
       "difficulty": "easy",
-      "text": "What is the projected GDP per capita growth rate of Spain over the next decade?",
+      "text": "What is the projected GDP per capita growth rate of Spain over the next decade? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 74,
       "category_id": "country_profile_overview",
       "difficulty": "easy",
-      "text": "What is Spain's growth projection rank?",
+      "text": "What is Spain's growth projection rank? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 75,
       "category_id": "cp_total_export_values",
       "difficulty": "easy",
-      "text": "What is the total value of exports for Brazil according to the Atlas country page?",
+      "text": "What is the total value of exports for Brazil according to the Atlas country page? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 76,
       "category_id": "cp_total_export_values",
       "difficulty": "easy",
-      "text": "What is Brazil's exporter rank?",
+      "text": "What is Brazil's exporter rank? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 77,
       "category_id": "cp_total_export_values",
       "difficulty": "easy",
-      "text": "What is Brazil's current account balance?",
+      "text": "What is Brazil's current account balance? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 78,
       "category_id": "cp_total_export_values",
       "difficulty": "easy",
-      "text": "What is the total value of imports for Brazil according to the Atlas?",
+      "text": "What is the total value of imports for Brazil according to the Atlas? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 79,
       "category_id": "cp_total_export_values",
       "difficulty": "easy",
-      "text": "Does Brazil have a trade surplus or trade deficit?",
+      "text": "Does Brazil have a trade surplus or trade deficit? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 80,
       "category_id": "cp_total_export_values",
       "difficulty": "easy",
-      "text": "What is the total value of exports for Germany according to the Atlas country page?",
+      "text": "What is the total value of exports for Germany according to the Atlas country page? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 81,
       "category_id": "cp_total_export_values",
       "difficulty": "easy",
-      "text": "What is Germany's exporter rank?",
+      "text": "What is Germany's exporter rank? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 82,
       "category_id": "cp_total_export_values",
       "difficulty": "easy",
-      "text": "What is Germany's current account balance?",
+      "text": "What is Germany's current account balance? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 83,
       "category_id": "cp_total_export_values",
       "difficulty": "easy",
-      "text": "What is the total value of imports for Germany according to the Atlas?",
+      "text": "What is the total value of imports for Germany according to the Atlas? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 84,
       "category_id": "cp_total_export_values",
       "difficulty": "easy",
-      "text": "Does Germany have a trade surplus or trade deficit?",
+      "text": "Does Germany have a trade surplus or trade deficit? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 85,
       "category_id": "cp_sectoral_composition",
       "difficulty": "easy",
-      "text": "What is the top product in India's export basket and what share does it represent?",
+      "text": "What is the top product in India's export basket and what share does it represent? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 86,
       "category_id": "cp_sectoral_composition",
       "difficulty": "medium",
-      "text": "What are the top 3 products in India's export basket by share?",
+      "text": "What are the top 3 products in India's export basket by share? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 87,
       "category_id": "cp_sectoral_composition",
       "difficulty": "medium",
-      "text": "What is the gross export value of Business from India?",
+      "text": "What is the gross export value of Business from India? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 88,
@@ -733,31 +803,39 @@
       "difficulty": "hard",
       "text": "What is the HS92 code for Business exported by India?",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 89,
       "category_id": "cp_sectoral_composition",
       "difficulty": "easy",
-      "text": "What is the top product in USA's export basket and what share does it represent?",
+      "text": "What is the top product in USA's export basket and what share does it represent? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/840/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/840/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 90,
       "category_id": "cp_sectoral_composition",
       "difficulty": "medium",
-      "text": "What are the top 3 products in USA's export basket by share?",
+      "text": "What are the top 3 products in USA's export basket by share? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/840/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/840/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 91,
       "category_id": "cp_sectoral_composition",
       "difficulty": "medium",
-      "text": "What is the gross export value of Business from USA?",
+      "text": "What is the gross export value of Business from USA? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/840/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/840/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 92,
@@ -765,623 +843,779 @@
       "difficulty": "hard",
       "text": "What is the HS92 code for Business exported by USA?",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/840/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/840/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 93,
       "category_id": "cp_trade_partners",
       "difficulty": "medium",
-      "text": "What are the top 3 export destination countries for Turkiye?",
+      "text": "What are the top 3 export destination countries for Turkiye? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 94,
       "category_id": "cp_trade_partners",
       "difficulty": "easy",
-      "text": "In which sector does Turkiye have the largest global market share?",
+      "text": "In which sector does Turkiye have the largest global market share? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/market-share"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/market-share",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 95,
       "category_id": "cp_trade_partners",
       "difficulty": "medium",
-      "text": "What are the top 3 export destination countries for Ethiopia?",
+      "text": "What are the top 3 export destination countries for Ethiopia? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 96,
       "category_id": "cp_trade_partners",
       "difficulty": "easy",
-      "text": "In which sector does Ethiopia have the largest global market share?",
+      "text": "In which sector does Ethiopia have the largest global market share? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/market-share"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/market-share",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 97,
       "category_id": "cp_growth_performance",
       "difficulty": "medium",
-      "text": "What is Spain's ECI value according to the growth dynamics chart?",
+      "text": "What is Spain's ECI value according to the growth dynamics chart? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/724/growth-dynamics"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724/growth-dynamics",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 98,
       "category_id": "cp_growth_performance",
       "difficulty": "hard",
-      "text": "What is the gross country export value of Travel & tourism from Spain?",
+      "text": "What is the gross country export value of Travel & tourism from Spain? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/724/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 99,
       "category_id": "cp_growth_performance",
       "difficulty": "medium",
-      "text": "What is India's ECI value according to the growth dynamics chart?",
+      "text": "What is India's ECI value according to the growth dynamics chart? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/growth-dynamics"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/growth-dynamics",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 100,
       "category_id": "cp_growth_performance",
       "difficulty": "hard",
-      "text": "What is the gross country export value of Business from India?",
+      "text": "What is the gross country export value of Business from India? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 101,
       "category_id": "cp_economic_complexity",
       "difficulty": "easy",
-      "text": "What is Brazil's Economic Complexity Index (ECI) ranking?",
+      "text": "What is Brazil's Economic Complexity Index (ECI) ranking? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/76"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 102,
       "category_id": "cp_economic_complexity",
       "difficulty": "easy",
-      "text": "What is Brazil's ECI ranking according to the export complexity page?",
+      "text": "What is Brazil's ECI ranking according to the export complexity page? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-complexity"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-complexity",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 103,
       "category_id": "cp_economic_complexity",
       "difficulty": "hard",
-      "text": "What is the Product Complexity Index (PCI) of Petroleum oils, crude exported by Brazil?",
+      "text": "What is the Product Complexity Index (PCI) of Petroleum oils, crude exported by Brazil? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-complexity"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-complexity",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 104,
       "category_id": "cp_economic_complexity",
       "difficulty": "easy",
-      "text": "What is Turkiye's Economic Complexity Index (ECI) ranking?",
+      "text": "What is Turkiye's Economic Complexity Index (ECI) ranking? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/792"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 105,
       "category_id": "cp_economic_complexity",
       "difficulty": "easy",
-      "text": "What is Turkiye's ECI ranking according to the export complexity page?",
+      "text": "What is Turkiye's ECI ranking according to the export complexity page? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/export-complexity"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/export-complexity",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 106,
       "category_id": "cp_economic_complexity",
       "difficulty": "hard",
-      "text": "What is the Product Complexity Index (PCI) of Travel & tourism exported by Turkiye?",
+      "text": "What is the Product Complexity Index (PCI) of Travel & tourism exported by Turkiye? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/export-complexity"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/export-complexity",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 107,
       "category_id": "cp_diversification",
       "difficulty": "easy",
-      "text": "What is Kenya's economic diversification grade?",
+      "text": "What is Kenya's economic diversification grade? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 108,
       "category_id": "cp_diversification",
       "difficulty": "easy",
-      "text": "What is Kenya's diversity rank?",
+      "text": "What is Kenya's diversity rank? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 109,
       "category_id": "cp_diversification",
       "difficulty": "easy",
-      "text": "How many new products has Kenya started exporting in the last 15 years?",
+      "text": "How many new products has Kenya started exporting in the last 15 years? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 110,
       "category_id": "cp_diversification",
       "difficulty": "medium",
-      "text": "What is the per-capita income contribution of Kenya's new products?",
+      "text": "What is the per-capita income contribution of Kenya's new products? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 111,
       "category_id": "cp_diversification",
       "difficulty": "medium",
-      "text": "What is the total value of Kenya's new export products?",
+      "text": "What is the total value of Kenya's new export products? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 112,
       "category_id": "cp_diversification",
       "difficulty": "medium",
-      "text": "What share of Kenya's export basket is made up of new products?",
+      "text": "What share of Kenya's export basket is made up of new products? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 113,
       "category_id": "cp_diversification",
       "difficulty": "hard",
-      "text": "How does Kenya's new product count compare to peer countries?",
+      "text": "How does Kenya's new product count compare to peer countries? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 114,
       "category_id": "cp_diversification",
       "difficulty": "easy",
-      "text": "What is Ethiopia's economic diversification grade?",
+      "text": "What is Ethiopia's economic diversification grade? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 115,
       "category_id": "cp_diversification",
       "difficulty": "easy",
-      "text": "What is Ethiopia's diversity rank?",
+      "text": "What is Ethiopia's diversity rank? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 116,
       "category_id": "cp_diversification",
       "difficulty": "easy",
-      "text": "How many new products has Ethiopia started exporting in the last 15 years?",
+      "text": "How many new products has Ethiopia started exporting in the last 15 years? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 117,
       "category_id": "cp_diversification",
       "difficulty": "medium",
-      "text": "What is the per-capita income contribution of Ethiopia's new products?",
+      "text": "What is the per-capita income contribution of Ethiopia's new products? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 118,
       "category_id": "cp_diversification",
       "difficulty": "medium",
-      "text": "What is the total value of Ethiopia's new export products?",
+      "text": "What is the total value of Ethiopia's new export products? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 119,
       "category_id": "cp_diversification",
       "difficulty": "medium",
-      "text": "What share of Ethiopia's export basket is made up of new products?",
+      "text": "What share of Ethiopia's export basket is made up of new products? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 120,
       "category_id": "cp_diversification",
       "difficulty": "hard",
-      "text": "How does Ethiopia's new product count compare to peer countries?",
+      "text": "How does Ethiopia's new product count compare to peer countries? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 121,
       "category_id": "cp_product_space",
       "difficulty": "easy",
-      "text": "How many products does Kenya export with a revealed comparative advantage (RCA > 1)?",
+      "text": "How many products does Kenya export with a revealed comparative advantage (RCA > 1)? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/paths"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/paths",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 122,
       "category_id": "cp_product_space",
       "difficulty": "easy",
-      "text": "What is Kenya's Complexity Outlook Index rank?",
+      "text": "What is Kenya's Complexity Outlook Index rank? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/paths"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/paths",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 123,
       "category_id": "cp_product_space",
       "difficulty": "easy",
-      "text": "What strategic approach does the Atlas recommend for Kenya?",
+      "text": "What strategic approach does the Atlas recommend for Kenya? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/strategic-approach"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/strategic-approach",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 124,
       "category_id": "cp_product_space",
       "difficulty": "easy",
-      "text": "How many products does Turkiye export with a revealed comparative advantage (RCA > 1)?",
+      "text": "How many products does Turkiye export with a revealed comparative advantage (RCA > 1)? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/paths"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/paths",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 125,
       "category_id": "cp_product_space",
       "difficulty": "easy",
-      "text": "What is Turkiye's Complexity Outlook Index rank?",
+      "text": "What is Turkiye's Complexity Outlook Index rank? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/paths"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/paths",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 126,
       "category_id": "cp_product_space",
       "difficulty": "easy",
-      "text": "What strategic approach does the Atlas recommend for Turkiye?",
+      "text": "What strategic approach does the Atlas recommend for Turkiye? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/strategic-approach"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/strategic-approach",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 127,
       "category_id": "cp_growth_opportunities",
       "difficulty": "easy",
-      "text": "What product selection strategy is shown by default for Kenya's growth opportunities?",
+      "text": "What product selection strategy is shown by default for Kenya's growth opportunities? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/growth-opportunities"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/growth-opportunities",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 128,
       "category_id": "cp_growth_opportunities",
       "difficulty": "easy",
-      "text": "What product selection strategy is shown by default for India's growth opportunities?",
+      "text": "What product selection strategy is shown by default for India's growth opportunities? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/growth-opportunities"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/growth-opportunities",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 129,
       "category_id": "cp_frontier_edge_cases",
       "difficulty": "easy",
-      "text": "Does the Atlas show growth opportunity products for USA?",
+      "text": "Does the Atlas show growth opportunity products for USA? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/840/growth-opportunities"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/840/growth-opportunities",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 130,
       "category_id": "cp_frontier_edge_cases",
       "difficulty": "easy",
-      "text": "Does the Atlas show a product opportunities table for USA?",
+      "text": "Does the Atlas show a product opportunities table for USA? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/840/product-table"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/840/product-table",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 131,
       "category_id": "cp_frontier_edge_cases",
       "difficulty": "easy",
-      "text": "Does the Atlas show growth opportunity products for Germany?",
+      "text": "Does the Atlas show growth opportunity products for Germany? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/growth-opportunities"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/growth-opportunities",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 132,
       "category_id": "cp_frontier_edge_cases",
       "difficulty": "easy",
-      "text": "Does the Atlas show a product opportunities table for Germany?",
+      "text": "Does the Atlas show a product opportunities table for Germany? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/product-table"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/product-table",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 133,
       "category_id": "cp_summary",
       "difficulty": "easy",
-      "text": "How many new products are shown on Turkiye's summary page?",
+      "text": "How many new products are shown on Turkiye's summary page? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/summary"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/summary",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 134,
       "category_id": "cp_summary",
       "difficulty": "easy",
-      "text": "What growth projection is shown on Turkiye's summary page?",
+      "text": "What growth projection is shown on Turkiye's summary page? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/summary"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/summary",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 135,
       "category_id": "cp_summary",
       "difficulty": "medium",
-      "text": "What strategic approach is described on Turkiye's summary page?",
+      "text": "What strategic approach is described on Turkiye's summary page? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/summary"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/summary",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 136,
       "category_id": "cp_summary",
       "difficulty": "easy",
-      "text": "How many new products are shown on Brazil's summary page?",
+      "text": "How many new products are shown on Brazil's summary page? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/summary"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/summary",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 137,
       "category_id": "cp_summary",
       "difficulty": "easy",
-      "text": "What growth projection is shown on Brazil's summary page?",
+      "text": "What growth projection is shown on Brazil's summary page? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/summary"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/summary",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 138,
       "category_id": "cp_summary",
       "difficulty": "medium",
-      "text": "What strategic approach is described on Brazil's summary page?",
+      "text": "What strategic approach is described on Brazil's summary page? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/summary"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/summary",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 139,
       "category_id": "country_profile_overview",
       "difficulty": "medium",
-      "text": "What is the average GDP per capita growth rate of Kenya over the past five years?",
+      "text": "What is the average GDP per capita growth rate of Kenya over the past five years? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 140,
       "category_id": "country_profile_overview",
       "difficulty": "medium",
-      "text": "How does Kenya's GDP per capita growth compare to its regional average?",
+      "text": "How does Kenya's GDP per capita growth compare to its regional average? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 141,
       "category_id": "country_profile_overview",
       "difficulty": "medium",
-      "text": "Is Kenya more or less complex than expected for its income level?",
+      "text": "Is Kenya more or less complex than expected for its income level? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 142,
       "category_id": "country_profile_overview",
       "difficulty": "easy",
-      "text": "How fast is Kenya projected to grow according to the Atlas?",
+      "text": "How fast is Kenya projected to grow according to the Atlas? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 143,
       "category_id": "country_profile_overview",
       "difficulty": "medium",
-      "text": "What is the average GDP per capita growth rate of Spain over the past five years?",
+      "text": "What is the average GDP per capita growth rate of Spain over the past five years? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 144,
       "category_id": "country_profile_overview",
       "difficulty": "medium",
-      "text": "How does Spain's GDP per capita growth compare to its regional average?",
+      "text": "How does Spain's GDP per capita growth compare to its regional average? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 145,
       "category_id": "country_profile_overview",
       "difficulty": "medium",
-      "text": "Is Spain more or less complex than expected for its income level?",
+      "text": "Is Spain more or less complex than expected for its income level? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 146,
       "category_id": "country_profile_overview",
       "difficulty": "easy",
-      "text": "How fast is Spain projected to grow according to the Atlas?",
+      "text": "How fast is Spain projected to grow according to the Atlas? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/724"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 147,
       "category_id": "cp_economic_complexity",
       "difficulty": "medium",
-      "text": "How has Brazil's ECI ranking changed over the past decade?",
+      "text": "How has Brazil's ECI ranking changed over the past decade? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/76"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 148,
       "category_id": "cp_economic_complexity",
       "difficulty": "medium",
-      "text": "What is driving Brazil's complexity trend?",
+      "text": "What is driving Brazil's complexity trend? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/76"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 149,
       "category_id": "cp_economic_complexity",
       "difficulty": "medium",
-      "text": "How has Turkiye's ECI ranking changed over the past decade?",
+      "text": "How has Turkiye's ECI ranking changed over the past decade? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/792"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 150,
       "category_id": "cp_economic_complexity",
       "difficulty": "medium",
-      "text": "What is driving Turkiye's complexity trend?",
+      "text": "What is driving Turkiye's complexity trend? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/792"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 151,
       "category_id": "cp_total_export_values",
       "difficulty": "medium",
-      "text": "What is the 5-year average export growth rate for Brazil?",
+      "text": "What is the 5-year average export growth rate for Brazil? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 152,
       "category_id": "cp_total_export_values",
       "difficulty": "medium",
-      "text": "What is the non-oil export growth rate for Brazil?",
+      "text": "What is the non-oil export growth rate for Brazil? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 153,
       "category_id": "cp_total_export_values",
       "difficulty": "medium",
-      "text": "What is the 5-year average export growth rate for Germany?",
+      "text": "What is the 5-year average export growth rate for Germany? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 154,
       "category_id": "cp_total_export_values",
       "difficulty": "medium",
-      "text": "What is the non-oil export growth rate for Germany?",
+      "text": "What is the non-oil export growth rate for Germany? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 155,
       "category_id": "cp_growth_performance",
       "difficulty": "medium",
-      "text": "How would you describe Spain's export growth pattern?",
+      "text": "How would you describe Spain's export growth pattern? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/724/growth-dynamics"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724/growth-dynamics",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 156,
       "category_id": "cp_growth_performance",
       "difficulty": "medium",
-      "text": "Which sectors or products are driving Spain's export growth?",
+      "text": "Which sectors or products are driving Spain's export growth? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/724/growth-dynamics"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724/growth-dynamics",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 157,
       "category_id": "cp_growth_performance",
       "difficulty": "medium",
-      "text": "How would you describe India's export growth pattern?",
+      "text": "How would you describe India's export growth pattern? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/growth-dynamics"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/growth-dynamics",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 158,
       "category_id": "cp_growth_performance",
       "difficulty": "medium",
-      "text": "Which sectors or products are driving India's export growth?",
+      "text": "Which sectors or products are driving India's export growth? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/growth-dynamics"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/growth-dynamics",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 159,
       "category_id": "cp_trade_partners",
       "difficulty": "medium",
-      "text": "Has Turkiye completed its structural transformation according to the Atlas?",
+      "text": "Has Turkiye completed its structural transformation according to the Atlas? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/market-share"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/market-share",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 160,
       "category_id": "cp_trade_partners",
       "difficulty": "hard",
-      "text": "Is Turkiye's export growth driven by expanding global market share or by concentrating in a growing sector?",
+      "text": "Is Turkiye's export growth driven by expanding global market share or by concentrating in a growing sector? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/market-share"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/market-share",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 161,
       "category_id": "cp_trade_partners",
       "difficulty": "medium",
-      "text": "Has Ethiopia completed its structural transformation according to the Atlas?",
+      "text": "Has Ethiopia completed its structural transformation according to the Atlas? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/market-share"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/231/market-share",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 162,
       "category_id": "cp_growth_performance",
       "difficulty": "medium",
-      "text": "Which sectors are driving Spain's export growth according to the market share page?",
+      "text": "Which sectors are driving Spain's export growth according to the market share page? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/724/market-share"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/724/market-share",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 163,
       "category_id": "cp_growth_performance",
       "difficulty": "medium",
-      "text": "Which sectors are driving India's export growth according to the market share page?",
+      "text": "Which sectors are driving India's export growth according to the market share page? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/market-share"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/market-share",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 164,
       "category_id": "cp_economic_complexity",
       "difficulty": "medium",
-      "text": "Which sectors contain Brazil's largest exports by complexity level?",
+      "text": "Which sectors contain Brazil's largest exports by complexity level? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-complexity"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-complexity",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 165,
       "category_id": "cp_economic_complexity",
       "difficulty": "medium",
-      "text": "Which sectors contain Turkiye's largest exports by complexity level?",
+      "text": "Which sectors contain Turkiye's largest exports by complexity level? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/export-complexity"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/export-complexity",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 166,
       "category_id": "cp_product_space",
       "difficulty": "medium",
-      "text": "What does the Atlas's recommended strategic approach for Kenya entail?",
+      "text": "What does the Atlas's recommended strategic approach for Kenya entail? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/strategic-approach"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/strategic-approach",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 167,
       "category_id": "cp_product_space",
       "difficulty": "medium",
-      "text": "What does the Atlas's recommended strategic approach for Turkiye entail?",
+      "text": "What does the Atlas's recommended strategic approach for Turkiye entail? Use the HS 1992 classification.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/strategic-approach"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/792/strategic-approach",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 168,
       "category_id": "cp_growth_opportunities",
       "difficulty": "medium",
-      "text": "Which sectors are identified as high-potential for Kenya's diversification?",
+      "text": "Which sectors are identified as high-potential for Kenya's diversification? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/product-table"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/product-table",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 169,
       "category_id": "cp_growth_opportunities",
       "difficulty": "medium",
-      "text": "Which sectors are identified as high-potential for India's diversification?",
+      "text": "Which sectors are identified as high-potential for India's diversification? Use the HS 1992 classification for goods and also use the services schema.",
       "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/product-table"
+      "atlas_url": "https://atlas.hks.harvard.edu/countries/356/product-table",
+      "expected_api_target": "country_pages",
+      "expected_classification": "HS92"
     },
     {
       "id": 170,

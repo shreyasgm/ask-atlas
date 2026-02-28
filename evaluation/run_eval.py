@@ -46,6 +46,8 @@ def _load_questions_meta() -> dict[str, dict]:
             "category": categories.get(q["category_id"], q["category_id"]),
             "difficulty": q["difficulty"],
             "expected_behavior": q.get("expected_behavior"),
+            "expected_api_target": q.get("expected_api_target"),
+            "expected_classification": q.get("expected_classification"),
         }
     return meta
 
@@ -144,6 +146,16 @@ async def _judge_all(
         expected_behavior = meta.get("expected_behavior")
         ground_truth = _load_ground_truth(qid)
 
+        # Build classification note for country page questions
+        classification_note = None
+        if meta.get("expected_classification"):
+            classification_note = (
+                "Note: The ground truth was collected from the Atlas Country Pages API using "
+                "HS 1992 (HS92) product classification. The Country Pages API only supports HS92. "
+                "If the agent's answer uses different product names or codes (e.g., from HS 2012), "
+                "this may explain discrepancies in product-specific data."
+            )
+
         async with semaphore:
             try:
                 mode = (
@@ -161,6 +173,7 @@ async def _judge_all(
                     model=judge_model,
                     provider=judge_provider,
                     tools_used=tools_used,
+                    classification_note=classification_note,
                 )
                 judge_results[qid] = verdict
                 logging.info(
@@ -239,8 +252,8 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--concurrency",
         type=int,
-        default=3,
-        help="Max concurrent agent runs (default: 3)",
+        default=10,
+        help="Max concurrent agent runs (default: 10)",
     )
     parser.add_argument(
         "--judge-model",

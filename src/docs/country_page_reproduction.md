@@ -43,6 +43,8 @@ Country Pages are found at `https://atlas.hks.harvard.edu/countries/{m49_id}`. A
 
 **Default classification:** HS92 (Harmonized System 1992), 4-digit product level, most recent available year (currently 2024).
 
+> **Important:** The Country Pages API `ProductClass` enum has exactly two values: `HS` and `SITC`. There is no `HS12` or `HS22`. `HS` is equivalent to HS92 — the data returned is identical to the Explore API's `HS92` (verified empirically: same product count and export values). Passing `HS12` or `HS22` will return a GraphQL validation error.
+
 **Two data sources available:**
 
 | Source | Endpoint | When to use |
@@ -997,4 +999,4 @@ Some Country Pages metrics are derived by the Atlas backend and cannot be recons
 
 6. **Lookback table exists only in hs92.** The `country_product_lookback_{1,2,4}` tables exist only in the `hs92` schema. For SITC or HS12 lookback analysis, you must calculate CAGRs manually from `country_product_year_*` time series.
 
-7. **Country Pages API product class enum.** In the Country Pages API, the product class enum is `HS` (not `HS92`). In the Explore API, it is `HS92`. Using `HS92` in the Country Pages API will fail.
+7. **Country Pages API only supports `HS` and `SITC`.** The `ProductClass` enum has exactly two values: `HS` (equivalent to HS92) and `SITC`. There is no `HS12`, `HS22`, or `HS92` value — passing any of these returns a GraphQL validation error. The Explore API uses `HS92`, `HS12`, `HS22`, `SITC` instead. All product trade data from the Country Pages API is HS 1992 data.
