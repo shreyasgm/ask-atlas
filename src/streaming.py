@@ -299,6 +299,7 @@ class AnswerResult:
     token_usage: dict | None = None
     cost: dict | None = None
     tool_call_counts: dict[str, int] | None = None
+    step_timing: dict | None = None
 
 
 @dataclass
@@ -689,14 +690,22 @@ class AtlasTextToSQL:
         summary = _build_turn_summary(queries, resolved_products)
         await self.agent.aupdate_state(config, {"turn_summaries": [summary]})
 
-        # Collect token usage from final state
-        from src.token_usage import aggregate_usage, count_tool_calls, estimate_cost
+        # Collect token usage and timing from final state
+        from src.token_usage import (
+            aggregate_timing,
+            aggregate_usage,
+            count_tool_calls,
+            estimate_cost,
+        )
 
         raw_usage = last_state.get("token_usage", [])
         token_usage = aggregate_usage(raw_usage) if raw_usage else None
         cost = estimate_cost(raw_usage) if raw_usage else None
         all_messages = last_state.get("messages", [])
         tool_counts = count_tool_calls(all_messages) if all_messages else None
+
+        raw_timing = last_state.get("step_timing", [])
+        step_timing = aggregate_timing(raw_timing) if raw_timing else None
 
         return AnswerResult(
             answer=self._extract_text(message.content),
@@ -708,6 +717,7 @@ class AtlasTextToSQL:
             token_usage=token_usage,
             cost=cost,
             tool_call_counts=tool_counts,
+            step_timing=step_timing,
         )
 
     async def astream_agent_response(

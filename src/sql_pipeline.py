@@ -32,7 +32,7 @@ from src.prompts import build_sql_generation_prefix
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 from src.sql_validation import extract_table_names_from_ddl, validate_sql
 from src.state import AtlasAgentState
-from src.token_usage import make_usage_record_from_callback
+from src.token_usage import make_usage_record_from_callback, node_timer
 
 logger = logging.getLogger(__name__)
 
@@ -298,15 +298,20 @@ def get_table_info_for_schemas(
 
 async def extract_tool_question(state: AtlasAgentState) -> dict:
     """Extract the question from the agent's tool_call args."""
-    last_msg = state["messages"][-1]
-    if len(last_msg.tool_calls) > 1:
-        logger.warning(
-            "LLM produced %d parallel tool_calls; only the first will be executed.",
-            len(last_msg.tool_calls),
-        )
-    question = last_msg.tool_calls[0]["args"]["question"]
-    context = last_msg.tool_calls[0]["args"].get("context", "")
-    return {"pipeline_question": question, "pipeline_context": context}
+    async with node_timer("extract_tool_question", "query_tool") as t:
+        last_msg = state["messages"][-1]
+        if len(last_msg.tool_calls) > 1:
+            logger.warning(
+                "LLM produced %d parallel tool_calls; only the first will be executed.",
+                len(last_msg.tool_calls),
+            )
+        question = last_msg.tool_calls[0]["args"]["question"]
+        context = last_msg.tool_calls[0]["args"].get("context", "")
+    return {
+        "pipeline_question": question,
+        "pipeline_context": context,
+        "step_timing": [t.record],
+    }
 
 
 async def extract_products_node(
@@ -315,51 +320,58 @@ async def extract_products_node(
     """Run product/schema extraction LLM chain, then apply overrides."""
     from langchain_core.callbacks import UsageMetadataCallbackHandler
 
-    usage_handler = UsageMetadataCallbackHandler()
-    lookup = ProductAndSchemaLookup(llm=llm, connection=engine)
-    products = await lookup.aextract_schemas_and_product_mentions_direct(
-        state["pipeline_question"],
-        callbacks=[usage_handler],
-    )
-
-    override_schema = state.get("override_schema")
-    override_mode = state.get("override_mode")
-
-    if override_schema:
-        # Schema override: force classification_schemas and rebind products
-        products = SchemasAndProductsFound(
-            classification_schemas=[override_schema],
-            products=[
-                ProductDetails(
-                    name=p.name,
-                    classification_schema=override_schema,
-                    codes=p.codes,
-                )
-                for p in (products.products or [])
-            ],
-            requires_product_lookup=products.requires_product_lookup,
+    async with node_timer("extract_products", "query_tool") as t:
+        usage_handler = UsageMetadataCallbackHandler()
+        lookup = ProductAndSchemaLookup(llm=llm, connection=engine)
+        llm_start = time.monotonic()
+        products = await lookup.aextract_schemas_and_product_mentions_direct(
+            state["pipeline_question"],
+            callbacks=[usage_handler],
         )
-    elif override_mode:
-        # Mode override (only when no schema override): filter schemas
-        schemas = products.classification_schemas
-        if override_mode == "goods":
-            schemas = [s for s in schemas if not s.startswith("services_")]
-            if not schemas:
-                schemas = ["hs92"]
-        elif override_mode == "services":
-            schemas = [s for s in schemas if s.startswith("services_")]
-            if not schemas:
-                schemas = ["services_unilateral"]
-        products = SchemasAndProductsFound(
-            classification_schemas=schemas,
-            products=products.products,
-            requires_product_lookup=products.requires_product_lookup,
-        )
+        t.mark_llm(llm_start, time.monotonic())
+
+        override_schema = state.get("override_schema")
+        override_mode = state.get("override_mode")
+
+        if override_schema:
+            # Schema override: force classification_schemas and rebind products
+            products = SchemasAndProductsFound(
+                classification_schemas=[override_schema],
+                products=[
+                    ProductDetails(
+                        name=p.name,
+                        classification_schema=override_schema,
+                        codes=p.codes,
+                    )
+                    for p in (products.products or [])
+                ],
+                requires_product_lookup=products.requires_product_lookup,
+            )
+        elif override_mode:
+            # Mode override (only when no schema override): filter schemas
+            schemas = products.classification_schemas
+            if override_mode == "goods":
+                schemas = [s for s in schemas if not s.startswith("services_")]
+                if not schemas:
+                    schemas = ["hs92"]
+            elif override_mode == "services":
+                schemas = [s for s in schemas if s.startswith("services_")]
+                if not schemas:
+                    schemas = ["services_unilateral"]
+            products = SchemasAndProductsFound(
+                classification_schemas=schemas,
+                products=products.products,
+                requires_product_lookup=products.requires_product_lookup,
+            )
 
     usage_record = make_usage_record_from_callback(
         "extract_products", "query_tool", usage_handler
     )
-    return {"pipeline_products": products, "token_usage": [usage_record]}
+    return {
+        "pipeline_products": products,
+        "token_usage": [usage_record],
+        "step_timing": [t.record],
+    }
 
 
 async def lookup_codes_node(
@@ -372,27 +384,35 @@ async def lookup_codes_node(
     """Get candidate codes from DB and select final codes via LLM."""
     from langchain_core.callbacks import UsageMetadataCallbackHandler
 
-    products = state.get("pipeline_products")
-    if not products or not products.products:
-        return {"pipeline_codes": ""}
+    async with node_timer("lookup_codes", "query_tool") as t:
+        products = state.get("pipeline_products")
+        if not products or not products.products:
+            return {"pipeline_codes": "", "step_timing": [t.record]}
 
-    lookup = ProductAndSchemaLookup(
-        llm=llm, connection=engine, async_engine=async_engine
-    )
-    if async_engine is not None:
-        candidates = await lookup.aget_candidate_codes(products)
-    else:
-        candidates = await asyncio.to_thread(lookup.get_candidate_codes, products)
-    usage_handler = UsageMetadataCallbackHandler()
-    codes = await lookup.aselect_final_codes_direct(
-        state["pipeline_question"], candidates, callbacks=[usage_handler]
-    )
+        lookup = ProductAndSchemaLookup(
+            llm=llm, connection=engine, async_engine=async_engine
+        )
+        io_start = time.monotonic()
+        if async_engine is not None:
+            candidates = await lookup.aget_candidate_codes(products)
+        else:
+            candidates = await asyncio.to_thread(lookup.get_candidate_codes, products)
+        t.mark_io(io_start, time.monotonic())
+
+        usage_handler = UsageMetadataCallbackHandler()
+        llm_start = time.monotonic()
+        codes = await lookup.aselect_final_codes_direct(
+            state["pipeline_question"], candidates, callbacks=[usage_handler]
+        )
+        t.mark_llm(llm_start, time.monotonic())
+
     usage_record = make_usage_record_from_callback(
         "lookup_codes", "query_tool", usage_handler
     )
     return {
         "pipeline_codes": format_product_codes_for_prompt(codes),
         "token_usage": [usage_record],
+        "step_timing": [t.record],
     }
 
 
@@ -403,15 +423,18 @@ async def get_table_info_node(
     table_descriptions: Dict,
 ) -> dict:
     """Get table info for the identified schemas."""
-    products = state.get("pipeline_products")
-    schemas = products.classification_schemas if products else []
-    info = await asyncio.to_thread(
-        get_table_info_for_schemas,
-        db=db,
-        table_descriptions=table_descriptions,
-        classification_schemas=schemas,
-    )
-    return {"pipeline_table_info": info}
+    async with node_timer("get_table_info", "query_tool") as t:
+        products = state.get("pipeline_products")
+        schemas = products.classification_schemas if products else []
+        io_start = time.monotonic()
+        info = await asyncio.to_thread(
+            get_table_info_for_schemas,
+            db=db,
+            table_descriptions=table_descriptions,
+            classification_schemas=schemas,
+        )
+        t.mark_io(io_start, time.monotonic())
+    return {"pipeline_table_info": info, "step_timing": [t.record]}
 
 
 async def generate_sql_node(
@@ -424,26 +447,34 @@ async def generate_sql_node(
     """Generate SQL query using LLM."""
     from langchain_core.callbacks import UsageMetadataCallbackHandler
 
-    codes = state.get("pipeline_codes") or None
-    chain = create_query_generation_chain(
-        llm=llm,
-        codes=codes,
-        top_k=max_results,
-        table_info=state.get("pipeline_table_info", ""),
-        example_queries=example_queries,
-        direction_constraint=state.get("override_direction"),
-        mode_constraint=state.get("override_mode"),
-        context=state.get("pipeline_context", ""),
-    )
-    usage_handler = UsageMetadataCallbackHandler()
-    sql = await chain.ainvoke(
-        {"question": state["pipeline_question"]},
-        config={"callbacks": [usage_handler]},
-    )
+    async with node_timer("generate_sql", "query_tool") as t:
+        codes = state.get("pipeline_codes") or None
+        chain = create_query_generation_chain(
+            llm=llm,
+            codes=codes,
+            top_k=max_results,
+            table_info=state.get("pipeline_table_info", ""),
+            example_queries=example_queries,
+            direction_constraint=state.get("override_direction"),
+            mode_constraint=state.get("override_mode"),
+            context=state.get("pipeline_context", ""),
+        )
+        usage_handler = UsageMetadataCallbackHandler()
+        llm_start = time.monotonic()
+        sql = await chain.ainvoke(
+            {"question": state["pipeline_question"]},
+            config={"callbacks": [usage_handler]},
+        )
+        t.mark_llm(llm_start, time.monotonic())
+
     usage_record = make_usage_record_from_callback(
         "generate_sql", "query_tool", usage_handler
     )
-    return {"pipeline_sql": sql, "token_usage": [usage_record]}
+    return {
+        "pipeline_sql": sql,
+        "token_usage": [usage_record],
+        "step_timing": [t.record],
+    }
 
 
 async def validate_sql_node(
@@ -484,14 +515,20 @@ async def validate_sql_node(
     for ct in _classification_tables_for_schemas(schemas, table_descriptions):
         valid_tables.add(ct["table_name"])
 
-    result = validate_sql(sql, valid_tables)
+    async with node_timer("validate_sql", "query_tool") as t:
+        result = validate_sql(sql, valid_tables)
 
     if not result.is_valid:
         error_msg = "SQL validation failed: " + "; ".join(result.errors)
         logger.warning(error_msg)
-        return {"pipeline_sql": sql, "pipeline_result": "", "last_error": error_msg}
+        return {
+            "pipeline_sql": sql,
+            "pipeline_result": "",
+            "last_error": error_msg,
+            "step_timing": [t.record],
+        }
 
-    return {"pipeline_sql": result.sql, "last_error": ""}
+    return {"pipeline_sql": result.sql, "last_error": "", "step_timing": [t.record]}
 
 
 async def execute_sql_node(
@@ -513,60 +550,83 @@ async def execute_sql_node(
         "pipeline_execution_time_ms": 0,
     }
 
-    if use_async:
+    async with node_timer("execute_sql", "query_tool") as t:
+        if use_async:
 
-        async def _run_query() -> Tuple[str, list[str], list[list]]:
-            async with async_engine.connect() as conn:
-                result = await conn.execute(text(sql))
-                if not result.returns_rows:
-                    return "", [], []
-                columns = list(result.keys())
-                rows = result.fetchall()
-                rows_as_lists = [list(row) for row in rows]
-                if not rows:
-                    return "", columns, []
-                result_str = "\n".join(str(dict(zip(columns, row))) for row in rows)
-                return result_str, columns, rows_as_lists
+            async def _run_query() -> Tuple[str, list[str], list[list]]:
+                async with async_engine.connect() as conn:
+                    result = await conn.execute(text(sql))
+                    if not result.returns_rows:
+                        return "", [], []
+                    columns = list(result.keys())
+                    rows = result.fetchall()
+                    rows_as_lists = [list(row) for row in rows]
+                    if not rows:
+                        return "", columns, []
+                    result_str = "\n".join(str(dict(zip(columns, row))) for row in rows)
+                    return result_str, columns, rows_as_lists
 
-        try:
-            t0 = time.monotonic()
-            result_str, columns, rows = await async_execute_with_retry(_run_query)
-            elapsed_ms = int((time.monotonic() - t0) * 1000)
-        except QueryExecutionError as e:
-            logger.error("Query execution failed: %s", e)
-            return {"pipeline_result": "", "last_error": str(e), **_empty_structured}
-        except Exception as e:
-            logger.error("Unexpected error executing SQL: %s", e)
-            return {"pipeline_result": "", "last_error": str(e), **_empty_structured}
-    else:
-        # Sync fallback (for tests or when async_engine is a sync Engine)
-        engine = async_engine
+            try:
+                t0 = time.monotonic()
+                result_str, columns, rows = await async_execute_with_retry(_run_query)
+                elapsed_ms = int((time.monotonic() - t0) * 1000)
+                t.mark_io(t0, time.monotonic())
+            except QueryExecutionError as e:
+                logger.error("Query execution failed: %s", e)
+                return {
+                    "pipeline_result": "",
+                    "last_error": str(e),
+                    **_empty_structured,
+                    "step_timing": [t.record],
+                }
+            except Exception as e:
+                logger.error("Unexpected error executing SQL: %s", e)
+                return {
+                    "pipeline_result": "",
+                    "last_error": str(e),
+                    **_empty_structured,
+                    "step_timing": [t.record],
+                }
+        else:
+            # Sync fallback (for tests or when async_engine is a sync Engine)
+            engine = async_engine
 
-        def _run_query_sync() -> Tuple[str, list[str], list[list]]:
-            with engine.connect() as conn:
-                result = conn.execute(text(sql))
-                if not result.returns_rows:
-                    return "", [], []
-                columns = list(result.keys())
-                rows = result.fetchall()
-                rows_as_lists = [list(row) for row in rows]
-                if not rows:
-                    return "", columns, []
-                result_str = "\n".join(str(dict(zip(columns, row))) for row in rows)
-                return result_str, columns, rows_as_lists
+            def _run_query_sync() -> Tuple[str, list[str], list[list]]:
+                with engine.connect() as conn:
+                    result = conn.execute(text(sql))
+                    if not result.returns_rows:
+                        return "", [], []
+                    columns = list(result.keys())
+                    rows = result.fetchall()
+                    rows_as_lists = [list(row) for row in rows]
+                    if not rows:
+                        return "", columns, []
+                    result_str = "\n".join(str(dict(zip(columns, row))) for row in rows)
+                    return result_str, columns, rows_as_lists
 
-        try:
-            t0 = time.monotonic()
-            result_str, columns, rows = await asyncio.to_thread(
-                execute_with_retry, _run_query_sync
-            )
-            elapsed_ms = int((time.monotonic() - t0) * 1000)
-        except QueryExecutionError as e:
-            logger.error("Query execution failed: %s", e)
-            return {"pipeline_result": "", "last_error": str(e), **_empty_structured}
-        except Exception as e:
-            logger.error("Unexpected error executing SQL: %s", e)
-            return {"pipeline_result": "", "last_error": str(e), **_empty_structured}
+            try:
+                t0 = time.monotonic()
+                result_str, columns, rows = await asyncio.to_thread(
+                    execute_with_retry, _run_query_sync
+                )
+                elapsed_ms = int((time.monotonic() - t0) * 1000)
+                t.mark_io(t0, time.monotonic())
+            except QueryExecutionError as e:
+                logger.error("Query execution failed: %s", e)
+                return {
+                    "pipeline_result": "",
+                    "last_error": str(e),
+                    **_empty_structured,
+                    "step_timing": [t.record],
+                }
+            except Exception as e:
+                logger.error("Unexpected error executing SQL: %s", e)
+                return {
+                    "pipeline_result": "",
+                    "last_error": str(e),
+                    **_empty_structured,
+                    "step_timing": [t.record],
+                }
 
     if not result_str or not result_str.strip():
         result_str = "SQL query returned no results."
@@ -576,6 +636,7 @@ async def execute_sql_node(
         "pipeline_result_columns": columns,
         "pipeline_result_rows": rows,
         "pipeline_execution_time_ms": elapsed_ms,
+        "step_timing": [t.record],
     }
 
 
@@ -587,43 +648,46 @@ async def format_results_node(state: AtlasAgentState) -> dict:
     still need a corresponding ToolMessage so that provider APIs (e.g.
     OpenAI) don't reject the message history.
     """
-    last_msg = state["messages"][-1]
-    tool_calls = last_msg.tool_calls
+    async with node_timer("format_results", "query_tool") as t:
+        last_msg = state["messages"][-1]
+        tool_calls = last_msg.tool_calls
 
-    if state.get("last_error"):
-        content = f"Error executing query: {state['last_error']}"
-    else:
-        content = state.get("pipeline_result", "SQL query returned no results.")
+        if state.get("last_error"):
+            content = f"Error executing query: {state['last_error']}"
+        else:
+            content = state.get("pipeline_result", "SQL query returned no results.")
 
-    messages: list[ToolMessage] = [
-        ToolMessage(
-            content=content, tool_call_id=tool_calls[0]["id"], name="query_tool"
-        )
-    ]
-    for tc in tool_calls[1:]:
-        messages.append(
+        messages: list[ToolMessage] = [
             ToolMessage(
-                content="Only one query can be executed at a time. Please make additional queries sequentially.",
-                tool_call_id=tc["id"],
-                name="query_tool",
+                content=content, tool_call_id=tool_calls[0]["id"], name="query_tool"
             )
-        )
+        ]
+        for tc in tool_calls[1:]:
+            messages.append(
+                ToolMessage(
+                    content="Only one query can be executed at a time. Please make additional queries sequentially.",
+                    tool_call_id=tc["id"],
+                    name="query_tool",
+                )
+            )
 
     return {
         "messages": messages,
         "queries_executed": state.get("queries_executed", 0) + 1,
+        "step_timing": [t.record],
     }
 
 
 async def max_queries_exceeded_node(state: AtlasAgentState) -> dict:
     """Return a ToolMessage for every tool_call indicating the query limit was hit."""
-    last_msg = state["messages"][-1]
-    error_content = "Error: Maximum number of queries exceeded."
-    messages = [
-        ToolMessage(content=error_content, tool_call_id=tc["id"], name=tc["name"])
-        for tc in last_msg.tool_calls
-    ]
-    return {"messages": messages}
+    async with node_timer("max_queries_exceeded", "query_tool") as t:
+        last_msg = state["messages"][-1]
+        error_content = "Error: Maximum number of queries exceeded."
+        messages = [
+            ToolMessage(content=error_content, tool_call_id=tc["id"], name=tc["name"])
+            for tc in last_msg.tool_calls
+        ]
+    return {"messages": messages, "step_timing": [t.record]}
 
 
 # ---------------------------------------------------------------------------

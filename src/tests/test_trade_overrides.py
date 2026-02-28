@@ -489,7 +489,7 @@ class TestAgentNodeDynamicPrompt:
         import asyncio
 
         agent_fn = graph.nodes["agent"]
-        asyncio.get_event_loop().run_until_complete(agent_fn.ainvoke(state))
+        asyncio.run(agent_fn.ainvoke(state))
 
         # Find the SystemMessage in captured_messages
         system_msgs = [

@@ -28,7 +28,11 @@ from src.prompts import (
     build_id_resolution_prompt,
 )
 from src.state import AtlasAgentState
-from src.token_usage import make_usage_record_from_callback, make_usage_record_from_msg
+from src.token_usage import (
+    make_usage_record_from_callback,
+    make_usage_record_from_msg,
+    node_timer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -314,19 +318,21 @@ async def extract_graphql_question(state: AtlasAgentState) -> dict:
 
     Resets all graphql_* state fields to prevent cross-turn leakage.
     """
-    last_msg = state["messages"][-1]
-    if len(last_msg.tool_calls) > 1:
-        logger.warning(
-            "LLM produced %d parallel tool_calls; only the first will be executed.",
-            len(last_msg.tool_calls),
-        )
-    question = last_msg.tool_calls[0]["args"]["question"]
-    context = last_msg.tool_calls[0]["args"].get("context", "")
+    async with node_timer("extract_graphql_question", "atlas_graphql") as t:
+        last_msg = state["messages"][-1]
+        if len(last_msg.tool_calls) > 1:
+            logger.warning(
+                "LLM produced %d parallel tool_calls; only the first will be executed.",
+                len(last_msg.tool_calls),
+            )
+        question = last_msg.tool_calls[0]["args"]["question"]
+        context = last_msg.tool_calls[0]["args"].get("context", "")
 
     # Reset all graphql state fields + set the new question and context
     result = dict(_GRAPHQL_STATE_DEFAULTS)
     result["graphql_question"] = question
     result["graphql_context"] = context
+    result["step_timing"] = [t.record]
     return result
 
 
@@ -345,25 +351,23 @@ async def classify_query(state: AtlasAgentState, *, lightweight_model: Any) -> d
     Returns:
         Dict with ``graphql_classification`` and ``graphql_api_target``.
     """
+    import time
     from langchain_core.callbacks import UsageMetadataCallbackHandler
 
-    question = state["graphql_question"]
-    context = state.get("graphql_context", "")
+    async with node_timer("classify_query", "atlas_graphql") as t:
+        question = state["graphql_question"]
+        context = state.get("graphql_context", "")
 
-    # No try/except — errors propagate so LangGraph RetryPolicy can retry
-    # transient failures (rate limits, timeouts). After max retries, the
-    # exception reaches the streaming layer which returns a user-friendly error.
-    # method="function_calling" avoids OpenAI's Structured Output API
-    # (ParsedChatCompletion), which triggers spurious Pydantic serialization
-    # warnings due to unresolved TypeVar on ParsedChatCompletionMessage.parsed.
-    chain = lightweight_model.with_structured_output(
-        GraphQLQueryClassification, method="function_calling"
-    )
-    prompt = build_classification_prompt(question, context)
-    usage_handler = UsageMetadataCallbackHandler()
-    classification: GraphQLQueryClassification = await chain.ainvoke(
-        prompt, config={"callbacks": [usage_handler]}
-    )
+        chain = lightweight_model.with_structured_output(
+            GraphQLQueryClassification, method="function_calling"
+        )
+        prompt = build_classification_prompt(question, context)
+        usage_handler = UsageMetadataCallbackHandler()
+        llm_start = time.monotonic()
+        classification: GraphQLQueryClassification = await chain.ainvoke(
+            prompt, config={"callbacks": [usage_handler]}
+        )
+        t.mark_llm(llm_start, time.monotonic())
 
     usage_record = make_usage_record_from_callback(
         "classify_query", "atlas_graphql", usage_handler
@@ -372,6 +376,7 @@ async def classify_query(state: AtlasAgentState, *, lightweight_model: Any) -> d
         "graphql_classification": classification.model_dump(),
         "graphql_api_target": classification.api_target,
         "token_usage": [usage_record],
+        "step_timing": [t.record],
     }
 
 
@@ -392,34 +397,36 @@ async def extract_entities(state: AtlasAgentState, *, lightweight_model: Any) ->
     Returns:
         Dict with ``graphql_entity_extraction``.
     """
+    import time
     from langchain_core.callbacks import UsageMetadataCallbackHandler
 
-    classification = state.get("graphql_classification")
-    if classification and classification.get("query_type") == "reject":
-        return {"graphql_entity_extraction": None}
+    async with node_timer("extract_entities", "atlas_graphql") as t:
+        classification = state.get("graphql_classification")
+        if classification and classification.get("query_type") == "reject":
+            return {"graphql_entity_extraction": None, "step_timing": [t.record]}
 
-    question = state["graphql_question"]
-    context = state.get("graphql_context", "")
-    query_type = classification.get("query_type", "") if classification else ""
+        question = state["graphql_question"]
+        context = state.get("graphql_context", "")
+        query_type = classification.get("query_type", "") if classification else ""
 
-    # No try/except — errors propagate so LangGraph RetryPolicy can retry
-    # transient failures. After max retries, the exception reaches the
-    # streaming layer which returns a user-friendly error.
-    # method="function_calling" avoids OpenAI ParsedChatCompletion warnings.
-    chain = lightweight_model.with_structured_output(
-        GraphQLEntityExtraction, method="function_calling"
-    )
-    prompt = build_extraction_prompt(question, query_type, context)
-    usage_handler = UsageMetadataCallbackHandler()
-    extraction: GraphQLEntityExtraction = await chain.ainvoke(
-        prompt, config={"callbacks": [usage_handler]}
-    )
+        chain = lightweight_model.with_structured_output(
+            GraphQLEntityExtraction, method="function_calling"
+        )
+        prompt = build_extraction_prompt(question, query_type, context)
+        usage_handler = UsageMetadataCallbackHandler()
+        llm_start = time.monotonic()
+        extraction: GraphQLEntityExtraction = await chain.ainvoke(
+            prompt, config={"callbacks": [usage_handler]}
+        )
+        t.mark_llm(llm_start, time.monotonic())
+
     usage_record = make_usage_record_from_callback(
         "extract_entities", "atlas_graphql", usage_handler
     )
     return {
         "graphql_entity_extraction": extraction.model_dump(),
         "token_usage": [usage_record],
+        "step_timing": [t.record],
     }
 
 
@@ -460,6 +467,32 @@ async def resolve_ids(
 
     if not extraction:
         return {"graphql_resolved_params": None, "graphql_atlas_links": []}
+
+    async with node_timer("resolve_ids", "atlas_graphql") as _t:
+        return await _resolve_ids_inner(
+            state,
+            _t,
+            lightweight_model=lightweight_model,
+            country_cache=country_cache,
+            product_cache=product_cache,
+            group_cache=group_cache,
+            services_cache=services_cache,
+        )
+
+
+async def _resolve_ids_inner(
+    state: AtlasAgentState,
+    t: Any,
+    *,
+    lightweight_model: Any,
+    country_cache: CatalogCache,
+    product_cache: CatalogCache,
+    group_cache: CatalogCache | None = None,
+    services_cache: CatalogCache,
+) -> dict:
+    """Inner logic for resolve_ids, extracted so node_timer wraps the whole body."""
+    classification = state.get("graphql_classification")
+    extraction = state.get("graphql_entity_extraction")
 
     api_target = classification.get("api_target", "explore")
     query_type = classification.get("query_type", "")
@@ -611,6 +644,7 @@ async def resolve_ids(
     result: dict[str, Any] = {
         "graphql_resolved_params": resolved,
         "graphql_atlas_links": atlas_links,
+        "step_timing": [t.record],
     }
     if usage_sink:
         result["token_usage"] = usage_sink
@@ -811,78 +845,91 @@ async def build_and_execute_graphql(
     classification = state.get("graphql_classification")
     resolved_params = state.get("graphql_resolved_params")
 
-    if (
-        not classification
-        or classification.get("query_type") == "reject"
-        or resolved_params is None
-    ):
-        return {
-            "graphql_raw_response": None,
-            "graphql_query": None,
-            "graphql_execution_time_ms": 0,
-            "last_error": "",
-        }
+    async with node_timer("build_and_execute_graphql", "atlas_graphql") as t:
+        if (
+            not classification
+            or classification.get("query_type") == "reject"
+            or resolved_params is None
+        ):
+            return {
+                "graphql_raw_response": None,
+                "graphql_query": None,
+                "graphql_execution_time_ms": 0,
+                "last_error": "",
+                "step_timing": [t.record],
+            }
 
-    query_type = classification["query_type"]
-    api_target = (
-        classification.get("api_target") or state.get("graphql_api_target") or "explore"
-    )
+        query_type = classification["query_type"]
+        api_target = (
+            classification.get("api_target")
+            or state.get("graphql_api_target")
+            or "explore"
+        )
 
-    # Route to the correct client based on api_target
-    client = (
-        country_pages_client
-        if (api_target == "country_pages" and country_pages_client is not None)
-        else graphql_client
-    )
+        # Route to the correct client based on api_target
+        client = (
+            country_pages_client
+            if (api_target == "country_pages" and country_pages_client is not None)
+            else graphql_client
+        )
 
-    try:
-        query_string, variables = build_graphql_query(query_type, resolved_params)
-    except (ValueError, KeyError) as e:
-        logger.error("Failed to build GraphQL query: %s", e)
-        return {
-            "graphql_raw_response": {"error": "build_failed", "detail": str(e)},
-            "graphql_query": None,
-            "graphql_execution_time_ms": 0,
-            "last_error": f"Failed to build query: {e}",
-        }
+        try:
+            query_string, variables = build_graphql_query(query_type, resolved_params)
+        except (ValueError, KeyError) as e:
+            logger.error("Failed to build GraphQL query: %s", e)
+            return {
+                "graphql_raw_response": {"error": "build_failed", "detail": str(e)},
+                "graphql_query": None,
+                "graphql_execution_time_ms": 0,
+                "last_error": f"Failed to build query: {e}",
+                "step_timing": [t.record],
+            }
 
-    start = time.monotonic()
-    try:
-        data = await client.execute(query_string, variables)
-        elapsed_ms = int((time.monotonic() - start) * 1000)
-        return {
-            "graphql_raw_response": data,
-            "graphql_query": query_string,
-            "graphql_execution_time_ms": elapsed_ms,
-            "last_error": "",
-        }
-    except BudgetExhaustedError as e:
-        elapsed_ms = int((time.monotonic() - start) * 1000)
-        logger.warning("GraphQL budget exhausted: %s", e)
-        return {
-            "graphql_raw_response": {"error": "budget_exhausted", "detail": str(e)},
-            "graphql_query": query_string,
-            "graphql_execution_time_ms": elapsed_ms,
-            "last_error": f"GraphQL API budget exhausted: {e}",
-        }
-    except GraphQLError as e:
-        elapsed_ms = int((time.monotonic() - start) * 1000)
-        logger.error("GraphQL error: %s", e)
-        return {
-            "graphql_raw_response": {"error": "graphql_error", "detail": str(e)},
-            "graphql_query": query_string,
-            "graphql_execution_time_ms": elapsed_ms,
-            "last_error": f"GraphQL query failed: {e}",
-        }
-    except Exception as e:
-        elapsed_ms = int((time.monotonic() - start) * 1000)
-        logger.error("Unexpected error executing GraphQL query: %s", e)
-        return {
-            "graphql_raw_response": {"error": "unexpected_error", "detail": str(e)},
-            "graphql_query": query_string,
-            "graphql_execution_time_ms": elapsed_ms,
-            "last_error": f"Unexpected error: {e}",
-        }
+        start = time.monotonic()
+        try:
+            data = await client.execute(query_string, variables)
+            elapsed_ms = int((time.monotonic() - start) * 1000)
+            t.mark_io(start, time.monotonic())
+            return {
+                "graphql_raw_response": data,
+                "graphql_query": query_string,
+                "graphql_execution_time_ms": elapsed_ms,
+                "last_error": "",
+                "step_timing": [t.record],
+            }
+        except BudgetExhaustedError as e:
+            elapsed_ms = int((time.monotonic() - start) * 1000)
+            t.mark_io(start, time.monotonic())
+            logger.warning("GraphQL budget exhausted: %s", e)
+            return {
+                "graphql_raw_response": {"error": "budget_exhausted", "detail": str(e)},
+                "graphql_query": query_string,
+                "graphql_execution_time_ms": elapsed_ms,
+                "last_error": f"GraphQL API budget exhausted: {e}",
+                "step_timing": [t.record],
+            }
+        except GraphQLError as e:
+            elapsed_ms = int((time.monotonic() - start) * 1000)
+            t.mark_io(start, time.monotonic())
+            logger.error("GraphQL error: %s", e)
+            return {
+                "graphql_raw_response": {"error": "graphql_error", "detail": str(e)},
+                "graphql_query": query_string,
+                "graphql_execution_time_ms": elapsed_ms,
+                "last_error": f"GraphQL query failed: {e}",
+                "step_timing": [t.record],
+            }
+        except Exception as e:
+            elapsed_ms = int((time.monotonic() - start) * 1000)
+            t.mark_io(start, time.monotonic())
+            logger.error("Unexpected error executing GraphQL query: %s", e)
+            return {
+                "graphql_raw_response": {"error": "unexpected_error", "detail": str(e)},
+                "graphql_query": query_string,
+                "graphql_execution_time_ms": elapsed_ms,
+                "last_error": f"Unexpected error: {e}",
+                "step_timing": [t.record],
+            }
 
 
 # ---------------------------------------------------------------------------
@@ -910,66 +957,68 @@ async def format_graphql_results(
         product_cache: Optional product catalog cache for name enrichment.
         country_cache: Optional country catalog cache for name enrichment.
     """
-    last_msg = state["messages"][-1]
-    tool_calls = last_msg.tool_calls
-    classification = state.get("graphql_classification") or {}
-    query_type = classification.get("query_type", "")
-    raw_response = state.get("graphql_raw_response")
-    last_error = state.get("last_error", "")
+    async with node_timer("format_graphql_results", "atlas_graphql") as _fmt_t:
+        last_msg = state["messages"][-1]
+        tool_calls = last_msg.tool_calls
+        classification = state.get("graphql_classification") or {}
+        query_type = classification.get("query_type", "")
+        raw_response = state.get("graphql_raw_response")
+        last_error = state.get("last_error", "")
 
-    # Determine content and atlas links
-    atlas_links: list[dict] = []
-    entity_extraction = state.get("graphql_entity_extraction")
+        # Determine content and atlas links
+        atlas_links: list[dict] = []
+        entity_extraction = state.get("graphql_entity_extraction")
 
-    if query_type == "reject":
-        reason = classification.get("rejection_reason", "Question not supported")
-        content = (
-            f"This question could not be answered via the Atlas GraphQL API. "
-            f"Rejection reason: {reason}"
-        )
-    elif query_type != "reject" and entity_extraction is None and classification:
-        content = (
-            "Entity extraction failed — could not parse entities from the question. "
-            "Please try rephrasing your question."
-        )
-    elif isinstance(raw_response, dict) and "error" in raw_response:
-        content = f"Error executing GraphQL query: {raw_response['error']} — {raw_response.get('detail', '')}"
-    elif last_error or raw_response is None:
-        content = (
-            f"Error executing GraphQL query: {last_error or 'No response received'}"
-        )
-        # Discard links on failure
-    else:
-        # Success — post-process then serialize
-        import json
-
-        processed = post_process_response(
-            query_type,
-            raw_response,
-            product_cache=product_cache,
-            country_cache=country_cache,
-        )
-        content = json.dumps(processed, indent=2, default=str)
-        atlas_links = state.get("graphql_atlas_links", [])
-
-    messages: list[ToolMessage] = [
-        ToolMessage(
-            content=content, tool_call_id=tool_calls[0]["id"], name="atlas_graphql"
-        )
-    ]
-    for tc in tool_calls[1:]:
-        messages.append(
-            ToolMessage(
-                content="Only one query can be executed at a time. Please make additional queries sequentially.",
-                tool_call_id=tc["id"],
-                name="atlas_graphql",
+        if query_type == "reject":
+            reason = classification.get("rejection_reason", "Question not supported")
+            content = (
+                f"This question could not be answered via the Atlas GraphQL API. "
+                f"Rejection reason: {reason}"
             )
-        )
+        elif query_type != "reject" and entity_extraction is None and classification:
+            content = (
+                "Entity extraction failed — could not parse entities from the question. "
+                "Please try rephrasing your question."
+            )
+        elif isinstance(raw_response, dict) and "error" in raw_response:
+            content = f"Error executing GraphQL query: {raw_response['error']} — {raw_response.get('detail', '')}"
+        elif last_error or raw_response is None:
+            content = (
+                f"Error executing GraphQL query: {last_error or 'No response received'}"
+            )
+            # Discard links on failure
+        else:
+            # Success — post-process then serialize
+            import json
+
+            processed = post_process_response(
+                query_type,
+                raw_response,
+                product_cache=product_cache,
+                country_cache=country_cache,
+            )
+            content = json.dumps(processed, indent=2, default=str)
+            atlas_links = state.get("graphql_atlas_links", [])
+
+        messages: list[ToolMessage] = [
+            ToolMessage(
+                content=content, tool_call_id=tool_calls[0]["id"], name="atlas_graphql"
+            )
+        ]
+        for tc in tool_calls[1:]:
+            messages.append(
+                ToolMessage(
+                    content="Only one query can be executed at a time. Please make additional queries sequentially.",
+                    tool_call_id=tc["id"],
+                    name="atlas_graphql",
+                )
+            )
 
     return {
         "messages": messages,
         "queries_executed": state.get("queries_executed", 0) + 1,
         "graphql_atlas_links": atlas_links,
+        "step_timing": [_fmt_t.record],
     }
 
 

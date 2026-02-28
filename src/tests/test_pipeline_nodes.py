@@ -374,7 +374,7 @@ class TestLookupCodesNode:
         )
         result = await lookup_codes_node(state, llm=mock_llm, engine=mock_engine)
 
-        assert result == {"pipeline_codes": ""}
+        assert result["pipeline_codes"] == ""
 
     async def test_none_products_returns_empty_codes(self):
         """When pipeline_products is None, codes should be empty."""
@@ -384,7 +384,7 @@ class TestLookupCodesNode:
         state = _base_state(pipeline_question="Hello", pipeline_products=None)
         result = await lookup_codes_node(state, llm=mock_llm, engine=mock_engine)
 
-        assert result == {"pipeline_codes": ""}
+        assert result["pipeline_codes"] == ""
 
     async def test_multiple_products(self):
         products_found = SchemasAndProductsFound(
@@ -495,7 +495,7 @@ class TestGetTableInfoNode:
                 state, db=mock_db, table_descriptions=mock_table_desc
             )
 
-        assert result == {"pipeline_table_info": ""}
+        assert result["pipeline_table_info"] == ""
         mock_get.assert_called_once_with(
             db=mock_db,
             table_descriptions=mock_table_desc,
