@@ -1,4 +1,4 @@
-/** Trim to a reasonable ceiling; CSS `truncate` handles visible clipping. */
+/** Trim to a reasonable ceiling to prevent extremely long text in the UI. */
 function truncate(s: string, max = 200): string {
   return s.length > max ? s.slice(0, max) + '\u2026' : s;
 }

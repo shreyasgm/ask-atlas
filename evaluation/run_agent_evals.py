@@ -122,8 +122,9 @@ async def run_single_question(
                         m.name for m in messages if hasattr(m, "name") and m.name
                     )
                 )
-                # Extract token usage and cost
+                # Extract token usage, cost, and step timing
                 from src.token_usage import (
+                    aggregate_timing,
                     aggregate_usage,
                     count_tool_calls,
                     estimate_cost,
@@ -134,6 +135,11 @@ async def run_single_question(
                     result["token_usage"] = aggregate_usage(raw_usage)
                     result["cost"] = estimate_cost(raw_usage)
                     result["tool_call_counts"] = count_tool_calls(messages)
+
+                raw_timing = state.values.get("step_timing", [])
+                if raw_timing:
+                    result["step_timing"] = raw_timing
+                    result["step_timing_summary"] = aggregate_timing(raw_timing)
             except Exception:
                 result["sql"] = ""
                 result["tools_used"] = []

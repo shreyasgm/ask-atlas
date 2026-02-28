@@ -81,6 +81,7 @@ class ChatResponse(BaseModel):
     token_usage: dict | None = None
     cost: dict | None = None
     tool_call_counts: dict[str, int] | None = None
+    step_timing: dict | None = None
 
 
 class ConversationSummary(BaseModel):
@@ -477,6 +478,7 @@ async def chat(
         token_usage=result.token_usage,
         cost=result.cost,
         tool_call_counts=result.tool_call_counts,
+        step_timing=result.step_timing,
     )
 
 
@@ -690,15 +692,17 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                 exc_info=True,
             )
 
-        # Extract token usage from checkpoint state
+        # Extract token usage and timing from checkpoint state
         token_usage_data = None
         cost_data = None
         tool_call_counts_data = None
+        step_timing_data = None
         try:
             state = await atlas_sql.agent.aget_state(config)
             raw_usage = state.values.get("token_usage", [])
             if raw_usage:
                 from src.token_usage import (
+                    aggregate_timing,
                     aggregate_usage,
                     count_tool_calls,
                     estimate_cost,
@@ -708,6 +712,12 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                 cost_data = estimate_cost(raw_usage)
                 state_messages = state.values.get("messages", [])
                 tool_call_counts_data = count_tool_calls(state_messages)
+
+            raw_timing = state.values.get("step_timing", [])
+            if raw_timing:
+                from src.token_usage import aggregate_timing
+
+                step_timing_data = aggregate_timing(raw_timing)
         except Exception:
             logger.warning(
                 "Failed to extract token usage for thread %s",
@@ -741,6 +751,8 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
             done_payload["cost"] = cost_data
         if tool_call_counts_data:
             done_payload["tool_call_counts"] = tool_call_counts_data
+        if step_timing_data:
+            done_payload["step_timing"] = step_timing_data
         yield {
             "event": "done",
             "data": json.dumps(done_payload),

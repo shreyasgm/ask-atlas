@@ -27,7 +27,11 @@ from pydantic import BaseModel, Field
 
 from src.prompts import DOCUMENT_SELECTION_PROMPT, DOCUMENTATION_SYNTHESIS_PROMPT
 from src.state import AtlasAgentState
-from src.token_usage import make_usage_record_from_callback, make_usage_record_from_msg
+from src.token_usage import (
+    make_usage_record_from_callback,
+    make_usage_record_from_msg,
+    node_timer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +42,8 @@ logger = logging.getLogger(__name__)
 DOCS_PIPELINE_NODES = frozenset(
     {
         "extract_docs_question",
-        "select_and_synthesize",
+        "select_docs",
+        "synthesize_docs",
         "format_docs_results",
     }
 )
@@ -295,143 +300,207 @@ async def extract_docs_question(state: AtlasAgentState) -> dict:
     Resets all ``docs_*`` state fields to defaults before populating
     the new question and context.  Pure state manipulation — no LLM call.
     """
-    last_msg = state["messages"][-1]
-    if len(last_msg.tool_calls) > 1:
-        logger.warning(
-            "LLM produced %d parallel tool_calls; only the first will be executed.",
-            len(last_msg.tool_calls),
-        )
-    args = last_msg.tool_calls[0]["args"]
-    question = args.get("question", "")
-    context = args.get("context", "")
+    async with node_timer("extract_docs_question", "docs_tool") as t:
+        last_msg = state["messages"][-1]
+        if len(last_msg.tool_calls) > 1:
+            logger.warning(
+                "LLM produced %d parallel tool_calls; only the first will be executed.",
+                len(last_msg.tool_calls),
+            )
+        args = last_msg.tool_calls[0]["args"]
+        question = args.get("question", "")
+        context = args.get("context", "")
 
     update = dict(_DOCS_STATE_DEFAULTS)
     update["docs_question"] = question
     update["docs_context"] = context
+    update["step_timing"] = [t.record]
     return update
 
 
-async def select_and_synthesize(
+async def select_docs(
     state: AtlasAgentState,
     *,
     lightweight_model: BaseLanguageModel,
     manifest: list[DocEntry],
     max_docs: int = DEFAULT_MAX_DOCS,
 ) -> dict:
-    """Select relevant docs and synthesize a response.
+    """Select relevant docs from the manifest using an LLM.
 
-    Two-step LLM process:
-    1. Selection: present manifest to lightweight LLM with structured output
-       to choose which documents to load.
-    2. Synthesis: load selected docs from disk, present to lightweight LLM
-       to produce a focused response.
+    Presents the manifest to a lightweight LLM with structured output to
+    choose which documents to load for synthesis in the next node.
 
-    Error handling:
-    - Selection fails → load ALL docs (fallback).
-    - Synthesis fails → return raw concatenated docs.
-    - Node must never raise.
+    Error handling: Selection fails → select ALL docs (fallback).
+    Node must never raise.
 
     Args:
         state: Current agent state with docs_question and docs_context.
-        lightweight_model: Lightweight LLM for selection and synthesis.
+        lightweight_model: Lightweight LLM for selection.
         manifest: Pre-loaded documentation manifest.
         max_docs: Maximum number of documents to select (default 2).
 
     Returns:
-        Dict with docs_selected_files and docs_synthesis.
+        Dict with docs_selected_files.
     """
-    question = state.get("docs_question", "")
-    context = state.get("docs_context", "")
-    context_block = f"**Context:** {context}" if context else ""
+    import time as _time
 
-    # --- Step A: Selection ---
-    selected_entries: list[DocEntry] = []
-    selected_filenames: list[str] = []
-    usage_records: list[dict] = []
+    async with node_timer("select_docs", "docs_tool") as _t:
+        question = state.get("docs_question", "")
+        context = state.get("docs_context", "")
+        context_block = f"**Context:** {context}" if context else ""
 
-    try:
-        from langchain_core.callbacks import UsageMetadataCallbackHandler
+        selected_entries: list[DocEntry] = []
+        usage_records: list[dict] = []
 
-        manifest_text = _format_manifest_for_prompt(manifest)
-        selection_prompt = DOCUMENT_SELECTION_PROMPT.format(
-            question=question,
-            context_block=context_block,
-            manifest=manifest_text,
-            max_docs=max_docs,
-        )
+        try:
+            from langchain_core.callbacks import UsageMetadataCallbackHandler
 
-        selection_model = _make_docs_selection_model(max_docs)
-        selection_llm = lightweight_model.with_structured_output(selection_model)
-        selection_handler = UsageMetadataCallbackHandler()
-        selection = await selection_llm.ainvoke(
-            selection_prompt, config={"callbacks": [selection_handler]}
-        )
-        usage_records.append(
-            make_usage_record_from_callback(
-                "select_and_synthesize", "docs_tool", selection_handler
+            manifest_text = _format_manifest_for_prompt(manifest)
+            selection_prompt = DOCUMENT_SELECTION_PROMPT.format(
+                question=question,
+                context_block=context_block,
+                manifest=manifest_text,
+                max_docs=max_docs,
             )
-        )
 
-        valid_indices = [
-            i for i in selection.selected_indices if 0 <= i < len(manifest)
-        ]
+            selection_model = _make_docs_selection_model(max_docs)
+            selection_llm = lightweight_model.with_structured_output(selection_model)
+            selection_handler = UsageMetadataCallbackHandler()
+            llm_start = _time.monotonic()
+            selection = await selection_llm.ainvoke(
+                selection_prompt, config={"callbacks": [selection_handler]}
+            )
+            _t.mark_llm(llm_start, _time.monotonic())
+            usage_records.append(
+                make_usage_record_from_callback(
+                    "select_docs", "docs_tool", selection_handler
+                )
+            )
 
-        if not valid_indices:
-            logger.warning(
-                "LLM selected no valid doc indices; falling back to all docs."
+            valid_indices = [
+                i for i in selection.selected_indices if 0 <= i < len(manifest)
+            ]
+
+            if not valid_indices:
+                logger.warning(
+                    "LLM selected no valid doc indices; falling back to all docs."
+                )
+                selected_entries = list(manifest)
+            else:
+                selected_entries = [manifest[i] for i in valid_indices]
+
+        except Exception:
+            logger.exception(
+                "Doc selection LLM failed; loading all documents as fallback."
             )
             selected_entries = list(manifest)
-        else:
-            selected_entries = [manifest[i] for i in valid_indices]
 
-    except Exception:
-        logger.exception("Doc selection LLM failed; loading all documents as fallback.")
-        selected_entries = list(manifest)
+        selected_filenames = [e.filename for e in selected_entries]
 
-    selected_filenames = [e.filename for e in selected_entries]
+    result: dict = {
+        "docs_selected_files": selected_filenames,
+        "step_timing": [_t.record],
+    }
+    if usage_records:
+        result["token_usage"] = usage_records
+    return result
 
-    # --- Step B: Assemble selected doc contents ---
-    docs_content_parts: list[str] = []
-    for entry in selected_entries:
+
+def _assemble_selected_content(
+    selected_filenames: list[str],
+    manifest: list[DocEntry],
+) -> str:
+    """Look up selected files in the manifest and assemble their content.
+
+    Args:
+        selected_filenames: Filenames chosen by select_docs.
+        manifest: Pre-loaded documentation manifest.
+
+    Returns:
+        Concatenated document content string (may be empty).
+    """
+    manifest_by_name = {e.filename: e for e in manifest}
+    parts: list[str] = []
+    for filename in selected_filenames:
+        entry = manifest_by_name.get(filename)
+        if entry is None:
+            continue
         body = entry.content
         if not body:
-            # Fallback: read from disk if content wasn't pre-loaded
             try:
                 text = entry.full_path.read_text(encoding="utf-8")
                 body = _extract_body(text)
             except OSError:
                 logger.warning("Could not read doc file: %s", entry.full_path)
                 continue
-        docs_content_parts.append(f"--- {entry.title} ({entry.filename}) ---\n\n{body}")
+        parts.append(f"--- {entry.title} ({entry.filename}) ---\n\n{body}")
+    return "\n\n".join(parts)
 
-    docs_content = "\n\n".join(docs_content_parts)
-    if not docs_content:
-        return {
-            "docs_selected_files": selected_filenames,
-            "docs_synthesis": "No documentation files could be loaded.",
-        }
 
-    # --- Step C: Synthesis ---
-    try:
-        synthesis_prompt = DOCUMENTATION_SYNTHESIS_PROMPT.format(
-            question=question,
-            context_block=context_block,
-            docs_content=docs_content,
-        )
-        response = await lightweight_model.ainvoke(synthesis_prompt)
-        synthesis = response.content if hasattr(response, "content") else str(response)
-        usage_records.append(
-            make_usage_record_from_msg("select_and_synthesize", "docs_tool", response)
-        )
-    except Exception:
-        logger.exception(
-            "Doc synthesis LLM failed; returning raw concatenated docs as fallback."
-        )
-        synthesis = docs_content
+async def synthesize_docs(
+    state: AtlasAgentState,
+    *,
+    lightweight_model: BaseLanguageModel,
+    manifest: list[DocEntry],
+) -> dict:
+    """Synthesize a response from previously selected documentation files.
 
-    result = {
-        "docs_selected_files": selected_filenames,
+    Reads docs_selected_files from state, looks up their content in the
+    manifest, and runs a synthesis LLM call.
+
+    Error handling: Synthesis fails → return raw concatenated docs.
+    Node must never raise.
+
+    Args:
+        state: Current agent state with docs_question, docs_context,
+            and docs_selected_files.
+        lightweight_model: Lightweight LLM for synthesis.
+        manifest: Pre-loaded documentation manifest.
+
+    Returns:
+        Dict with docs_synthesis.
+    """
+    import time as _time
+
+    async with node_timer("synthesize_docs", "docs_tool") as _t:
+        question = state.get("docs_question", "")
+        context = state.get("docs_context", "")
+        context_block = f"**Context:** {context}" if context else ""
+        selected_filenames = state.get("docs_selected_files", [])
+        usage_records: list[dict] = []
+
+        docs_content = _assemble_selected_content(selected_filenames, manifest)
+
+        if not docs_content:
+            return {
+                "docs_synthesis": "No documentation files could be loaded.",
+                "step_timing": [_t.record],
+            }
+
+        try:
+            synthesis_prompt = DOCUMENTATION_SYNTHESIS_PROMPT.format(
+                question=question,
+                context_block=context_block,
+                docs_content=docs_content,
+            )
+            llm_start = _time.monotonic()
+            response = await lightweight_model.ainvoke(synthesis_prompt)
+            _t.mark_llm(llm_start, _time.monotonic())
+            synthesis = (
+                response.content if hasattr(response, "content") else str(response)
+            )
+            usage_records.append(
+                make_usage_record_from_msg("synthesize_docs", "docs_tool", response)
+            )
+        except Exception:
+            logger.exception(
+                "Doc synthesis LLM failed; returning raw concatenated docs as fallback."
+            )
+            synthesis = docs_content
+
+    result: dict = {
         "docs_synthesis": synthesis,
+        "step_timing": [_t.record],
     }
     if usage_records:
         result["token_usage"] = usage_records
@@ -444,26 +513,27 @@ async def format_docs_results(state: AtlasAgentState) -> dict:
     Does NOT increment ``queries_executed`` — this is a knowledge lookup,
     not a data query.
     """
-    last_msg = state["messages"][-1]
-    tool_calls = last_msg.tool_calls
+    async with node_timer("format_docs_results", "docs_tool") as t:
+        last_msg = state["messages"][-1]
+        tool_calls = last_msg.tool_calls
 
-    synthesis = state.get("docs_synthesis", "")
-    if not synthesis:
-        synthesis = "No relevant documentation found."
+        synthesis = state.get("docs_synthesis", "")
+        if not synthesis:
+            synthesis = "No relevant documentation found."
 
-    messages: list[ToolMessage] = [
-        ToolMessage(
-            content=synthesis, tool_call_id=tool_calls[0]["id"], name="docs_tool"
-        )
-    ]
-    # Handle parallel tool_calls (only first is executed)
-    for tc in tool_calls[1:]:
-        messages.append(
+        messages: list[ToolMessage] = [
             ToolMessage(
-                content="Only one tool can be executed at a time. Please make additional requests sequentially.",
-                tool_call_id=tc["id"],
-                name="docs_tool",
+                content=synthesis, tool_call_id=tool_calls[0]["id"], name="docs_tool"
             )
-        )
+        ]
+        # Handle parallel tool_calls (only first is executed)
+        for tc in tool_calls[1:]:
+            messages.append(
+                ToolMessage(
+                    content="Only one tool can be executed at a time. Please make additional requests sequentially.",
+                    tool_call_id=tc["id"],
+                    name="docs_tool",
+                )
+            )
 
-    return {"messages": messages}
+    return {"messages": messages, "step_timing": [t.record]}
