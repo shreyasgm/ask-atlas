@@ -36,7 +36,6 @@ def _clear_settings_cache():
 class TestConfigUnit:
     """Validate configuration values (no DB required)."""
 
-    @pytest.mark.integration
     def test_settings_load_from_env(self):
         """Settings loads successfully with required env vars present."""
         settings = get_settings()

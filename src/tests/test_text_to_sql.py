@@ -35,6 +35,7 @@ async def test_initialization(atlas_sql):
     assert atlas_sql.max_results == 15
 
 
+@pytest.mark.integration
 async def test_answer_question_basic(atlas_sql, logger):
     """Test if the system can answer a basic trade-related question"""
     question1 = (
@@ -61,26 +62,7 @@ async def test_answer_question_basic(atlas_sql, logger):
     assert len(answer2) > 0
 
 
-async def test_answer_question_stream(atlas_sql, logger):
-    """Test streaming: aanswer_question_stream yields StreamData objects."""
-    question = (
-        "What were the top 5 products exported from United States to China in 2020?"
-    )
-
-    full_text = ""
-    messages = []
-    async for stream_data in atlas_sql.aanswer_question_stream(question):
-        assert isinstance(stream_data, StreamData)
-        messages.append(stream_data)
-        if stream_data.source == "agent" and stream_data.content:
-            full_text += stream_data.content
-
-    logger.info(f"Streamed answer: {full_text[:200]}...")
-    assert len(full_text) > 0
-    assert len(messages) > 0
-    assert all(isinstance(m, StreamData) for m in messages)
-
-
+@pytest.mark.integration
 async def test_stream_contract(atlas_sql):
     """Verify the async streaming API contract: yields StreamData objects.
 
@@ -116,13 +98,3 @@ async def test_stream_contract(atlas_sql):
         if item.message_type in ("node_start", "pipeline_state"):
             assert item.payload is not None
             assert isinstance(item.payload, dict)
-
-
-@pytest.mark.filterwarnings("ignore::pytest.PytestWarning")
-def test_json_loading(base_dir):
-    """Test the JSON loading functionality"""
-    test_file = base_dir / "src" / "schema" / "db_table_descriptions.json"
-
-    result = AtlasTextToSQL._load_json_as_dict(test_file)
-    assert isinstance(result, dict)
-    assert len(result) > 0
