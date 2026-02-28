@@ -6,554 +6,48 @@ This guide describes how to systematically collect ground truth Q&A pairs from t
 
 ## Table of Contents
 
-1. [Navigation & Technical Requirements](#1-navigation--technical-requirements)
-2. [GraphQL API Reference (Explore Endpoint)](#2-graphql-api-reference-explore-endpoint)
-3. [Data Points: What's New vs What's Already Covered](#3-data-points-whats-new-vs-whats-already-covered)
-4. [Country & Product Selection Matrix](#4-country--product-selection-matrix)
-5. [Question Templates by Category](#5-question-templates-by-category)
-6. [Ground Truth Recording Format](#6-ground-truth-recording-format)
-7. [Integration with the Eval System](#7-integration-with-the-eval-system)
-8. [Batch Workflow](#8-batch-workflow)
-9. [Scale & Time Estimate](#9-scale--time-estimate)
-10. [Additional Resources](#10-additional-resources)
+1. [Quick Reference & Prerequisites](#1-quick-reference--prerequisites)
+2. [Data Points: What's New vs What's Already Covered](#2-data-points-whats-new-vs-whats-already-covered)
+3. [Country & Product Selection Matrix](#3-country--product-selection-matrix)
+4. [Question Templates by Category](#4-question-templates-by-category)
+5. [Ground Truth Recording Format](#5-ground-truth-recording-format)
+6. [Integration with the Eval System](#6-integration-with-the-eval-system)
+7. [Batch Workflow](#7-batch-workflow)
+8. [Scale & Time Estimate](#8-scale--time-estimate)
+9. [Additional Resources](#9-additional-resources)
 
 ---
 
-## 1. Navigation & Technical Requirements
+## 1. Quick Reference & Prerequisites
 
-### URL Structure
+> **Full technical references:**
+> - `atlas_explore_pages_exploration.md` — URL structure, 7 visualization types,
+>   URL parameters, tooltip data, Products vs Locations modes, API→UI mapping
+> - `graphql_api_official_docs.md` — Complete Explore API schema (27 queries,
+>   40 types), official docs + introspection data
 
-- **Base URL**: `https://atlas.hks.harvard.edu/explore`
-- **Seven visualization types** (six base types, with Growth Opportunity having both graph and table views), each with a URL slug:
+**Essential quick-reference for collection:**
 
-| # | Slug | Full URL Pattern | Content |
-|---|------|-----------------|---------|
-| 1 | `treemap` | `/explore/treemap?year=2024` | Trade Composition treemap |
-| 2 | `geomap` | `/explore/geomap?year=2024` | Trade Map (choropleth world map) |
-| 3 | `overtime` | `/explore/overtime?year=2024&startYear=1995&endYear=2024` | Trade Over Time (stacked area) |
-| 4 | `marketshare` | `/explore/marketshare?year=2024&startYear=1995&endYear=2024` | Global Market Share (multi-line) |
-| 5 | `productspace` | `/explore/productspace?year=2024` | Product Space network |
-| 6 | `feasibility` | `/explore/feasibility?year=2024` | Growth Opportunity scatter |
-| 6b | `feasibility/table` | `/explore/feasibility/table?year=2024&productLevel=4` | Growth Opportunity table |
+- **Explore API endpoint**: `POST https://atlas.hks.harvard.edu/api/graphql`
+- **ID format**: Integer M49 codes (e.g., `countryId: 404` for Kenya)
+  - Different from Country Pages API which uses `"location-404"` strings
+- **Product IDs**: Internal numeric IDs, not HS codes (use `productHs92` to map)
+- **Rate limit**: ≤ 120 req/min, include `User-Agent` header
+- **No authentication required**
 
-### URL Query Parameters
+### Key difference from Country Pages API
 
-| Parameter | Values | Description |
-|-----------|--------|-------------|
-| `year` | `1995`–`2024` | Display year |
-| `startYear` | `1995`–`2024` | Time series start (overtime, marketshare) |
-| `endYear` | `1995`–`2024` | Time series end |
-| `view` | `markets` | Switch to Locations view (default is Products) |
-| `product` | `product-HS92-{id}` | Filter to specific product (internal numeric ID, not HS code) |
-| `tradeDirection` | `imports` | Switch to import flows (default = exports) |
-| `exporter` | `country-{iso}`, `group-1` (World) | Set exporter country |
-| `importer` | `country-{iso}`, `group-1` (World) | Set importer country |
-| `productLevel` | `2`, `4`, `6` | Product detail level (HS digits) |
+| Aspect | Explore API | Country Pages API |
+|--------|-------------|-------------------|
+| ID format | `countryId: 404` (integer) | `location: "location-404"` (string) |
+| Product class | `HS92`, `HS12`, `HS22`, `SITC` | `HS`, `SITC` |
+| Unique features | Bilateral trade, 6-digit, groups | `countryProfile`, narrative metrics |
 
-### Controls & Settings
-
-Each visualization has a **Settings** panel with:
-
-| Setting | Options | Available On |
-|---------|---------|-------------|
-| Detail Level | 2 digit, 4 digit, 6 digit | treemap, overtime |
-| Trade Flow | Gross, Net | treemap, overtime, geomap |
-| Product Class | HS 1992, HS 2012, HS 2022, SITC | All visualizations |
-| Color by | Sector, Complexity, Entry Year | treemap |
-
-The **Trade Over Time** visualization has a Y-axis selector with 4 metric options:
-- Current Gross Exports
-- Constant (2024 USD)
-- Per Capita
-- Per Capita Constant (2024 USD)
-
-### Two Modes: Products vs Locations
-
-Most visualizations support two perspectives toggled via Products/Locations buttons:
-
-| Mode | Shows | Example Question |
-|------|-------|-----------------|
-| **Products** | Product breakdown by sector | "What did Kenya export in 2024?" |
-| **Locations** | Trade partner breakdown by region | "Where did Kenya export to in 2024?" |
-
-**Total value distinction**: In Products mode, the total value includes both goods and services (e.g., "$16B" for Kenya). In Locations mode, the total shows goods-only (e.g., "$8.2B" for Kenya), because bilateral services trade data is excluded. This is important for data accuracy when collecting ground truth — the same country can show different total export figures depending on the mode.
-
-### Tooltip Data (Treemap)
-
-Hovering over a product in the treemap shows:
-
-**Basic tooltip:**
-- Product name + HS92 code (e.g., "Iron ores and concentrates | 2601 HS92")
-- Sector (with color swatch)
-- Export Value (e.g., "$74.1B")
-- Share (e.g., "19.68%")
-
-**Expanded tooltip (click "Show more"):**
-- Revealed Comparative Advantage (RCA) (e.g., 37.65)
-- Distance (e.g., 0.781)
-- Product Complexity Index (PCI) (e.g., -2.695)
-
-**Drill-down links:**
-- "Who exported this product?" → switches to product-centric location view
-- "Where did [country] export this product to?" → bilateral by-product view
-
-### Technical Notes
-
-- **The site is a JavaScript SPA** (React). Static HTTP fetches will not work for page content.
-- **The Explore pages use a different GraphQL API** from Country pages — these are two completely separate APIs with different schemas:
-  - Explore API: `POST /api/graphql` (27 query types, explicit HS revisions, bilateral trade, groups, better introspection)
-  - Country Pages API: `POST /api/countries/graphql` (25 query types, `countryProfile` with derived narrative metrics)
-  - Both are available on production (`atlas.hks.harvard.edu`) and staging (`staging.atlas.growthlab-dev.com`), with identical schemas within each type.
-- **Canvas-based visualizations**: treemap and product space are rendered on `<canvas>`, so tooltip data is not accessible via DOM queries. Use the GraphQL API.
-- **The "Growth Opportunity" table view** (`/explore/feasibility/table`) renders an HTML table that IS DOM-accessible — no canvas overlay.
-- **Product IDs in URLs** use an internal numeric format (`product-HS92-726` for Coffee/0901), not the HS code directly. The mapping comes from the `productHs92` query.
+> See the full comparison table in `atlas_explore_pages_exploration.md` § "Explore API vs Country Pages API".
 
 ---
 
-## 2. GraphQL API Reference (Explore Endpoint)
-
-> **NOTE:** The Explore API documented here (`/api/graphql`) is a separate API from the Country Pages API (`/api/countries/graphql`). Both are available on production (`atlas.hks.harvard.edu`) and staging (`staging.atlas.growthlab-dev.com`), with identical schemas within each API type. The Explore API has **27 query types** and **40 custom types**; the Country Pages API has **25 query types** and **49 custom types**. The Country Pages API provides unique derived metrics (`countryProfile`, lookback, etc.) not present in this API. See `docs/backend_redesign_analysis.md` for full details on how both APIs complement each other. **Rate limit (per Atlas `llms.txt`): ≤ 120 req/min (2 req/sec) for automated access. Include a `User-Agent` header.**
-
-### Endpoints
-
-**Explore API** (available on both production and staging with identical schemas):
-
-```
-POST https://atlas.hks.harvard.edu/api/graphql
-POST https://staging.atlas.growthlab-dev.com/api/graphql
-Content-Type: application/json
-```
-
-No authentication headers required. Introspection enabled.
-
-> **GraphiQL interface:** The official docs confirm that users can explore the schema interactively by navigating to `https://atlas.hks.harvard.edu/api/graphql` in a browser. This opens the GraphiQL interface, which includes a Documentation Explorer accessible via the "Docs" menu in the top right of the page. The Documentation Explorer allows clicking through the base Query object into descriptions of all fields, parameters, and response types.
-
-Per the Atlas `llms.txt`, automated access must:
-- **Limit to ≤ 120 requests per minute** (2 req/sec)
-- **Include a `User-Agent` header** (e.g., `User-Agent: ask-atlas/1.0`)
-- Prefer small, targeted queries — request only needed fields, avoid exhaustive introspection
-- Cache and reuse previous results when possible
-
-### Key Difference from Country Pages API
-
-| Aspect | Explore API (`/api/graphql`) | Country Pages API (`/api/countries/graphql`) |
-|--------|------------------------------|----------------------------------------------|
-| Query count | 27 query types, 40 custom types | 25 query types, 49 custom types |
-| ID format | Numeric integers — [M49 codes](https://unstats.un.org/unsd/methodology/m49/) as designated by the UN, which coincide with ISO 3166-1 numeric codes for most countries (e.g., `countryId: 404` for Kenya) | String IDs (`location: "location-404"`) |
-| Year params | `yearMin` / `yearMax` ranges | `year`, `minYear` / `maxYear` |
-| Product class | `HS92`, `HS12`, `HS22`, `SITC` (explicit revisions) | `HS`, `SITC` (generic) |
-| Product levels | 2, 4, **6** digit | section, twoDigit, fourDigit |
-| Services | `servicesClass: unilateral` (explicit param) | Bundled into product class |
-| Arg descriptions | Human-readable for ALL arguments | `None` for all arguments |
-| Focus | Raw trade data, bilateral flows | Analytical profiles, recommendations |
-| Unique features | Bilateral trade, groups, product relatedness (`productProduct`), 6-digit products, HS22, code conversion, data quality flags, percentile thresholds, download catalog, argument descriptions | `countryProfile` (46 derived fields), `countryLookback`, peer comparisons, policy enums, narrative-ready data |
-
-### Available Query Types (27 total)
-
-#### Core Trade Data
-
-| Query | Arguments | Returns | Purpose |
-|-------|-----------|---------|---------|
-| `countryProductYear` | `productClass, servicesClass, productLevel!, countryId, productId, yearMin, yearMax` | `[CountryProductYear]` | Country × product trade data |
-| `countryYear` | `countryId, productClass, servicesClass, yearMin, yearMax` | `[CountryYear]` | Country-level aggregates (GDP, ECI, etc.) |
-| `productYear` | `productClass, servicesClass, productLevel!, productId, yearMin, yearMax` | `[ProductYear]` | Global product-level data |
-| `countryCountryYear` | `productClass, servicesClass, countryId, partnerCountryId, yearMin, yearMax` | `[CountryCountryYear]` | Bilateral trade totals |
-| `countryCountryProductYear` | `countryId, partnerCountryId, yearMin/Max, productClass, servicesClass, productLevel, productId, productIds` | `[CountryCountryProductYear]` | Bilateral trade by product |
-| `countryCountryProductYearGrouped` | Same as `countryCountryProductYear` | `[CountryCountryProductYearGrouped]` | Grouped bilateral trade (returns `productIds` + `data` arrays) |
-
-#### Product Relatedness
-
-| Query | Arguments | Returns | Purpose |
-|-------|-----------|---------|---------|
-| `productProduct` | `productClass!, productLevel!` | `[ProductProduct]` | Product-to-product relatedness strengths (product space edges); fields: `productId, targetId, strength, productLevel` |
-
-#### Group / Regional Data
-
-| Query | Arguments | Returns | Purpose |
-|-------|-----------|---------|---------|
-| `groupYear` | `productClass, servicesClass, groupId, groupType, yearMin, yearMax` | `[GroupYear]` | Group-level aggregate trade |
-| `groupGroupProductYear` | `productClass, servicesClass, productLevel, productId, groupId, partnerGroupId, yearMin, yearMax` | `[GroupGroupProductYear]` | Group-to-group bilateral |
-| `countryGroupProductYear` | `productClass, servicesClass, productLevel, productId, countryId, partnerGroupId!, yearMin, yearMax` | `[CountryGroupProductYear]` | Country-to-group bilateral |
-| `groupCountryProductYear` | `productClass, servicesClass, productLevel, productId, groupId!, partnerCountryId, yearMin, yearMax` | `[GroupCountryProductYear]` | Group-to-country bilateral |
-
-#### Reference Data
-
-| Query | Arguments | Returns | Purpose |
-|-------|-----------|---------|---------|
-| `locationCountry` | *(none)* | `[LocationCountry]` | All countries with ISO codes, income level |
-| `locationGroup` | `groupType` | `[LocationGroup]` | Groups (continents, regions, trade blocs) with CAGR stats |
-| `productHs92` | `productLevel, servicesClass` | `[Product]` | HS92 product catalog |
-| `productHs12` | `productLevel, servicesClass` | `[Product]` | HS 2012 product catalog |
-| `productHs22` | `productLevel, servicesClass` | `[Product]` | HS 2022 product catalog |
-| `productSitc` | `productLevel, servicesClass` | `[Product]` | SITC product catalog |
-| `year` | `yearMin, yearMax` | `[Year]` | Available years with deflators |
-
-#### Metadata & Diagnostics
-
-| Query | Arguments | Returns | Purpose |
-|-------|-----------|---------|---------|
-| `countryYearThresholds` | `productClass!, countryId, yearMin, yearMax` | `[CountryYearThresholds]` | Percentile distributions for complexity vars |
-| `dataFlags` | `countryId` | `[DataFlags]` | Data quality flags per country |
-| `dataAvailability` | *(none)* | `[DataAvailability]` | Year ranges per classification |
-| `conversionPath` | `sourceCode!, sourceClassification!, targetClassification!` | `[ConversionClassifications]` | HS/SITC code conversion |
-| `conversionSources` | `targetCode!, targetClassification!, sourceClassification!` | `[ConversionClassifications]` | Reverse code lookup |
-| `conversionWeights` | `sitc1962, sitc1976, sitc1988, hs1992, hs1997, hs2002, hs2007, hs2012, hs2017, hs2022` | `[ConversionWeights]` | Weighted conversion between classifications |
-| `downloadsTable` | *(none)* | `[DownloadsTable]` | Data download catalog (70 entries) |
-| `banner` | *(none)* | `[Banner]` | Site announcement banners (currently empty) |
-| `metadata` | *(none)* | `Metadata` | Server/ingestion info |
-
-### Key Type Schemas
-
-#### `CountryProductYear` (the richest type)
-
-```
-countryId, locationLevel, productId, productLevel, year
-exportValue, importValue, globalMarketShare
-exportRca, exportRpop
-isNew, productStatus (absent/lost/new/present)
-cog, distance
-normalizedPci, normalizedCog, normalizedDistance, normalizedExportRca
-normalizedPciRcalt1, normalizedCogRcalt1, normalizedDistanceRcalt1, normalizedExportRcaRcalt1
-```
-
-#### `CountryYear`
-
-```
-countryId, year
-exportValue, importValue
-population, gdp, gdppc, gdpPpp, gdppcPpp
-gdpConst, gdpPppConst, gdppcConst, gdppcPppConst
-eci, eciFixed, coi
-currentAccount, growthProj
-```
-
-#### `ProductYear`
-
-```
-productId, productLevel, year
-exportValue, importValue
-exportValueConstGrowth5, importValueConstGrowth5
-exportValueConstCagr5, importValueConstCagr5
-pci, complexityEnum (low/moderate/high)
-```
-
-#### `CountryCountryYear`
-
-```
-countryId, partnerCountryId, year
-exportValue, exportValueReported
-importValue, importValueReported
-```
-
-#### `CountryCountryProductYear` (11 fields)
-
-```
-countryId, locationLevel, partnerCountryId, partnerLevel
-productId, productLevel, year
-exportValue, importValue
-exportValueReported, importValueReported
-```
-
-#### `ProductProduct` (4 fields)
-
-```
-productId, targetId, strength, productLevel
-```
-
-Purpose: Encodes the product space network edges. Each row is a pair of products with a `strength` value indicating how related they are (based on co-export patterns).
-
-#### `Product`
-
-```
-productId, productLevel, code
-nameEn, nameShortEn
-productType (good/service)
-parent, topParent, productIdHierarchy
-clusterId, productSpaceX, productSpaceY
-naturalResource, greenProduct
-isShown, globalExportThreshold, showFeasibility
-```
-
-#### `LocationCountry`
-
-```
-countryId, locationLevel
-iso3Code, iso2Code, legacyCountryId
-nameEn, nameShortEn, nameAbbrEn
-incomelevelEnum (high/upper_middle/lower_middle/low)
-isTrusted, formerCountry
-inRankings, inCp, inMv
-reportedServ, reportedServRecent
-```
-
-#### `LocationGroup`
-
-```
-groupId, groupName, groupType
-members (list of country IDs)
-parentId, parentName, parentType
-gdpMean, gdpSum
-exportValueMean, exportValueSum
-exportValueCagr3/5/10/15
-exportValueNonOilCagr3/5/10/15
-gdpCagr3/5/10/15, gdpConstCagr3/5/10/15
-gdppcConstCagr3/5/10/15
-```
-
-#### `GroupYear` (8 fields)
-
-```
-groupId, groupType, year
-population, gdp, gdpPpp
-exportValue, importValue
-```
-
-#### `GroupGroupProductYear` (11 fields)
-
-```
-groupId, groupType, locationLevel
-partnerGroupId, partnerType, partnerLevel
-productId, productLevel, year
-exportValue, importValue
-```
-
-#### `CountryGroupProductYear` (9 fields)
-
-```
-locationLevel, partnerLevel
-productId, productLevel, year
-exportValue, importValue
-countryId, partnerGroupId
-```
-
-#### `GroupCountryProductYear` (9 fields)
-
-```
-locationLevel, partnerLevel
-productId, productLevel, year
-exportValue, importValue
-groupId, partnerCountryId
-```
-
-#### `Year` (2 fields)
-
-```
-year, deflator
-```
-
-#### `Metadata` (4 fields)
-
-```
-serverName, ingestionCommit, ingestionDate, apiCommit
-```
-
-#### `CountryYearThresholds` (18 fields)
-
-```
-countryId, year, variable
-mean, median, min, max, std
-percentile10, percentile20, percentile25, percentile30
-percentile40, percentile50, percentile60
-percentile70, percentile75, percentile80, percentile90
-```
-
-#### `DataFlags` (20 fields)
-
-```
-countryId, formerCountry, countryProject
-rankingsOverride, cpOverride
-year, minPopulation, population
-minAvgExport, avgExport3
-complexityCurrentYearCoverage, complexityLookbackYearsCoverage
-imfAnyCoverage, imfCurrentYearsCoverage, imfLookbackYearsCoverage
-rankingsEligible, countryProfilesEligible
-inRankings, inCp, inMv
-```
-
-#### `ConversionClassifications` (3 fields)
-
-```
-fromClassification, toClassification, codes (list of ConversionCodes)
-```
-
-#### `ConversionWeights` (19 fields)
-
-```
-sitc1962, sitc1976, weightSitc1962Sitc1976
-sitc1988, weightSitc1976Sitc1988
-hs1992, weightSitc1988Hs1992
-hs1997, weightHs1992Hs1997
-hs2002, weightHs1997Hs2002
-hs2007, weightHs2002Hs2007
-hs2012, weightHs2007Hs2012
-hs2017, weightHs2012Hs2017
-hs2022, weightHs2017Hs2022
-```
-
-#### `DownloadsTable` (17+ fields)
-
-```
-tableId, tableName, tableDataType, repo
-complexityData, productLevel, facet
-yearMin, yearMax, displayName
-productClassificationHs92, productClassificationHs12
-productClassificationHs22, productClassificationSitc
-productClassificationServicesUnilateral
-dvFileId, dvFileName, dvFileSize, dvPublicationDate, doi
-columns (list of DownloadsColumn)
-```
-
-#### `Banner` (6 fields)
-
-```
-bannerId, startTime, endTime
-text, ctaText, ctaLink
-```
-
-### Enum Values
-
-| Enum | Values |
-|------|--------|
-| `ProductClass` | `HS92`, `HS12`, `HS22`, `SITC` |
-| `ServicesClass` | `unilateral` |
-| `ComplexityLevel` | `low`, `moderate`, `high` |
-| `LocationLevel` | `country`, `group` |
-| `GroupType` | `continent`, `political`, `region`, `rock_song`, `subregion`, `trade`, `wdi_income_level`, `wdi_region`, `world` |
-| `ProductType` | `good`, `service` |
-| `ProductStatus` | `absent`, `lost`, `new`, `present` |
-| `IncomeLevel` | `high`, `upper_middle`, `lower_middle`, `low` |
-| `ClassificationEnum` | `SITC1962`, `SITC1976`, `SITC1988`, `HS1992`, `HS1997`, `HS2002`, `HS2007`, `HS2012`, `HS2017`, `HS2022` |
-| `DownloadTableDataType` | `unilateral`, `bilateral`, `product`, `classification`, `product_space`, `rankings` |
-| `DownloadTableFacet` | `CPY`, `CY`, `PY`, `CCY`, `CCPY` |
-| `DownloadTableRepo` | `rankings`, `hs92`, `hs12`, `hs22`, `sitc`, `services_unilateral`, `classification`, `product_space` |
-
-### Working Sample Queries
-
-**Country-product data for Kenya, Coffee (0901), 2024:**
-
-```graphql
-{
-  countryProductYear(
-    productClass: HS92,
-    productLevel: 4,
-    countryId: 404,
-    productId: 726,
-    yearMin: 2024,
-    yearMax: 2024
-  ) {
-    countryId productId year
-    exportValue importValue
-    globalMarketShare exportRca
-    distance cog
-    normalizedPci normalizedCog normalizedDistance
-    productStatus
-  }
-}
-```
-
-**Note on product IDs**: The Explore API uses internal numeric product IDs (e.g., 726 for Coffee/0901), NOT the HS code directly. Use `productHs92(productLevel: 4)` to get the mapping from HS code → product ID.
-
-**Product ID mapping for selected products** (retrieved from the `productHs92` query):
-
-| HS92 Code | Internal Product ID | Product Name |
-|-----------|-------------------|-------------|
-| 0901 | 726 | Coffee |
-| 0902 | 727 | Tea |
-| 2601 | 1506 | Iron ores |
-| 2710 | 1584 | Petroleum oils, refined |
-| 3004 | 1748 | Medicaments |
-| 6109 | 2801 | T-shirts |
-| 8542 | 3595 | Electronic integrated circuits |
-| 8703 | 3667 | Cars |
-
-These IDs are used in URLs (e.g., `product=product-HS92-726` for Coffee) and API queries (e.g., `productId: 726`).
-
-**Global product data for Coffee, 2020-2024:**
-
-```graphql
-{
-  productYear(
-    productClass: HS92,
-    productLevel: 4,
-    productId: 726,
-    yearMin: 2020,
-    yearMax: 2024
-  ) {
-    productId year
-    exportValue importValue
-    pci complexityEnum
-    exportValueConstCagr5
-  }
-}
-```
-
-**Bilateral trade: Kenya → USA, Coffee, 2024:**
-
-```graphql
-{
-  countryCountryProductYear(
-    countryId: 404,
-    partnerCountryId: 840,
-    productClass: HS92,
-    productLevel: 4,
-    productId: 726,
-    yearMin: 2024,
-    yearMax: 2024
-  ) {
-    countryId partnerCountryId productId year
-    exportValue importValue
-  }
-}
-```
-
-**Country-level time series for Kenya, 2015-2024:**
-
-```graphql
-{
-  countryYear(
-    countryId: 404,
-    productClass: HS92,
-    yearMin: 2015,
-    yearMax: 2024
-  ) {
-    countryId year
-    exportValue importValue
-    gdppc gdppcPpp
-    eci coi growthProj
-    population
-  }
-}
-```
-
-**All countries metadata:**
-
-```graphql
-{
-  locationCountry {
-    countryId iso3Code iso2Code
-    nameEn nameShortEn
-    incomelevelEnum
-    inRankings inCp
-  }
-}
-```
-
-**Product catalog (HS92, 4-digit):**
-
-```graphql
-{
-  productHs92(productLevel: 4) {
-    productId code
-    nameEn nameShortEn
-    productType
-    naturalResource greenProduct
-  }
-}
-```
-
----
-
-## 3. Data Points: What's New vs What's Already Covered
+## 2. Data Points: What's New vs What's Already Covered
 
 ### Principle: No Duplication
 
@@ -604,7 +98,7 @@ Instead, Explore pages provide data points that country pages **cannot** answer:
 
 ---
 
-## 4. Country & Product Selection Matrix
+## 3. Country & Product Selection Matrix
 
 ### Selected Countries (same 8 as Country Pages)
 
@@ -653,7 +147,7 @@ Each question template uses 1–2 country-product combinations. Spread across th
 
 ---
 
-## 5. Question Templates by Category
+## 4. Question Templates by Category
 
 Each template specifies:
 - **Question template** with `{country}`, `{product}`, `{partner}` placeholders
@@ -663,7 +157,7 @@ Each template specifies:
 
 ---
 
-### 5.1 Product-Level Complexity & Competitiveness
+### 4.1 Product-Level Complexity & Competitiveness
 
 **Focus**: RCA, PCI, distance, COG for specific country×product pairs — data visible in Explore treemap tooltips but not extractable from country pages.
 
@@ -681,7 +175,7 @@ Each template specifies:
 
 ---
 
-### 5.2 Global Product Statistics
+### 4.2 Global Product Statistics
 
 **Focus**: Product-level global data that country pages never show — global trade value, PCI, growth rate.
 
@@ -697,7 +191,7 @@ Each template specifies:
 
 ---
 
-### 5.3 Bilateral Trade
+### 4.3 Bilateral Trade
 
 **Focus**: Country-to-country trade flows (total and by product) — a dimension country pages don't expose beyond top 3 partners.
 
@@ -713,7 +207,7 @@ Each template specifies:
 
 ---
 
-### 5.4 Import Composition
+### 4.4 Import Composition
 
 **Focus**: Product-level imports — country pages show total imports but not the product breakdown.
 
@@ -728,7 +222,7 @@ Each template specifies:
 
 ---
 
-### 5.5 Trade Time Series & Growth
+### 4.5 Trade Time Series & Growth
 
 **Focus**: Year-by-year trade data, constant-dollar values, per-capita metrics — visible in Trade Over Time but not extractable from country pages.
 
@@ -745,7 +239,7 @@ Each template specifies:
 
 ---
 
-### 5.6 Feasibility & Growth Opportunities (Explore Specific)
+### 4.6 Feasibility & Growth Opportunities (Explore Specific)
 
 **Focus**: The Growth Opportunity table with numeric values (not diamond ratings like country pages) — distance, COG, PCI, global size, 5yr growth.
 
@@ -759,7 +253,7 @@ Each template specifies:
 
 ---
 
-### 5.7 Regional & Group Aggregates
+### 4.7 Regional & Group Aggregates
 
 **Focus**: Trade data at regional/continental/income-group level — entirely unique to Explore.
 
@@ -774,7 +268,7 @@ Each template specifies:
 
 ---
 
-### 5.8 Product Classification & Metadata
+### 4.8 Product Classification & Metadata
 
 **Focus**: Product classification details, natural resource flags, classification conversion — data accessible only via the Explore API.
 
@@ -805,9 +299,9 @@ Each template specifies:
 
 ---
 
-## 6. Ground Truth Recording Format
+## 5. Ground Truth Recording Format
 
-### 6.1 `question.json` Schema
+### 5.1 `question.json` Schema
 
 ```json
 {
@@ -825,7 +319,7 @@ Each template specifies:
 - `atlas_url`: The Explore page URL where the answer is visually verifiable. For API-only data points, use the closest relevant Explore URL.
 - `question_id`: Continue from the highest existing ID (currently 169).
 
-### 6.2 `results.json` Schema
+### 5.2 `results.json` Schema
 
 ```json
 {
@@ -858,7 +352,7 @@ Each template specifies:
 
 ---
 
-## 7. Integration with the Eval System
+## 6. Integration with the Eval System
 
 ### File Locations
 
@@ -914,7 +408,7 @@ Same structure as country page questions:
 
 ---
 
-## 8. Batch Workflow
+## 7. Batch Workflow
 
 ### Layer 1: GraphQL API Script (Primary — ~95%)
 
@@ -1144,7 +638,7 @@ Document any discrepancies as comments in the ground truth `results.json` and ad
 - For regional data, query `locationGroup` and `groupYear`
 
 **Step 3: Generate question.json and results.json files**
-- Use templates from section 5 to generate questions
+- Use templates from section 4 to generate questions
 - Fill in actual values from API responses
 - Write files to `evaluation/questions/{id}/` and `evaluation/results/{id}/ground_truth/`
 
@@ -1161,7 +655,7 @@ Document any discrepancies as comments in the ground truth `results.json` and ad
 
 ---
 
-## 9. Scale & Time Estimate
+## 8. Scale & Time Estimate
 
 ### Expected Question Count
 
@@ -1194,7 +688,7 @@ Document any discrepancies as comments in the ground truth `results.json` and ad
 
 ---
 
-## 10. Additional Resources
+## 9. Additional Resources
 
 ### Bulk Data Downloads
 

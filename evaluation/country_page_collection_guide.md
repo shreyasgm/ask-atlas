@@ -1,12 +1,12 @@
 # Atlas Country Page — Ground Truth Collection Guide
 
-This guide describes how to systematically collect ground truth Q&A pairs from the Atlas of Economic Complexity country pages and integrate them into the eval system. It is self-contained: an agent (or human) can follow it without external context.
+This guide describes how to systematically collect ground truth Q&A pairs from the Atlas of Economic Complexity country pages and integrate them into the eval system.
 
 ---
 
 ## Table of Contents
 
-1. [Navigation & Technical Requirements](#1-navigation--technical-requirements)
+1. [Quick Reference & Prerequisites](#1-quick-reference--prerequisites)
 2. [Country Selection & Assignment Matrix](#2-country-selection--assignment-matrix)
 3. [Question Templates by Category](#3-question-templates-by-category)
 4. [Ground Truth Recording Format](#4-ground-truth-recording-format)
@@ -16,268 +16,32 @@ This guide describes how to systematically collect ground truth Q&A pairs from t
 
 ---
 
-## 1. Navigation & Technical Requirements
+## 1. Quick Reference & Prerequisites
 
-### URL Structure
+> **Full technical reference**: See `atlas_country_pages_exploration.md` for complete
+> URL structure (12 subpages), GraphQL API details (25 query types, type schemas,
+> enum values), and sample queries with verified responses.
 
-- **Base URL**: `https://atlas.hks.harvard.edu/countries/{m49_code}`
-- **Country IDs**: [M49 codes as designated by the UN](https://unstats.un.org/unsd/methodology/m49/) (which coincide with ISO 3166-1 numeric codes for most countries) — e.g., 840 = USA, 404 = Kenya, 724 = Spain
-- **Total countries on Atlas**: 145
+**Essential quick-reference for collection:**
 
-### The 12 Subpages
-
-| # | Slug | Full URL Pattern | Content |
-|---|------|-----------------|---------|
-| 1 | *(none)* | `/countries/{id}` | Country introduction: GDP, population, ECI, growth projection |
-| 2 | `export-basket` | `/countries/{id}/export-basket` | Treemap of exports, trade totals, top partners |
-| 3 | `export-complexity` | `/countries/{id}/export-complexity` | Treemap colored by PCI, ECI stats |
-| 4 | `growth-dynamics` | `/countries/{id}/growth-dynamics` | Scatter of product growth vs complexity |
-| 5 | `market-share` | `/countries/{id}/market-share` | Time series of global market share by sector |
-| 6 | `new-products` | `/countries/{id}/new-products` | New products treemap, diversification stats |
-| 7 | `product-space` | `/countries/{id}/product-space` | Generic Product Space explanation (no country data) |
-| 8 | `paths` | `/countries/{id}/paths` | Country-specific product space network |
-| 9 | `strategic-approach` | `/countries/{id}/strategic-approach` | Quadrant scatter: recommended strategy |
-| 10 | `growth-opportunities` | `/countries/{id}/growth-opportunities` | Product opportunities scatter (non-frontier only) |
-| 11 | `product-table` | `/countries/{id}/product-table` | Top 50 product opportunities table (non-frontier only) |
-| 12 | `summary` | `/countries/{id}/summary` | Summary stat cards |
+- **Country Pages API endpoint**: `POST https://atlas.hks.harvard.edu/api/countries/graphql`
+- **ID format**: `"location-{m49_code}"` (e.g., `"location-404"` for Kenya)
+- **Rate limit**: ≤ 120 req/min, include `User-Agent` header
+- **No authentication required**
 
 ### Technical Notes
 
-- **The site is a JavaScript SPA** (React, not Next.js). Static HTTP fetches will not work for page content, but **the site has a public GraphQL API** (see section 1b below) that provides ~85% of data points without browser automation.
-- **For browser-based extraction**: Wait ~4-5 seconds after navigating to any page before reading content. JS rendering and data loading take time.
-- **Tooltips require hover interaction.** For treemap and scatter data, hover over elements to reveal tooltip values. **However, the GraphQL API returns the same data directly** — tooltip hovering is no longer needed for most data points.
-- **Toggle dropdowns** may need explicit clicks to switch between views (e.g., "export destination" vs "import origin" on the export basket page).
-- **Skip subpage 7 (`product-space`)**: It is a generic educational page with no country-specific data.
-- **Subpages 10 and 11** (`growth-opportunities`, `product-table`) are **not available for frontier/highest-complexity countries** (e.g., USA, Germany). They display "Visualization not available for highest complexity countries."
-- **Treemaps are rendered on `<canvas>` elements** (not SVG/DOM), so tooltip data is inaccessible via DOM queries or accessibility trees. Use the GraphQL API instead.
+- **The site is a JavaScript SPA** (React). Static HTTP fetches won't work for page content, but the GraphQL API provides ~85% of data points without browser automation.
+- **For browser-based extraction**: Wait ~4-5 s after navigation for JS rendering.
+- **Treemaps are `<canvas>` elements** — use the API instead of DOM queries for treemap data.
+- **Subpages 10 and 11** (`growth-opportunities`, `product-table`) are unavailable for frontier countries (e.g., USA, Germany).
 
----
+### URL Structure (summary)
 
-## 1b. GraphQL API Reference
-
-> **Note:** In addition to this Country Pages API, there is a separate **Explore API** at `/api/graphql` (available on both production and staging). The Explore API uses integer IDs (`countryId: 404`), explicit product classes (`HS92`, `HS12`, `HS22`, `SITC`), integer product levels (`1`, `2`, `4`, `6`), built-in year ranges (`yearMin`/`yearMax`), and provides bilateral trade, group-level queries, and 6-digit product granularity. It does not have the `countryProfile` endpoint or its derived metrics — for those, use the Country Pages API below. Both API types are available on production (`atlas.hks.harvard.edu`) and staging (`staging.atlas.growthlab-dev.com`), with identical schemas within each type. See `docs/backend_redesign_analysis.md` for full details on all four endpoints. **Rate limit (per Atlas `llms.txt`): ≤ 120 req/min (2 req/sec) for automated access. Include a `User-Agent` header.**
-
-### Discovery
-
-The Atlas website makes ~20 GraphQL POST requests per page load to a **public, unauthenticated API** with introspection enabled. This means ~85% of data points can be extracted via direct API queries without any browser automation.
-
-For the Explore API, the official docs confirm that navigating to [`https://atlas.hks.harvard.edu/api/graphql`](https://atlas.hks.harvard.edu/api/graphql) in a browser opens a **GraphiQL interface** with a Documentation Explorer (accessible via the "Docs" menu in the top right). This provides an interactive way to browse all queries, types, and field descriptions for the Explore API schema.
-
-### Endpoints
-
-> **Documentation note:** Only the **Explore API** (`/api/graphql`) has [official documentation from the Growth Lab](https://github.com/harvard-growth-lab/api-docs/blob/main/atlas.md). The **Country Pages API** (`/api/countries/graphql`) is **not officially documented** — our knowledge of it comes entirely from reverse-engineering the Atlas website's network requests and GraphQL introspection. Treat Country Pages API details as best-effort research, not authoritative specifications. The official docs also confirm that the [GraphiQL interface](https://atlas.hks.harvard.edu/api/graphql) is accessible by navigating to the Explore API URL in a browser; this may or may not work for the Country Pages API endpoint.
-
-**Country Pages API** (used by the Atlas country pages — **undocumented**):
-
-```
-POST https://atlas.hks.harvard.edu/api/countries/graphql
-Content-Type: application/json
-```
-
-Also available at `https://staging.atlas.growthlab-dev.com/api/countries/graphql` (identical schema).
-
-**Explore API** (used by the Atlas explore pages; [officially documented](https://github.com/harvard-growth-lab/api-docs/blob/main/atlas.md) — use only for data unique to this API: bilateral trade, 6-digit products, HS 2022, group/regional queries; for overlapping data points, prefer the Country Pages API above):
-
-```
-POST https://atlas.hks.harvard.edu/api/graphql
-Content-Type: application/json
-```
-
-Also available at `https://staging.atlas.growthlab-dev.com/api/graphql` (identical schema).
-
-No authentication headers are required for any endpoint. Per the Atlas `llms.txt`, automated access must:
-- **Limit to ≤ 120 requests per minute** (2 req/sec)
-- **Include a `User-Agent` header** (e.g., `User-Agent: ask-atlas/1.0`)
-- Prefer small, targeted queries — request only needed fields, avoid exhaustive introspection
-- Cache and reuse previous results when possible
-- **For bulk data**, use the [Atlas data downloads page](https://atlas.hks.harvard.edu/data-downloads) instead of the API — it provides pre-generated tables for download
-
-> **Official usage warning (from the Growth Lab API docs):** "The Atlas API is best used to access data for stand-alone economic analysis, not to support other software applications."
-
-### ID Format
-
-The API uses a **`location-{m49_code}`** format for country IDs (where the numeric portion is the [UN M49 code](https://unstats.un.org/unsd/methodology/m49/)):
-
-| URL Path | GraphQL ID |
-|----------|-----------|
-| `/countries/404` (Kenya) | `"location-404"` |
-| `/countries/840` (USA) | `"location-840"` |
-| `/countries/276` (Germany) | `"location-276"` |
-
-The bare numeric ID (e.g., `"404"`) will fail with "Not a supported country." Always prefix with `location-`.
-
-### Available Query Types (25 total)
-
-```
-treeMap              productYear          allProductYear
-productYearRange     allProductYearRange  productSpace
-product              allProducts          newProductsCountry
-newProductsComparisonCountries            location
-allLocations         group                allGroups
-globalDatum          countryYear          allCountryYear
-countryYearRange     allCountryYearRange  countryProfile
-allCountryProfiles   allCountryProductYear
-manyCountryProductYear                    countryProductLookback
-countryLookback
-```
-
-### Key Query Signatures
-
-| Query | Arguments | Returns |
-|-------|-----------|---------|
-| `countryProfile` | `location: ID` | `CountryProfile` |
-| `treeMap` | `facet: TreeMapType, productClass: ProductClass, year: Int, productLevel: ProductLevel, locationLevel: LocationLevel, location: ID, product: ID, partner: ID, mergePci: Boolean` | `TreeMapDatum` (union) |
-| `productYear` | `product: ID, year: Int` | `ProductYear` |
-| `productYearRange` | `product: ID, minYear: Int, maxYear: Int` | `ProductYearRange` |
-| `productSpace` | `productClass: ProductClass, year: Int, location: ID` | `ProductSpaceDatum` |
-| `allCountryProfiles` | *(none)* | `[CountryProfile]` |
-| `newProductsCountry` | *(see introspection)* | `NewProductsCountry` |
-| `countryYearRange` | *(see introspection)* | `CountryYearRange` |
-
-### Enum Values
-
-| Enum | Values |
-|------|--------|
-| `TreeMapType` | `CPY_C` (country exports), `CPY_P` (by product), `CCY_C` (bilateral trade) |
-| `ProductClass` | `HS` |
-| `ProductLevel` | `fourDigit` |
-| `LocationLevel` | `country`, `region` |
-| `IncomeClassification` | `LowerMiddle`, and others (see introspection) |
-
-### Nested Type Structures
-
-Several `CountryProfile` fields return composite objects requiring sub-selections:
-
-| Field Type | Sub-fields | Example |
-|-----------|------------|---------|
-| `IntForYear` | `quantity: Int!, year: Int!` | `latestGdpPerCapita { quantity year }` |
-| `IntForNotRequiredYear` | `quantity: Int, year: Int` | `latestGdpPerCapitaPpp { quantity year }` |
-| `FloatForYear` | `quantity: Float!, year: Float!` | *(similar pattern)* |
-| `FloatForNotRequiredYear` | `quantity: Float, year: Int` | `currentAccount { quantity year }` |
-| `Product` | `id, code, level, parent, topLevelParent, longName, shortName, productType, neverShow, hideFeasibility` | `marketShareMainSector { shortName code }` |
-
-### CountryProfile Fields (partial list, truncated in discovery)
-
-```
-location, latestPopulation, latestGdp, latestGdpRank, latestGdpPpp,
-latestGdpPppRank, latestGdpPerCapita, latestGdpPerCapitaRank,
-latestGdpPerCapitaPpp, latestGdpPerCapitaPppRank, incomeClassification,
-exportValue, importValue, exportValueRank, exportValueNatResources,
-importValueNatResources, netExportValueNatResources, exportValueNonOil,
-newProductExportValue, newProductExportValuePerCapita,
-newProductsIncomeGrowthComments, newProductsComments,
-newProductsComplexityStatusGrowthPrediction, currentAccount,
-latestEci, latestEciRank, eciNatResourcesGdpControlled,
-latestCoi, latestCoiRank, coiClassification, growthProjection,
-growthProjectionRank, growthProjectionClassification,
-growthProjectionRelativeToIncome,
-growthProjectionPercentileClassification, comparisonLocations,
-diversity, diversityRank, diversificationGrade,
-marketShareMainSector, marketShareMainSectorDirection,
-marketShareMainSectorPositiveGrowth, structuralTransformationStep, ...
-```
-
-### Working Sample Queries
-
-**Country profile for Kenya:**
-
-```graphql
-{
-  countryProfile(location: "location-404") {
-    latestGdpPerCapita { quantity year }
-    latestGdpPerCapitaRank { quantity year }
-    latestGdpPerCapitaPpp { quantity year }
-    incomeClassification
-    latestPopulation { quantity year }
-    exportValue
-    importValue
-    exportValueRank
-    latestEci
-    latestEciRank
-    latestCoi
-    latestCoiRank
-    growthProjection
-    growthProjectionRank
-    diversificationGrade
-    diversityRank
-    diversity
-    currentAccount { quantity year }
-    marketShareMainSector { shortName code }
-  }
-}
-```
-
-**Verified response (Kenya, February 2026):**
-
-```json
-{
-  "data": {
-    "countryProfile": {
-      "latestGdpPerCapita": { "quantity": 2274, "year": 2024 },
-      "latestGdpPerCapitaRank": { "quantity": 116, "year": 2024 },
-      "latestGdpPerCapitaPpp": { "quantity": 7159, "year": 2024 },
-      "incomeClassification": "LowerMiddle",
-      "latestPopulation": { "quantity": 52444000, "year": 2024 },
-      "exportValue": 16218559749.40366,
-      "importValue": 29321913947.698288,
-      "exportValueRank": 90,
-      "latestEci": -0.2657129168510437,
-      "latestEciRank": 91,
-      "latestCoi": 1.6222412586212158,
-      "latestCoiRank": 8,
-      "growthProjection": 0.03383,
-      "growthProjectionRank": 39,
-      "diversificationGrade": "B",
-      "diversityRank": 38,
-      "diversity": 226,
-      "currentAccount": { "quantity": -2715000000, "year": 2024 },
-      "marketShareMainSector": { "shortName": "Services", "code": "..." }
-    }
-  }
-}
-```
-
-**Export treemap for Kenya:**
-
-```graphql
-{
-  treeMap(facet: CPY_C, productClass: HS, year: 2024,
-          productLevel: fourDigit, locationLevel: country,
-          location: "location-404") {
-    ... on TreeMapProduct {
-      product { shortName code }
-      exportValue
-      pci
-    }
-  }
-}
-```
-
-**Verified response (top 8 by export value):**
-
-```json
-{
-  "total": 1194,
-  "top8": [
-    { "name": "Travel & tourism", "code": "travel", "value": 3496641908.95 },
-    { "name": "Transport", "code": "transport", "value": 2193409469.31 },
-    { "name": "Business", "code": "ict", "value": 1510674966.64 },
-    { "name": "Tea", "code": "0902", "value": 1385422508 },
-    { "name": "Petroleum oils, refined", "code": "2710", "value": 885687014 },
-    { "name": "Insurance & finance", "code": "financial", "value": 830426643.89 },
-    { "name": "Cut flowers", "code": "0603", "value": 737518130 },
-    { "name": "Coffee", "code": "0901", "value": 281890503 }
-  ]
-}
-```
-
-**List all country IDs:**
-
-```graphql
-{ allCountryProfiles { location { id shortName longName } } }
-```
-
-Returns 145 countries. Sample: `location-4` (Afghanistan), `location-8` (Albania), `location-404` (Kenya).
+- **Base URL**: `https://atlas.hks.harvard.edu/countries/{m49_code}`
+- **Country IDs**: M49 codes — e.g., 840 = USA, 404 = Kenya, 724 = Spain. **Total**: 145 countries.
+- **12 subpages** per country (see `atlas_country_pages_exploration.md` § "Page-by-Page Exploration" for full table)
+- **Explore API** (separate): `POST https://atlas.hks.harvard.edu/api/graphql` — uses integer IDs (`countryId: 404`), covers bilateral trade, 6-digit products, groups. See `atlas_explore_pages_exploration.md`.
 
 ### Data Points Available via API vs Browser
 
@@ -286,7 +50,7 @@ Returns 145 countries. Sample: `location-4` (Afghanistan), `location-8` (Albania
 | **GraphQL API** | ~50-56 of 62 | ~85% | GDP, ECI, exports, treemap products, diversity grade, COI, growth projection, rankings |
 | **Browser only** | ~6-12 of 62 | ~15% | Client-rendered narrative text: growth pattern descriptions, structural transformation text, strategic approach descriptions, complexity-income relationship text, comparison to regional averages |
 
-**Rule of thumb:** If the data point is a **number, rank, enum, or structured value**, it is available via the API. If it is a **generated narrative sentence**, it requires browser rendering.
+**Rule of thumb:** Numbers/ranks/enums → API. Narrative sentences → Browser.
 
 ---
 
@@ -338,7 +102,7 @@ This matrix assigns primary countries to each question category. Follow it to ma
 Each template below specifies:
 - **Question template** with `{country}` placeholder
 - **Subpage URL** where the answer is found
-- **Extraction method** — prefixed with **API** (GraphQL query, see section 1b) or **Browser** (requires page rendering)
+- **Extraction method** — prefixed with **API** (GraphQL query, see `atlas_country_pages_exploration.md`) or **Browser** (requires page rendering)
 - **Category** and **difficulty** for the question metadata
 
 Data point numbers (DP#) reference the catalog in `evaluation/atlas_country_pages_exploration.md`.
@@ -684,7 +448,7 @@ Country page questions will be scored using the existing **ground truth mode** (
 
 ## 6. Batch Workflow (Three-Layer Approach)
 
-The discovery of the GraphQL API (section 1b) fundamentally changes the collection approach. Instead of visiting 80+ subpages via browser automation, use a **three-layer strategy**:
+The GraphQL API (see `atlas_country_pages_exploration.md`) fundamentally changes the collection approach. Instead of visiting 80+ subpages via browser automation, use a **three-layer strategy**:
 
 1. **Layer 1 — GraphQL API script** (~85% of data points, no browser needed)
 2. **Layer 2 — Browser text extraction** (~15% of data points, narrative text only)
