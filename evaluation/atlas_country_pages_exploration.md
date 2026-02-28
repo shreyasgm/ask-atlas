@@ -686,7 +686,7 @@ FloatForNotRequiredYear: { quantity: Float, year: Int }
 | Enum | Values |
 |------|--------|
 | `TreeMapType` | `CPY_C`, `CPY_P`, `CCY_C` |
-| `ProductClass` | `HS`, `SITC` |
+| `ProductClass` | `HS`, `SITC` — **only two values; no `HS12` or `HS22`**. `HS` is equivalent to HS92. Passing `HS12` returns a GraphQL validation error. |
 | `ProductLevel` | `section`, `twoDigit`, `fourDigit` |
 | `LocationLevel` | `country`, `region` |
 | `ProductType` | `Goods`, `Service` |
@@ -838,7 +838,7 @@ The Atlas has **two separate GraphQL APIs** with different schemas. For full det
 | **Official docs** | ❌ Not documented | ✅ [Officially documented](https://github.com/harvard-growth-lab/api-docs/blob/main/atlas.md) |
 | **ID format** | String IDs (`location: "location-404"`) | Numeric integers (`countryId: 404`) |
 | **Year params** | `year`, `minYear` / `maxYear` | `yearMin` / `yearMax` |
-| **Product class** | `HS`, `SITC` (generic) | `HS92`, `HS12`, `HS22`, `SITC` (explicit revisions) |
+| **Product class** | `HS`, `SITC` **only** — `HS` = HS92; no HS12/HS22 support | `HS92`, `HS12`, `HS22`, `SITC` (explicit revisions) |
 | **Product levels** | `section`, `twoDigit`, `fourDigit` | 2, 4, **6** digit |
 | **Arg descriptions** | ❌ `None` for all arguments | ✅ Human-readable for all arguments |
 

@@ -147,7 +147,8 @@ API_TARGET_DESCRIPTION = (
     "                  newProductsCountry, growth_opportunities (productSpace), peer comparisons, and\n"
     "                  policy recommendations. Used by country_profile, country_profile_exports,\n"
     "                  country_profile_complexity, country_lookback, new_products, and\n"
-    "                  growth_opportunities query types."
+    "                  growth_opportunities query types.\n"
+    "                  Note: Country Pages only supports productClass 'HS' (= HS92) and 'SITC'."
 )
 
 PRODUCT_LEVEL_DESCRIPTION = (
@@ -160,11 +161,13 @@ PRODUCT_LEVEL_DESCRIPTION = (
 
 PRODUCT_CLASS_DESCRIPTION = (
     "Product classification system. Choose one:\n"
-    "- HS92 : Harmonized System 1992 revision (default). Data available 1995-2024. Most commonly used.\n"
-    "- HS12 : Harmonized System 2012 revision. Data available 2012-2024.\n"
-    "- HS22 : Harmonized System 2022 revision. Data available 2022-2024. Only available in the Explore API\n"
-    "         (not Country Pages or SQL pipeline).\n"
-    "- SITC : Standard International Trade Classification. Data available 1962-2024. Use for long historical time series."
+    "- HS92 : Harmonized System 1992 revision. Data available 1995-2024.\n"
+    "- HS12 : Harmonized System 2012 revision (default for Explore API). Data available 2012-2024.\n"
+    "- HS22 : Harmonized System 2022 revision. Data available 2022-2024. Only available in the Explore API.\n"
+    "- SITC : Standard International Trade Classification. Data available 1962-2024.\n"
+    "\n"
+    "Important: The Country Pages API only supports 'HS' (equivalent to HS92) and 'SITC'.\n"
+    "When querying the Country Pages API, product_class is effectively HS92 regardless of what is set here."
 )
 
 GROUP_TYPE_DESCRIPTION = (
@@ -1237,7 +1240,7 @@ def _build_country_product_year(params: dict) -> tuple[str, dict]:
     variables: dict[str, Any] = {
         "countryId": params.get("country_id"),
         "productLevel": _product_level_to_int(params.get("product_level", "fourDigit")),
-        "productClass": params.get("product_class", "HS92"),
+        "productClass": params.get("product_class", "HS12"),
     }
     year = params.get("year")
     if year:
@@ -1326,7 +1329,7 @@ def _build_country_country_product_year(params: dict) -> tuple[str, dict]:
         "countryId": params.get("country_id"),
         "partnerCountryId": params.get("partner_id"),
         "productLevel": _product_level_to_int(params.get("product_level", "fourDigit")),
-        "productClass": params.get("product_class", "HS92"),
+        "productClass": params.get("product_class", "HS12"),
     }
     year = params.get("year")
     if year:
@@ -1617,7 +1620,7 @@ def _build_product_table(params: dict) -> tuple[str, dict]:
     variables: dict[str, Any] = {
         "countryId": params.get("country_id"),
         "productLevel": _product_level_to_int(params.get("product_level", "fourDigit")),
-        "productClass": params.get("product_class", "HS92"),
+        "productClass": params.get("product_class", "HS12"),
     }
     year = params.get("year")
     if year:
@@ -1702,7 +1705,7 @@ def _build_treemap_cpy(params: dict) -> tuple[str, dict]:
     variables: dict[str, Any] = {
         "countryId": params.get("country_id"),
         "productLevel": _product_level_to_int(params.get("product_level", "fourDigit")),
-        "productClass": params.get("product_class", "HS92"),
+        "productClass": params.get("product_class", "HS12"),
     }
     year = params.get("year")
     if year:
@@ -1777,7 +1780,7 @@ def _build_treemap_ccpy(params: dict) -> tuple[str, dict]:
         "countryId": params.get("country_id"),
         "partnerCountryId": params.get("partner_id"),
         "productLevel": _product_level_to_int(params.get("product_level", "fourDigit")),
-        "productClass": params.get("product_class", "HS92"),
+        "productClass": params.get("product_class", "HS12"),
     }
     year = params.get("year")
     if year:
@@ -1817,7 +1820,7 @@ def _build_feasibility_cpy(params: dict) -> tuple[str, dict]:
     variables: dict[str, Any] = {
         "countryId": params.get("country_id"),
         "productLevel": _product_level_to_int(params.get("product_level", "fourDigit")),
-        "productClass": params.get("product_class", "HS92"),
+        "productClass": params.get("product_class", "HS12"),
     }
     year = params.get("year")
     if year:

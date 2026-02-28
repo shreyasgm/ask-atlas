@@ -312,6 +312,7 @@ async def judge_answer(
     model: str = "gpt-5-mini",
     provider: str = "openai",
     tools_used: list[str] | None = None,
+    classification_note: str | None = None,
 ) -> dict:
     """Score an agent answer using an LLM judge.
 
@@ -328,6 +329,8 @@ async def judge_answer(
         model: Judge LLM model name.
         provider: Judge LLM provider.
         tools_used: List of tool names the agent invoked, or None.
+        classification_note: Optional note about product classification context
+            (e.g., HS92 vs HS12) to inject into the ground truth judging prompt.
 
     Returns:
         Dictionary with scores, verdict, reasoning, and ``judge_mode``.
@@ -342,8 +345,16 @@ async def judge_answer(
             and "query_tool" in tools_used
             and _SQL_DATA_MAX_YEAR < _GRAPHQL_DATA_MAX_YEAR
         )
-        prompt = (
-            _GROUND_TRUTH_PROMPT_WITH_YEAR_GAP if apply_caveat else _GROUND_TRUTH_PROMPT
+
+        # Build system text with optional caveats
+        system_text = _GROUND_TRUTH_SYSTEM_TEXT
+        if apply_caveat:
+            system_text += _YEAR_GAP_CAVEAT
+        if classification_note:
+            system_text += "\n\n" + classification_note
+
+        prompt = ChatPromptTemplate.from_messages(
+            [("system", system_text), ("human", _GROUND_TRUTH_HUMAN_TEXT)]
         )
         chain = prompt | llm.with_structured_output(JudgeVerdict)
         result: JudgeVerdict = await chain.ainvoke(
@@ -356,6 +367,8 @@ async def judge_answer(
         verdict_dict = result.to_dict()
         if apply_caveat:
             verdict_dict["year_gap_caveat_applied"] = True
+        if classification_note:
+            verdict_dict["classification_note_applied"] = True
         return verdict_dict
 
     if expected_behavior is not None:
