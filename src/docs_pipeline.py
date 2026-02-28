@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field
 
 from src.prompts import DOCUMENT_SELECTION_PROMPT, DOCUMENTATION_SYNTHESIS_PROMPT
 from src.state import AtlasAgentState
+from src.token_usage import make_usage_record_from_callback, make_usage_record_from_msg
 
 logger = logging.getLogger(__name__)
 
@@ -346,8 +347,11 @@ async def select_and_synthesize(
     # --- Step A: Selection ---
     selected_entries: list[DocEntry] = []
     selected_filenames: list[str] = []
+    usage_records: list[dict] = []
 
     try:
+        from langchain_core.callbacks import UsageMetadataCallbackHandler
+
         manifest_text = _format_manifest_for_prompt(manifest)
         selection_prompt = DOCUMENT_SELECTION_PROMPT.format(
             question=question,
@@ -358,7 +362,15 @@ async def select_and_synthesize(
 
         selection_model = _make_docs_selection_model(max_docs)
         selection_llm = lightweight_model.with_structured_output(selection_model)
-        selection = await selection_llm.ainvoke(selection_prompt)
+        selection_handler = UsageMetadataCallbackHandler()
+        selection = await selection_llm.ainvoke(
+            selection_prompt, config={"callbacks": [selection_handler]}
+        )
+        usage_records.append(
+            make_usage_record_from_callback(
+                "select_and_synthesize", "docs_tool", selection_handler
+            )
+        )
 
         valid_indices = [
             i for i in selection.selected_indices if 0 <= i < len(manifest)
@@ -408,16 +420,22 @@ async def select_and_synthesize(
         )
         response = await lightweight_model.ainvoke(synthesis_prompt)
         synthesis = response.content if hasattr(response, "content") else str(response)
+        usage_records.append(
+            make_usage_record_from_msg("select_and_synthesize", "docs_tool", response)
+        )
     except Exception:
         logger.exception(
             "Doc synthesis LLM failed; returning raw concatenated docs as fallback."
         )
         synthesis = docs_content
 
-    return {
+    result = {
         "docs_selected_files": selected_filenames,
         "docs_synthesis": synthesis,
     }
+    if usage_records:
+        result["token_usage"] = usage_records
+    return result
 
 
 async def format_docs_results(state: AtlasAgentState) -> dict:

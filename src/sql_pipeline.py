@@ -32,6 +32,7 @@ from src.prompts import build_sql_generation_prefix
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 from src.sql_validation import extract_table_names_from_ddl, validate_sql
 from src.state import AtlasAgentState
+from src.token_usage import make_usage_record_from_callback
 
 logger = logging.getLogger(__name__)
 
@@ -312,9 +313,13 @@ async def extract_products_node(
     state: AtlasAgentState, *, llm: BaseLanguageModel, engine: Engine
 ) -> dict:
     """Run product/schema extraction LLM chain, then apply overrides."""
+    from langchain_core.callbacks import UsageMetadataCallbackHandler
+
+    usage_handler = UsageMetadataCallbackHandler()
     lookup = ProductAndSchemaLookup(llm=llm, connection=engine)
     products = await lookup.aextract_schemas_and_product_mentions_direct(
-        state["pipeline_question"]
+        state["pipeline_question"],
+        callbacks=[usage_handler],
     )
 
     override_schema = state.get("override_schema")
@@ -351,7 +356,10 @@ async def extract_products_node(
             requires_product_lookup=products.requires_product_lookup,
         )
 
-    return {"pipeline_products": products}
+    usage_record = make_usage_record_from_callback(
+        "extract_products", "query_tool", usage_handler
+    )
+    return {"pipeline_products": products, "token_usage": [usage_record]}
 
 
 async def lookup_codes_node(
@@ -362,6 +370,8 @@ async def lookup_codes_node(
     async_engine: AsyncEngine | None = None,
 ) -> dict:
     """Get candidate codes from DB and select final codes via LLM."""
+    from langchain_core.callbacks import UsageMetadataCallbackHandler
+
     products = state.get("pipeline_products")
     if not products or not products.products:
         return {"pipeline_codes": ""}
@@ -373,10 +383,17 @@ async def lookup_codes_node(
         candidates = await lookup.aget_candidate_codes(products)
     else:
         candidates = await asyncio.to_thread(lookup.get_candidate_codes, products)
+    usage_handler = UsageMetadataCallbackHandler()
     codes = await lookup.aselect_final_codes_direct(
-        state["pipeline_question"], candidates
+        state["pipeline_question"], candidates, callbacks=[usage_handler]
     )
-    return {"pipeline_codes": format_product_codes_for_prompt(codes)}
+    usage_record = make_usage_record_from_callback(
+        "lookup_codes", "query_tool", usage_handler
+    )
+    return {
+        "pipeline_codes": format_product_codes_for_prompt(codes),
+        "token_usage": [usage_record],
+    }
 
 
 async def get_table_info_node(
@@ -405,6 +422,8 @@ async def generate_sql_node(
     max_results: int,
 ) -> dict:
     """Generate SQL query using LLM."""
+    from langchain_core.callbacks import UsageMetadataCallbackHandler
+
     codes = state.get("pipeline_codes") or None
     chain = create_query_generation_chain(
         llm=llm,
@@ -416,8 +435,15 @@ async def generate_sql_node(
         mode_constraint=state.get("override_mode"),
         context=state.get("pipeline_context", ""),
     )
-    sql = await chain.ainvoke({"question": state["pipeline_question"]})
-    return {"pipeline_sql": sql}
+    usage_handler = UsageMetadataCallbackHandler()
+    sql = await chain.ainvoke(
+        {"question": state["pipeline_question"]},
+        config={"callbacks": [usage_handler]},
+    )
+    usage_record = make_usage_record_from_callback(
+        "generate_sql", "query_tool", usage_handler
+    )
+    return {"pipeline_sql": sql, "token_usage": [usage_record]}
 
 
 async def validate_sql_node(

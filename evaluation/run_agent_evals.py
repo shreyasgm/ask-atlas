@@ -111,12 +111,32 @@ async def run_single_question(
             answer = atlas._extract_text(message.content)
             result["answer"] = answer
 
-            # Extract pipeline_sql from checkpointed state
+            # Extract pipeline_sql, tools_used, and token usage from checkpointed state
             try:
                 state = await atlas.agent.aget_state(config)
                 result["sql"] = state.values.get("pipeline_sql", "")
+                # Extract tools actually used from message history
+                messages = state.values.get("messages", [])
+                result["tools_used"] = list(
+                    dict.fromkeys(
+                        m.name for m in messages if hasattr(m, "name") and m.name
+                    )
+                )
+                # Extract token usage and cost
+                from src.token_usage import (
+                    aggregate_usage,
+                    count_tool_calls,
+                    estimate_cost,
+                )
+
+                raw_usage = state.values.get("token_usage", [])
+                if raw_usage:
+                    result["token_usage"] = aggregate_usage(raw_usage)
+                    result["cost"] = estimate_cost(raw_usage)
+                    result["tool_call_counts"] = count_tool_calls(messages)
             except Exception:
                 result["sql"] = ""
+                result["tools_used"] = []
 
             result["status"] = "success"
 

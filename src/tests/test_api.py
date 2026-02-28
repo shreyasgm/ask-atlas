@@ -237,6 +237,9 @@ class TestChat:
             "schemas_used",
             "total_rows",
             "total_execution_time_ms",
+            "token_usage",
+            "cost",
+            "tool_call_counts",
         }
         assert set(data.keys()) == expected_keys
 
