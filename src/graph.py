@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Dict, List, Literal
 
 from langchain_core.language_models import BaseLanguageModel
+from langchain_core.messages import HumanMessage, ToolMessage
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
@@ -78,6 +79,7 @@ def build_atlas_graph(
     country_cache=None,
     product_cache=None,
     services_cache=None,
+    group_cache=None,
     agent_mode: AgentMode = AgentMode.AUTO,
     budget_tracker: GraphQLBudgetTracker | None = None,
     docs_dir: Path | None = None,
@@ -118,10 +120,24 @@ def build_atlas_graph(
         "extract_graphql_question",
         "extract_docs_question",
         "max_queries_exceeded",
+        "tool_call_nudge",
         "__end__",
     ]:
         last_msg = state["messages"][-1]
         if not (hasattr(last_msg, "tool_calls") and last_msg.tool_calls):
+            # Agent wants to respond without a tool call — check if any tool
+            # was ever called in this conversation.  If not, nudge once.
+            has_tool_msg = any(isinstance(m, ToolMessage) for m in state["messages"])
+            if not has_tool_msg:
+                # Check if we already nudged (prevent infinite loop)
+                nudge_already = any(
+                    isinstance(m, HumanMessage)
+                    and hasattr(m, "content")
+                    and "You must call a tool before answering" in (m.content or "")
+                    for m in state["messages"]
+                )
+                if not nudge_already:
+                    return "tool_call_nudge"
             return END
         tool_name = last_msg.tool_calls[0]["name"]
         # docs_tool bypasses the query budget — check BEFORE budget gate
@@ -134,6 +150,23 @@ def build_atlas_graph(
         elif tool_name == "atlas_graphql":
             return "extract_graphql_question"
         return END
+
+    async def tool_call_nudge(state: AtlasAgentState) -> dict:
+        """Inject a nudge message asking the agent to call a tool before answering."""
+        return {
+            "messages": [
+                HumanMessage(
+                    content=(
+                        "You must call a tool before answering data questions. "
+                        "Use query_tool, atlas_graphql, or docs_tool to look up "
+                        "the information needed. However, if the question is not "
+                        "related to trade data, is harmful, or is otherwise "
+                        "inappropriate, you may respond directly without calling "
+                        "a tool."
+                    )
+                )
+            ]
+        }
 
     def route_after_classify(
         state: AtlasAgentState,
@@ -227,12 +260,13 @@ def build_atlas_graph(
         partial(extract_entities, lightweight_model=lightweight_llm),
         retry_policy=_llm_retry,
     )
-    # resolve_ids needs three separate catalog caches
+    # resolve_ids needs catalog caches for entity resolution
     _resolve_kwargs: dict = {
         "lightweight_model": lightweight_llm,
         "country_cache": country_cache,
         "product_cache": product_cache,
         "services_cache": services_cache,
+        "group_cache": group_cache,
     }
     builder.add_node(
         "resolve_ids",
@@ -255,6 +289,9 @@ def build_atlas_graph(
             country_cache=country_cache,
         ),
     )
+
+    # Anti-hallucination nudge node
+    builder.add_node("tool_call_nudge", tool_call_nudge)
 
     # Docs pipeline nodes
     _docs_dir = docs_dir or Path(__file__).resolve().parent / "docs"
@@ -282,9 +319,11 @@ def build_atlas_graph(
             "extract_graphql_question": "extract_graphql_question",
             "extract_docs_question": "extract_docs_question",
             "max_queries_exceeded": "max_queries_exceeded",
+            "tool_call_nudge": "tool_call_nudge",
             END: END,
         },
     )
+    builder.add_edge("tool_call_nudge", "agent")
 
     # SQL pipeline
     builder.add_edge("extract_tool_question", "extract_products")

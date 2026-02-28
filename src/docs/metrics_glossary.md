@@ -275,6 +275,17 @@ The DB stores a categorical version of PCI: `complexity_enum ENUM(low, moderate,
 
 Same as ECI: PCI is standardized relative to each year's product distribution. Do not compare PCI levels across years. Use PCI rank comparisons within a year.
 
+### Natural resource products
+
+The Atlas website displays PCI as "N/A" for products classified as natural resources
+(where `natural_resource = true` in the classification table). Although the database
+stores a numeric PCI value for these products, the Atlas UI suppresses it because
+the complexity of natural-resource-intensive products is considered less meaningful
+as an indicator of productive capabilities.
+
+When asked what the Atlas shows for PCI of a natural resource product, report "N/A"
+rather than the raw database value.
+
 ---
 
 ## 7. Normalized Variants

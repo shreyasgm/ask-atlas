@@ -547,6 +547,7 @@ class AtlasTextToSQL:
         # Wire up GraphQL components (Explore + Country Pages clients, catalog caches)
         from src.cache import (
             country_catalog,
+            group_catalog,
             product_catalog,
             services_catalog,
             wire_catalog_fetchers,
@@ -582,6 +583,7 @@ class AtlasTextToSQL:
             country_cache=country_catalog,
             product_cache=product_catalog,
             services_cache=services_catalog,
+            group_cache=group_catalog,
             agent_mode=AgentMode(_settings.agent_mode),
             budget_tracker=budget_tracker,
             docs_dir=BASE_DIR / "src" / "docs",

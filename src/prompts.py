@@ -96,6 +96,9 @@ If a user asks a normative policy question, such as what products a country shou
 - Every specific number you present (dollar amounts, percentages, rankings) must come from
   a tool response. If a query returned no data for a specific field, say so explicitly.
   Never estimate or fabricate specific values that did not appear in a tool response.
+- You MUST call a tool before answering ANY question about data, metrics, countries,
+  or Atlas features. NEVER answer a data question from your own knowledge alone.
+  If unsure whether data exists, call docs_tool first to check.
 - Your responses should be to the point and precise. Don't say any more than you need to.
 
 
@@ -145,6 +148,12 @@ pre-calculated metrics and visualizations. This is complementary to `query_tool`
 - "What is Nigeria's diversification grade?" -> atlas_graphql (Country Pages-only metric)
 - "Is Thailand's export growth pattern promising or troubling?" -> atlas_graphql (country_lookback classification)
 - "What is the total export value from Brazil to China?" -> atlas_graphql (bilateral aggregate)
+- "What growth opportunities exist for Germany?" -> atlas_graphql or docs_tool
+  (Note: the Atlas does NOT show growth opportunities for the highest-complexity countries.
+   Call a tool to confirm before answering.)
+- "What are Kenya's top growth opportunity products?" -> atlas_graphql
+  (pre-computed feasibility rankings with correct RCA filtering and COG sorting)
+- "What are Sub-Saharan Africa's total exports?" -> atlas_graphql (regional/group aggregate data)
 
 **Trusting Pre-Computed Fields:**
 - When atlas_graphql returns pre-computed labels or metrics (e.g., `diversificationGrade`,
@@ -345,10 +354,11 @@ PRODUCT_EXTRACTION_PROMPT = """
 
         Guidelines for schema selection:
         - For questions without a specified product classification:
-            * Default to 'hs92' for goods
+            * Default to 'hs12' for goods
             * Use 'services_bilateral' for services trade between specific countries
             * Use 'services_unilateral' for services trade of a single country
-        - When the question asks about "total exports/imports", "all exports", "overall trade", or a country's aggregate export/import value WITHOUT specifying "goods" or naming a specific goods product: include BOTH the default goods schema (hs92) AND the services schema (services_unilateral for single-country, services_bilateral for two-country questions).
+        - When the question asks about "total exports/imports", "all exports", "overall trade", "top products", or a country's aggregate export/import value WITHOUT specifying "goods" or naming a specific goods product: include BOTH the default goods schema (hs12) AND the services schema (services_unilateral for single-country, services_bilateral for two-country questions). "Products" in trade context means goods + services.
+        - When the question explicitly says "goods" or names a specific goods product (e.g., "cars", "coffee"): use only the relevant goods schema (default hs12). Do not include services schemas.
         - When the question asks about specific goods products (e.g., "cars", "coffee") or specifies a goods classification (HS, SITC): use only the relevant goods schema.
         - When the question explicitly mentions "services" or service-sector products: use the appropriate services schema.
         - Include specific product classifications if mentioned (e.g., if "HS 2012" is mentioned, include schema 'hs12')
@@ -371,32 +381,32 @@ PRODUCT_EXTRACTION_PROMPT = """
 
         Question: "What were US exports of cars and vehicles (HS 87) in 2020?"
         Response: {{
-            "classification_schemas": ["hs92"],
+            "classification_schemas": ["hs12"],
             "products": [],
             "requires_product_lookup": false,
             "countries": [{{"name": "United States", "iso3_code": "USA"}}]
         }}
-        Reason: Since no specific product classification is mentioned, default to the schema 'hs92'. The question specifies a product code (HS 87), so no further lookup is needed for the codes. The US is mentioned.
+        Reason: Since no specific product classification is mentioned, default to the schema 'hs12'. The question specifies a product code (HS 87), so no further lookup is needed for the codes. The US is mentioned.
 
         Question: "What were US exports of cotton and wheat in 2021?"
         Response: {{
-            "classification_schemas": ["hs92"],
+            "classification_schemas": ["hs12"],
             "products": [
                 {{
                     "name": "cotton",
-                    "classification_schema": "hs92",
+                    "classification_schema": "hs12",
                     "codes": ["5201", "5202"]
                 }},
                 {{
                     "name": "wheat",
-                    "classification_schema": "hs92",
+                    "classification_schema": "hs12",
                     "codes": ["1001"]
                 }}
             ],
             "requires_product_lookup": true,
             "countries": [{{"name": "United States", "iso3_code": "USA"}}]
         }}
-        Reason: The question mentions two products without codes, so the products need to be looked up in the db. The schema wasn't mentioned, so default to 'hs92'.
+        Reason: The question mentions two products without codes, so the products need to be looked up in the db. The schema wasn't mentioned, so default to 'hs12'.
 
         Question: "What services did India export to the US in 2021?"
         Response: {{
@@ -418,16 +428,16 @@ PRODUCT_EXTRACTION_PROMPT = """
 
         Question: "Which country is the world's biggest exporter of fruits and vegetables?"
         Response: {{
-            "classification_schemas": ["hs92"],
+            "classification_schemas": ["hs12"],
             "products": [
                 {{
                     "name": "fruits",
-                    "classification_schema": "hs92",
+                    "classification_schema": "hs12",
                     "codes": ["0801", "0802", "0803", "0804", "0805", "0806", "0807", "0808", "0809", "0810", "0811", "0812", "0813", "0814"]
                 }},
                 {{
                     "name": "vegetables",
-                    "classification_schema": "hs92",
+                    "classification_schema": "hs12",
                     "codes": ["07"]
                 }}
             ],
@@ -438,12 +448,21 @@ PRODUCT_EXTRACTION_PROMPT = """
 
         Question: "What is the total value of exports for Brazil in 2018?"
         Response: {{
-            "classification_schemas": ["hs92", "services_unilateral"],
+            "classification_schemas": ["hs12", "services_unilateral"],
             "products": [],
             "requires_product_lookup": false,
             "countries": [{{"name": "Brazil", "iso3_code": "BRA"}}]
         }}
-        Reason: The question asks about "total value of exports" without specifying goods-only, so include both hs92 (goods) and services_unilateral (services) to capture the complete export figure.
+        Reason: The question asks about "total value of exports" without specifying goods-only, so include both hs12 (goods) and services_unilateral (services) to capture the complete export figure.
+
+        Question: "What are India's top products?"
+        Response: {{
+            "classification_schemas": ["hs12", "services_unilateral"],
+            "products": [],
+            "requires_product_lookup": false,
+            "countries": [{{"name": "India", "iso3_code": "IND"}}]
+        }}
+        Reason: "Top products" without specifying "goods" means both goods and services. Include hs12 and services_unilateral.
         """
 
 # --- PRODUCT_CODE_SELECTION_PROMPT ---
@@ -607,6 +626,12 @@ For products, provide your best-guess HS code (e.g., 0901 for coffee) or service
 - country_year: country (required), year
 - global_datum: year or year range (if mentioned)
 
+**Services class:**
+- Set `services_class` to "unilateral" when the question asks about total/all exports, top products,
+  or overall trade without specifically limiting to goods. This includes services in the response.
+- Set `services_class` to "bilateral" for bilateral services trade questions.
+- Leave `services_class` as null when the question explicitly says "goods" or names a specific goods product.
+
 **Year handling:**
 - If no year mentioned, leave year fields as null (the system defaults to latest available)
 - For time-series query types (overtime_*, marketshare, country_lookback), extract year_min/year_max if a range is stated
@@ -615,7 +640,7 @@ For products, provide your best-guess HS code (e.g., 0901 for coffee) or service
 - "in 2023" -> year: 2023
 
 **Product classification:**
-- Default to HS92 unless the user explicitly mentions a different classification
+- Default to HS12 unless the user explicitly mentions a different classification
 - "HS 2012" or "HS12" -> product_class: HS12
 - "SITC" -> product_class: SITC
 - If the user mentions a service (tourism, transport, ICT, etc.), the product_code_guess should be \

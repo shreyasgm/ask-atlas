@@ -452,6 +452,19 @@ services_catalog.add_index(
 )
 registry.register_catalog(services_catalog)
 
+# Group catalog: maps location group names → Atlas group IDs
+group_catalog = CatalogCache("group_catalog", ttl=CATALOG_TTL)
+group_catalog.add_index(
+    "name",
+    key_fn=lambda e: (e.get("groupName") or "").strip().lower() or None,
+    normalize_query=_name_normalize,
+)
+group_catalog.add_index(
+    "id",
+    key_fn=lambda e: str(e["groupId"]) if "groupId" in e else None,
+)
+registry.register_catalog(group_catalog)
+
 
 # ---------------------------------------------------------------------------
 # Catalog fetcher wiring (called once at app startup)
@@ -487,9 +500,15 @@ def wire_catalog_fetchers(explore_client: AtlasGraphQLClient) -> None:
         data = await explore_client.execute(query)
         return data.get("productHs92", [])
 
+    async def _fetch_groups() -> list[dict[str, Any]]:
+        query = "{ locationGroup { groupId groupName groupType } }"
+        data = await explore_client.execute(query)
+        return data.get("locationGroup", [])
+
     country_catalog.set_fetcher(_fetch_countries)
     product_catalog.set_fetcher(_fetch_products)
     services_catalog.set_fetcher(_fetch_services)
+    group_catalog.set_fetcher(_fetch_groups)
 
 
 # ---------------------------------------------------------------------------

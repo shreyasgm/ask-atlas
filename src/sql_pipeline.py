@@ -274,8 +274,10 @@ def get_table_info_for_schemas(
         _classification_tables_for_schemas(classification_schemas, table_descriptions)
     )
 
-    # Remove any tables that have the word "group" in the table name
-    tables = [table for table in tables if "group" not in table["table_name"].lower()]
+    # Exclude large group data tables but keep classification lookup tables
+    # Table names are schema-qualified (e.g. "hs92.group_group_product_year_4"),
+    # so we check the part after the schema prefix.
+    tables = [table for table in tables if "group_group_" not in table["table_name"]]
     table_info = ""
     for table in tables:
         table_info += (
@@ -568,13 +570,16 @@ async def format_results_node(state: AtlasAgentState) -> dict:
         content = state.get("pipeline_result", "SQL query returned no results.")
 
     messages: list[ToolMessage] = [
-        ToolMessage(content=content, tool_call_id=tool_calls[0]["id"])
+        ToolMessage(
+            content=content, tool_call_id=tool_calls[0]["id"], name="query_tool"
+        )
     ]
     for tc in tool_calls[1:]:
         messages.append(
             ToolMessage(
                 content="Only one query can be executed at a time. Please make additional queries sequentially.",
                 tool_call_id=tc["id"],
+                name="query_tool",
             )
         )
 
@@ -589,7 +594,7 @@ async def max_queries_exceeded_node(state: AtlasAgentState) -> dict:
     last_msg = state["messages"][-1]
     error_content = "Error: Maximum number of queries exceeded."
     messages = [
-        ToolMessage(content=error_content, tool_call_id=tc["id"])
+        ToolMessage(content=error_content, tool_call_id=tc["id"], name=tc["name"])
         for tc in last_msg.tool_calls
     ]
     return {"messages": messages}

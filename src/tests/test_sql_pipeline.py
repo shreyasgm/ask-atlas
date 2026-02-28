@@ -272,8 +272,8 @@ class TestGetTableInfoForSchemas:
 
         assert isinstance(table_info, str)
         assert len(table_info) > 0
-        # Check if it properly filters out tables with 'group' in the name
-        assert "group" not in table_info.lower()
+        # Check that large group data tables are filtered out but classification group tables remain
+        assert "group_group_product_year" not in table_info.lower()
         # Check if schema-qualified table names are present
         assert "hs92." in table_info
 
