@@ -872,26 +872,9 @@ class TestAtlasGraphQLClientIntegration:
         with pytest.raises(TransientGraphQLError):
             await short_client.execute(query="{ metadata { serverName } }")
 
-    async def test_budget_tracker_integration_with_real_api(self) -> None:
-        """Budget is consumed only on successful real API calls."""
+    async def test_budget_tracker_and_circuit_breaker_with_real_api(self) -> None:
+        """A single real API call updates both budget tracker and circuit breaker."""
         tracker = GraphQLBudgetTracker(max_requests=5, window_seconds=60.0)
-        client = AtlasGraphQLClient(
-            base_url=ATLAS_GRAPHQL_URL,
-            timeout=15.0,
-            max_retries=0,
-            budget_tracker=tracker,
-        )
-
-        await client.execute(query="{ metadata { serverName } }")
-        assert tracker.remaining() == 4
-
-        # A failing query should NOT consume budget
-        with pytest.raises(GraphQLError):
-            await client.execute(query="{ metadata { bogusField } }")
-        assert tracker.remaining() == 4
-
-    async def test_circuit_breaker_closes_after_real_success(self) -> None:
-        """A real successful response resets the circuit breaker."""
         cb = CircuitBreaker(failure_threshold=3, recovery_timeout=30.0)
         cb.record_failure()
         cb.record_failure()
@@ -901,8 +884,20 @@ class TestAtlasGraphQLClientIntegration:
             base_url=ATLAS_GRAPHQL_URL,
             timeout=15.0,
             max_retries=0,
+            budget_tracker=tracker,
             circuit_breaker=cb,
         )
+
         await client.execute(query="{ metadata { serverName } }")
+
+        # Budget tracker: consumed one request
+        assert tracker.remaining() == 4
+
+        # Circuit breaker: success resets failure count
         assert cb._failure_count == 0
         assert cb.state == CircuitState.CLOSED
+
+        # A failing query should NOT consume budget
+        with pytest.raises(GraphQLError):
+            await client.execute(query="{ metadata { bogusField } }")
+        assert tracker.remaining() == 4
