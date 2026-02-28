@@ -3,6 +3,7 @@ data/
 proj/
 tables/
 logs/
+presentations/
 CLAUDE.md
 .claude/
 .agents/
@@ -247,7 +248,8 @@ messages.json
 requirements_uv.txt
 
 # Project tracking docs (not for public repo)
-docs/
+docs/*
+!docs/public/
 !src/docs/
 
 # Generated test seed data (regenerate with: uv run python src/tests/fixtures/generate_seed_sql.py)
