@@ -475,3 +475,284 @@ class TestCostAnalysis:
 
         q1 = report["per_question"][0]
         assert q1["cost_usd"] == 0.003
+
+
+# ---------------------------------------------------------------------------
+# Tests: latency analysis in report
+# ---------------------------------------------------------------------------
+
+
+class TestLatencyAnalysis:
+    def _make_timing_results(self):
+        """Helper: run results with step_timing data."""
+        return [
+            {
+                "question_id": "1",
+                "question_text": "Brazil exports?",
+                "category": "Trade Values",
+                "difficulty": "easy",
+                "status": "success",
+                "duration_s": 10.0,
+                "step_timing_summary": {
+                    "by_node": {
+                        "agent": {
+                            "wall_time_ms": 2000,
+                            "llm_time_ms": 1800,
+                            "io_time_ms": 0,
+                            "call_count": 1,
+                        },
+                        "generate_sql": {
+                            "wall_time_ms": 4000,
+                            "llm_time_ms": 3500,
+                            "io_time_ms": 0,
+                            "call_count": 1,
+                        },
+                        "execute_sql": {
+                            "wall_time_ms": 3000,
+                            "llm_time_ms": 0,
+                            "io_time_ms": 2800,
+                            "call_count": 1,
+                        },
+                    },
+                    "by_pipeline": {
+                        "agent": {"wall_time_ms": 2000, "call_count": 1},
+                        "query_tool": {"wall_time_ms": 7000, "call_count": 2},
+                    },
+                    "total": {
+                        "wall_time_ms": 9000,
+                        "llm_time_ms": 5300,
+                        "io_time_ms": 2800,
+                        "overhead_ms": 900,
+                    },
+                    "slowest_node": {"node": "generate_sql", "wall_time_ms": 4000},
+                },
+            },
+            {
+                "question_id": "2",
+                "question_text": "India ECI?",
+                "category": "Complexity",
+                "difficulty": "medium",
+                "status": "success",
+                "duration_s": 15.0,
+                "step_timing_summary": {
+                    "by_node": {
+                        "agent": {
+                            "wall_time_ms": 3000,
+                            "llm_time_ms": 2500,
+                            "io_time_ms": 0,
+                            "call_count": 1,
+                        },
+                        "classify_query": {
+                            "wall_time_ms": 1000,
+                            "llm_time_ms": 800,
+                            "io_time_ms": 0,
+                            "call_count": 1,
+                        },
+                    },
+                    "by_pipeline": {
+                        "agent": {"wall_time_ms": 3000, "call_count": 1},
+                        "atlas_graphql": {"wall_time_ms": 1000, "call_count": 1},
+                    },
+                    "total": {
+                        "wall_time_ms": 4000,
+                        "llm_time_ms": 3300,
+                        "io_time_ms": 0,
+                        "overhead_ms": 700,
+                    },
+                    "slowest_node": {"node": "agent", "wall_time_ms": 3000},
+                },
+            },
+        ]
+
+    def test_report_includes_latency_analysis(self):
+        """When results have step_timing_summary, report should include latency_analysis."""
+        run_results = self._make_timing_results()
+        report = generate_report(
+            run_results,
+            {},
+            {
+                "1": {"category": "Trade Values", "difficulty": "easy"},
+                "2": {"category": "Complexity", "difficulty": "medium"},
+            },
+        )
+
+        assert "latency_analysis" in report
+        la = report["latency_analysis"]
+        assert "avg_total_ms" in la
+        assert "p50_total_ms" in la
+        assert "p90_total_ms" in la
+        assert "p95_total_ms" in la
+        assert "avg_by_node" in la
+        assert "time_breakdown" in la
+        assert la["questions_with_timing"] == 2
+
+    def test_latency_percentiles_correct(self):
+        """Percentile calculations should be reasonable."""
+        run_results = self._make_timing_results()
+        report = generate_report(
+            run_results,
+            {},
+            {
+                "1": {"category": "Trade Values", "difficulty": "easy"},
+                "2": {"category": "Complexity", "difficulty": "medium"},
+            },
+        )
+
+        la = report["latency_analysis"]
+        # avg of 9000 and 4000 = 6500
+        assert la["avg_total_ms"] == pytest.approx(6500.0, abs=1)
+        # With 2 values, p50 should be between them
+        assert la["p50_total_ms"] >= 4000
+        assert la["p50_total_ms"] <= 9000
+
+    def test_time_breakdown_percentages(self):
+        """Time breakdown should show LLM, I/O, and overhead as percentages."""
+        run_results = self._make_timing_results()
+        report = generate_report(
+            run_results,
+            {},
+            {
+                "1": {"category": "Trade Values", "difficulty": "easy"},
+                "2": {"category": "Complexity", "difficulty": "medium"},
+            },
+        )
+
+        tb = report["latency_analysis"]["time_breakdown"]
+        assert "llm_pct" in tb
+        assert "io_pct" in tb
+        assert "overhead_pct" in tb
+        # Percentages should sum to ~100
+        total = tb["llm_pct"] + tb["io_pct"] + tb["overhead_pct"]
+        assert total == pytest.approx(100.0, abs=1)
+
+    def test_no_timing_data_no_section(self):
+        """When no results have step_timing_summary, latency_analysis should be absent."""
+        run_results = [
+            {
+                "question_id": "1",
+                "question_text": "Test?",
+                "category": "A",
+                "difficulty": "easy",
+                "status": "success",
+                "duration_s": 5.0,
+            },
+        ]
+        report = generate_report(
+            run_results, {}, {"1": {"category": "A", "difficulty": "easy"}}
+        )
+
+        assert "latency_analysis" not in report
+
+    def test_markdown_includes_latency_section(self):
+        """report_to_markdown should include Latency Analysis heading."""
+        run_results = self._make_timing_results()
+        report = generate_report(
+            run_results,
+            {},
+            {
+                "1": {"category": "Trade Values", "difficulty": "easy"},
+                "2": {"category": "Complexity", "difficulty": "medium"},
+            },
+        )
+        md = report_to_markdown(report)
+
+        assert "## Latency Analysis" in md
+        assert "Bottleneck Nodes" in md
+
+
+# ---------------------------------------------------------------------------
+# Tests: budget violations
+# ---------------------------------------------------------------------------
+
+
+class TestBudgetViolations:
+    def test_duration_threshold_violation(self):
+        """Questions exceeding duration threshold should be flagged."""
+        run_results = [
+            {
+                "question_id": "1",
+                "question_text": "Fast question?",
+                "category": "A",
+                "difficulty": "easy",
+                "status": "success",
+                "duration_s": 5.0,
+            },
+            {
+                "question_id": "2",
+                "question_text": "Slow question?",
+                "category": "A",
+                "difficulty": "easy",
+                "status": "success",
+                "duration_s": 45.0,
+            },
+        ]
+        report = generate_report(
+            run_results,
+            {},
+            {
+                "1": {"category": "A", "difficulty": "easy"},
+                "2": {"category": "A", "difficulty": "easy"},
+            },
+        )
+
+        assert "budget_violations" in report
+        bv = report["budget_violations"]
+        assert bv["duration_violations"] == 1
+        # Question 2 exceeds the 30s threshold
+        assert any(v["question_id"] == "2" for v in bv["violations"])
+
+    def test_cost_threshold_violation(self):
+        """Questions exceeding cost threshold should be flagged."""
+        run_results = [
+            {
+                "question_id": "1",
+                "question_text": "Cheap question?",
+                "category": "A",
+                "difficulty": "easy",
+                "status": "success",
+                "duration_s": 5.0,
+                "cost": {"total_cost_usd": 0.01, "by_pipeline": {}, "record_count": 1},
+            },
+            {
+                "question_id": "2",
+                "question_text": "Expensive question?",
+                "category": "A",
+                "difficulty": "easy",
+                "status": "success",
+                "duration_s": 5.0,
+                "cost": {"total_cost_usd": 0.08, "by_pipeline": {}, "record_count": 1},
+            },
+        ]
+        report = generate_report(
+            run_results,
+            {},
+            {
+                "1": {"category": "A", "difficulty": "easy"},
+                "2": {"category": "A", "difficulty": "easy"},
+            },
+        )
+
+        assert "budget_violations" in report
+        bv = report["budget_violations"]
+        assert bv["cost_violations"] == 1
+
+    def test_no_violations_no_section(self):
+        """When no thresholds are exceeded, budget_violations should be absent."""
+        run_results = [
+            {
+                "question_id": "1",
+                "question_text": "Normal question?",
+                "category": "A",
+                "difficulty": "easy",
+                "status": "success",
+                "duration_s": 5.0,
+                "cost": {"total_cost_usd": 0.01, "by_pipeline": {}, "record_count": 1},
+            },
+        ]
+        report = generate_report(
+            run_results,
+            {},
+            {"1": {"category": "A", "difficulty": "easy"}},
+        )
+
+        assert "budget_violations" not in report

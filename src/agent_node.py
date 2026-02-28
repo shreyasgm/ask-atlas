@@ -8,6 +8,7 @@ Provides:
 
 from __future__ import annotations
 
+import time
 from typing import Awaitable, Callable
 
 from langchain_core.language_models import BaseLanguageModel
@@ -25,7 +26,7 @@ from src.prompts import (
 )
 from src.sql_pipeline import _query_tool_schema
 from src.state import AtlasAgentState
-from src.token_usage import make_usage_record_from_msg
+from src.token_usage import make_usage_record_from_msg, node_timer
 
 # ---------------------------------------------------------------------------
 # atlas_graphql tool schema (schema-only; execution routes through graph nodes)
@@ -122,53 +123,63 @@ def make_agent_node(
     """
 
     async def agent_node(state: AtlasAgentState) -> dict:
-        # Per-request override takes precedence over construction-time config
-        state_mode = state.get("override_agent_mode")
-        effective_config_mode = AgentMode(state_mode) if state_mode else agent_mode
-        effective_mode = resolve_effective_mode(effective_config_mode, budget_tracker)
-        if effective_mode == AgentMode.GRAPHQL_ONLY:
-            tools = [_atlas_graphql_schema, _docs_tool_schema]
-        elif effective_mode == AgentMode.SQL_ONLY:
-            tools = [_query_tool_schema, _docs_tool_schema]
-        else:
-            # GRAPHQL_SQL (and AUTO resolved to GRAPHQL_SQL)
-            tools = [_query_tool_schema, _atlas_graphql_schema, _docs_tool_schema]
-
-        # Select system prompt based on effective mode
-        prompt_text = build_agent_system_prompt(max_uses, top_k_per_query)
-        if effective_mode not in (AgentMode.SQL_ONLY, AgentMode.GRAPHQL_ONLY):
-            remaining = budget_tracker.remaining() if budget_tracker else "unknown"
-            budget_status = f"Available ({remaining} calls remaining this window)"
-            prompt_text += DUAL_TOOL_EXTENSION.format(
-                max_uses=max_uses, budget_status=budget_status
+        async with node_timer("agent", "agent") as t:
+            # Per-request override takes precedence over construction-time config
+            state_mode = state.get("override_agent_mode")
+            effective_config_mode = AgentMode(state_mode) if state_mode else agent_mode
+            effective_mode = resolve_effective_mode(
+                effective_config_mode, budget_tracker
             )
+            if effective_mode == AgentMode.GRAPHQL_ONLY:
+                tools = [_atlas_graphql_schema, _docs_tool_schema]
+            elif effective_mode == AgentMode.SQL_ONLY:
+                tools = [_query_tool_schema, _docs_tool_schema]
+            else:
+                # GRAPHQL_SQL (and AUTO resolved to GRAPHQL_SQL)
+                tools = [_query_tool_schema, _atlas_graphql_schema, _docs_tool_schema]
 
-        # Docs tool extension — available in ALL modes
-        prompt_text += DOCS_TOOL_EXTENSION.format(max_uses=max_uses)
+            # Select system prompt based on effective mode
+            prompt_text = build_agent_system_prompt(max_uses, top_k_per_query)
+            if effective_mode not in (AgentMode.SQL_ONLY, AgentMode.GRAPHQL_ONLY):
+                remaining = budget_tracker.remaining() if budget_tracker else "unknown"
+                budget_status = f"Available ({remaining} calls remaining this window)"
+                prompt_text += DUAL_TOOL_EXTENSION.format(
+                    max_uses=max_uses, budget_status=budget_status
+                )
 
-        # Apply override lines (same logic as legacy create_sql_agent)
-        overrides_parts: list[str] = []
-        if state.get("override_schema"):
-            overrides_parts.append(
-                f"- Classification schema: **{state['override_schema']}**"
-            )
-        if state.get("override_direction"):
-            overrides_parts.append(
-                f"- Trade direction: **{state['override_direction']}**"
-            )
-        if state.get("override_mode"):
-            overrides_parts.append(f"- Trade mode: **{state['override_mode']}**")
-        if overrides_parts:
-            prompt_text += "\n\n**Active User Overrides:**\n" + "\n".join(
-                overrides_parts
-            )
-            prompt_text += "\n\nThese overrides take precedence over what the question implies. If the question contradicts an override, briefly note the conflict but follow the override."
+            # Docs tool extension — available in ALL modes
+            prompt_text += DOCS_TOOL_EXTENSION.format(max_uses=max_uses)
 
-        model_with_tools = llm.bind_tools(tools)
-        response = await model_with_tools.ainvoke(
-            [SystemMessage(content=prompt_text)] + state["messages"]
-        )
+            # Apply override lines (same logic as legacy create_sql_agent)
+            overrides_parts: list[str] = []
+            if state.get("override_schema"):
+                overrides_parts.append(
+                    f"- Classification schema: **{state['override_schema']}**"
+                )
+            if state.get("override_direction"):
+                overrides_parts.append(
+                    f"- Trade direction: **{state['override_direction']}**"
+                )
+            if state.get("override_mode"):
+                overrides_parts.append(f"- Trade mode: **{state['override_mode']}**")
+            if overrides_parts:
+                prompt_text += "\n\n**Active User Overrides:**\n" + "\n".join(
+                    overrides_parts
+                )
+                prompt_text += "\n\nThese overrides take precedence over what the question implies. If the question contradicts an override, briefly note the conflict but follow the override."
+
+            model_with_tools = llm.bind_tools(tools)
+            llm_start = time.monotonic()
+            response = await model_with_tools.ainvoke(
+                [SystemMessage(content=prompt_text)] + state["messages"]
+            )
+            t.mark_llm(llm_start, time.monotonic())
+
         usage_record = make_usage_record_from_msg("agent", "agent", response)
-        return {"messages": [response], "token_usage": [usage_record]}
+        return {
+            "messages": [response],
+            "token_usage": [usage_record],
+            "step_timing": [t.record],
+        }
 
     return agent_node

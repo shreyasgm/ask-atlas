@@ -1,15 +1,18 @@
-"""Token usage tracking and cost estimation for the Atlas agent.
+"""Token usage tracking, cost estimation, and per-step timing for the Atlas agent.
 
 Provides data structures and helpers for recording LLM token usage across
-pipeline nodes, aggregating by tool pipeline, and estimating costs using
-a cache-aware pricing model.
+pipeline nodes, aggregating by tool pipeline, estimating costs using
+a cache-aware pricing model, and tracking wall-clock / LLM / I/O time
+per graph node.
 """
 
 from __future__ import annotations
 
 import logging
 import re
+import time
 from collections import defaultdict
+from contextlib import asynccontextmanager
 from typing import Any
 
 from langchain_core.messages import AIMessage, ToolMessage
@@ -359,4 +362,190 @@ def estimate_cost(records: list[UsageRecord]) -> dict[str, Any]:
         "by_pipeline": {k: round(v, 6) for k, v in by_pipeline.items()},
         "total_cost_usd": round(total, 6),
         "record_count": len(records),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Per-step timing
+# ---------------------------------------------------------------------------
+
+# TimingRecord keys:
+#   node: str             — graph node name (e.g. "agent", "generate_sql")
+#   tool_pipeline: str    — pipeline grouping (e.g. "agent", "query_tool")
+#   wall_time_ms: float   — total elapsed time for the node
+#   llm_time_ms: float    — time spent in LLM calls
+#   io_time_ms: float     — time spent in DB / HTTP I/O
+#   overhead_ms: float    — wall_time_ms - llm_time_ms - io_time_ms
+
+TimingRecord = dict[str, Any]
+
+
+def make_timing_record(
+    node: str,
+    tool_pipeline: str,
+    *,
+    wall_time_ms: float,
+    llm_time_ms: float = 0.0,
+    io_time_ms: float = 0.0,
+) -> TimingRecord:
+    """Build a TimingRecord dict.
+
+    Args:
+        node: Graph node name.
+        tool_pipeline: Pipeline grouping key.
+        wall_time_ms: Total wall-clock time in milliseconds.
+        llm_time_ms: Time spent in LLM calls (ms).
+        io_time_ms: Time spent in DB/HTTP I/O (ms).
+
+    Returns:
+        A TimingRecord dict with computed overhead.
+    """
+    overhead = max(0.0, wall_time_ms - llm_time_ms - io_time_ms)
+    return {
+        "node": node,
+        "tool_pipeline": tool_pipeline,
+        "wall_time_ms": round(wall_time_ms, 2),
+        "llm_time_ms": round(llm_time_ms, 2),
+        "io_time_ms": round(io_time_ms, 2),
+        "overhead_ms": round(overhead, 2),
+    }
+
+
+class _TimingBuilder:
+    """Accumulates LLM and I/O sub-timings within a node_timer block."""
+
+    __slots__ = ("_node", "_pipeline", "_start", "_llm_ms", "_io_ms")
+
+    def __init__(self, node: str, pipeline: str) -> None:
+        self._node = node
+        self._pipeline = pipeline
+        self._start = time.monotonic()
+        self._llm_ms = 0.0
+        self._io_ms = 0.0
+
+    def mark_llm(self, start: float, end: float) -> None:
+        """Record an LLM call sub-timing.
+
+        Args:
+            start: monotonic timestamp when LLM call began.
+            end: monotonic timestamp when LLM call completed.
+        """
+        self._llm_ms += (end - start) * 1000
+
+    def mark_io(self, start: float, end: float) -> None:
+        """Record a DB/HTTP I/O sub-timing.
+
+        Args:
+            start: monotonic timestamp when I/O began.
+            end: monotonic timestamp when I/O completed.
+        """
+        self._io_ms += (end - start) * 1000
+
+    @property
+    def record(self) -> TimingRecord:
+        """Build the final TimingRecord from accumulated data."""
+        wall_ms = (time.monotonic() - self._start) * 1000
+        return make_timing_record(
+            self._node,
+            self._pipeline,
+            wall_time_ms=wall_ms,
+            llm_time_ms=self._llm_ms,
+            io_time_ms=self._io_ms,
+        )
+
+
+@asynccontextmanager
+async def node_timer(node: str, tool_pipeline: str):
+    """Async context manager that tracks wall-clock time for a graph node.
+
+    Yields a ``_TimingBuilder`` with ``.mark_llm(start, end)`` and
+    ``.mark_io(start, end)`` methods for recording sub-timings.
+
+    Usage::
+
+        async with node_timer("generate_sql", "query_tool") as t:
+            llm_start = time.monotonic()
+            result = await chain.ainvoke(...)
+            t.mark_llm(llm_start, time.monotonic())
+        timing_record = t.record
+
+    Args:
+        node: Graph node name.
+        tool_pipeline: Pipeline grouping key.
+
+    Yields:
+        A _TimingBuilder instance.
+    """
+    builder = _TimingBuilder(node, tool_pipeline)
+    yield builder
+
+
+def aggregate_timing(records: list[TimingRecord]) -> dict[str, Any]:
+    """Aggregate timing records by node and by pipeline.
+
+    Args:
+        records: List of TimingRecord dicts.
+
+    Returns:
+        Dict with ``by_node``, ``by_pipeline``, ``total``, and
+        ``slowest_node`` summaries.
+    """
+    if not records:
+        return {
+            "by_node": {},
+            "by_pipeline": {},
+            "total": {
+                "wall_time_ms": 0.0,
+                "llm_time_ms": 0.0,
+                "io_time_ms": 0.0,
+                "overhead_ms": 0.0,
+            },
+            "slowest_node": None,
+        }
+
+    by_node: dict[str, dict[str, float]] = defaultdict(
+        lambda: {
+            "wall_time_ms": 0.0,
+            "llm_time_ms": 0.0,
+            "io_time_ms": 0.0,
+            "call_count": 0,
+        }
+    )
+    by_pipeline: dict[str, dict[str, float]] = defaultdict(
+        lambda: {
+            "wall_time_ms": 0.0,
+            "llm_time_ms": 0.0,
+            "io_time_ms": 0.0,
+            "call_count": 0,
+        }
+    )
+    grand = {
+        "wall_time_ms": 0.0,
+        "llm_time_ms": 0.0,
+        "io_time_ms": 0.0,
+        "overhead_ms": 0.0,
+    }
+
+    for rec in records:
+        node = rec.get("node", "unknown")
+        pipeline = rec.get("tool_pipeline", "unknown")
+        for key in ("wall_time_ms", "llm_time_ms", "io_time_ms"):
+            val = rec.get(key, 0.0)
+            by_node[node][key] += val
+            by_pipeline[pipeline][key] += val
+            grand[key] += val
+        grand["overhead_ms"] += rec.get("overhead_ms", 0.0)
+        by_node[node]["call_count"] += 1
+        by_pipeline[pipeline]["call_count"] += 1
+
+    # Identify slowest node
+    slowest_name = max(by_node, key=lambda n: by_node[n]["wall_time_ms"])
+    slowest_entry = dict(by_node[slowest_name])
+    slowest_entry["node"] = slowest_name
+
+    return {
+        "by_node": {k: dict(v) for k, v in by_node.items()},
+        "by_pipeline": {k: dict(v) for k, v in by_pipeline.items()},
+        "total": grand,
+        "slowest_node": slowest_entry,
     }

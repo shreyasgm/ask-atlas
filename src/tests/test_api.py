@@ -240,6 +240,7 @@ class TestChat:
             "token_usage",
             "cost",
             "tool_call_counts",
+            "step_timing",
         }
         assert set(data.keys()) == expected_keys
 

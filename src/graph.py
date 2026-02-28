@@ -27,7 +27,8 @@ from src.docs_pipeline import (
     extract_docs_question,
     format_docs_results,
     load_docs_manifest,
-    select_and_synthesize,
+    select_docs,
+    synthesize_docs,
 )
 from src.graphql_client import GraphQLBudgetTracker
 from src.graphql_pipeline import (
@@ -298,12 +299,21 @@ def build_atlas_graph(
     _docs_manifest = load_docs_manifest(_docs_dir)
     builder.add_node("extract_docs_question", extract_docs_question)
     builder.add_node(
-        "select_and_synthesize",
+        "select_docs",
         partial(
-            select_and_synthesize,
+            select_docs,
             lightweight_model=lightweight_llm,
             manifest=_docs_manifest,
             max_docs=max_docs_per_selection,
+        ),
+        retry_policy=_llm_retry,
+    )
+    builder.add_node(
+        "synthesize_docs",
+        partial(
+            synthesize_docs,
+            lightweight_model=lightweight_llm,
+            manifest=_docs_manifest,
         ),
         retry_policy=_llm_retry,
     )
@@ -359,8 +369,9 @@ def build_atlas_graph(
     builder.add_edge("format_graphql_results", "agent")
 
     # Docs pipeline
-    builder.add_edge("extract_docs_question", "select_and_synthesize")
-    builder.add_edge("select_and_synthesize", "format_docs_results")
+    builder.add_edge("extract_docs_question", "select_docs")
+    builder.add_edge("select_docs", "synthesize_docs")
+    builder.add_edge("synthesize_docs", "format_docs_results")
     builder.add_edge("format_docs_results", "agent")
 
     memory = checkpointer if checkpointer is not None else MemorySaver()

@@ -98,3 +98,48 @@ async def test_stream_contract(atlas_sql):
         if item.message_type in ("node_start", "pipeline_state"):
             assert item.payload is not None
             assert isinstance(item.payload, dict)
+
+
+@pytest.mark.integration
+async def test_step_timing_in_answer_result(atlas_sql, logger):
+    """End-to-end: aanswer_question should return step_timing with plausible data.
+
+    This exercises the full timing chain: node_timer instrumentation →
+    state reducer accumulation → extraction from final state →
+    aggregate_timing → AnswerResult.step_timing.
+    """
+    result = await atlas_sql.aanswer_question("What is the ECI of Japan in 2019?")
+    logger.info(f"step_timing: {result.step_timing}")
+
+    assert result.step_timing is not None, "step_timing should be present"
+    st = result.step_timing
+
+    # Must have the expected top-level structure
+    assert "by_node" in st
+    assert "by_pipeline" in st
+    assert "total" in st
+    assert "slowest_node" in st
+
+    # The agent node should always appear (it routes to a tool)
+    assert (
+        "agent" in st["by_node"]
+    ), f"'agent' missing from by_node: {list(st['by_node'].keys())}"
+
+    # Total wall time should be positive and plausible (> 1s for a real LLM call)
+    assert (
+        st["total"]["wall_time_ms"] > 1000
+    ), f"Total wall time {st['total']['wall_time_ms']}ms seems too low for a real LLM call"
+
+    # LLM time should be positive (agent node always makes an LLM call)
+    assert st["total"]["llm_time_ms"] > 0, "LLM time should be positive"
+
+    # At least one pipeline tool should appear (sql or graphql)
+    pipelines = set(st["by_pipeline"].keys())
+    assert pipelines & {
+        "query_tool",
+        "atlas_graphql",
+    }, f"Expected query_tool or atlas_graphql in pipelines, got: {pipelines}"
+
+    # Slowest node should point to a real node
+    assert st["slowest_node"]["node"] in st["by_node"]
+    assert st["slowest_node"]["wall_time_ms"] > 0

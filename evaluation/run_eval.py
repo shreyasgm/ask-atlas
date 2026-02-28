@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+from collections import defaultdict
 from typing import Any
 
 from utils import (
@@ -26,6 +27,7 @@ from utils import (
 from run_agent_evals import run_agent_evals
 from judge import judge_answer
 from report import generate_report, save_report
+from html_report import generate_html_report
 
 # Curated smoke-test subset: 1 easy, 2 medium, 2 hard across different categories.
 # These are chosen for fast signal across diverse question types.
@@ -61,6 +63,61 @@ def _load_ground_truth(question_id: str) -> list[dict] | None:
         return data if data else None
     except Exception:
         return None
+
+
+def _select_balanced(questions_meta: dict[str, dict], n: int) -> list[str]:
+    """Select N questions with balanced coverage across categories and difficulties.
+
+    Algorithm:
+    1. Group questions by category, then by difficulty within each category.
+    2. Build an interleaved queue per category cycling easy→medium→hard.
+    3. Round-robin across all categories, taking one question per round.
+    4. Continue until N questions selected or all exhausted.
+
+    Args:
+        questions_meta: Dict mapping question_id → {category, difficulty, ...}.
+        n: Number of questions to select.
+
+    Returns:
+        List of question ID strings.
+    """
+    DIFFICULTY_ORDER = ["easy", "medium", "hard"]
+
+    # Group by category → difficulty → list of qids
+    cat_diff: dict[str, dict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
+    for qid, meta in questions_meta.items():
+        cat = meta.get("category", "unknown")
+        diff = meta.get("difficulty", "unknown")
+        cat_diff[cat][diff].append(qid)
+
+    # Sort qids within each group for determinism
+    for cat in cat_diff:
+        for diff in cat_diff[cat]:
+            cat_diff[cat][diff].sort(key=int)
+
+    # Build interleaved queue per category: cycle easy→medium→hard
+    cat_queues: dict[str, list[str]] = {}
+    for cat in sorted(cat_diff.keys()):
+        queue: list[str] = []
+        diff_lists = {d: list(cat_diff[cat][d]) for d in DIFFICULTY_ORDER}
+        # Round-robin across difficulties
+        while any(diff_lists[d] for d in DIFFICULTY_ORDER):
+            for d in DIFFICULTY_ORDER:
+                if diff_lists[d]:
+                    queue.append(diff_lists[d].pop(0))
+        cat_queues[cat] = queue
+
+    # Round-robin across categories
+    selected: list[str] = []
+    categories = sorted(cat_queues.keys())
+    while len(selected) < n and any(cat_queues[c] for c in categories):
+        for cat in categories:
+            if len(selected) >= n:
+                break
+            if cat_queues[cat]:
+                selected.append(cat_queues[cat].pop(0))
+
+    return selected
 
 
 async def _judge_all(
@@ -127,6 +184,12 @@ def _append_history(
 ) -> None:
     """Append a one-line JSON summary to runs/history.jsonl."""
     agg = report["aggregate"]
+    # Latency metrics from run_stats
+    run_stats = report.get("run_stats", {})
+    latency = report.get("latency_analysis", {})
+    cost_analysis = report.get("cost_analysis", {})
+    budget_violations = report.get("budget_violations", {})
+
     entry = {
         "timestamp": run_dir_name,
         "questions_run": agg["count"],
@@ -139,6 +202,10 @@ def _append_history(
         "agent_provider": agent_provider,
         "judge_model": judge_model,
         "judge_provider": judge_provider,
+        "avg_duration_s": run_stats.get("avg_question_duration_s"),
+        "p90_duration_ms": latency.get("p90_total_ms"),
+        "avg_cost_usd": cost_analysis.get("avg_cost_per_question_usd"),
+        "budget_violations": budget_violations.get("total_violations", 0),
     }
     history_path = EVALUATION_BASE_DIR / "runs" / "history.jsonl"
     with open(history_path, "a") as f:
@@ -160,6 +227,12 @@ def _parse_args() -> argparse.Namespace:
         "--smoke",
         action="store_true",
         help=f"Run only the smoke-test subset ({len(SMOKE_QUESTION_IDS)} curated questions)",
+    )
+    parser.add_argument(
+        "--balanced",
+        type=int,
+        metavar="N",
+        help="Auto-select N questions with balanced coverage across categories and difficulties",
     )
     parser.add_argument(
         "--concurrency",
@@ -205,11 +278,22 @@ async def main() -> None:
     questions_meta = _load_questions_meta()
     logging.info(f"Loaded metadata for {len(questions_meta)} questions")
 
-    # Resolve question IDs
+    # Resolve question IDs (mutually exclusive: --questions, --smoke, --balanced)
+    specified = sum(1 for x in [args.questions, args.smoke, args.balanced] if x)
+    if specified > 1:
+        logging.error("--questions, --smoke, and --balanced are mutually exclusive")
+        return
+
     question_ids = args.questions
     if args.smoke:
         question_ids = SMOKE_QUESTION_IDS
         logging.info(f"Smoke-test mode: running {len(question_ids)} curated questions")
+    elif args.balanced:
+        question_ids = _select_balanced(questions_meta, args.balanced)
+        logging.info(
+            f"Balanced mode: selected {len(question_ids)} questions "
+            f"across {len({questions_meta[q]['category'] for q in question_ids})} categories"
+        )
 
     # Step 2: Run agent
     run_dir, run_results = await run_agent_evals(
@@ -245,6 +329,9 @@ async def main() -> None:
     )
     json_path, md_path = save_report(report, run_dir)
 
+    # Step 4b: Generate interactive HTML report
+    html_path = generate_html_report(run_dir)
+
     # Step 5: Append to history.jsonl
     if not args.skip_judge:
         # Read agent model info from summary.json
@@ -269,7 +356,8 @@ async def main() -> None:
     logging.info(
         f"  Pass/Partial/Fail:   {agg['pass_count']}/{agg['partial_count']}/{agg['fail_count']}"
     )
-    logging.info(f"  Report:              {md_path}")
+    logging.info(f"  Report (md):         {md_path}")
+    logging.info(f"  Report (html):       {html_path}")
     logging.info("=" * 60)
 
 

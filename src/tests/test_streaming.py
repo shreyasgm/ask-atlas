@@ -218,6 +218,32 @@ class TestGraphQLPipelineStateExtraction:
         assert "api_target" in result
         assert "success" in result
 
+    def test_select_docs_surfaces_selected_files(self):
+        """select_docs node: result has selected_files list."""
+        result = _extract_pipeline_state(
+            "select_docs",
+            {"docs_selected_files": ["metrics.md", "trade_data.md"]},
+        )
+        assert result["stage"] == "select_docs"
+        assert result["selected_files"] == ["metrics.md", "trade_data.md"]
+
+    def test_synthesize_docs_surfaces_synthesis_status(self):
+        """synthesize_docs node: result has has_synthesis flag."""
+        result = _extract_pipeline_state(
+            "synthesize_docs",
+            {"docs_synthesis": "ECI measures economic complexity."},
+        )
+        assert result["stage"] == "synthesize_docs"
+        assert result["has_synthesis"] is True
+
+    def test_synthesize_docs_no_synthesis(self):
+        """synthesize_docs node: has_synthesis is False when empty."""
+        result = _extract_pipeline_state(
+            "synthesize_docs",
+            {"docs_synthesis": ""},
+        )
+        assert result["has_synthesis"] is False
+
 
 # ---------------------------------------------------------------------------
 # Test Group 2: _build_turn_summary with atlas_links

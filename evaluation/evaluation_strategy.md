@@ -9,17 +9,19 @@
 ## Table of Contents
 
 1. [Current State Assessment](#1-current-state-assessment)
-2. [Five-Tier Evaluation Pyramid](#2-five-tier-evaluation-pyramid)
-3. [Ground Truth Source Hierarchy](#3-ground-truth-source-hierarchy)
-4. [Browser Automation Strategy](#4-browser-automation-strategy)
-5. [Observability and Production Monitoring](#5-observability-and-production-monitoring)
-6. [Dataset Collection Plan](#6-dataset-collection-plan)
-7. [Eval Run Costs and Cadence](#7-eval-run-costs-and-cadence)
-8. [Metrics and Dashboards](#8-metrics-and-dashboards)
-9. [Phased Implementation Roadmap](#9-phased-implementation-roadmap)
-10. [File Inventory](#10-file-inventory)
-11. [Risk Mitigation](#11-risk-mitigation)
-12. [Modern Eval Research to Incorporate](#12-modern-eval-research-to-incorporate)
+2. [Three-Axis Evaluation Framework](#2-three-axis-evaluation-framework)
+3. [Five-Tier Evaluation Pyramid](#3-five-tier-evaluation-pyramid)
+4. [Ground Truth Source Hierarchy](#4-ground-truth-source-hierarchy)
+5. [Browser Automation Strategy](#5-browser-automation-strategy)
+6. [Observability and Production Monitoring](#6-observability-and-production-monitoring)
+7. [Dataset Collection Plan](#7-dataset-collection-plan)
+8. [Eval Run Costs and Cadence](#8-eval-run-costs-and-cadence)
+9. [Metrics and Dashboards](#9-metrics-and-dashboards)
+10. [Architecture Flexibility & Eval Decoupling](#10-architecture-flexibility--eval-decoupling)
+11. [Phased Implementation Roadmap](#11-phased-implementation-roadmap)
+12. [File Inventory](#12-file-inventory)
+13. [Risk Mitigation](#13-risk-mitigation)
+14. [Modern Eval Research to Incorporate](#14-modern-eval-research-to-incorporate)
 
 ---
 
@@ -78,7 +80,25 @@ Verdicts: pass (>=3.5), partial (>=2.5), fail (<2.5) on a 1-5 scale.
 | `evaluation/explore_page_collection_guide.md` | Step-by-step browser collection for explore pages |
 | `evaluation/graphql_api_official_docs.md` | Official Explore API documentation |
 
-### 1.2 Planned but Not Built
+### 1.2 Recently Implemented
+
+**LLM token usage & cost tracking (commit `bd6deb5`, 2026-02-27):**
+- `src/token_usage.py`: `TokenUsageRecord`, `aggregate_usage()`, `estimate_cost()`, `MODEL_PRICING` dict, `count_tool_calls()`
+- `AtlasAgentState.token_usage` — accumulates per-node usage via reducer
+- Cost estimation in eval reports (`evaluation/report.py`: `_aggregate_cost()`, `cost_analysis` section)
+- Exposed via `src/streaming.py` (`AnswerResult.token_usage`, `.cost`) and `src/api.py` (`ChatResponse.token_usage`)
+
+**Per-step timing tracking (2026-02-28):**
+- `src/token_usage.py`: `TimingRecord`, `make_timing_record()`, `node_timer` async context manager, `aggregate_timing()`
+- `AtlasAgentState.step_timing` — accumulates per-node timing via reducer (same pattern as `token_usage`)
+- All 20 graph nodes instrumented with `node_timer()`, with LLM/I/O sub-timing marks
+- Latency analysis in eval reports (`evaluation/report.py`: `_aggregate_latency()`, P50/P90/P95 percentiles, bottleneck node identification)
+- Budget violation detection: configurable thresholds for duration (30s) and cost ($0.05) per question
+- `evaluation/runs/history.jsonl` tracks `avg_duration_s`, `p90_duration_ms`, `avg_cost_usd`, `budget_violations` per run
+- HTML report: P50/P90 latency badges, "By Node" breakdown tab, per-question step timing waterfall
+- Exposed via `src/streaming.py` (`AnswerResult.step_timing`) and `src/api.py` (`ChatResponse.step_timing`, SSE `done` event)
+
+### 1.3 Planned but Not Built
 
 From GitHub issues #51, #89, #90 and `docs/backend_redesign_analysis.md` Section 13:
 
@@ -91,7 +111,6 @@ From GitHub issues #51, #89, #90 and `docs/backend_redesign_analysis.md` Section
 **Issue #90 — Judge Extensions & Trajectory Testing:**
 - `TrajectoryVerdict` judge mode (deterministic tool sequence comparison)
 - `data_source_appropriateness` scoring dimension (weight 0.15)
-- Tool call sequence capture in `run_agent_evals.py`
 - Rebalanced dimension weights
 
 **Issue #51 — Data Collection Strategy Overhaul:**
@@ -101,20 +120,60 @@ From GitHub issues #51, #89, #90 and `docs/backend_redesign_analysis.md` Section
 - `refresh_ground_truth.py` with dry-run + changelog
 - Remediate 56 original SQL questions missing ground truth
 
-### 1.3 Missing Entirely
+### 1.4 Missing Entirely
 
 These capabilities are not described in any existing plan and are defined for the first time in this document:
 
 - **Browser automation workflow** using `claude-in-chrome` MCP for ground truth collection (Section 4)
 - **Production observability** — structured request traces, metrics endpoint (Section 5)
 - **Continuous evaluation loop** — production failures feeding back into eval datasets (Section 5.3)
-- **Cost model** for eval runs with mitigation strategies (Section 7)
 - **Data staleness management** — refresh pipeline, changelog, review cadence (Section 4.4)
 - **Trend reporting** — historical progress tracking from `runs/history.jsonl` (Section 8)
 
 ---
 
-## 2. Five-Tier Evaluation Pyramid
+## 2. Three-Axis Evaluation Framework
+
+The evaluation system measures the agent on three axes, in priority order:
+
+| Axis | Priority | What It Measures | Key Metrics | Implementation Status |
+|------|----------|-----------------|-------------|----------------------|
+| **Accuracy** | Highest | Does the agent answer correctly? | Pass rate, avg weighted score, per-dimension scores | **Implemented** — LLM judge with 4-dimension rubric, 3 judge modes |
+| **Latency** | Second | How fast does the agent respond? | P50/P90/P95 total time, per-node breakdown, bottleneck identification | **Implemented** — `step_timing` on state, `aggregate_timing()`, latency analysis in reports |
+| **Cost** | Third | How much does the agent cost per question? | Total tokens, estimated cost (USD), per-node token usage | **Implemented** — `token_usage` on state, `estimate_cost()`, cost analysis in reports |
+
+### Priority Ordering: Accuracy > Latency > Cost
+
+**Accuracy is non-negotiable.** A fast, cheap agent that gives wrong answers is worthless. Optimize accuracy first; only then consider whether responses are fast enough and affordable enough.
+
+**Latency is the primary operational constraint.** Users tolerate ~10-15 seconds for a complex trade data query, but >30 seconds causes abandonment. The budget threshold of 30s per question flags latency regressions.
+
+**Cost is the secondary operational constraint.** At ~20 concurrent users with moderate query volume, per-question cost directly impacts sustainability. The budget threshold of $0.05 per question flags cost regressions.
+
+### Budget Thresholds
+
+Configured in `evaluation/report.py`:
+
+| Threshold | Value | Rationale |
+|-----------|-------|-----------|
+| `BUDGET_THRESHOLD_DURATION_S` | 30.0s | Beyond this, users experience the system as "broken" |
+| `BUDGET_THRESHOLD_COST_USD` | $0.05 | At 20 users × 10 queries/day, $0.05/q = $10/day — sustainable |
+
+Violations are tracked per-question in eval reports and aggregated in `runs/history.jsonl` for trend detection.
+
+### Three-Axis Reporting
+
+Each eval run produces a unified report covering all three axes:
+
+- **Accuracy:** Pass/partial/fail counts, avg weighted score, per-category and per-difficulty breakdowns, per-question dimension scores
+- **Latency:** P50/P90/P95 total latency, per-node timing breakdown (LLM %, I/O %, overhead %), bottleneck node identification, per-question step timing waterfall
+- **Cost:** Total cost, avg cost per question, per-node token usage breakdown
+
+The HTML report (`evaluation/html_report.py`) provides dashboard badges for all three axes plus interactive breakdowns.
+
+---
+
+## 3. Five-Tier Evaluation Pyramid
 
 The evaluation system is organized into five tiers, ordered by speed and cost. Lower tiers run more frequently and catch issues earlier; higher tiers provide deeper signal at higher cost.
 
@@ -221,7 +280,7 @@ Real-world request tracing and failure detection. See Section 5 for full design.
 
 ---
 
-## 3. Ground Truth Source Hierarchy
+## 4. Ground Truth Source Hierarchy
 
 Ground truth must be independent of the system being evaluated. LLMs are the system under test — using LLM-generated answers as ground truth is circular. The browser (the rendered Atlas website) is the authoritative source of truth.
 
@@ -259,7 +318,7 @@ Ground truth must be independent of the system being evaluated. LLMs are the sys
 
 ---
 
-## 4. Browser Automation Strategy
+## 5. Browser Automation Strategy
 
 This section is new — not covered in the existing plans. It defines the workflow for collecting and refreshing ground truth by navigating the Atlas website in a browser.
 
@@ -424,7 +483,7 @@ Each extractor encapsulates page-specific DOM selectors and extraction logic. Th
 
 ---
 
-## 5. Observability and Production Monitoring
+## 6. Observability and Production Monitoring
 
 ### 5.1 Custom Trace Collector
 
@@ -532,7 +591,7 @@ A closed loop that turns production failures into evaluation improvements:
 
 ---
 
-## 6. Dataset Collection Plan
+## 7. Dataset Collection Plan
 
 Maps directly to GitHub issues #89, #90, #51. Each phase produces specific artifacts with defined formats.
 
@@ -782,7 +841,7 @@ The 56 original SQL questions (IDs 1-60, excluding those already covered) lack g
 
 ---
 
-## 7. Eval Run Costs and Cadence
+## 8. Eval Run Costs and Cadence
 
 Evaluations are run manually (not in CI/CD). Cost estimates assume GPT-5.2 for agent and GPT-5-mini for judge.
 
@@ -819,7 +878,7 @@ Evaluations are run manually (not in CI/CD). Cost estimates assume GPT-5.2 for a
 
 ---
 
-## 8. Metrics and Dashboards
+## 9. Metrics and Dashboards
 
 ### Quality Metrics (from eval runs)
 
@@ -872,7 +931,43 @@ Run: `uv run python evaluation/trend_report.py` (default: last 10 runs) or `uv r
 
 ---
 
-## 9. Phased Implementation Roadmap
+## 10. Architecture Flexibility & Eval Decoupling
+
+The agent's internal architecture may evolve — for example, entity/product resolution could be extracted from individual tool pipelines into a standalone tool. The evaluation system must survive such refactoring without requiring a rebuild.
+
+### Three-Layer Eval Model
+
+| Layer | Coupling | Investment Priority | Architecture Sensitivity |
+|-------|----------|--------------------|-----------------------|
+| **Layer 1: End-to-End Accuracy** | Architecture-agnostic | **Invest heavily** | None — input is question text, output is answer text |
+| **Layer 2: Operational Metrics** | Architecture-aware but generic | **Invest moderately** | Low — uses string-keyed node names, not hard-coded enums |
+| **Layer 3: Component Evals** | Tightly coupled | **Defer until architecture stabilizes** | High — tests individual nodes in isolation |
+
+**Layer 1 (End-to-End Accuracy)** is the most durable investment. The LLM judge compares the agent's answer text to ground truth data. It doesn't care which nodes ran, which tools were called, or how the graph is structured. Ground truth collection (especially browser-verified GT) pays off regardless of architecture changes.
+
+**Layer 2 (Operational Metrics)** is designed for flexibility:
+- `node_timer(node_name, pipeline_name)` uses string parameters, not enums
+- `aggregate_timing()` and `aggregate_usage()` use `defaultdict` — new nodes appear automatically, removed nodes disappear
+- Reports group by `tool_pipeline` string (a soft label), not a fixed enum
+- When architecture changes, just update the `tool_pipeline` strings in the new nodes
+- No hard-coded list of expected nodes in reporting code
+
+**Layer 3 (Component Evals)** is most vulnerable to architecture changes. Classification eval datasets, entity extraction eval sets, and ID resolution eval sets test specific nodes. If entity extraction moves to a separate tool, these datasets and their harness need rebuilding. **Defer Phase B until the architecture stabilizes.**
+
+### Impact of Potential Architecture Changes
+
+If entity/product resolution becomes a standalone tool:
+- It gets its own `tool_pipeline` label (e.g., `"entity_resolver"`)
+- Its nodes use `node_timer("resolve_entities", "entity_resolver")`
+- SQL and GraphQL pipelines lose their extraction nodes
+- Reports automatically reflect the new pipeline in timing/cost breakdowns
+- **Layer 1 (end-to-end accuracy): completely unaffected**
+- **Layer 2 (operational metrics): automatically adapts** — new node names appear in aggregations
+- **Layer 3 (component evals): must be rebuilt** — extraction eval datasets need new expected values
+
+---
+
+## 11. Phased Implementation Roadmap
 
 Phases are ordered by dependency chains and signal-per-effort. No calendar dates — work items become available when their dependencies are satisfied.
 
@@ -880,19 +975,21 @@ Phases are ordered by dependency chains and signal-per-effort. No calendar dates
 
 **Dependencies:** None — start immediately.
 **Effort:** ~15 hours
+**Status:** Partially complete — tool call capture and node timing are implemented (see Section 1.2). Trajectory expectations should be **deferred until the architecture stabilizes** (see Section 10). Tool call counts are already captured via `count_tool_calls()` in `src/token_usage.py`.
 
-| Work Item | Effort | Unlocks |
-|-----------|--------|---------|
-| Tool call capture in `run_agent_evals.py` — extract tool_calls, node_sequence, classification from `AtlasAgentState` | ~4h | Trajectory eval, data_source_appropriateness |
-| `annotate_tool_expectations.py` — rule-based + LLM annotation of `expected_tool` for all 246 questions | ~4h | Trajectory eval |
-| `analyze_coverage_gaps.py` — category balance, query type coverage, difficulty distribution | ~2h | Prioritized dataset collection |
-| `TrajectoryVerdict` judge mode — deterministic tool sequence comparison in `judge.py` | ~3h | Free quality gate for every run |
-| `trend_report.py` — historical progress tracking from `runs/history.jsonl` | ~2h | Visible progress tracking |
+| Work Item | Effort | Unlocks | Status |
+|-----------|--------|---------|--------|
+| Tool call capture in `run_agent_evals.py` — extract tool_calls, node_sequence, classification from `AtlasAgentState` | ~4h | Trajectory eval, data_source_appropriateness | **DONE** — `tools_used`, `tool_call_counts`, `step_timing` captured |
+| `annotate_tool_expectations.py` — rule-based + LLM annotation of `expected_tool` for all 246 questions | ~4h | Trajectory eval | Pending — **defer until architecture stabilizes** |
+| `analyze_coverage_gaps.py` — category balance, query type coverage, difficulty distribution | ~2h | Prioritized dataset collection | Pending |
+| `TrajectoryVerdict` judge mode — deterministic tool sequence comparison in `judge.py` | ~3h | Free quality gate for every run | Pending — **defer until architecture stabilizes** |
+| `trend_report.py` — historical progress tracking from `runs/history.jsonl` | ~2h | Visible progress tracking | Pending |
 
 ### Phase B: Component Eval Datasets
 
 **Dependencies:** Phase A + `GraphQLQueryClassification` schema finalized.
 **Effort:** ~20 hours
+**Status:** Pending — **DEFER until architecture stabilizes.** This is the most architecture-coupled tier (Layer 3 in Section 10). If entity extraction moves to a separate tool, classification/extraction/resolution datasets all need rebuilding. Wait until the graph topology is stable before investing ~20h in component eval datasets.
 
 | Work Item | Effort |
 |-----------|--------|
@@ -915,6 +1012,7 @@ Phases are ordered by dependency chains and signal-per-effort. No calendar dates
 
 **Dependencies:** Phase A + GraphQL pipeline being functional.
 **Effort:** ~40 hours (can run in parallel with Phase C)
+**Note:** The Atlas website (atlas.hks.harvard.edu) has been stable for close to a decade — the UI is not expected to change. Browser-verified ground truth is the gold standard because it is independent of the agent under test (no circular validation), and the website's stability makes browser extraction durable. The existing 190 browser-verified ground truths are a major asset and should never be downgraded to API-verified.
 
 | Work Item | Effort |
 |-----------|--------|
@@ -939,22 +1037,31 @@ Phases are ordered by dependency chains and signal-per-effort. No calendar dates
 ### Dependency Graph
 
 ```
-Phase A (Foundations)
+Phase A (Foundations)          [PARTIALLY COMPLETE — tool call capture + timing done]
   |
-  ├──> Phase B (Component Datasets)
+  ├──> Phase B (Component Datasets)   [DEFER — wait for architecture to stabilize]
   |      |
   |      └──> Phase C (Judge Extensions)
   |
-  ├──> Phase D (Browser GT)   [can run in parallel with C]
+  ├──> Phase D (Browser GT)   [NEXT — highest-quality GT to close coverage gap]
   |
 Phase E (Production Monitoring)   [independent — anytime]
 ```
 
-**Total effort:** ~92 hours across all phases. Phases A and E can start immediately and run in parallel.
+### Recommended Sequencing (updated 2026-02-28)
+
+1. **DONE**: Per-step timing + cost tracking implementation
+2. **NEXT**: Browser-verified GT for 40 remaining questions (Phase D, subset) — close the GT coverage gap with highest-quality data
+3. **NEXT**: Full eval run to establish three-axis baseline (accuracy + latency + cost)
+4. **LATER**: Phase C (judge extensions) — after baseline shows where accuracy gaps are
+5. **DEFER**: Phase A trajectory expectations + Phase B component evals — wait for architecture to stabilize
+6. **LATER**: Phase E production monitoring — when approaching production deployment
+
+**Total effort:** ~92 hours across all phases. Phases A (remaining items) and E can start immediately and run in parallel.
 
 ---
 
-## 10. File Inventory
+## 12. File Inventory
 
 ### New Files to Create
 
@@ -981,11 +1088,29 @@ Phase E (Production Monitoring)   [independent — anytime]
 | `evaluation/graphql_eval_collection_guide.md` | Collection guide for new GraphQL-specific eval questions | D |
 | `evaluation/ground_truth_changelog.jsonl` | Append-only changelog of ground truth data changes | D |
 
-### Existing Files to Modify
+### Existing Files Modified (2026-02-28)
+
+| File | Changes | Status |
+|------|---------|--------|
+| `src/token_usage.py` | Added `TimingRecord`, `make_timing_record()`, `node_timer` context manager, `aggregate_timing()` | **DONE** |
+| `src/state.py` | Added `step_timing` field with `add_step_timing` reducer | **DONE** |
+| `src/agent_node.py` | Wrapped agent node in `node_timer("agent", "agent")` | **DONE** |
+| `src/sql_pipeline.py` | Wrapped all 9 SQL pipeline nodes in `node_timer()` with LLM/IO marks | **DONE** |
+| `src/graphql_pipeline.py` | Wrapped all 6 GraphQL pipeline nodes in `node_timer()` with LLM/IO marks | **DONE** |
+| `src/docs_pipeline.py` | Wrapped all 3 docs pipeline nodes in `node_timer()` with LLM marks | **DONE** |
+| `src/streaming.py` | Added `step_timing` to `AnswerResult`; collect from final state | **DONE** |
+| `src/api.py` | Added `step_timing` to `ChatResponse` and SSE `done` event | **DONE** |
+| `evaluation/run_agent_evals.py` | Extract `step_timing` + `token_usage` from agent state | **DONE** |
+| `evaluation/report.py` | Added `_aggregate_latency()`, `_check_budget_violations()`, latency/budget markdown sections | **DONE** |
+| `evaluation/run_eval.py` | Added latency/cost metrics to `_append_history()` | **DONE** |
+| `evaluation/html_report.py` | Latency dashboard badges, "By Node" breakdown tab, per-question step timing waterfall | **DONE** |
+| `src/tests/test_token_usage.py` | Added tests for `make_timing_record`, `node_timer`, `aggregate_timing` | **DONE** |
+| `src/tests/test_eval_report.py` | Added tests for `_aggregate_latency`, `_check_budget_violations` | **DONE** |
+
+### Existing Files to Modify (future phases)
 
 | File | Changes | Phase |
 |------|---------|-------|
-| `evaluation/run_agent_evals.py` | Capture `tool_calls`, `node_sequence`, `graphql_classification`, `graphql_entities`, `atlas_links` from agent state after each question | A |
 | `evaluation/judge.py` | Add `TrajectoryVerdict` mode (A); add `data_source_appropriateness` dimension + rebalance weights (C) | A + C |
 | `evaluation/run_eval.py` | Integrate trajectory eval into orchestration; pass tool call data to judge | A |
 | `evaluation/report.py` | Add trajectory stats (match rate, tool distribution) and component eval summaries to reports | A |
@@ -994,7 +1119,7 @@ Phase E (Production Monitoring)   [independent — anytime]
 
 ---
 
-## 11. Risk Mitigation
+## 13. Risk Mitigation
 
 ### LLM Judge Reliability
 
@@ -1025,7 +1150,7 @@ Phase E (Production Monitoring)   [independent — anytime]
 
 ---
 
-## 12. Modern Eval Research to Incorporate
+## 14. Modern Eval Research to Incorporate
 
 This section documents the evaluation patterns informing this strategy, with sources. The strategy doesn't adopt any framework wholesale — it selects the patterns that fit Ask-Atlas's needs.
 
@@ -1038,7 +1163,7 @@ The industry has converged on evaluating agents across multiple axes — capabil
 | **Capability** (can it answer correctly?) | Tier 2 (component), Tier 4 (end-to-end) |
 | **Tool correctness** (does it use the right tools?) | Tier 3 (trajectory) |
 | **Robustness** (does it handle edge cases?) | Tier 1 (unit tests for budget/circuit breaker), Tier 4 (edge case questions) |
-| **Efficiency** (how fast? how much cost?) | Tier 5 (production latency), Tier 3 (budget utilization) |
+| **Efficiency** (how fast? how much cost?) | Tier 4 (per-step timing + cost tracking — **implemented**), Tier 5 (production latency), Tier 3 (budget utilization) |
 | **Safety** (does it refuse appropriately?) | Tier 4 (refusal judge mode), Tier 3 (trajectory for refusal questions) |
 
 Source: "Beyond Task Completion: Assessment Framework for Agentic AI" (arXiv 2512.12791).
@@ -1112,4 +1237,4 @@ Token costs scale with eval dataset size x model cost. The cost analysis in Sect
 
 ---
 
-*Document version: 2026-02-27. Consolidates `docs/backend_redesign_analysis.md` Section 13, GitHub issues #51, #89, #90.*
+*Document version: 2026-02-28. Consolidates `docs/backend_redesign_analysis.md` Section 13, GitHub issues #51, #89, #90. Updated to reflect implemented cost tracking (commit `bd6deb5`) and per-step timing tracking, three-axis evaluation framework, and architecture flexibility considerations.*

@@ -43,6 +43,19 @@ def add_token_usage(existing: list[dict] | None, new: list[dict] | None) -> list
     return (existing or []) + (new or [])
 
 
+def add_step_timing(existing: list[dict] | None, new: list[dict] | None) -> list[dict]:
+    """Reducer that accumulates per-step timing records across graph nodes.
+
+    Args:
+        existing: Previously accumulated timing records (may be None).
+        new: New timing records to append (may be None).
+
+    Returns:
+        Combined list of all timing records.
+    """
+    return (existing or []) + (new or [])
+
+
 class AtlasAgentState(TypedDict):
     """State carried through each node of the Atlas agent graph.
 
@@ -101,6 +114,8 @@ class AtlasAgentState(TypedDict):
     turn_summaries: Annotated[list[dict], add_turn_summaries]
     # Accumulated LLM token usage records (per-node granularity)
     token_usage: Annotated[list[dict], add_token_usage]
+    # Accumulated per-step timing records (wall clock, LLM, I/O per node)
+    step_timing: Annotated[list[dict], add_step_timing]
     # Trade toggle overrides (None = auto-detect)
     override_schema: Optional[str]
     override_direction: Optional[str]

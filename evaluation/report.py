@@ -9,11 +9,16 @@ Takes agent run results and judge verdicts and produces:
 from __future__ import annotations
 
 import json
+import math
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
 from utils import get_timestamp, logging
+
+# Budget thresholds — flag questions exceeding these limits
+BUDGET_THRESHOLD_DURATION_S = 30.0
+BUDGET_THRESHOLD_COST_USD = 0.05
 
 
 def _aggregate_scores(verdicts: list[dict]) -> dict[str, Any]:
@@ -138,6 +143,159 @@ def _aggregate_costs(run_results: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _percentile(sorted_values: list[float], p: float) -> float:
+    """Compute the p-th percentile from an already-sorted list.
+
+    Args:
+        sorted_values: Pre-sorted list of numeric values.
+        p: Percentile to compute (0-100).
+
+    Returns:
+        The interpolated percentile value.
+    """
+    if not sorted_values:
+        return 0.0
+    k = (len(sorted_values) - 1) * p / 100.0
+    f = math.floor(k)
+    c = math.ceil(k)
+    if f == c:
+        return sorted_values[int(k)]
+    return sorted_values[f] * (c - k) + sorted_values[c] * (k - f)
+
+
+def _aggregate_latency(run_results: list[dict[str, Any]]) -> dict[str, Any]:
+    """Compute aggregate latency statistics from per-step timing summaries.
+
+    Args:
+        run_results: List of per-question result dicts, each optionally
+            containing ``step_timing_summary``.
+
+    Returns:
+        Dict with percentiles, per-node averages, time breakdown, or empty
+        dict if no timing data is available.
+    """
+    results_with_timing = [r for r in run_results if r.get("step_timing_summary")]
+    if not results_with_timing:
+        return {}
+
+    # Collect total wall times
+    total_wall_times = sorted(
+        r["step_timing_summary"]["total"]["wall_time_ms"] for r in results_with_timing
+    )
+    n = len(results_with_timing)
+
+    # Aggregate per-node averages
+    node_totals: dict[str, dict[str, float]] = defaultdict(
+        lambda: {"wall_time_ms": 0.0, "llm_time_ms": 0.0, "io_time_ms": 0.0, "count": 0}
+    )
+    grand_llm = 0.0
+    grand_io = 0.0
+    grand_overhead = 0.0
+    grand_wall = 0.0
+
+    for r in results_with_timing:
+        summary = r["step_timing_summary"]
+        for node_name, node_data in summary.get("by_node", {}).items():
+            node_totals[node_name]["wall_time_ms"] += node_data.get("wall_time_ms", 0)
+            node_totals[node_name]["llm_time_ms"] += node_data.get("llm_time_ms", 0)
+            node_totals[node_name]["io_time_ms"] += node_data.get("io_time_ms", 0)
+            node_totals[node_name]["count"] += 1
+
+        total = summary.get("total", {})
+        grand_llm += total.get("llm_time_ms", 0)
+        grand_io += total.get("io_time_ms", 0)
+        grand_overhead += total.get("overhead_ms", 0)
+        grand_wall += total.get("wall_time_ms", 0)
+
+    # Compute averages per node
+    avg_by_node = {}
+    for node_name, data in sorted(
+        node_totals.items(), key=lambda x: -x[1]["wall_time_ms"]
+    ):
+        cnt = data["count"]
+        avg_by_node[node_name] = {
+            "avg_wall_time_ms": round(data["wall_time_ms"] / cnt, 1),
+            "avg_llm_time_ms": round(data["llm_time_ms"] / cnt, 1),
+            "avg_io_time_ms": round(data["io_time_ms"] / cnt, 1),
+            "pct_of_total": (
+                round(data["wall_time_ms"] / grand_wall * 100, 1) if grand_wall else 0
+            ),
+            "appearances": cnt,
+        }
+
+    # Time breakdown percentages
+    time_breakdown = {
+        "llm_pct": round(grand_llm / grand_wall * 100, 1) if grand_wall else 0,
+        "io_pct": round(grand_io / grand_wall * 100, 1) if grand_wall else 0,
+        "overhead_pct": (
+            round(grand_overhead / grand_wall * 100, 1) if grand_wall else 0
+        ),
+    }
+
+    return {
+        "questions_with_timing": n,
+        "avg_total_ms": round(sum(total_wall_times) / n, 1),
+        "p50_total_ms": round(_percentile(total_wall_times, 50), 1),
+        "p90_total_ms": round(_percentile(total_wall_times, 90), 1),
+        "p95_total_ms": round(_percentile(total_wall_times, 95), 1),
+        "max_total_ms": round(max(total_wall_times), 1),
+        "avg_by_node": avg_by_node,
+        "time_breakdown": time_breakdown,
+    }
+
+
+def _check_budget_violations(run_results: list[dict[str, Any]]) -> dict[str, Any]:
+    """Check for questions exceeding duration or cost thresholds.
+
+    Args:
+        run_results: List of per-question result dicts.
+
+    Returns:
+        Dict with violation counts and details, or empty dict if none.
+    """
+    violations: list[dict[str, Any]] = []
+
+    for r in run_results:
+        qid = str(r.get("question_id", ""))
+        reasons: list[str] = []
+
+        duration = r.get("duration_s")
+        if duration is not None and duration > BUDGET_THRESHOLD_DURATION_S:
+            reasons.append(f"duration {duration:.1f}s > {BUDGET_THRESHOLD_DURATION_S}s")
+
+        cost = r.get("cost", {})
+        cost_usd = cost.get("total_cost_usd") if cost else None
+        if cost_usd is not None and cost_usd > BUDGET_THRESHOLD_COST_USD:
+            reasons.append(f"cost ${cost_usd:.4f} > ${BUDGET_THRESHOLD_COST_USD}")
+
+        if reasons:
+            violations.append(
+                {
+                    "question_id": qid,
+                    "question_text": r.get("question_text", ""),
+                    "reasons": reasons,
+                    "duration_s": duration,
+                    "cost_usd": cost_usd,
+                }
+            )
+
+    if not violations:
+        return {}
+
+    return {
+        "duration_violations": sum(
+            1
+            for v in violations
+            if any("duration" in reason for reason in v["reasons"])
+        ),
+        "cost_violations": sum(
+            1 for v in violations if any("cost" in reason for reason in v["reasons"])
+        ),
+        "total_violations": len(violations),
+        "violations": violations,
+    }
+
+
 def generate_report(
     run_results: list[dict[str, Any]],
     judge_results: dict[str, dict],
@@ -221,6 +379,14 @@ def generate_report(
 
     if cost_analysis:
         report["cost_analysis"] = cost_analysis
+
+    latency_analysis = _aggregate_latency(run_results)
+    if latency_analysis:
+        report["latency_analysis"] = latency_analysis
+
+    budget_violations = _check_budget_violations(run_results)
+    if budget_violations:
+        report["budget_violations"] = budget_violations
 
     return report
 
@@ -331,6 +497,65 @@ def report_to_markdown(report: dict[str, Any]) -> str:
                 tc = tool_totals[tool_name]
                 ac = avg_calls.get(tool_name, 0)
                 lines.append(f"| {tool_name} | {tc} | {ac} |")
+
+    # Latency analysis
+    latency = report.get("latency_analysis", {})
+    if latency:
+        lines.append("\n## Latency Analysis\n")
+        lines.append("| Metric | Value |")
+        lines.append("|--------|-------|")
+        lines.append(f"| Avg total | {latency['avg_total_ms']:.0f}ms |")
+        lines.append(f"| P50 | {latency['p50_total_ms']:.0f}ms |")
+        lines.append(f"| P90 | {latency['p90_total_ms']:.0f}ms |")
+        lines.append(f"| P95 | {latency['p95_total_ms']:.0f}ms |")
+        lines.append(f"| Max | {latency['max_total_ms']:.0f}ms |")
+        lines.append(f"| Questions with timing | {latency['questions_with_timing']} |")
+
+        tb = latency.get("time_breakdown", {})
+        if tb:
+            lines.append(f"| LLM time | {tb.get('llm_pct', 0):.1f}% |")
+            lines.append(f"| I/O time | {tb.get('io_pct', 0):.1f}% |")
+            lines.append(f"| Overhead | {tb.get('overhead_pct', 0):.1f}% |")
+
+        avg_by_node = latency.get("avg_by_node", {})
+        if avg_by_node:
+            lines.append("\n### Bottleneck Nodes\n")
+            lines.append("| Node | Avg Time | % of Total | LLM % | I/O % |")
+            lines.append("|------|----------|------------|-------|-------|")
+            for node_name, data in avg_by_node.items():
+                avg_wall = data["avg_wall_time_ms"]
+                llm_pct = (
+                    round(data["avg_llm_time_ms"] / avg_wall * 100, 1)
+                    if avg_wall
+                    else 0
+                )
+                io_pct = (
+                    round(data["avg_io_time_ms"] / avg_wall * 100, 1) if avg_wall else 0
+                )
+                lines.append(
+                    f"| {node_name} | {avg_wall:.0f}ms | {data['pct_of_total']:.1f}% "
+                    f"| {llm_pct:.1f}% | {io_pct:.1f}% |"
+                )
+
+    # Budget violations
+    bv = report.get("budget_violations", {})
+    if bv:
+        lines.append("\n## Budget Violations\n")
+        lines.append(
+            f"**{bv['total_violations']}** questions exceeded thresholds "
+            f"({bv['duration_violations']} duration, {bv['cost_violations']} cost)\n"
+        )
+        lines.append("| Question | Duration | Cost | Reasons |")
+        lines.append("|----------|----------|------|---------|")
+        for v in bv.get("violations", []):
+            dur = (
+                f"{v['duration_s']:.1f}s" if v.get("duration_s") is not None else "n/a"
+            )
+            cost_val = (
+                f"${v['cost_usd']:.4f}" if v.get("cost_usd") is not None else "n/a"
+            )
+            reasons = "; ".join(v["reasons"])
+            lines.append(f"| Q{v['question_id']} | {dur} | {cost_val} | {reasons} |")
 
     # Failed questions
     failed = report.get("failed_questions", [])

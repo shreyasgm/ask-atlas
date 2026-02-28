@@ -1,20 +1,26 @@
 """Unit tests for src/token_usage.py.
 
 Tests the core math and data transforms: cost estimation, aggregation,
-model name lookup. No mocks, no DB, no LLM.
+model name lookup, and per-step timing. No mocks, no DB, no LLM.
 """
 
 from __future__ import annotations
+
+import asyncio
+import time
 
 import pytest
 
 from src.model_config import DEFAULT_PRICING, MODEL_PRICING
 from src.token_usage import (
     _lookup_pricing,
+    aggregate_timing,
     aggregate_usage,
     count_tool_calls,
     estimate_cost,
+    make_timing_record,
     make_usage_record,
+    node_timer,
 )
 
 # ---------------------------------------------------------------------------
@@ -230,3 +236,298 @@ class TestCountToolCalls:
         """Empty message list should return empty counts."""
         result = count_tool_calls([])
         assert result == {}
+
+
+# ---------------------------------------------------------------------------
+# Tests: make_timing_record
+# ---------------------------------------------------------------------------
+
+
+class TestMakeTimingRecord:
+    def test_overhead_computed_correctly(self):
+        """Overhead = wall_time - llm_time - io_time."""
+        rec = make_timing_record(
+            "generate_sql",
+            "query_tool",
+            wall_time_ms=1000.0,
+            llm_time_ms=600.0,
+            io_time_ms=200.0,
+        )
+        assert rec["node"] == "generate_sql"
+        assert rec["tool_pipeline"] == "query_tool"
+        assert rec["wall_time_ms"] == 1000.0
+        assert rec["llm_time_ms"] == 600.0
+        assert rec["io_time_ms"] == 200.0
+        assert rec["overhead_ms"] == 200.0
+
+    def test_defaults_to_zero_sub_timings(self):
+        """Without sub-timings, overhead equals wall time."""
+        rec = make_timing_record("agent", "agent", wall_time_ms=500.0)
+        assert rec["llm_time_ms"] == 0.0
+        assert rec["io_time_ms"] == 0.0
+        assert rec["overhead_ms"] == 500.0
+
+    def test_overhead_never_negative(self):
+        """If sub-timings exceed wall time (unlikely), overhead should be 0."""
+        rec = make_timing_record(
+            "test", "test", wall_time_ms=100.0, llm_time_ms=80.0, io_time_ms=50.0
+        )
+        assert rec["overhead_ms"] == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Tests: node_timer
+# ---------------------------------------------------------------------------
+
+
+class TestNodeTimer:
+    def test_captures_wall_time(self):
+        """node_timer should measure wall-clock time."""
+
+        async def _run():
+            async with node_timer("agent", "agent") as t:
+                await asyncio.sleep(0.05)
+            return t.record
+
+        rec = asyncio.run(_run())
+        assert rec["node"] == "agent"
+        assert rec["tool_pipeline"] == "agent"
+        assert rec["wall_time_ms"] >= 40  # at least ~50ms minus scheduling jitter
+
+    def test_marks_llm_and_io(self):
+        """mark_llm and mark_io should accumulate sub-timings."""
+
+        async def _run():
+            async with node_timer("generate_sql", "query_tool") as t:
+                llm_start = time.monotonic()
+                await asyncio.sleep(0.02)
+                t.mark_llm(llm_start, time.monotonic())
+
+                io_start = time.monotonic()
+                await asyncio.sleep(0.01)
+                t.mark_io(io_start, time.monotonic())
+            return t.record
+
+        rec = asyncio.run(_run())
+        assert rec["llm_time_ms"] >= 15  # ~20ms
+        assert rec["io_time_ms"] >= 5  # ~10ms
+        assert rec["wall_time_ms"] >= rec["llm_time_ms"] + rec["io_time_ms"]
+        assert rec["overhead_ms"] >= 0
+
+
+# ---------------------------------------------------------------------------
+# Tests: aggregate_timing
+# ---------------------------------------------------------------------------
+
+
+class TestAggregateTiming:
+    def test_groups_by_node(self):
+        """Records from different nodes should be grouped correctly."""
+        records = [
+            make_timing_record("agent", "agent", wall_time_ms=100.0, llm_time_ms=80.0),
+            make_timing_record(
+                "generate_sql", "query_tool", wall_time_ms=500.0, llm_time_ms=400.0
+            ),
+            make_timing_record(
+                "execute_sql", "query_tool", wall_time_ms=200.0, io_time_ms=180.0
+            ),
+        ]
+        result = aggregate_timing(records)
+
+        assert "agent" in result["by_node"]
+        assert "generate_sql" in result["by_node"]
+        assert "execute_sql" in result["by_node"]
+        assert result["by_node"]["agent"]["wall_time_ms"] == 100.0
+        assert result["by_node"]["generate_sql"]["llm_time_ms"] == 400.0
+
+    def test_groups_by_pipeline(self):
+        """Records from same pipeline should be aggregated."""
+        records = [
+            make_timing_record("extract_products", "query_tool", wall_time_ms=100.0),
+            make_timing_record("generate_sql", "query_tool", wall_time_ms=500.0),
+        ]
+        result = aggregate_timing(records)
+
+        assert result["by_pipeline"]["query_tool"]["wall_time_ms"] == 600.0
+        assert result["by_pipeline"]["query_tool"]["call_count"] == 2
+
+    def test_identifies_slowest_node(self):
+        """Should identify the node with the highest wall_time_ms."""
+        records = [
+            make_timing_record("agent", "agent", wall_time_ms=100.0),
+            make_timing_record("generate_sql", "query_tool", wall_time_ms=500.0),
+            make_timing_record("execute_sql", "query_tool", wall_time_ms=200.0),
+        ]
+        result = aggregate_timing(records)
+
+        assert result["slowest_node"]["node"] == "generate_sql"
+        assert result["slowest_node"]["wall_time_ms"] == 500.0
+
+    def test_total_sums(self):
+        """Total should sum all records."""
+        records = [
+            make_timing_record(
+                "a", "p1", wall_time_ms=100.0, llm_time_ms=50.0, io_time_ms=30.0
+            ),
+            make_timing_record(
+                "b", "p2", wall_time_ms=200.0, llm_time_ms=100.0, io_time_ms=60.0
+            ),
+        ]
+        result = aggregate_timing(records)
+
+        assert result["total"]["wall_time_ms"] == 300.0
+        assert result["total"]["llm_time_ms"] == 150.0
+        assert result["total"]["io_time_ms"] == 90.0
+
+    def test_empty_records(self):
+        """Empty list should return zero totals and no slowest node."""
+        result = aggregate_timing([])
+        assert result["total"]["wall_time_ms"] == 0.0
+        assert result["slowest_node"] is None
+        assert result["by_node"] == {}
+        assert result["by_pipeline"] == {}
+
+
+# ---------------------------------------------------------------------------
+# Tests: add_step_timing reducer
+# ---------------------------------------------------------------------------
+
+
+class TestStepTimingReducer:
+    """Tests for the state reducer that accumulates timing records across nodes.
+
+    This is the critical accumulation mechanism — if the reducer is broken,
+    all per-node timing data is silently lost even though individual nodes
+    produce correct records.
+    """
+
+    def test_accumulates_records_across_nodes(self):
+        """Timing records from separate nodes should concatenate in order."""
+        from src.state import add_step_timing
+
+        first = [make_timing_record("agent", "agent", wall_time_ms=100.0)]
+        second = [make_timing_record("generate_sql", "query_tool", wall_time_ms=500.0)]
+        third = [make_timing_record("execute_sql", "query_tool", wall_time_ms=200.0)]
+
+        accumulated = add_step_timing(None, first)
+        accumulated = add_step_timing(accumulated, second)
+        accumulated = add_step_timing(accumulated, third)
+
+        assert len(accumulated) == 3
+        assert accumulated[0]["node"] == "agent"
+        assert accumulated[1]["node"] == "generate_sql"
+        assert accumulated[2]["node"] == "execute_sql"
+
+    def test_handles_none_inputs(self):
+        """Reducer should handle None for both existing and new."""
+        from src.state import add_step_timing
+
+        assert add_step_timing(None, None) == []
+        assert add_step_timing([], None) == []
+        rec = [make_timing_record("agent", "agent", wall_time_ms=100.0)]
+        assert add_step_timing(None, rec) == rec
+
+
+# ---------------------------------------------------------------------------
+# Tests: node_timer exception safety
+# ---------------------------------------------------------------------------
+
+
+class TestNodeTimerExceptionSafety:
+    """Verify that node_timer still produces a valid record when the
+    wrapped code raises an exception — this is the production path for
+    any node that fails (timeout, bad SQL, API error, etc.).
+    """
+
+    def test_record_available_after_exception(self):
+        """If the wrapped code raises, the timing builder should still
+        produce a valid record with the wall time up to the exception."""
+
+        async def _run():
+            builder = None
+            try:
+                async with node_timer("execute_sql", "query_tool") as t:
+                    builder = t
+                    await asyncio.sleep(0.02)
+                    raise RuntimeError("DB connection lost")
+            except RuntimeError:
+                pass
+            return builder.record
+
+        rec = asyncio.run(_run())
+        assert rec["node"] == "execute_sql"
+        assert rec["wall_time_ms"] >= 15  # at least ~20ms minus jitter
+        assert rec["llm_time_ms"] == 0.0
+        assert rec["overhead_ms"] >= 0
+
+
+# ---------------------------------------------------------------------------
+# Tests: pipeline nodes return step_timing
+# ---------------------------------------------------------------------------
+
+
+class TestPipelineNodesReturnStepTiming:
+    """Verify that the actual pipeline node functions return a 'step_timing'
+    key in their result dict. These are regression guards — if someone
+    refactors a node and drops the timing, the node becomes invisible
+    in timing reports.
+    """
+
+    def test_extract_tool_question_returns_timing(self):
+        """extract_tool_question should include step_timing in its result."""
+        from src.sql_pipeline import extract_tool_question
+        from langchain_core.messages import AIMessage
+
+        state = {
+            "messages": [
+                AIMessage(
+                    content="",
+                    tool_calls=[
+                        {
+                            "id": "c1",
+                            "name": "query_tool",
+                            "args": {"question": "test?"},
+                        },
+                    ],
+                )
+            ],
+        }
+        result = asyncio.run(extract_tool_question(state))
+
+        assert "step_timing" in result
+        assert len(result["step_timing"]) == 1
+        rec = result["step_timing"][0]
+        assert rec["node"] == "extract_tool_question"
+        assert rec["tool_pipeline"] == "query_tool"
+        assert rec["wall_time_ms"] >= 0
+
+    def test_format_results_returns_timing(self):
+        """format_results_node should include step_timing in its result."""
+        from langchain_core.messages import AIMessage
+        from src.sql_pipeline import format_results_node
+
+        state = {
+            "messages": [
+                AIMessage(
+                    content="",
+                    tool_calls=[
+                        {
+                            "id": "c1",
+                            "name": "query_tool",
+                            "args": {"question": "test?"},
+                        },
+                    ],
+                )
+            ],
+            "pipeline_question": "test?",
+            "pipeline_result_columns": ["country", "value"],
+            "pipeline_result_rows": [["Brazil", 100]],
+            "pipeline_execution_time_ms": 50,
+            "pipeline_sql": "SELECT country FROM t",
+        }
+        result = asyncio.run(format_results_node(state))
+
+        assert "step_timing" in result
+        rec = result["step_timing"][0]
+        assert rec["node"] == "format_results"
+        assert rec["tool_pipeline"] == "query_tool"
