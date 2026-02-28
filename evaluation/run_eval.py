@@ -152,6 +152,7 @@ async def _judge_all(
                     else "refusal" if expected_behavior is not None else "plausibility"
                 )
                 logging.info(f"Question {qid}: judging ({mode})...")
+                tools_used = result.get("tools_used")
                 verdict = await judge_answer(
                     question=meta.get("text", result.get("question_text", "")),
                     agent_answer=result["answer"],
@@ -159,6 +160,7 @@ async def _judge_all(
                     expected_behavior=expected_behavior,
                     model=judge_model,
                     provider=judge_provider,
+                    tools_used=tools_used,
                 )
                 judge_results[qid] = verdict
                 logging.info(
