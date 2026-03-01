@@ -8,8 +8,11 @@ IDs start at 170 (1-169 are existing questions).
 
 Usage:
     uv run python evaluation/collect_explore_page_data.py
+    uv run python evaluation/collect_explore_page_data.py --product-class HS92
+    uv run python evaluation/collect_explore_page_data.py --questions 170 171
 """
 
+import argparse
 import asyncio
 import json
 from collections import Counter
@@ -67,6 +70,9 @@ TARGET_GROUPS: dict[str, str] = {
     "low": "Low Income countries",
 }
 
+PRODUCT_CLASS = "HS12"  # overridden by --product-class CLI arg
+QUESTION_FILTER: set[int] | None = None  # overridden by --questions CLI arg
+
 RATE_DELAY = 0.5  # seconds between requests
 
 # Runtime-populated catalogs
@@ -94,16 +100,28 @@ SEM: asyncio.Semaphore
 # GraphQL Queries
 # ---------------------------------------------------------------------------
 
-PRODUCT_CATALOG_QUERY = """
-query ProductCatalog {
-  productHs92(productLevel: 4) {
+_CATALOG_QUERY_NAMES = {
+    "HS92": "productHs92",
+    "HS12": "productHs12",
+    "HS22": "productHs22",
+    "SITC": "productSitc",
+}
+
+
+def product_catalog_query() -> str:
+    """Return the product catalog query for the active PRODUCT_CLASS."""
+    qname = _CATALOG_QUERY_NAMES[PRODUCT_CLASS]
+    return f"""
+query ProductCatalog {{
+  {qname}(productLevel: 4) {{
     productId code
     nameEn nameShortEn
     productType
     naturalResource greenProduct
-  }
-}
+  }}
+}}
 """
+
 
 LOCATION_COUNTRY_QUERY = """
 query LocationCountry {
@@ -137,141 +155,158 @@ query DataAvailability {
 }
 """
 
-# All products for a given country (one year)
-COUNTRY_PRODUCT_YEAR_QUERY = """
-query CountryProductYear($countryId: Int!, $yearMin: Int!, $yearMax: Int!) {
+
+def country_product_year_query() -> str:
+    """All products for a given country (one year)."""
+    return f"""
+query CountryProductYear($countryId: Int!, $yearMin: Int!, $yearMax: Int!) {{
   countryProductYear(
-    productClass: HS92,
+    productClass: {PRODUCT_CLASS},
     productLevel: 4,
     countryId: $countryId,
     yearMin: $yearMin,
     yearMax: $yearMax
-  ) {
+  ) {{
     countryId productId year
     exportValue importValue globalMarketShare
     exportRca distance cog
     normalizedPci productStatus
-  }
-}
+  }}
+}}
 """
 
-# All countries for a given product (for top-exporter questions)
-PRODUCT_ALL_COUNTRIES_QUERY = """
-query ProductAllCountries($productId: Int!, $yearMin: Int!, $yearMax: Int!) {
+
+def product_all_countries_query() -> str:
+    """All countries for a given product (for top-exporter questions)."""
+    return f"""
+query ProductAllCountries($productId: Int!, $yearMin: Int!, $yearMax: Int!) {{
   countryProductYear(
-    productClass: HS92,
+    productClass: {PRODUCT_CLASS},
     productLevel: 4,
     productId: $productId,
     yearMin: $yearMin,
     yearMax: $yearMax
-  ) {
+  ) {{
     countryId productId year
     exportValue
-  }
-}
+  }}
+}}
 """
 
-# Global product stats (all products, one year)
-PRODUCT_YEAR_ALL_QUERY = """
-query ProductYearAll($yearMin: Int!, $yearMax: Int!) {
+
+def product_year_all_query() -> str:
+    """Global product stats (all products, one year)."""
+    return f"""
+query ProductYearAll($yearMin: Int!, $yearMax: Int!) {{
   productYear(
-    productClass: HS92,
+    productClass: {PRODUCT_CLASS},
     productLevel: 4,
     yearMin: $yearMin,
     yearMax: $yearMax
-  ) {
+  ) {{
     productId year
     exportValue importValue
     pci complexityEnum
     exportValueConstCagr5
-  }
-}
+  }}
+}}
 """
 
-COUNTRY_COUNTRY_YEAR_QUERY = """
+
+def country_country_year_query() -> str:
+    return f"""
 query CountryCountryYear(
   $countryId: Int!, $partnerCountryId: Int!,
   $yearMin: Int!, $yearMax: Int!
-) {
+) {{
   countryCountryYear(
-    productClass: HS92,
+    productClass: {PRODUCT_CLASS},
     countryId: $countryId,
     partnerCountryId: $partnerCountryId,
     yearMin: $yearMin,
     yearMax: $yearMax
-  ) {
+  ) {{
     countryId partnerCountryId year
     exportValue importValue
-  }
-}
+  }}
+}}
 """
 
-COUNTRY_COUNTRY_PRODUCT_YEAR_QUERY = """
+
+def country_country_product_year_query() -> str:
+    return f"""
 query CountryCountryProductYear(
   $countryId: Int!, $partnerCountryId: Int!,
   $yearMin: Int!, $yearMax: Int!
-) {
+) {{
   countryCountryProductYear(
     countryId: $countryId,
     partnerCountryId: $partnerCountryId,
-    productClass: HS92,
+    productClass: {PRODUCT_CLASS},
     productLevel: 4,
     yearMin: $yearMin,
     yearMax: $yearMax
-  ) {
+  ) {{
     countryId partnerCountryId productId year
     exportValue importValue
-  }
-}
+  }}
+}}
 """
 
-COUNTRY_YEAR_QUERY = """
-query CountryYear($countryId: Int!, $yearMin: Int!, $yearMax: Int!) {
+
+def country_year_query() -> str:
+    return f"""
+query CountryYear($countryId: Int!, $yearMin: Int!, $yearMax: Int!) {{
   countryYear(
     countryId: $countryId,
-    productClass: HS92,
+    productClass: {PRODUCT_CLASS},
     yearMin: $yearMin,
     yearMax: $yearMax
-  ) {
+  ) {{
     countryId year
     exportValue importValue
     gdppc eci
     population
-  }
-}
+  }}
+}}
 """
 
-IMPORT_SOURCES_QUERY = """
+
+def import_sources_query() -> str:
+    return f"""
 query ImportSources(
   $countryId: Int!, $productId: Int!,
   $yearMin: Int!, $yearMax: Int!
-) {
+) {{
   countryCountryProductYear(
     countryId: $countryId,
-    productClass: HS92,
+    productClass: {PRODUCT_CLASS},
     productLevel: 4,
     productId: $productId,
     yearMin: $yearMin,
     yearMax: $yearMax
-  ) {
+  ) {{
     partnerCountryId year
     importValue
-  }
-}
+  }}
+}}
 """
 
-GROUP_YEAR_QUERY = """
-query GroupYear($groupId: Int!, $yearMin: Int!, $yearMax: Int!) {
+
+def group_year_query() -> str:
+    return f"""
+query GroupYear($groupId: Int!, $yearMin: Int!, $yearMax: Int!) {{
   groupYear(
-    productClass: HS92,
+    productClass: {PRODUCT_CLASS},
     groupId: $groupId,
     yearMin: $yearMin,
     yearMax: $yearMax
-  ) {
+  ) {{
     groupId year exportValue importValue
-  }
-}
+  }}
+}}
 """
+
 
 CONVERSION_PATH_QUERY = """
 query ConversionPath(
@@ -352,9 +387,9 @@ def get_product_str_id(hs_code: str) -> str:
 
 
 def product_label(hs_code: str) -> str:
-    """Return 'Product Name (XXXX HS92)'."""
+    """Return 'Product Name (XXXX HS12)' (or whichever PRODUCT_CLASS is active)."""
     name = PRODUCT_MAP[hs_code].get("nameShortEn") or hs_code
-    return f"{name} ({hs_code} HS92)"
+    return f"{name} ({hs_code} {PRODUCT_CLASS})"
 
 
 def get_cpd(country: str, hs_code: str) -> dict | None:
@@ -419,7 +454,7 @@ async def gql(
         resp = await client.post(
             ENDPOINT,
             json={"query": query, "variables": variables or {}},
-            headers={"User-Agent": "ask-atlas/1.0"},
+            headers={"User-Agent": "ask-atlas-gt"},
             timeout=30,
         )
         await asyncio.sleep(RATE_DELAY)
@@ -454,6 +489,8 @@ def emit(
 ) -> None:
     """Write ground truth result and track question for eval_questions.json."""
     qid = next_id()
+    if QUESTION_FILTER is not None and qid not in QUESTION_FILTER:
+        return
     r = make_result(qid, url, data)
     write_result(qid, r)
     ALL_QUESTIONS.append(
@@ -478,7 +515,7 @@ async def resolve_catalogs(client: httpx.AsyncClient) -> None:
     global DATA_AVAILABILITY
 
     results = await asyncio.gather(
-        gql(client, PRODUCT_CATALOG_QUERY),
+        gql(client, product_catalog_query()),
         gql(client, LOCATION_COUNTRY_QUERY),
         gql(client, DATA_AVAILABILITY_QUERY),
         gql(client, LOCATION_GROUP_QUERY, {"groupType": "wdi_region"}),
@@ -488,9 +525,10 @@ async def resolve_catalogs(client: httpx.AsyncClient) -> None:
     )
 
     # Product catalog — keyed by HS code and by string productId
-    for p in results[0]["productHs92"]:
+    catalog_key = _CATALOG_QUERY_NAMES[PRODUCT_CLASS]
+    for p in results[0][catalog_key]:
         PRODUCT_MAP[p["code"]] = p
-        PRODUCT_ID_MAP[p["productId"]] = p  # "product-HS92-726" → info
+        PRODUCT_ID_MAP[p["productId"]] = p
 
     # Country names — keyed by string countryId ("country-404")
     for c in results[1]["locationCountry"]:
@@ -533,7 +571,7 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
     async def fetch_cpd(country: str) -> None:
         data = await gql(
             client,
-            COUNTRY_PRODUCT_YEAR_QUERY,
+            country_product_year_query(),
             {
                 "countryId": COUNTRIES[country],
                 "yearMin": 2024,
@@ -548,7 +586,7 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
     async def fetch_exporters(code: str) -> None:
         data = await gql(
             client,
-            PRODUCT_ALL_COUNTRIES_QUERY,
+            product_all_countries_query(),
             {
                 "productId": get_product_id(code),
                 "yearMin": 2024,
@@ -563,7 +601,7 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
     async def fetch_all_product_year() -> None:
         data = await gql(
             client,
-            PRODUCT_YEAR_ALL_QUERY,
+            product_year_all_query(),
             {
                 "yearMin": 2024,
                 "yearMax": 2024,
@@ -577,7 +615,7 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
         exp, imp = pair
         data = await gql(
             client,
-            COUNTRY_COUNTRY_YEAR_QUERY,
+            country_country_year_query(),
             {
                 "countryId": COUNTRIES[exp],
                 "partnerCountryId": COUNTRIES[imp],
@@ -593,7 +631,7 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
         exp, imp = pair
         data = await gql(
             client,
-            COUNTRY_COUNTRY_PRODUCT_YEAR_QUERY,
+            country_country_product_year_query(),
             {
                 "countryId": COUNTRIES[exp],
                 "partnerCountryId": COUNTRIES[imp],
@@ -609,7 +647,7 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
     async def fetch_ts(country: str) -> None:
         data = await gql(
             client,
-            COUNTRY_YEAR_QUERY,
+            country_year_query(),
             {
                 "countryId": COUNTRIES[country],
                 "yearMin": 2000,
@@ -643,7 +681,7 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
         gid = parse_group_id(g["groupId"])
         data = await gql(
             client,
-            GROUP_YEAR_QUERY,
+            group_year_query(),
             {
                 "groupId": gid,
                 "yearMin": 2019,
@@ -657,7 +695,7 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
         try:
             data = await gql(
                 client,
-                IMPORT_SOURCES_QUERY,
+                import_sources_query(),
                 {
                     "countryId": COUNTRIES[country],
                     "productId": get_product_id(hs_code),
@@ -945,7 +983,7 @@ def gen_global_product_stats() -> None:
             "treemap",
             year=2024,
             view="markets",
-            product=f"product-HS92-{get_product_id(code)}",
+            product=f"product-{PRODUCT_CLASS}-{get_product_id(code)}",
         )
         emit(
             f"Which country is the largest exporter of {product_name(code)}?",
@@ -977,7 +1015,7 @@ def gen_global_product_stats() -> None:
             "treemap",
             year=2024,
             view="markets",
-            product=f"product-HS92-{get_product_id(code)}",
+            product=f"product-{PRODUCT_CLASS}-{get_product_id(code)}",
         )
         data = []
         for i, r in enumerate(sorted_rows):
@@ -1119,7 +1157,7 @@ def gen_bilateral_trade() -> None:
             year=2024,
             exporter=f"country-{COUNTRIES[exp]}",
             importer=f"country-{COUNTRIES[imp]}",
-            product=f"product-HS92-{pid_int}",
+            product=f"product-{PRODUCT_CLASS}-{pid_int}",
         )
         emit(
             f"What is the value of {product_name(code)} exports from {exp} to {imp}?",
@@ -1161,7 +1199,7 @@ def gen_bilateral_trade() -> None:
             data.append(
                 {
                     "rank": i + 1,
-                    "product": f"{pname} ({pcode} HS92)" if pcode else pname,
+                    "product": f"{pname} ({pcode} {PRODUCT_CLASS})" if pcode else pname,
                     "export_value": format_usd(r["exportValue"]),
                     "raw_export_value": r["exportValue"],
                 }
@@ -1206,7 +1244,7 @@ def gen_import_composition() -> None:
                 {
                     "metric": "Top imported product",
                     "country": country,
-                    "product": f"{pname} ({pcode} HS92)" if pcode else pname,
+                    "product": f"{pname} ({pcode} {PRODUCT_CLASS})" if pcode else pname,
                     "import_value": format_usd(top["importValue"]),
                     "raw_import_value": top["importValue"],
                     "year": "2024",
@@ -1232,7 +1270,7 @@ def gen_import_composition() -> None:
             data.append(
                 {
                     "rank": i + 1,
-                    "product": f"{pname} ({pcode} HS92)" if pcode else pname,
+                    "product": f"{pname} ({pcode} {PRODUCT_CLASS})" if pcode else pname,
                     "import_value": format_usd(r["importValue"]),
                     "raw_import_value": r["importValue"],
                 }
@@ -1290,7 +1328,7 @@ def gen_import_composition() -> None:
                 year=2024,
                 exporter="country-840",
                 tradeDirection="imports",
-                product=f"product-HS92-{pid_int}",
+                product=f"product-{PRODUCT_CLASS}-{pid_int}",
             )
             emit(
                 f"From which country does the USA import the most {product_name('2710')}?",
@@ -1514,7 +1552,7 @@ def gen_feasibility() -> None:
             data.append(
                 {
                     "rank": i + 1,
-                    "product": f"{pname} ({pcode} HS92)" if pcode else pname,
+                    "product": f"{pname} ({pcode} {PRODUCT_CLASS})" if pcode else pname,
                     "cog": round(r["cog"], 4),
                     "distance": round(r["distance"], 4) if r.get("distance") else None,
                 }
@@ -1544,7 +1582,9 @@ def gen_feasibility() -> None:
                     {
                         "metric": "Global export value of top opportunity",
                         "country": country,
-                        "product": f"{pname} ({pcode} HS92)" if pcode else pname,
+                        "product": (
+                            f"{pname} ({pcode} {PRODUCT_CLASS})" if pcode else pname
+                        ),
                         "value": format_usd(py["exportValue"]),
                         "raw_value": py["exportValue"],
                         "year": "2024",
@@ -1566,7 +1606,9 @@ def gen_feasibility() -> None:
                     {
                         "metric": "5-year CAGR of top opportunity",
                         "country": country,
-                        "product": f"{pname} ({pcode} HS92)" if pcode else pname,
+                        "product": (
+                            f"{pname} ({pcode} {PRODUCT_CLASS})" if pcode else pname
+                        ),
                         "value": pct_str(py["exportValueConstCagr5"]),
                         "raw_value": py["exportValueConstCagr5"],
                         "year": "2024",
@@ -1704,38 +1746,17 @@ def gen_product_metadata() -> None:
             ],
         )
 
-    # Template 35: HS conversion
-    # conversionPath returns steps with codes[].targetCodes lists
-    # If codes is empty at each step, the code is unchanged (0901 → 0901)
-    if conversion_result:
-        # Check if any step has actual code changes
-        all_codes_empty = all(not step.get("codes") for step in conversion_result)
-        if all_codes_empty:
-            # Code unchanged through all revisions
-            emit(
-                "What HS 2012 code corresponds to Coffee (HS 1992 code 0901)?",
-                cat_id,
-                cat_name,
-                "hard",
-                explore_url("treemap", year=2024),
-                [
-                    {
-                        "metric": "HS code conversion",
-                        "source_code": "0901",
-                        "source_classification": "HS 1992",
-                        "target_classification": "HS 2012",
-                        "target_codes": ["0901"],
-                        "note": "Code unchanged across revisions",
-                    }
-                ],
-            )
-        else:
-            # Collect target codes from the final step
-            final_step = conversion_result[-1]
-            targets = []
-            for code_entry in final_step.get("codes", []):
-                targets.extend(code_entry.get("targetCodes", []))
-            if targets:
+    # Templates 35-37 are inherently HS92-specific (code conversion,
+    # HS92 product count, HS92 data years). Only generate when running HS92.
+    if PRODUCT_CLASS == "HS92":
+        # Template 35: HS conversion
+        # conversionPath returns steps with codes[].targetCodes lists
+        # If codes is empty at each step, the code is unchanged (0901 → 0901)
+        if conversion_result:
+            # Check if any step has actual code changes
+            all_codes_empty = all(not step.get("codes") for step in conversion_result)
+            if all_codes_empty:
+                # Code unchanged through all revisions
                 emit(
                     "What HS 2012 code corresponds to Coffee (HS 1992 code 0901)?",
                     cat_id,
@@ -1748,43 +1769,67 @@ def gen_product_metadata() -> None:
                             "source_code": "0901",
                             "source_classification": "HS 1992",
                             "target_classification": "HS 2012",
-                            "target_codes": targets,
+                            "target_codes": ["0901"],
+                            "note": "Code unchanged across revisions",
                         }
                     ],
                 )
+            else:
+                # Collect target codes from the final step
+                final_step = conversion_result[-1]
+                targets = []
+                for code_entry in final_step.get("codes", []):
+                    targets.extend(code_entry.get("targetCodes", []))
+                if targets:
+                    emit(
+                        "What HS 2012 code corresponds to Coffee (HS 1992 code 0901)?",
+                        cat_id,
+                        cat_name,
+                        "hard",
+                        explore_url("treemap", year=2024),
+                        [
+                            {
+                                "metric": "HS code conversion",
+                                "source_code": "0901",
+                                "source_classification": "HS 1992",
+                                "target_classification": "HS 2012",
+                                "target_codes": targets,
+                            }
+                        ],
+                    )
 
-    # Template 36: Product count
-    hs4_count = len(PRODUCT_MAP)
-    emit(
-        "How many 4-digit HS92 products does the Atlas track?",
-        cat_id,
-        cat_name,
-        "easy",
-        explore_url("treemap", year=2024),
-        [{"metric": "HS92 4-digit product count", "value": hs4_count}],
-    )
-
-    # Template 37: Data years available
-    hs92_avail = next(
-        (d for d in DATA_AVAILABILITY if d.get("productClassification") == "HS92"),
-        None,
-    )
-    if hs92_avail:
+        # Template 36: Product count
+        hs4_count = len(PRODUCT_MAP)
         emit(
-            "What years of trade data are available for HS 1992 on the Atlas?",
+            "How many 4-digit HS92 products does the Atlas track?",
             cat_id,
             cat_name,
             "easy",
             explore_url("treemap", year=2024),
-            [
-                {
-                    "metric": "Data availability",
-                    "classification": "HS 1992",
-                    "year_min": hs92_avail["yearMin"],
-                    "year_max": hs92_avail["yearMax"],
-                }
-            ],
+            [{"metric": "HS92 4-digit product count", "value": hs4_count}],
         )
+
+        # Template 37: Data years available
+        hs92_avail = next(
+            (d for d in DATA_AVAILABILITY if d.get("productClassification") == "HS92"),
+            None,
+        )
+        if hs92_avail:
+            emit(
+                "What years of trade data are available for HS 1992 on the Atlas?",
+                cat_id,
+                cat_name,
+                "easy",
+                explore_url("treemap", year=2024),
+                [
+                    {
+                        "metric": "Data availability",
+                        "classification": "HS 1992",
+                        "year_min": hs92_avail["yearMin"],
+                        "year_max": hs92_avail["yearMax"],
+                    }
+                ],
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -1793,7 +1838,29 @@ def gen_product_metadata() -> None:
 
 
 async def main() -> None:
-    global SEM
+    global SEM, PRODUCT_CLASS, QUESTION_FILTER
+
+    parser = argparse.ArgumentParser(
+        description="Collect Explore page ground truth data"
+    )
+    parser.add_argument(
+        "--product-class",
+        choices=["HS92", "HS12", "HS22", "SITC"],
+        default="HS12",
+        help="Product classification to use (default: HS12)",
+    )
+    parser.add_argument(
+        "--questions",
+        type=int,
+        nargs="+",
+        metavar="ID",
+        help="Only regenerate specific question IDs (e.g. --questions 244 245 246)",
+    )
+    args = parser.parse_args()
+    PRODUCT_CLASS = args.product_class
+    if args.questions:
+        QUESTION_FILTER = set(args.questions)
+
     SEM = asyncio.Semaphore(2)
 
     print("Phase 1: Resolving catalogs...")
