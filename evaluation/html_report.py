@@ -410,6 +410,7 @@ function renderBreakdownTabs() {
       <button data-tab="difficulty">By Difficulty</button>
       <button data-tab="judgeMode">By Judge Mode</button>
       <button data-tab="pipeline">By Pipeline</button>
+      <button data-tab="pipelineLatency">By Pipeline Latency</button>
       <button data-tab="nodeLatency">By Node</button>
     </div>
   `;
@@ -443,6 +444,25 @@ function renderBreakdown(tab) {
       if (tools.includes('query_tool')) return 'sql';
       return tools.join('+');
     });
+  } else if (tab === 'pipelineLatency') {
+    const la = REPORT.latency_analysis || {};
+    const avgByPipeline = la.avg_by_pipeline || {};
+    if (Object.keys(avgByPipeline).length === 0) {
+      document.getElementById('breakdown-container').innerHTML = '<p class="no-results">No per-pipeline timing data available</p>';
+      return;
+    }
+    const rows = Object.entries(avgByPipeline).map(([pipe, d]) => {
+      const llmPct = d.avg_wall_time_ms ? (d.avg_llm_time_ms / d.avg_wall_time_ms * 100).toFixed(1) : '0.0';
+      const ioPct = d.avg_wall_time_ms ? (d.avg_io_time_ms / d.avg_wall_time_ms * 100).toFixed(1) : '0.0';
+      return `<tr><td>${esc(pipe)}</td><td>${d.avg_wall_time_ms.toFixed(0)}ms</td><td>${d.pct_of_total.toFixed(1)}%</td><td>${llmPct}%</td><td>${ioPct}%</td><td>${d.appearances}</td></tr>`;
+    }).join('');
+    document.getElementById('breakdown-container').innerHTML = `
+      <table class="breakdown-table">
+        <thead><tr><th>Pipeline</th><th>Avg Time</th><th>% of Total</th><th>LLM %</th><th>I/O %</th><th>Appearances</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+    return;
   } else if (tab === 'nodeLatency') {
     const la = REPORT.latency_analysis || {};
     const avgByNode = la.avg_by_node || {};
