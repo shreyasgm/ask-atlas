@@ -10,12 +10,12 @@ Ask Atlas is an AI-powered assistant that answers natural language questions abo
 
 ## Features
 
-- **Agentic query pipeline** — A LangGraph agent breaks complex trade questions into sub-queries, resolving products, generating SQL, validating and executing it, and interpreting results across multiple iterations.
-- **Product code resolution** — Resolves natural language ("cars", "crude oil") to exact HS/SITC codes via a 5-stage pipeline: LLM extraction, code suggestion, database verification, full-text search with trigram fallback, and LLM-based final selection.
-- **Live pipeline visibility** — The UI shows each pipeline step in real time — identifying products, looking up codes, generating SQL, executing queries — so users can see exactly how the agent arrived at its answer.
-- **Trade-specific controls** — Users constrain queries by trade mode (goods/services), classification schema (HS92, HS12, SITC), and direction (exports/imports) via toggle controls that propagate through the entire pipeline.
-- **5 classification systems, ~60 tables** — Covers goods trade (HS 1992, HS 2012, SITC) and services trade (unilateral/bilateral) with economic complexity metrics (ECI, RCA, COG, distance) at multiple granularities.
-- **LLM-as-judge evaluation** — A comprehensive eval framework scores answers across factual correctness, data accuracy, completeness, and reasoning quality, with three judge modes (ground-truth comparison, refusal testing, plausibility scoring) and automated reporting by category and difficulty.
+- **Natural language → answer** — Ask in plain English; the agent interprets your question, resolves products and countries, queries the data, and streams back an interpreted answer.
+- **Live pipeline visibility** — Watch each step in real time — identifying products, looking up codes, generating SQL, executing queries — so you can see exactly how the agent arrived at its answer.
+- **Atlas visualization links** — Results include clickable links to explore data on the [Atlas website](https://atlas.hks.harvard.edu/).
+- **Trade controls** — Toggle goods/services, classification schema (HS92, HS12, SITC), and export/import direction. Settings propagate through the entire pipeline.
+- **Conversation history** — Pick up where you left off; conversations persist across sessions.
+- **Built-in domain knowledge** — Ask about methodology (ECI, RCA, product space) and get sourced explanations drawn from Atlas documentation.
 
 ## Architecture
 
@@ -34,9 +34,14 @@ graph TB
         API["FastAPI + Uvicorn<br/>2 workers · SSE streaming<br/>120s request timeout"]
         subgraph Agent["AtlasTextToSQL"]
             direction LR
-            LG["LangGraph StateGraph<br/>Outer agent loop<br/>+ inner pipeline"]
+            LG["LangGraph StateGraph<br/>Agent loop + 3 pipelines:<br/>SQL · GraphQL · Docs"]
         end
         API --> Agent
+    end
+
+    subgraph AtlasAPI["Atlas Public APIs"]
+        ExploreAPI["Explore GraphQL API"]
+        CPAPI["Country Pages GraphQL API"]
     end
 
     subgraph VPC["VPC (private network)"]
@@ -51,22 +56,25 @@ graph TB
     SPA -->|"HTTPS (API calls)"| API
     Agent -->|"Private IP"| AppDB
     Agent -->|"Static IP<br/>(whitelisted)"| AtlasDB
+    Agent -->|"HTTPS"| ExploreAPI
+    Agent -->|"HTTPS"| CPAPI
 
     style Browser fill:#e8f4f8,stroke:#2196F3
     style Firebase fill:#fff3e0,stroke:#FF9800
     style GCP fill:#e8f5e9,stroke:#4CAF50
+    style AtlasAPI fill:#fff3e0,stroke:#FF9800
     style VPC fill:#f3e5f5,stroke:#9C27B0
     style AWS fill:#fce4ec,stroke:#f44336
 ```
 
-**Two-database design**: Trade data lives in a read-only AWS RDS instance managed by the Harvard Growth Lab. Application state (conversations, LangGraph checkpoints) lives in a separate Cloud SQL instance. Cloud Run connects to the external database through a VPC with a static egress IP.
+**Two-database design**: Trade data lives in a read-only AWS RDS instance managed by the Harvard Growth Lab. Application state (conversations, LangGraph checkpoints) lives in a separate Cloud SQL instance. The agent also calls the Atlas public GraphQL APIs for visualization links and pre-computed metrics.
 
 ## Tech Stack
 
 | Layer | Technologies |
 |-------|-------------|
-| **Frontend** | React 19, TypeScript 5.9, Vite 7, Tailwind CSS 4, react-markdown |
-| **Backend** | Python 3.12, FastAPI, LangGraph, LangChain, SQLAlchemy (sync + async) |
+| **Frontend** | React 19, TypeScript 5.9, Vite 7, Tailwind CSS 4, react-markdown, KaTeX |
+| **Backend** | Python 3.12, FastAPI, LangGraph, LangChain, SQLAlchemy, httpx, sqlglot |
 | **LLM** | OpenAI (default), with Anthropic and Google as swappable providers |
 | **Database** | PostgreSQL (Atlas trade data on AWS RDS, app state on Cloud SQL) |
 | **Infra** | Google Cloud Run, Firebase Hosting, Cloud Build, GitHub Actions CI/CD |
@@ -74,27 +82,39 @@ graph TB
 
 ## Agent Pipeline
 
-The LangGraph StateGraph uses an outer agent loop (LLM decides when to query) wrapping an inner deterministic pipeline:
+A LangGraph StateGraph with an outer agent loop (the LLM decides which tool to call) wrapping three deterministic pipelines — SQL, GraphQL, and Docs:
 
 ```mermaid
-graph TD
+graph LR
     START([START]) --> agent
-    agent -->|"harmful or<br/>off-topic?"| REFUSE([Politely refuse])
-    agent -->|tool_calls?| etq[extract_tool_question]
-    agent -->|queries exceeded?| mqe[max_queries_exceeded]
     agent -->|no tool_calls| END_NODE([END])
+    agent -->|queries exceeded?| mqe[max_queries_exceeded]
+    agent -->|query_tool| etq[extract_tool_question]
+    agent -->|atlas_graphql| egq[extract_graphql_question]
+    agent -->|docs_tool| edq[extract_docs_question]
 
     etq --> ep[extract_products]
     ep --> lc[lookup_codes]
     lc --> gti[get_table_info]
     gti --> gs[generate_sql]
     gs --> vs[validate_sql]
-
     vs -->|valid| es[execute_sql]
     vs -->|error| fr[format_results]
     es --> fr
-
     fr --> agent
+
+    egq --> cq[classify_query]
+    cq -->|reject| fgr[format_graphql_results]
+    cq -->|ok| ee[extract_entities]
+    ee --> ri[resolve_ids]
+    ri --> beg[build_and_execute_graphql]
+    beg --> fgr
+    fgr --> agent
+
+    edq --> ss[select_and_synthesize]
+    ss --> fdr[format_docs_results]
+    fdr --> agent
+
     mqe --> agent
 
     style agent fill:#4CAF50,color:#fff,stroke:#388E3C
@@ -106,10 +126,19 @@ graph TD
     style vs fill:#fff3e0,stroke:#F57C00
     style es fill:#e3f2fd,stroke:#1976D2
     style fr fill:#e8f5e9,stroke:#388E3C
+    style egq fill:#fff3e0,stroke:#F57C00
+    style cq fill:#fff3e0,stroke:#F57C00
+    style ee fill:#fff3e0,stroke:#F57C00
+    style ri fill:#fff3e0,stroke:#F57C00
+    style beg fill:#fff3e0,stroke:#F57C00
+    style fgr fill:#e8f5e9,stroke:#388E3C
+    style edq fill:#f3e5f5,stroke:#7B1FA2
+    style ss fill:#f3e5f5,stroke:#7B1FA2
+    style fdr fill:#e8f5e9,stroke:#388E3C
     style mqe fill:#ffebee,stroke:#c62828
 ```
 
-The agent can loop multiple times per question — after seeing results from one query, it may decide to run additional queries to fully answer the user's question.
+The agent can loop multiple times per question — after seeing results from one query, it may decide to call a different tool or run additional queries to fully answer the user's question.
 
 ## Getting Started
 
@@ -187,8 +216,6 @@ PYTHONPATH=$(pwd) uv run pytest -m "db" -v
 PYTHONPATH=$(pwd) uv run pytest -m "integration" -v
 ```
 
-See `CLAUDE.md` for full developer guidelines including all test tiers, code style, and deployment procedures.
-
 ## API Endpoints
 
 | Method | Path | Description |
@@ -204,8 +231,7 @@ See `CLAUDE.md` for full developer guidelines including all test tiers, code sty
 
 ## Documentation
 
-- **[Technical Overview](docs/technical_overview.md)** — Comprehensive reference covering architecture, database schemas, pipeline nodes, frontend components, deployment, and evaluation system.
-- **[CLAUDE.md](CLAUDE.md)** — Developer guidelines: build commands, test tiers, code style, and monorepo conventions.
+- **[Technical Overview](docs/public/architecture.md)** — Comprehensive reference covering architecture, database schemas, pipeline nodes, frontend components, deployment, and evaluation system.
 
 ## Acknowledgments
 
