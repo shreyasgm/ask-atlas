@@ -139,6 +139,11 @@
       "id": "explore_product_metadata",
       "name": "Product Classification & Metadata (Explore Page)",
       "description": "Product catalog details, natural resource flags, classification conversion"
+    },
+    {
+      "id": "classification_diversity",
+      "name": "Classification Diversity",
+      "description": "Questions testing the agent's ability to handle explicit classification requests (HS92, HS12, HS22, SITC)"
     }
   ],
   "questions": [
@@ -430,7 +435,8 @@
       "id": 46,
       "category_id": "edge_cases",
       "difficulty": "hard",
-      "text": "What were the top exports of the Soviet Union in 1990?"
+      "text": "What were the top exports of the Soviet Union in 1990?",
+      "expected_behavior": "Should explain that the Soviet Union is a historical entity not present in the Atlas database and suggest looking at successor states like Russia."
     },
     {
       "id": 47,
@@ -891,11 +897,11 @@
       "id": 97,
       "category_id": "cp_growth_performance",
       "difficulty": "medium",
-      "text": "What is Spain's ECI value according to the growth dynamics chart? Use the HS 1992 classification.",
+      "text": "What is Spain's ECI value according to the growth dynamics chart? Use the SITC classification.",
       "source": "atlas_country_page",
       "atlas_url": "https://atlas.hks.harvard.edu/countries/724/growth-dynamics",
       "expected_api_target": "country_pages",
-      "expected_classification": "HS92"
+      "expected_classification": "SITC"
     },
     {
       "id": 98,
@@ -911,11 +917,11 @@
       "id": 99,
       "category_id": "cp_growth_performance",
       "difficulty": "medium",
-      "text": "What is India's ECI value according to the growth dynamics chart? Use the HS 1992 classification.",
+      "text": "What is India's ECI value according to the growth dynamics chart? Use the SITC classification.",
       "source": "atlas_country_page",
       "atlas_url": "https://atlas.hks.harvard.edu/countries/356/growth-dynamics",
       "expected_api_target": "country_pages",
-      "expected_classification": "HS92"
+      "expected_classification": "SITC"
     },
     {
       "id": 100,
@@ -1781,7 +1787,7 @@
       "id": 190,
       "category_id": "explore_global_product_stats",
       "difficulty": "medium",
-      "text": "What is the 5-year export growth rate (CAGR) for Cars globally?",
+      "text": "What is the 5-year export growth rate (CAGR) for Cars globally? Use the HS 1992 classification.",
       "source": "atlas_explore_page",
       "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4"
     },
@@ -1813,7 +1819,7 @@
       "id": 194,
       "category_id": "explore_global_product_stats",
       "difficulty": "medium",
-      "text": "What are the top 3 exporters of Electronic integrated circuits by value?",
+      "text": "What are the top 3 exporters of Electronic integrated circuits by value? Use the HS 1992 classification.",
       "source": "atlas_explore_page",
       "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&product=product-HS92-1745"
     },
@@ -2053,7 +2059,7 @@
       "id": 224,
       "category_id": "explore_feasibility",
       "difficulty": "hard",
-      "text": "What are the top 5 growth opportunity products for Kenya ranked by opportunity gain?",
+      "text": "What are the top 5 growth opportunity products for Kenya ranked by opportunity gain? Use the HS 1992 classification.",
       "source": "atlas_explore_page",
       "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4&exporter=country-404"
     },
@@ -2061,7 +2067,7 @@
       "id": 225,
       "category_id": "explore_feasibility",
       "difficulty": "medium",
-      "text": "What is the global market size of Kenya's top growth opportunity product?",
+      "text": "What is the global market size of Kenya's top growth opportunity product? Use the HS 1992 classification.",
       "source": "atlas_explore_page",
       "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4&exporter=country-404"
     },
@@ -2069,7 +2075,7 @@
       "id": 226,
       "category_id": "explore_feasibility",
       "difficulty": "medium",
-      "text": "What is the 5-year growth rate of Kenya's top growth opportunity product globally?",
+      "text": "What is the 5-year growth rate of Kenya's top growth opportunity product globally? Use the HS 1992 classification.",
       "source": "atlas_explore_page",
       "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4&exporter=country-404"
     },
@@ -2077,7 +2083,7 @@
       "id": 227,
       "category_id": "explore_feasibility",
       "difficulty": "hard",
-      "text": "What are the top 5 growth opportunity products for Turkiye ranked by opportunity gain?",
+      "text": "What are the top 5 growth opportunity products for Turkiye ranked by opportunity gain? Use the HS 1992 classification.",
       "source": "atlas_explore_page",
       "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4&exporter=country-792"
     },
@@ -2085,7 +2091,7 @@
       "id": 228,
       "category_id": "explore_feasibility",
       "difficulty": "medium",
-      "text": "What is the global market size of Turkiye's top growth opportunity product?",
+      "text": "What is the global market size of Turkiye's top growth opportunity product? Use the HS 1992 classification.",
       "source": "atlas_explore_page",
       "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4&exporter=country-792"
     },
@@ -2093,7 +2099,7 @@
       "id": 229,
       "category_id": "explore_feasibility",
       "difficulty": "medium",
-      "text": "What is the 5-year growth rate of Turkiye's top growth opportunity product globally?",
+      "text": "What is the 5-year growth rate of Turkiye's top growth opportunity product globally? Use the HS 1992 classification.",
       "source": "atlas_explore_page",
       "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4&exporter=country-792"
     },
@@ -2232,6 +2238,42 @@
       "text": "What years of trade data are available for HS 1992 on the Atlas?",
       "source": "atlas_explore_page",
       "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024"
+    },
+    {
+      "id": 247,
+      "category_id": "classification_diversity",
+      "difficulty": "medium",
+      "text": "Under HS 1992 classification, what is Brazil's Revealed Comparative Advantage in Coffee?"
+    },
+    {
+      "id": 248,
+      "category_id": "classification_diversity",
+      "difficulty": "medium",
+      "text": "What are India's top 3 export products using HS 1992 classification?"
+    },
+    {
+      "id": 249,
+      "category_id": "classification_diversity",
+      "difficulty": "medium",
+      "text": "Using SITC classification, what is Japan's total export value in 2020?"
+    },
+    {
+      "id": 250,
+      "category_id": "classification_diversity",
+      "difficulty": "hard",
+      "text": "What is the SITC code for Coffee, and what is Kenya's RCA in it?"
+    },
+    {
+      "id": 251,
+      "category_id": "classification_diversity",
+      "difficulty": "medium",
+      "text": "What are the top exports for Germany in 2023 under the HS 2022 classification?"
+    },
+    {
+      "id": 252,
+      "category_id": "classification_diversity",
+      "difficulty": "hard",
+      "text": "How does Brazil's number of products with RCA > 1 differ between HS 1992 and HS 2012?"
     }
   ]
 }

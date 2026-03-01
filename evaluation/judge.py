@@ -215,6 +215,18 @@ _GROUND_TRUTH_HUMAN_TEXT = (
     "Evaluate the agent's answer against the ground truth."
 )
 
+_KNOWN_DATA_CAVEATS = (
+    "\n\nKnown data caveats to consider when scoring:\n"
+    "- RCA>1 product count: The Atlas browser Product Space visualization displays "
+    "a filtered count (~25-30% lower) compared to the API. Both the Explore API "
+    "countryProductYear count and the countryProfile.diversity field return a higher "
+    "count that includes all products meeting RCA>=1. Either the API count or the "
+    "browser-displayed count should be accepted as valid.\n"
+    "- Services share: The API's countryYear.exportValue returns goods+services "
+    "combined regardless of classification parameter. Accept answers that correctly "
+    "compute services share at the product level."
+)
+
 _YEAR_GAP_CAVEAT = (
     f"\n\nNote: the agent used the SQL database (data through {_SQL_DATA_MAX_YEAR}) "
     f"while the ground truth may reflect up to {_GRAPHQL_DATA_MAX_YEAR} data. "
@@ -347,7 +359,7 @@ async def judge_answer(
         )
 
         # Build system text with optional caveats
-        system_text = _GROUND_TRUTH_SYSTEM_TEXT
+        system_text = _GROUND_TRUTH_SYSTEM_TEXT + _KNOWN_DATA_CAVEATS
         if apply_caveat:
             system_text += _YEAR_GAP_CAVEAT
         if classification_note:
