@@ -1,0 +1,17 @@
+{
+  "question_id": "230",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024",
+  "results": {
+    "data": [
+      {
+        "metric": "Total export value",
+        "group": "East Asia & Pacific",
+        "value": "$7.27 trillion",
+        "raw_value": 7269407926049.0,
+        "year": "2024"
+      }
+    ]
+  }
+}

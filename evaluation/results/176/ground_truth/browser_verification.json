@@ -1,0 +1,10 @@
+{
+  "question_id": "176",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:05:33.601888+00:00",
+  "browser_value": "PCI: -2.200",
+  "gt_value": "-2.2002",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-404",
+  "match_note": "Coffee tooltip 'Show more' shows PCI = -2.200, matches GT -2.2002"
+}

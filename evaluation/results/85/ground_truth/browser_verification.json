@@ -1,0 +1,10 @@
+{
+  "question_id": "85",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T04:23:38.218802+00:00",
+  "browser_value": "Business $209B (26.4%)",
+  "gt_value": "Business $209.15B 26.4%",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-356",
+  "match_note": "Formatting"
+}

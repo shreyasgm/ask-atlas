@@ -1,0 +1,20 @@
+{
+  "question_id": "22",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-156",
+  "results": {
+    "data": [
+      {
+        "metric": "Electronics market share",
+        "country": "China",
+        "year": "2024",
+        "china_electronics": "$847.72 billion",
+        "global_electronics": "$3.03 trillion",
+        "share": "28.0%",
+        "raw_share": 0.27969473323074656,
+        "note": "Electronics = HS chapter 85"
+      }
+    ]
+  }
+}

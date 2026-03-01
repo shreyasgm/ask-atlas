@@ -1,0 +1,20 @@
+{
+  "question_id": "226",
+  "execution_timestamp": "2026-03-01T06:00:00.000000+00:00",
+  "source": "atlas_explore_page",
+  "source_method": "browser_feasibility_table",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4&exporter=country-404",
+  "results": {
+    "data": [
+      {
+        "metric": "5-year growth rate of top opportunity",
+        "country": "Kenya",
+        "product": "Photographic film, developed (3705 HS92)",
+        "value": "13.1%",
+        "growth_direction": "positive",
+        "year": "2024",
+        "note": "HS92 classification. Orange up arrow confirmed in browser feasibility table GLOBAL GROWTH 5 YR column."
+      }
+    ]
+  }
+}

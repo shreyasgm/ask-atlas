@@ -1,0 +1,16 @@
+{
+  "question_id": "168",
+  "execution_timestamp": "2026-03-01T03:37:06.485433+00:00",
+  "source": "atlas_country_page",
+  "source_method": "browser_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/404/product-table",
+  "results": {
+    "data": [
+      {
+        "metric": "High-potential sectors for diversification",
+        "sectors": "Paper and paperboard and Articles of iron or steel",
+        "description": "Given its current exports, some of the sectors with high potential for new diversification in Kenya are: Paper and paperboard and Articles of iron or steel."
+      }
+    ]
+  }
+}

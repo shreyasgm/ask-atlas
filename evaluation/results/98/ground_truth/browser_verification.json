@@ -1,0 +1,10 @@
+{
+  "question_id": "98",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T04:23:38.218802+00:00",
+  "browser_value": "Travel & tourism $107B",
+  "gt_value": "$106.66 billion",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-724",
+  "match_note": "Formatting"
+}

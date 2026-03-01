@@ -1,0 +1,18 @@
+{
+  "question_id": "208",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-840&tradeDirection=imports",
+  "results": {
+    "data": [
+      {
+        "metric": "Top imported product",
+        "country": "USA",
+        "product": "Business (ict HS12)",
+        "import_value": "$344.10 billion",
+        "raw_import_value": 344098000000.0,
+        "year": "2024"
+      }
+    ]
+  }
+}

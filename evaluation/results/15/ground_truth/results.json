@@ -1,0 +1,22 @@
+{
+  "question_id": "15",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-372&startYear=2015&endYear=2021",
+  "results": {
+    "data": [
+      {
+        "metric": "Service sector growth comparison",
+        "country": "Ireland",
+        "period": "2015-2021",
+        "ict_2015": "$112.16 billion",
+        "ict_2021": "$315.63 billion",
+        "ict_cagr": "18.8%",
+        "travel_2015": "$5.56 billion",
+        "travel_2021": "$2.66 billion",
+        "travel_cagr": "-11.6%",
+        "note": "ICT = 'Business' service sector in Atlas"
+      }
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "question_id": "86",
+  "execution_timestamp": "2026-02-28T22:44:53.587534+00:00",
+  "source": "atlas_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/356/export-basket",
+  "results": {
+    "data": [
+      {
+        "rank": 1,
+        "product_name": "Business",
+        "hs92_code": "ict",
+        "export_value": "$209.15 billion",
+        "raw_export_value": 209145463552.85388,
+        "share": "26.4%"
+      },
+      {
+        "rank": 2,
+        "product_name": "Unspecified",
+        "hs92_code": "unspecified",
+        "export_value": "$85.65 billion",
+        "raw_export_value": 85651735459.22124,
+        "share": "10.8%"
+      },
+      {
+        "rank": 3,
+        "product_name": "Petroleum oils, refined",
+        "hs92_code": "2710",
+        "export_value": "$59.30 billion",
+        "raw_export_value": 59296787109.0,
+        "share": "7.5%"
+      }
+    ]
+  }
+}

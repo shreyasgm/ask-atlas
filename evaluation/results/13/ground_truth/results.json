@@ -1,0 +1,19 @@
+{
+  "question_id": "13",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2022&exporter=country-764",
+  "results": {
+    "data": [
+      {
+        "metric": "Travel services share",
+        "country": "Thailand",
+        "year": "2022",
+        "travel_value": "$14.87 billion",
+        "total_services": "$38.95 billion",
+        "share": "38.2%",
+        "raw_share": 0.38187682254786137
+      }
+    ]
+  }
+}

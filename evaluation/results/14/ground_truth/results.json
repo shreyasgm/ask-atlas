@@ -1,0 +1,19 @@
+{
+  "question_id": "14",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2017&exporter=country-528",
+  "results": {
+    "data": [
+      {
+        "metric": "Transport services share",
+        "country": "Netherlands",
+        "year": "2017",
+        "transport_value": "$38.01 billion",
+        "total_services": "$199.20 billion",
+        "share": "19.1%",
+        "raw_share": 0.19080204812626522
+      }
+    ]
+  }
+}

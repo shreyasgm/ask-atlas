@@ -1,0 +1,16 @@
+{
+  "question_id": "151",
+  "execution_timestamp": "2026-03-01T03:42:42.708156+00:00",
+  "source": "atlas_country_page",
+  "source_method": "browser_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket",
+  "results": {
+    "data": [
+      {
+        "metric": "5-year average export growth rate",
+        "value": "3.8%",
+        "description": "Exports have grown by an annual average of 3.8% over the past five years, which has outpaced overall economic growth, as exports represent a growing segment of the economy."
+      }
+    ]
+  }
+}

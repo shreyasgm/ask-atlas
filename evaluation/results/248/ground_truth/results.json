@@ -1,0 +1,28 @@
+{
+  "question_id": "248",
+  "execution_timestamp": "2026-02-28T22:57:55.560423+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-356",
+  "results": {
+    "data": [
+      {
+        "rank": 1,
+        "product": "Business (ict HS92)",
+        "classification": "HS 1992",
+        "export_value": "$209.15 billion"
+      },
+      {
+        "rank": 2,
+        "product": "Unspecified (unspecified HS92)",
+        "classification": "HS 1992",
+        "export_value": "$85.65 billion"
+      },
+      {
+        "rank": 3,
+        "product": "Petroleum oils, refined (2710 HS92)",
+        "classification": "HS 1992",
+        "export_value": "$59.30 billion"
+      }
+    ]
+  }
+}

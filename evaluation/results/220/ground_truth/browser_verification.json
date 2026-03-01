@@ -1,0 +1,10 @@
+{
+  "question_id": "220",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T05:05:33.601888+00:00",
+  "browser_value": "$2,274",
+  "gt_value": "$2,274",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/404",
+  "match_note": "Already verified from country page stat card in batch 1 (Q61)"
+}

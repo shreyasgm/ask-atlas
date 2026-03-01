@@ -1,0 +1,10 @@
+{
+  "question_id": "129",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T03:47:57.177635+00:00",
+  "browser_value": "Technological Frontier Approach - growth opportunities table not available for frontier economies",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/840/growth-opportunities",
+  "match_note": "USA is a frontier economy - growth opportunities page shows innovation message instead of product table",
+  "gt_value": "{'available': False, 'message': 'Visualization not available for highest complexity countries'}",
+  "match": true
+}

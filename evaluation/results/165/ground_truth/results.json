@@ -1,0 +1,15 @@
+{
+  "question_id": "165",
+  "execution_timestamp": "2026-03-01T03:40:13.588418+00:00",
+  "source": "atlas_country_page",
+  "source_method": "browser_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/792/export-complexity",
+  "results": {
+    "data": [
+      {
+        "metric": "Sectors by complexity level",
+        "description": "Turkiye's largest goods exports are in low and moderate complexity products, Agriculture and Textiles, respectively."
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "question_id": "247",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "Brazil Coffee RCA=13.8011 (HS92)",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "RCA values not displayed in browser tooltip. Would need to find tooltip with RCA but treemap tooltip only shows PCI."
+}

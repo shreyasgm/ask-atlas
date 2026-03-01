@@ -1,0 +1,46 @@
+{
+  "question_id": "33",
+  "execution_timestamp": "2026-03-01T03:48:58.699127+00:00",
+  "source": "atlas_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/704",
+  "results": {
+    "data": [
+      {
+        "country": "Vietnam",
+        "eci": "0.6290",
+        "eci_rank": 45,
+        "diversification_grade": "APlus",
+        "diversity_rank": 36
+      },
+      {
+        "country": "Thailand",
+        "eci": "0.7892",
+        "eci_rank": 34,
+        "diversification_grade": "B",
+        "diversity_rank": 24
+      },
+      {
+        "country": "Indonesia",
+        "eci": "0.2343",
+        "eci_rank": 69,
+        "diversification_grade": "B",
+        "diversity_rank": 31
+      },
+      {
+        "country": "Malaysia",
+        "eci": "0.8182",
+        "eci_rank": 32,
+        "diversification_grade": "B",
+        "diversity_rank": 40
+      }
+    ]
+  },
+  "source_method": "graphql_api_browser_enriched",
+  "browser_narrative": {
+    "complexity_income": "Vietnam is more complex than expected for its income level.",
+    "eci_rank_change": "Compared to a decade prior, Vietnam's economy has become more complex, improving 17 positions in the ECI ranking.",
+    "growth_pattern": "Vietnam is projected to grow rapidly. The Growth Lab's 2034 Growth Projections foresee growth in Vietnam of 5.5% annually over the coming decade, ranking in the top decile of countries globally.",
+    "eci_ranking": "45th most complex country",
+    "income_classification": "lower-middle-income"
+  }
+}

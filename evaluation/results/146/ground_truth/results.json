@@ -1,0 +1,19 @@
+{
+  "question_id": "146",
+  "execution_timestamp": "2026-03-01T03:44:04.197384+00:00",
+  "source": "atlas_country_page",
+  "source_method": "browser_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/724",
+  "results": {
+    "data": [
+      {
+        "metric": "Growth projection speed",
+        "value": "slowly",
+        "growth_rate": "1.3%",
+        "growth_rank": "119th of 145",
+        "ranking_descriptor": "bottom half",
+        "description": "Spain is projected to grow slowly. The Growth Lab's 2034 Growth Projections foresee growth in Spain of 1.3% annually over the coming decade, ranking in the bottom half of countries globally."
+      }
+    ]
+  }
+}

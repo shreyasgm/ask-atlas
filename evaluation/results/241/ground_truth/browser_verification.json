@@ -1,0 +1,10 @@
+{
+  "question_id": "241",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "Cars green_product=false",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "Product metadata classification (green product flag) not visible as labeled attribute on browser pages. Note: GT file mislabeled \u2014 Q240 is about Iron ores natural resource, Q241 about Coffee. GT shows Q241 as Cars green classification."
+}

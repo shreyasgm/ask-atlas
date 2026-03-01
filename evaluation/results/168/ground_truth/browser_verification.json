@@ -1,0 +1,10 @@
+{
+  "question_id": "168",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T05:13:41.515313+00:00",
+  "browser_value": "sectors with high potential",
+  "gt_value": "sectors with high potential",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/404/product-table",
+  "match_note": "GT was collected directly from browser (source_method=browser_country_page). High-potential sectors \u2014 browser-sourced GT (narrative)"
+}

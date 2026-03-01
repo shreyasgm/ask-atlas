@@ -1,0 +1,18 @@
+{
+  "question_id": "184",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-356",
+  "results": {
+    "data": [
+      {
+        "metric": "Global market share",
+        "country": "India",
+        "product": "T-shirts, knit (6109 HS12)",
+        "value": "4.4%",
+        "raw_value": 0.044416138592013946,
+        "year": "2024"
+      }
+    ]
+  }
+}

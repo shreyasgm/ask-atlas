@@ -1,0 +1,20 @@
+{
+  "question_id": "244",
+  "execution_timestamp": "2026-02-28T22:46:09.578839+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024",
+  "results": {
+    "data": [
+      {
+        "metric": "HS code conversion",
+        "source_code": "0901",
+        "source_classification": "HS 1992",
+        "target_classification": "HS 2012",
+        "target_codes": [
+          "0901"
+        ],
+        "note": "Code unchanged across revisions"
+      }
+    ]
+  }
+}

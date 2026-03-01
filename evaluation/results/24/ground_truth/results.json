@@ -1,0 +1,19 @@
+{
+  "question_id": "24",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-276",
+  "results": {
+    "data": [
+      {
+        "metric": "Automotive global market share",
+        "country": "Germany",
+        "year": "2024",
+        "germany_value": "$253.03 billion",
+        "global_value": "$1.70 trillion",
+        "share": "14.9%",
+        "raw_share": 0.14924967114382506
+      }
+    ]
+  }
+}

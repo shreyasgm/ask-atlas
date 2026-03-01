@@ -1,0 +1,10 @@
+{
+  "question_id": "7",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T04:53:07.125991+00:00",
+  "browser_value": "Total $116B; Minerals: Gold $12.1B, Platinum $8.24B, Iron ore $6.33B, Coal $4.64B, Manganese $3.03B, Diamond $1.68B, Chromium $1.84B, Zinc ore $1.12B",
+  "gt_value": "Total $115.53B, minerals $44.90B, share 38.9%",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2019&exporter=country-710",
+  "match_note": "Total $116B matches GT $115.53B. Individual mineral products verified. Full minerals sum requires all HS 25-27,71 products"
+}

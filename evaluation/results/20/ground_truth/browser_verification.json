@@ -1,0 +1,10 @@
+{
+  "question_id": "20",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "Singapore goods $761.76B exports, $758.94B imports",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "Re-export analysis requires comparing imports and exports views. Not efficiently verifiable."
+}

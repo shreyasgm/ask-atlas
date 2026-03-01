@@ -1,0 +1,10 @@
+{
+  "question_id": "119",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T04:18:55.402081+00:00",
+  "browser_value": "7%",
+  "gt_value": "6.8%",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products",
+  "match_note": "Rounding: browser rounds 6.8% to 7% in summary display (same pattern as Q112)"
+}

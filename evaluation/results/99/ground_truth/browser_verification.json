@@ -1,0 +1,10 @@
+{
+  "question_id": "99",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T04:23:38.218802+00:00",
+  "browser_value": "0.63",
+  "gt_value": "0.7165",
+  "match": false,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/356/growth-dynamics",
+  "match_note": "DISCREPANCY: Browser chart 0.63 vs API 0.7165. Systematic ECI divergence. GT updated."
+}

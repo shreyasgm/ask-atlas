@@ -1,0 +1,10 @@
+{
+  "question_id": "44",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T05:31:04.674573+00:00",
+  "browser_value": "ECI rank 55th, improved 26 positions, less complex than expected, moderate opportunities, stagnant diversification",
+  "gt_value": "eci_rank=55, coi_rank=66, resource_export_share=50%",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/398",
+  "match_note": "ECI rank 55 matches. Narrative about resource dependence and stagnant diversification consistent with GT."
+}

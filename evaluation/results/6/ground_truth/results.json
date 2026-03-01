@@ -1,0 +1,47 @@
+{
+  "question_id": "6",
+  "execution_timestamp": "2026-03-01T06:00:00.000000+00:00",
+  "source": "atlas_explore_page",
+  "source_method": "browser_treemap",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2020&exporter=country-356",
+  "results": {
+    "data": [
+      {
+        "category": "Services",
+        "product_name": "Business services",
+        "export_value": "$119B",
+        "note": "Browser shows $119B, not $161B from API"
+      },
+      {
+        "category": "Services",
+        "product_name": "Unspecified services",
+        "export_value": "$43.5B"
+      },
+      {
+        "category": "Goods",
+        "product_name": "Petroleum oils, refined",
+        "product_code": "2710",
+        "export_value": "$23.7B"
+      },
+      {
+        "category": "Services",
+        "product_name": "Transport services",
+        "export_value": "$20.8B"
+      },
+      {
+        "category": "Goods",
+        "product_name": "Medicaments",
+        "product_code": "3004",
+        "export_value": "$15.4B"
+      },
+      {
+        "category": "Goods",
+        "product_name": "Diamonds",
+        "product_code": "7102",
+        "export_value": "$13.7B"
+      }
+    ],
+    "total_value": "$467B",
+    "note": "Top exports by value from browser treemap. Business services shows $119B (browser) vs $161B (API discrepancy)."
+  }
+}

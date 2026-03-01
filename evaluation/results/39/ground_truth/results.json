@@ -1,0 +1,17 @@
+{
+  "question_id": "39",
+  "execution_timestamp": "2026-02-28T22:57:18.829130+00:00",
+  "source": "atlas_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/458/export-complexity",
+  "results": {
+    "data": [
+      {
+        "metric": "Complexity comparison",
+        "country": "Malaysia",
+        "eci": "0.8182",
+        "eci_rank": 32,
+        "note": "Global average ECI is ~0 by construction (mean-centered)"
+      }
+    ]
+  }
+}

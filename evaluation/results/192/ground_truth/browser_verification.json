@@ -1,0 +1,10 @@
+{
+  "question_id": "192",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "Coffee extracts (2101 HS92): $11.4B, 14.7% 5yr growth (plain Coffee not visible in Germany opportunities table)",
+  "gt_value": "Coffee (0901 HS12): CAGR 6.2%",
+  "match": null,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4",
+  "match_note": "Plain Coffee (0901) not a growth opportunity for Germany (already exported). Only Coffee extracts found. Cannot verify Coffee CAGR from this view."
+}

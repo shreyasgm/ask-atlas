@@ -1,0 +1,16 @@
+{
+  "question_id": "161",
+  "execution_timestamp": "2026-03-01T03:47:15.536520+00:00",
+  "source": "atlas_country_page",
+  "source_method": "browser_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/231/market-share",
+  "results": {
+    "data": [
+      {
+        "metric": "Structural transformation status",
+        "value": "not yet started",
+        "description": "Ethiopia has not yet started the traditional process of structural transformation. A key source of economic growth, this process reallocates economic activity from low to high productivity sectors. It broadly moves activities out of agriculture into textiles, followed by electronics and/or machinery manufacturing. Global market share in textile exports in Ethiopia has stagnated over the previous decade; electronics and machinery have yet to take-off in Ethiopia, limiting its income growth."
+      }
+    ]
+  }
+}

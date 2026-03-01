@@ -1,0 +1,28 @@
+{
+  "question_id": "11",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2019&exporter=country-826",
+  "results": {
+    "data": [
+      {
+        "rank": 1,
+        "service_sector": "product-HS92-400",
+        "export_value": "$149.65 billion",
+        "raw_export_value": 149652776911.0
+      },
+      {
+        "rank": 2,
+        "service_sector": "product-HS92-404",
+        "export_value": "$102.37 billion",
+        "raw_export_value": 102374244319.0
+      },
+      {
+        "rank": 3,
+        "service_sector": "product-HS92-403",
+        "export_value": "$81.71 billion",
+        "raw_export_value": 81705457249.0
+      }
+    ]
+  }
+}

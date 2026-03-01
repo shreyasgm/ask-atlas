@@ -1,0 +1,10 @@
+{
+  "question_id": "170",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:31:04.674573+00:00",
+  "browser_value": "N/A",
+  "gt_value": "Kenya Coffee RCA=15.0",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "RCA values not displayed in treemap tooltip. Only PCI visible via 'Show more'."
+}

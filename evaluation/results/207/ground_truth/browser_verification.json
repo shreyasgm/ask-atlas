@@ -1,0 +1,10 @@
+{
+  "question_id": "207",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T04:53:07.125991+00:00",
+  "browser_value": "Iron ores $2.61B, Petroleum refined $1.28B, Crustaceans $827M",
+  "gt_value": "Iron ores $2.60B, Petroleum refined $1.28B, Crustaceans $825.50M",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-356&importer=country-156",
+  "match_note": "All 3 products match within rounding"
+}

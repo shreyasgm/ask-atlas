@@ -1,0 +1,25 @@
+{
+  "question_id": "49",
+  "execution_timestamp": "2026-02-28T22:57:55.560423+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2022",
+  "results": {
+    "data": [
+      {
+        "country": "Services Partners",
+        "product": "Travel & tourism (travel HS12)",
+        "export_value": "$1.03 trillion"
+      },
+      {
+        "country": "Services Partners",
+        "product": "Transport (transport HS12)",
+        "export_value": "$1.62 trillion"
+      },
+      {
+        "country": "Services Partners",
+        "product": "Business (ict HS12)",
+        "export_value": "$3.15 trillion"
+      }
+    ]
+  }
+}

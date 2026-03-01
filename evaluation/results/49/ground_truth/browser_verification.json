@@ -1,0 +1,10 @@
+{
+  "question_id": "49",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "Travel & tourism from Services Partners: $1.03T",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "Edge case \u2014 finding products >$1T requires scanning all country-product combinations. Not efficiently browser-verifiable."
+}

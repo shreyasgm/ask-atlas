@@ -1,0 +1,10 @@
+{
+  "question_id": "248",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:31:04.674573+00:00",
+  "browser_value": "HS92 2024: 1.Business $209B, 2.Unspecified $85.7B, 3.Petroleum oils refined $59.3B",
+  "gt_value": "HS92: 1.Business $209.15B",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-356",
+  "match_note": "Top product Business $209B matches GT $209.15B. Full ranking visible on treemap."
+}

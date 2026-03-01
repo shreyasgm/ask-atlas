@@ -1,0 +1,28 @@
+{
+  "question_id": "93",
+  "execution_timestamp": "2026-02-28T22:44:53.587534+00:00",
+  "source": "atlas_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/792/export-basket",
+  "results": {
+    "data": [
+      {
+        "rank": 1,
+        "country": "Germany",
+        "share": "8.0%",
+        "export_value": "$20.38 billion"
+      },
+      {
+        "rank": 2,
+        "country": "United Kingdom",
+        "share": "5.9%",
+        "export_value": "$15.06 billion"
+      },
+      {
+        "rank": 3,
+        "country": "United States of America",
+        "share": "5.7%",
+        "export_value": "$14.45 billion"
+      }
+    ]
+  }
+}

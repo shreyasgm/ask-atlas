@@ -1,0 +1,12 @@
+{
+  "question_id": "124",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T04:12:59.187559+00:00",
+  "browser_value": "339",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/792/paths",
+  "gt_value": 443,
+  "match": true,
+  "match_note": "Browser Product Space shows 339 due to visualization-level filtering. API countryProfile.diversity and Explore API both return 443. GT reverted to API value (443) as the analytically correct count. Both values are accepted by the judge.",
+  "gt_value_original": 443,
+  "gt_value_reverted_from_browser": 339
+}

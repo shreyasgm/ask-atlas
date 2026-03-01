@@ -1,0 +1,19 @@
+{
+  "question_id": "21",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&product=product-HS12-876",
+  "results": {
+    "data": [
+      {
+        "metric": "Iron ore market share",
+        "country": "Australia",
+        "year": "2024",
+        "australia_exports": "$74.06 billion",
+        "global_total": "$141.58 billion",
+        "global_share": "52.3%",
+        "note": "Asia-specific bilateral iron ore data requires countryCountryProductYear queries"
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "question_id": "190",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "Cars (8703 HS92): Global Size $873B, 5yr growth 3.4%",
+  "gt_value": "Cars (8703 HS12): CAGR -0.7% (constant USD)",
+  "match": false,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4",
+  "match_note": "Browser shows 3.4% nominal growth vs GT -0.7% real (constant USD) CAGR. Likely real vs nominal difference plus possible HS92 vs HS12 classification difference."
+}

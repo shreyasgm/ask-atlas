@@ -1,0 +1,79 @@
+{
+  "question_id": "38",
+  "execution_timestamp": "2026-03-01T03:50:01.008722+00:00",
+  "source": "atlas_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/410/export-complexity",
+  "results": {
+    "data": [
+      {
+        "metric": "Complexity profile",
+        "country": "South Korea",
+        "eci": "1.5621",
+        "eci_rank": 4,
+        "diversity": 240,
+        "top_complex_products": [
+          {
+            "product": "Photographic film, developed (3705 HS12)",
+            "pci": 2.216,
+            "export_value": "$266.44 million"
+          },
+          {
+            "product": "Machines and apparatus semiconductors, electronics (8486 HS12)",
+            "pci": 1.9642,
+            "export_value": "$12.99 billion"
+          },
+          {
+            "product": "Cermets (8113 HS12)",
+            "pci": 1.8867,
+            "export_value": "$40.23 million"
+          },
+          {
+            "product": "Chemical elements for electronics (3818 HS12)",
+            "pci": 1.7681,
+            "export_value": "$1.83 billion"
+          },
+          {
+            "product": "Bars of stainless steel, hot-rolled (7221 HS12)",
+            "pci": 1.7174,
+            "export_value": "$83.17 million"
+          },
+          {
+            "product": "Hydrides, nitrides, azides, silicides and borides (2850 HS12)",
+            "pci": 1.6497,
+            "export_value": "$54.55 million"
+          },
+          {
+            "product": "Articles for utensils, of cermet (8209 HS12)",
+            "pci": 1.6263,
+            "export_value": "$361.86 million"
+          },
+          {
+            "product": "Machining centers for working metal (8457 HS12)",
+            "pci": 1.6133,
+            "export_value": "$500.46 million"
+          },
+          {
+            "product": "Chemical preparations for photographic uses (3707 HS12)",
+            "pci": 1.5729,
+            "export_value": "$784.29 million"
+          },
+          {
+            "product": "Halides of nonmetals (2812 HS12)",
+            "pci": 1.5578,
+            "export_value": "$223.87 million"
+          }
+        ]
+      }
+    ]
+  },
+  "source_method": "graphql_api_browser_enriched",
+  "browser_narrative": {
+    "export_complexity": "South Korea's largest goods exports are in high complexity products, Electronics and Machinery.",
+    "growth_pattern": "South Korea has seen a promising pattern of export growth, with the largest contribution to export growth coming from high complexity products, particularly Electrical machinery and equipment and Vehicles.",
+    "structural_transformation": "South Korea has completed the process of structural transformation. However, global market share in machinery manufacturing has fallen over the previous decade.",
+    "growth_driver": "South Korea's export growth in the past five years has been driven by Vehicles, driven by expanding its global market share.",
+    "strategic_approach": "Technological Frontier Approach - Having exploited virtually all major existing products, gains come from developing new products.",
+    "diversification_grade": "B",
+    "diversity_rank": "35th of 145"
+  }
+}

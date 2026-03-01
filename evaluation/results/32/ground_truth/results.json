@@ -1,0 +1,74 @@
+{
+  "question_id": "32",
+  "execution_timestamp": "2026-02-28T22:57:07.100177+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-76&startYear=2009&endYear=2024",
+  "results": {
+    "data": [
+      {
+        "year": "2009",
+        "eci": null
+      },
+      {
+        "year": "2010",
+        "eci": null
+      },
+      {
+        "year": "2011",
+        "eci": null
+      },
+      {
+        "year": "2012",
+        "eci": "0.6823"
+      },
+      {
+        "year": "2013",
+        "eci": "0.7039"
+      },
+      {
+        "year": "2014",
+        "eci": "0.6643"
+      },
+      {
+        "year": "2015",
+        "eci": "0.6619"
+      },
+      {
+        "year": "2016",
+        "eci": "0.6582"
+      },
+      {
+        "year": "2017",
+        "eci": "0.6185"
+      },
+      {
+        "year": "2018",
+        "eci": "0.5530"
+      },
+      {
+        "year": "2019",
+        "eci": "0.4948"
+      },
+      {
+        "year": "2020",
+        "eci": "0.4063"
+      },
+      {
+        "year": "2021",
+        "eci": "0.3918"
+      },
+      {
+        "year": "2022",
+        "eci": "0.4543"
+      },
+      {
+        "year": "2023",
+        "eci": "0.4106"
+      },
+      {
+        "year": "2024",
+        "eci": "0.3700"
+      }
+    ]
+  }
+}

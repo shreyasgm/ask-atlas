@@ -1,0 +1,10 @@
+{
+  "question_id": "16",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "Decade of service sector data",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "Decade-long trend analysis requires multiple page visits and sector-level extraction. Not efficiently verifiable."
+}

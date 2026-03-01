@@ -1,0 +1,10 @@
+{
+  "question_id": "9",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:00:36.006317+00:00",
+  "browser_value": "Total $74B; Copper ore $15.2B, Travel $3.15B, Transport $3.32B",
+  "gt_value": "Total $147.09B, minerals 12.8%, services 50.0%",
+  "match": false,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2017&exporter=country-152",
+  "match_note": "DISCREPANCY: Browser total $74B vs GT $147.09B. GT double-counts (goods_value=services_value). Same bug as Q8, Q12."
+}

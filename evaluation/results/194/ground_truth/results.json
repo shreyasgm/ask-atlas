@@ -1,0 +1,31 @@
+{
+  "question_id": "194",
+  "execution_timestamp": "2026-03-01T06:00:00.000000+00:00",
+  "source": "atlas_explore_page",
+  "source_method": "browser_treemap",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&product=product-HS92-1745&exporter=group-1",
+  "results": {
+    "data": [
+      {
+        "rank": 1,
+        "country": "China",
+        "export_value": "$139B",
+        "share": "18.14%"
+      },
+      {
+        "rank": 2,
+        "country": "Taiwan",
+        "export_value": "$139B",
+        "share": "18.08%"
+      },
+      {
+        "rank": 3,
+        "country": "South Korea",
+        "export_value": "$112B",
+        "share": "14.62%"
+      }
+    ],
+    "total_global_value": "$767B",
+    "note": "HS92 classification. Values from browser treemap tooltips showing 'Who exported Electronic integrated circuits in 2024?'"
+  }
+}

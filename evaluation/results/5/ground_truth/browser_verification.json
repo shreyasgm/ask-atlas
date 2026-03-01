@@ -1,0 +1,10 @@
+{
+  "question_id": "5",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:00:36.006317+00:00",
+  "browser_value": "Total $608B; Petroleum crude $79.0B, Business $49.3B, Cars $28.1B, Travel $15.4B, Gold $14.0B",
+  "gt_value": "Sector 1: $116.11B, Sector 2: $49.33B",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2021&exporter=country-124",
+  "match_note": "Business $49.3B matches GT sector 2 ($49.33B). GT uses sector aggregates; individual products verified"
+}

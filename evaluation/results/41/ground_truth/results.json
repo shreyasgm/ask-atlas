@@ -1,0 +1,29 @@
+{
+  "question_id": "41",
+  "execution_timestamp": "2026-03-01T03:50:31.962310+00:00",
+  "source": "atlas_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/620/paths",
+  "results": {
+    "data": [
+      {
+        "metric": "Product Space position",
+        "country": "Portugal",
+        "coi_rank": 6,
+        "coi_classification": "high",
+        "strategic_approach": "ParsimoniousIndustrial",
+        "diversification_grade": "B",
+        "diversity": 403,
+        "diversity_rank": 10
+      }
+    ]
+  },
+  "source_method": "graphql_api_browser_enriched",
+  "browser_narrative": {
+    "strategic_approach": "Parsimonious Industrial Policy Approach - Limited opportunities requires addressing bottlenecks, to help jump short distances, into related products.",
+    "high_potential_sectors": "Industrial Machinery and Electrical machinery and equipment",
+    "structural_transformation": "Portugal has completed the process of structural transformation, having entered all major, high-productivity sectors.",
+    "diversification_grade": "B",
+    "diversity_rank": "10th of 145",
+    "new_products": "16 new products since 2009, contributed $144 in income per capita"
+  }
+}

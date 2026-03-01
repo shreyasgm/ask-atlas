@@ -1,0 +1,16 @@
+{
+  "question_id": "155",
+  "execution_timestamp": "2026-03-01T03:44:44.240072+00:00",
+  "source": "atlas_country_page",
+  "source_method": "browser_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/724/growth-dynamics",
+  "results": {
+    "data": [
+      {
+        "metric": "Export growth pattern",
+        "value": "troubling",
+        "description": "Spain has seen a troubling pattern of export growth, with the largest contribution to export growth coming from low and moderate complexity products, particularly Travel & tourism and Mineral fuels, oils and waxes."
+      }
+    ]
+  }
+}

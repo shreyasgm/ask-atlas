@@ -1,0 +1,9 @@
+{
+  "question_id": "123",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T03:37:17.498674+00:00",
+  "browser_value": "Light Touch Approach",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/404/strategic-approach",
+  "gt_value": "Light Touch Approach",
+  "match": true
+}

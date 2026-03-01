@@ -1,0 +1,18 @@
+{
+  "question_id": "249",
+  "execution_timestamp": "2026-02-28T22:57:55.560423+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-392&year=2020",
+  "results": {
+    "data": [
+      {
+        "metric": "Total exports (SITC)",
+        "country": "Japan",
+        "year": "2020",
+        "classification": "SITC",
+        "value": "$806.09 billion",
+        "raw_value": 806091378282.0
+      }
+    ]
+  }
+}

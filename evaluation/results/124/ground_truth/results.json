@@ -1,0 +1,16 @@
+{
+  "question_id": "124",
+  "execution_timestamp": "2026-03-01T04:30:00.000000+00:00",
+  "source": "atlas_country_page",
+  "source_method": "graphql_api",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/792/paths",
+  "results": {
+    "data": [
+      {
+        "metric": "Products with RCA > 1",
+        "value": 443,
+        "note": "API countryProfile.diversity and Explore API countryProductYear with exportRca>=1 both return 443. Browser Product Space visualization shows 339 due to visualization-level filtering. The API count is the analytically correct value."
+      }
+    ]
+  }
+}

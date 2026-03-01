@@ -1,0 +1,10 @@
+{
+  "question_id": "213",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "Canada $12.36B",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "USA import treemap with product filter URL parameters didn't render correctly. Product-specific import source breakdown not extractable."
+}

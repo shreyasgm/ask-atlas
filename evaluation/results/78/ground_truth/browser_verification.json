@@ -1,0 +1,10 @@
+{
+  "question_id": "78",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T04:12:59.187559+00:00",
+  "browser_value": "$368 billion",
+  "gt_value": "$367.68 billion",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/76/new-products",
+  "match_note": "Formatting: $368B rounds from $367.68B"
+}

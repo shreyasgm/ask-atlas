@@ -1,0 +1,24 @@
+{
+  "question_id": "27",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?startYear=2012&endYear=2022",
+  "results": {
+    "data": [
+      {
+        "country": "Netherlands",
+        "start_value": "$641.15 billion",
+        "end_value": "$893.51 billion",
+        "cagr": "3.4%",
+        "raw_cagr": 0.033746384519225625
+      },
+      {
+        "country": "Sweden",
+        "start_value": "$221.66 billion",
+        "end_value": "$280.76 billion",
+        "cagr": "2.4%",
+        "raw_cagr": 0.023915769678350962
+      }
+    ]
+  }
+}

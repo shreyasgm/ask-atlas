@@ -1,0 +1,10 @@
+{
+  "question_id": "1",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:26:14.587679+00:00",
+  "browser_value": "$257B",
+  "gt_value": "$257.39B (goods $223.34B + services $34.04B)",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2018&exporter=country-76",
+  "match_note": "Browser total $257B matches GT total $257.39B"
+}

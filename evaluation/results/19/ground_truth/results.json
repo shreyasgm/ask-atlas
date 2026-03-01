@@ -1,0 +1,90 @@
+{
+  "question_id": "19",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-404&view=markets",
+  "results": {
+    "data": [
+      {
+        "rank": 1,
+        "country": "Services Partners",
+        "exports": "$8.04 billion",
+        "imports": "$5.64 billion",
+        "balance": "$2.41 billion",
+        "status": "surplus"
+      },
+      {
+        "rank": 2,
+        "country": "China",
+        "exports": "$190.46 million",
+        "imports": "$7.33 billion",
+        "balance": "$-7.14 billion",
+        "status": "deficit"
+      },
+      {
+        "rank": 3,
+        "country": "India",
+        "exports": "$143.09 million",
+        "imports": "$2.98 billion",
+        "balance": "$-2.84 billion",
+        "status": "deficit"
+      },
+      {
+        "rank": 4,
+        "country": "United Arab Emirates",
+        "exports": "$753.88 million",
+        "imports": "$2.03 billion",
+        "balance": "$-1.28 billion",
+        "status": "deficit"
+      },
+      {
+        "rank": 5,
+        "country": "United States of America",
+        "exports": "$607.93 million",
+        "imports": "$783.39 million",
+        "balance": "$-175.47 million",
+        "status": "deficit"
+      },
+      {
+        "rank": 6,
+        "country": "Uganda",
+        "exports": "$901.23 million",
+        "imports": "$352.70 million",
+        "balance": "$548.53 million",
+        "status": "surplus"
+      },
+      {
+        "rank": 7,
+        "country": "Malaysia",
+        "exports": "$12.93 million",
+        "imports": "$1.18 billion",
+        "balance": "$-1.17 billion",
+        "status": "deficit"
+      },
+      {
+        "rank": 8,
+        "country": "Netherlands",
+        "exports": "$551.12 million",
+        "imports": "$546.81 million",
+        "balance": "$4.30 million",
+        "status": "surplus"
+      },
+      {
+        "rank": 9,
+        "country": "Japan",
+        "exports": "$66.41 million",
+        "imports": "$987.58 million",
+        "balance": "$-921.17 million",
+        "status": "deficit"
+      },
+      {
+        "rank": 10,
+        "country": "Pakistan",
+        "exports": "$569.73 million",
+        "imports": "$381.13 million",
+        "balance": "$188.60 million",
+        "status": "surplus"
+      }
+    ]
+  }
+}

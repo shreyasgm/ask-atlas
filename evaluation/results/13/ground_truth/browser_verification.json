@@ -1,0 +1,10 @@
+{
+  "question_id": "13",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:00:36.006317+00:00",
+  "browser_value": "Travel $14.9B, total services ~$38B (Business $16.5B + Transport $6.58B + Travel $14.9B)",
+  "gt_value": "Travel $14.87B, total services $38.95B, share 38.2%",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2022&exporter=country-764",
+  "match_note": "Travel $14.9B matches GT $14.87B. Services total ~$38B matches GT $38.95B"
+}
