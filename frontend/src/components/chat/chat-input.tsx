@@ -31,10 +31,11 @@ export default function ChatInput({ disabled, onSend }: ChatInputProps) {
   return (
     <div className="w-full">
       <form
-        className="flex items-center gap-2 rounded-2xl border border-border px-4 py-1"
+        className="flex items-center gap-2 rounded-2xl border border-border px-4 py-1 transition-colors focus-within:border-ring"
         onSubmit={handleSubmit}
       >
         <input
+          aria-label="Ask about trade data"
           className="h-11 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           disabled={disabled}
           onChange={(e) => setValue(e.target.value)}
@@ -46,7 +47,7 @@ export default function ChatInput({ disabled, onSend }: ChatInputProps) {
         />
         <button
           aria-label="Send"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground disabled:opacity-50"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-opacity hover:bg-primary/90 disabled:opacity-50"
           disabled={disabled || !value.trim()}
           type="submit"
         >

@@ -25,11 +25,12 @@ export default function HeroSection() {
         trade data from 1962 to 2024.
       </p>
       <form
-        className="flex w-full max-w-[680px] items-center gap-3 rounded-3xl border border-border bg-card px-5 shadow-sm"
+        className="flex w-full max-w-[680px] items-center gap-3 rounded-3xl border border-border bg-card px-5 shadow-sm transition-colors focus-within:border-ring"
         onSubmit={handleSubmit}
       >
         <Search className="h-[18px] w-[18px] shrink-0 text-muted-foreground" />
         <input
+          aria-label="Ask about global trade data"
           className="h-[52px] flex-1 bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted-foreground/60"
           onChange={(e) => setQuery(e.target.value)}
           placeholder="What were India's top exports in 2020?"
@@ -38,7 +39,7 @@ export default function HeroSection() {
         />
         <button
           aria-label="Search"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
           type="submit"
         >
           <ArrowUp className="h-4 w-4" />

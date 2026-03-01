@@ -1,4 +1,5 @@
 import { AlertCircle } from 'lucide-react';
+import { memo } from 'react';
 import type { ChatMessage, EntitiesData, PipelineStep, QueryAggregateStats } from '@/types/chat';
 import AssistantMessage from './assistant-message';
 import PipelineStepper from './pipeline-stepper';
@@ -16,7 +17,7 @@ interface MessageListProps {
   queryStats?: QueryAggregateStats | null;
 }
 
-export default function MessageList({
+export default memo(function MessageList({
   entitiesData,
   error,
   isRestoredThread,
@@ -28,7 +29,7 @@ export default function MessageList({
   const lastAssistantIndex = messages.findLastIndex((m) => m.role === 'assistant');
 
   return (
-    <div className="flex-1 overflow-y-auto px-4 py-4 sm:py-6">
+    <div aria-live="polite" className="flex-1 overflow-y-auto px-4 py-4 sm:py-6" role="log">
       <div className="mx-auto flex max-w-2xl flex-col gap-4">
         <WelcomeMessage />
         {messages.map((msg, index) => {
@@ -61,11 +62,10 @@ export default function MessageList({
             role="alert"
           >
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-            <p className="text-sm text-destructive">{error}</p>
+            <p className="line-clamp-5 text-sm text-destructive">{error}</p>
           </div>
         )}
-        <div />
       </div>
     </div>
   );
-}
+});

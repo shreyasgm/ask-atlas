@@ -18,6 +18,9 @@ interface LeftSidebarProps {
 function formatRelativeTime(isoDate: string): string {
   const now = Date.now();
   const then = new Date(isoDate).getTime();
+  if (Number.isNaN(then)) {
+    return '';
+  }
   const diffMs = now - then;
   const diffSec = Math.floor(diffMs / 1000);
   const diffMin = Math.floor(diffSec / 60);
@@ -66,7 +69,7 @@ export default function LeftSidebar({
       <div className="hidden h-full w-12 shrink-0 flex-col items-center gap-3 border-r border-border bg-background py-3 lg:flex">
         <button
           aria-label="Expand sidebar"
-          className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+          className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           onClick={onToggle}
           type="button"
         >
@@ -74,7 +77,7 @@ export default function LeftSidebar({
         </button>
         <button
           aria-label="New chat"
-          className="rounded bg-primary p-1.5 text-primary-foreground hover:bg-primary/90"
+          className="rounded bg-primary p-1.5 text-primary-foreground transition-colors hover:bg-primary/90"
           onClick={onNewChat}
           type="button"
         >
@@ -94,7 +97,7 @@ export default function LeftSidebar({
         </Link>
         <button
           aria-label="Collapse sidebar"
-          className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+          className="rounded p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           onClick={onToggle}
           type="button"
         >
@@ -105,7 +108,7 @@ export default function LeftSidebar({
       {/* New Chat button */}
       <div className="px-3 pb-2">
         <button
-          className="flex w-full items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          className="flex w-full items-center justify-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           onClick={onNewChat}
           type="button"
         >
@@ -119,6 +122,7 @@ export default function LeftSidebar({
         <div className="flex items-center gap-2 rounded-md border border-border px-2.5 py-1.5">
           <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           <input
+            aria-label="Search conversations"
             className="w-full bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search..."
@@ -179,11 +183,14 @@ function ConversationItem({
 }) {
   return (
     <div
-      className={cn('group relative rounded-md', active ? 'bg-secondary' : 'hover:bg-secondary/50')}
+      className={cn(
+        'group relative rounded-md transition-colors',
+        active ? 'bg-secondary' : 'hover:bg-secondary/50',
+      )}
       data-testid="conversation-item"
     >
       <Link
-        className="flex items-start gap-2 px-2 py-1.5"
+        className="flex items-start gap-2 rounded-md px-2 py-1.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         onClick={() => onSelect(conversation.threadId)}
         to={`/chat/${conversation.threadId}`}
       >
@@ -204,7 +211,7 @@ function ConversationItem({
       </Link>
       <button
         aria-label="Delete conversation"
-        className="absolute top-1.5 right-1.5 hidden rounded p-0.5 text-muted-foreground group-hover:block hover:bg-destructive/10 hover:text-destructive"
+        className="absolute top-1.5 right-1.5 hidden rounded p-0.5 text-muted-foreground group-hover:block hover:bg-destructive/10 hover:text-destructive focus-visible:block focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         onClick={(e) => {
           e.stopPropagation();
           if (window.confirm('Delete this conversation?')) {

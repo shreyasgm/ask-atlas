@@ -12,7 +12,7 @@ export default function ChatTopBar({ onClear, onToggleSidebar, title }: ChatTopB
       {/* Mobile: hamburger + centered logo */}
       <button
         aria-label="Toggle sidebar"
-        className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:text-foreground lg:hidden"
+        className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground lg:hidden"
         onClick={onToggleSidebar}
         type="button"
       >
@@ -28,7 +28,7 @@ export default function ChatTopBar({ onClear, onToggleSidebar, title }: ChatTopB
       {/* Desktop: title + clear button */}
       <h2 className="hidden truncate text-sm font-medium lg:block">{title}</h2>
       <button
-        className="hidden shrink-0 text-sm text-muted-foreground hover:text-foreground lg:block"
+        className="hidden shrink-0 text-sm text-muted-foreground transition-colors hover:text-foreground lg:block"
         onClick={onClear}
         type="button"
       >

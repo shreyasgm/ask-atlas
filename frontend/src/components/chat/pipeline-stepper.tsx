@@ -1,5 +1,5 @@
 import { Check, ChevronDown, ChevronRight, Loader } from 'lucide-react';
-import { useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import type { PipelineStep, PipelineType } from '@/types/chat';
 import { cn } from '@/lib/utils';
 import { getStepDetail } from '@/utils/step-detail';
@@ -62,14 +62,14 @@ function groupSteps(steps: Array<PipelineStep>): Array<PipelineGroup> {
   return groups;
 }
 
-export default function PipelineStepper({ steps }: PipelineStepperProps) {
+export default memo(function PipelineStepper({ steps }: PipelineStepperProps) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
+
+  const groups = useMemo(() => groupSteps(steps), [steps]);
 
   if (steps.length === 0) {
     return null;
   }
-
-  const groups = groupSteps(steps);
 
   function toggleGroup(index: number) {
     setExpanded((prev) => {
@@ -97,7 +97,7 @@ export default function PipelineStepper({ steps }: PipelineStepperProps) {
             {!isExpanded && allCompleted ? (
               /* Collapsed summary row */
               <button
-                className="flex w-full items-center gap-2.5 py-1.5"
+                className="flex w-full items-center gap-2.5 rounded py-1.5 transition-colors hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none dark:hover:bg-white/5"
                 onClick={() => toggleGroup(gi)}
                 type="button"
               >
@@ -112,7 +112,7 @@ export default function PipelineStepper({ steps }: PipelineStepperProps) {
               /* Expanded step rows */
               <div className="flex min-w-0 flex-col">
                 <button
-                  className="flex w-full items-center gap-2 py-1.5"
+                  className="flex w-full items-center gap-2 rounded py-1.5 transition-colors hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none dark:hover:bg-white/5"
                   onClick={() => toggleGroup(gi)}
                   type="button"
                 >
@@ -124,11 +124,11 @@ export default function PipelineStepper({ steps }: PipelineStepperProps) {
                     step.status === 'completed' ? getStepDetail(step.node, step.detail) : null;
                   return (
                     <div key={`${step.node}-${si}`}>
-                      <div className="flex w-full items-center gap-2.5 py-1.5">
+                      <div className="flex w-full min-w-0 items-center gap-2.5 py-1.5">
                         <div className={cn('h-2 w-2 shrink-0 rounded-full', colors.dot)} />
                         <span
                           className={cn(
-                            'min-w-0 text-xs',
+                            'min-w-0 truncate text-xs',
                             step.status === 'completed'
                               ? 'text-slate-500 dark:text-slate-400'
                               : cn('font-semibold', colors.text),
@@ -159,4 +159,4 @@ export default function PipelineStepper({ steps }: PipelineStepperProps) {
       })}
     </div>
   );
-}
+});

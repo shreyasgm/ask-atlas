@@ -1,4 +1,5 @@
 import type { ClassificationSchema, SystemMode, TradeMode, TradeOverrides } from '@/types/chat';
+import { cn } from '@/lib/utils';
 
 interface TradeTogglesBarProps {
   onModeChange: (v: TradeMode | null) => void;
@@ -46,20 +47,17 @@ function ToggleGroup<T extends string>({
     <div className="flex items-center gap-0.5">
       {options.map((opt) => {
         const isActive = value === opt.value;
-        let className =
-          'rounded px-2.5 py-1 text-xs transition-colors cursor-pointer whitespace-nowrap ';
-        if (isActive) {
-          className +=
-            variant === 'filled'
-              ? 'bg-primary text-primary-foreground font-semibold'
-              : 'border border-primary text-primary font-medium bg-card';
-        } else {
-          className += 'text-muted-foreground hover:text-foreground';
-        }
         return (
           <button
             aria-pressed={isActive}
-            className={className}
+            className={cn(
+              'cursor-pointer rounded px-2.5 py-1 text-xs whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+              isActive
+                ? variant === 'filled'
+                  ? 'bg-primary font-semibold text-primary-foreground'
+                  : 'border border-primary bg-card font-medium text-primary'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
             key={opt.label}
             onClick={() => onChange(opt.value)}
             type="button"
