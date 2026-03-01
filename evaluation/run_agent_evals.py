@@ -176,8 +176,8 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--concurrency",
         type=int,
-        default=3,
-        help="Max concurrent agent runs (default: 3)",
+        default=10,
+        help="Max concurrent agent runs (default: 10)",
     )
     parser.add_argument(
         "--mode",
