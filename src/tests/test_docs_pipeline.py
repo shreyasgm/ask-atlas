@@ -424,7 +424,7 @@ class TestSelectDocs:
         selection_call_args = (
             mock_llm.with_structured_output.return_value.ainvoke.call_args[0][0]
         )
-        assert "1 to 5" in selection_call_args
+        assert "1-5" in selection_call_args
         assert "more than 5" in selection_call_args
 
 

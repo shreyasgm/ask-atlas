@@ -20,11 +20,9 @@ from src.config import AgentMode
 from src.docs_pipeline import _docs_tool_schema
 from src.graphql_client import GraphQLBudgetTracker
 from src.prompts import (
-    DOCS_TOOL_EXTENSION,
-    DUAL_TOOL_EXTENSION,
-    GRAPHQL_DATA_MAX_YEAR,
-    SQL_DATA_MAX_YEAR,
-    build_agent_system_prompt,
+    GRAPHQL_ONLY_OVERRIDE,
+    build_dual_tool_system_prompt,
+    build_sql_only_system_prompt,
 )
 from src.sql_pipeline import _query_tool_schema
 from src.state import AtlasAgentState
@@ -141,19 +139,16 @@ def make_agent_node(
                 tools = [_query_tool_schema, _atlas_graphql_schema, _docs_tool_schema]
 
             # Select system prompt based on effective mode
-            prompt_text = build_agent_system_prompt(max_uses, top_k_per_query)
-            if effective_mode not in (AgentMode.SQL_ONLY, AgentMode.GRAPHQL_ONLY):
+            if effective_mode == AgentMode.SQL_ONLY:
+                prompt_text = build_sql_only_system_prompt(max_uses, top_k_per_query)
+            else:
                 remaining = budget_tracker.remaining() if budget_tracker else "unknown"
                 budget_status = f"Available ({remaining} calls remaining this window)"
-                prompt_text += DUAL_TOOL_EXTENSION.format(
-                    max_uses=max_uses,
-                    budget_status=budget_status,
-                    sql_max_year=SQL_DATA_MAX_YEAR,
-                    graphql_max_year=GRAPHQL_DATA_MAX_YEAR,
+                prompt_text = build_dual_tool_system_prompt(
+                    max_uses, top_k_per_query, budget_status
                 )
-
-            # Docs tool extension — available in ALL modes
-            prompt_text += DOCS_TOOL_EXTENSION.format(max_uses=max_uses)
+                if effective_mode == AgentMode.GRAPHQL_ONLY:
+                    prompt_text = GRAPHQL_ONLY_OVERRIDE + "\n\n" + prompt_text
 
             # Apply override lines (same logic as legacy create_sql_agent)
             overrides_parts: list[str] = []

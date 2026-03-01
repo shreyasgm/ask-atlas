@@ -7,7 +7,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from src.agent_node import make_agent_node, resolve_effective_mode
 from src.config import AgentMode
 from src.graphql_client import GraphQLBudgetTracker
-from src.prompts import build_agent_system_prompt
+from src.prompts import build_sql_only_system_prompt
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -99,8 +99,8 @@ class TestResolveEffectiveMode:
 
 
 class TestAgentNodeSqlOnly:
-    async def test_sql_only_agent_prompt_is_agent_prefix_verbatim(self):
-        """REGRESSION: system prompt in SQL-only mode must equal build_agent_system_prompt verbatim."""
+    async def test_sql_only_agent_prompt_matches_builder(self):
+        """REGRESSION: system prompt in SQL-only mode must match build_sql_only_system_prompt."""
         captured_messages = []
         mock_bound = MagicMock()
 
@@ -126,18 +126,20 @@ class TestAgentNodeSqlOnly:
         assert system_msgs, "No SystemMessage found"
         prompt = system_msgs[0].content
 
-        # Must contain the canonical phrases from AGENT_PREFIX
+        # Must contain the canonical phrases
         assert "You are Ask-Atlas" in prompt
-        assert "international trade data" in prompt
-        assert "Ask-Atlas" in prompt
+        assert "international trade" in prompt
 
-        # Must start with build_agent_system_prompt (now includes docs_tool extension)
-        expected_base = build_agent_system_prompt(3, 15)
+        # Must start with build_sql_only_system_prompt output
+        expected_base = build_sql_only_system_prompt(3, 15)
         assert prompt.startswith(expected_base)
 
-        # Must include docs_tool extension (available in all modes)
+        # Must include docs_tool guidance (integrated into SQL-only prompt)
         assert "docs_tool" in prompt
         assert "Documentation Tool" in prompt
+
+        # Must NOT include atlas_graphql (SQL-only mode)
+        assert "atlas_graphql" not in prompt
 
     async def test_sql_only_agent_binds_only_query_tool(self):
         """In SQL-only mode, only query_tool is bound — no atlas_graphql."""
@@ -270,8 +272,8 @@ class TestAgentNodeGraphqlOnly:
         assert "docs_tool" in tool_names
         assert "query_tool" not in tool_names
 
-    async def test_graphql_only_prompt_does_not_include_dual_tool_extension(self):
-        """GRAPHQL_ONLY mode should NOT include the dual-tool extension."""
+    async def test_graphql_only_prompt_has_override_prefix(self):
+        """GRAPHQL_ONLY mode should prepend the GRAPHQL_ONLY_OVERRIDE."""
         captured_messages = []
         mock_bound = MagicMock()
 
@@ -294,10 +296,12 @@ class TestAgentNodeGraphqlOnly:
         system_msgs = [m for m in captured_messages if isinstance(m, SystemMessage)]
         assert system_msgs
         prompt = system_msgs[0].content
-        # Should NOT contain the dual-tool table
-        assert "Multi-tool strategy" not in prompt
-        # But SHOULD contain docs_tool extension
+        # Should start with the GraphQL-only override
+        assert "SQL Tool Disabled" in prompt
+        # Should contain docs_tool guidance
         assert "docs_tool" in prompt
+        # Should contain atlas_graphql tool reference
+        assert "atlas_graphql" in prompt
 
     async def test_graphql_only_via_per_request_override(self):
         """Per-request override_agent_mode='graphql_only' binds only graphql + docs."""
