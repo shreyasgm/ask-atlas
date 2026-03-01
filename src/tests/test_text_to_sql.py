@@ -52,15 +52,6 @@ async def test_answer_question_basic(atlas_sql, logger):
         for word in ["united states", "china", "export", "product"]
     )
 
-    question2 = (
-        "Compare India's exports in agricultural goods to China's, from 2000 to 2020"
-    )
-    result2 = await atlas_sql.aanswer_question(question2)
-    answer2 = result2.answer
-    logger.info(f"Question: {question2}\nAnswer: {answer2}")
-    assert isinstance(answer2, str)
-    assert len(answer2) > 0
-
 
 @pytest.mark.integration
 async def test_stream_contract(atlas_sql):

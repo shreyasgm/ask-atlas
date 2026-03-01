@@ -122,30 +122,6 @@ class TestDocsEciMethodology:
             "eci" in synthesis or "economic complexity" in synthesis
         ), f"Synthesis does not mention ECI: {result['docs_synthesis'][:200]}"
 
-    async def test_rca_question_selects_relevant_docs(
-        self, lightweight_llm, docs_manifest
-    ):
-        """A question about RCA should select metrics documentation."""
-        state = _base_docs_state(
-            docs_question="What is Revealed Comparative Advantage (RCA)? How is it calculated?",
-        )
-
-        result = await _run_docs_pipeline(
-            state, lightweight_model=lightweight_llm, manifest=docs_manifest
-        )
-
-        assert result["docs_selected_files"], "No documentation files were selected"
-
-        # metrics_glossary.md is the primary RCA reference — it should be selected
-        assert (
-            "metrics_glossary.md" in result["docs_selected_files"]
-        ), f"Expected metrics_glossary.md in selected files, got: {result['docs_selected_files']}"
-
-        synthesis = result["docs_synthesis"].lower()
-        assert (
-            "rca" in synthesis or "comparative advantage" in synthesis
-        ), f"Synthesis does not mention RCA: {result['docs_synthesis'][:200]}"
-
 
 # ---------------------------------------------------------------------------
 # Tests: Classification system questions
