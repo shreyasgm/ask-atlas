@@ -167,7 +167,8 @@ PRODUCT_CLASS_DESCRIPTION = (
     "- SITC : Standard International Trade Classification. Data available 1962-2024.\n"
     "\n"
     "Important: The Country Pages API only supports 'HS' (equivalent to HS92) and 'SITC'.\n"
-    "When querying the Country Pages API, product_class is effectively HS92 regardless of what is set here."
+    "When querying the Country Pages API, product_class is effectively HS92 regardless of what is set here.\n"
+    "Note: The Explore API countryYear.exportValue returns goods+services total regardless of productClass/servicesClass parameter."
 )
 
 GROUP_TYPE_DESCRIPTION = (

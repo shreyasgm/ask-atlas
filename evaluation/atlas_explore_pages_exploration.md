@@ -1082,3 +1082,9 @@ The Atlas has **two separate GraphQL APIs** with different schemas, both availab
 - **Canvas vs DOM**: Treemap, product space, geomap, and feasibility graph are **canvas-rendered** (no DOM access to data). Only the feasibility **table** view renders as DOM-accessible HTML. Overtime and marketshare use SVG/canvas-hybrid charting.
 - **No narrative text** on any Explore page — everything is data-driven visualization. This contrasts sharply with Country Pages, which have ~15% narrative-text data points.
 - **Sector naming differs** between Product Space (8 clusters: Agricultural Goods, Construction Goods, etc.) and all other pages (11 sectors: Services, Textiles, Agriculture, Stone, Minerals, Metals, Chemicals, Vehicles, Machinery, Electronics, Other). Product Space uses `clusterId` from the product catalog; other pages use `topParent`.
+
+---
+
+## Known API Quirks
+
+> **Services exportValue caveat:** `countryYear.exportValue` returns the same total (goods + services combined) regardless of whether `productClass` or `servicesClass` is specified. The classification parameter has no effect on aggregate export values. Do NOT sum `countryYear(productClass: HS92).exportValue + countryYear(servicesClass: unilateral).exportValue` — this will double-count. To compute services share: use `countryProductYear` to get per-product export values, then identify services products by their non-numeric product codes (services categories like "Business", "Transport", "Travel & tourism"). Sum services product values and divide by the total.

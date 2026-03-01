@@ -631,3 +631,11 @@ The GraphQL API discovery reduces collection time from 4-10 hours to ~1-2 hours.
 | Parallelization | None (sequential browser) | Full (async API queries) |
 | Time estimate | 4-10 hours (3 sessions) | 1.5-3 hours (1 session) |
 | Reproducibility | Low (UI may change) | High (API is stable) |
+
+---
+
+## Known API Quirks
+
+> **Services exportValue caveat:** `countryYear.exportValue` returns the same total (goods + services combined) regardless of whether `productClass` or `servicesClass` is specified. The classification parameter has no effect on aggregate export values. Do NOT sum `countryYear(productClass: HS92).exportValue + countryYear(servicesClass: unilateral).exportValue` — this will double-count. To compute services share: use `countryProductYear` to get per-product export values, then identify services products by their non-numeric product codes (services categories like "Business", "Transport", "Travel & tourism"). Sum services product values and divide by the total.
+
+> **ECI classification caveat:** ECI values differ by product classification. The growth dynamics chart on Country Pages always displays SITC ECI (no selector available). The `countryProfile.latestEci` field returns HS12 ECI. Use `countryYear(eciProductClass: SITC)` on the Country Pages API to get the chart-displayed value. On the Explore API, pass `productClass: SITC` to `countryYear` for SITC ECI, or `productClass: HS92` for HS92 ECI. The Explore API defaults to HS92 when `productClass` is omitted.
