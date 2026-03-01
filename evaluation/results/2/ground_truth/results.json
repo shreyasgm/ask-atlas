@@ -1,12 +1,12 @@
 {
   "question_id": "2",
-  "execution_timestamp": "2026-02-21T18:14:48.672562+00:00Z",
+  "execution_timestamp": "2026-03-01T14:46:54.567328+00:00Z",
   "results": {
     "data": [
       {
         "product_code": "2709",
-        "product_name": "Petroleum oils and oils obtained from bituminous minerals, crude",
-        "export_value": 23882503326
+        "product_name": "Petroleum oils and oils obtained from bituminous minerals; crude",
+        "export_value": 23681047502
       }
     ]
   },
