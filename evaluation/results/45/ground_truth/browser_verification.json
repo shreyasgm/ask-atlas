@@ -1,0 +1,10 @@
+{
+  "question_id": "45",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T04:53:07.125991+00:00",
+  "browser_value": "$16M",
+  "gt_value": "$15.72 million",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-798&startYear=2020&endYear=2020",
+  "match_note": "Browser $16M matches GT $15.72M"
+}

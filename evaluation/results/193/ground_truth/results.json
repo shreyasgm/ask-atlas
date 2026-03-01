@@ -1,0 +1,18 @@
+{
+  "question_id": "193",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&product=product-HS12-725",
+  "results": {
+    "data": [
+      {
+        "metric": "Largest exporter",
+        "product": "Coffee (0901 HS12)",
+        "country": "Brazil",
+        "export_value": "$10.47 billion",
+        "raw_export_value": 10468172967.0,
+        "year": "2024"
+      }
+    ]
+  }
+}

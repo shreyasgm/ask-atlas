@@ -1,0 +1,10 @@
+{
+  "question_id": "59",
+  "source_method": "not_applicable",
+  "verification_timestamp": "2026-03-01T05:05:33.601888+00:00",
+  "browser_value": "N/A",
+  "gt_value": "Behavioral/edge case",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "Entity mapping (Taiwan/Chinese Taipei) \u2014 behavioral, not browser-verifiable"
+}

@@ -1,0 +1,19 @@
+{
+  "question_id": "213",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-840&tradeDirection=imports&product=product-HS12-906",
+  "results": {
+    "data": [
+      {
+        "metric": "Largest import source",
+        "country": "USA",
+        "product": "Petroleum oils, refined (2710 HS12)",
+        "source_country": "Canada",
+        "import_value": "$12.36 billion",
+        "raw_import_value": 12359193215.0,
+        "year": "2024"
+      }
+    ]
+  }
+}

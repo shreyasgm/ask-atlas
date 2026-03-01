@@ -1,0 +1,10 @@
+{
+  "question_id": "155",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T05:13:41.515313+00:00",
+  "browser_value": "troubling",
+  "gt_value": "troubling",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/724/growth-dynamics",
+  "match_note": "GT was collected directly from browser (source_method=browser_country_page). Export growth pattern \u2014 browser-sourced GT"
+}

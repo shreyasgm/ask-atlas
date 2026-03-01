@@ -1,0 +1,10 @@
+{
+  "question_id": "203",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T04:53:07.125991+00:00",
+  "browser_value": "Germany\u2192Turkiye $27B, Turkiye\u2192Germany $20B (prev verified), deficit ~$7B",
+  "gt_value": "exports $20.38B, imports $27.21B, deficit $-6.83B",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-276&importer=country-792",
+  "match_note": "Germany\u2192Turkiye $27B matches GT $27.21B, Turkiye\u2192Germany $20B matches GT $20.38B"
+}

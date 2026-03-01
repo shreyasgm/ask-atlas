@@ -1,0 +1,17 @@
+{
+  "question_id": "48",
+  "execution_timestamp": "2026-02-28T22:44:44.630156+00:00",
+  "source": "expected_behavior",
+  "results": {
+    "data": [
+      {
+        "expected_behavior": "refuse_future_year",
+        "description": "2030 data is not yet available. The agent should indicate that the latest available year is 2024 and offer to provide data for that year instead.",
+        "country": "Brazil",
+        "year_requested": 2030,
+        "latest_available": 2024,
+        "reason": "Future year not available"
+      }
+    ]
+  }
+}

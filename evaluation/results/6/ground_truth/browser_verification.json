@@ -1,0 +1,10 @@
+{
+  "question_id": "6",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:26:14.587679+00:00",
+  "browser_value": "Goods: Petroleum oils refined $23.7B, Medicaments $15.4B, Diamonds $13.7B; Services: Business $119B",
+  "gt_value": "Goods: Petroleum oils $23.69B, Medicaments $15.33B, Diamonds $13.68B; Services: Business $161B",
+  "match": "partial",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2020&exporter=country-356",
+  "match_note": "Top 3 goods match. Business services: browser $119B vs GT $161B \u2014 significant discrepancy, possibly same double-counting pattern as Q8/Q9/Q12"
+}

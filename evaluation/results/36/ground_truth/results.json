@@ -1,0 +1,38 @@
+{
+  "question_id": "36",
+  "execution_timestamp": "2026-02-28T22:57:18.829130+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-616&startYear=2012&endYear=2024",
+  "results": {
+    "data": [
+      {
+        "year": "2012",
+        "hightech_value": "$66.93 billion",
+        "total_exports": "$210.29 billion",
+        "share": "31.8%",
+        "raw_share": 0.3182915112625053
+      },
+      {
+        "year": "2017",
+        "hightech_value": "$82.77 billion",
+        "total_exports": "$264.34 billion",
+        "share": "31.3%",
+        "raw_share": 0.31310303541059337
+      },
+      {
+        "year": "2022",
+        "hightech_value": "$120.69 billion",
+        "total_exports": "$414.34 billion",
+        "share": "29.1%",
+        "raw_share": 0.29129120428809324
+      },
+      {
+        "year": "2024",
+        "hightech_value": "$128.98 billion",
+        "total_exports": "$443.69 billion",
+        "share": "29.1%",
+        "raw_share": 0.2906894916659613
+      }
+    ]
+  }
+}

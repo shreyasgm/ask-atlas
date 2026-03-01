@@ -1,0 +1,40 @@
+{
+  "question_id": "251",
+  "execution_timestamp": "2026-02-28T22:57:55.560423+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2023&exporter=country-276",
+  "results": {
+    "data": [
+      {
+        "rank": 1,
+        "product": "Business (ict HS22)",
+        "classification": "HS 2022",
+        "export_value": "$191.29 billion"
+      },
+      {
+        "rank": 2,
+        "product": "Cars (8703 HS22)",
+        "classification": "HS 2022",
+        "export_value": "$164.48 billion"
+      },
+      {
+        "rank": 3,
+        "product": "Transport (transport HS22)",
+        "classification": "HS 2022",
+        "export_value": "$95.65 billion"
+      },
+      {
+        "rank": 4,
+        "product": "Unspecified (unspecified HS22)",
+        "classification": "HS 2022",
+        "export_value": "$70.39 billion"
+      },
+      {
+        "rank": 5,
+        "product": "Medicaments, packaged (3004 HS22)",
+        "classification": "HS 2022",
+        "export_value": "$62.69 billion"
+      }
+    ]
+  }
+}

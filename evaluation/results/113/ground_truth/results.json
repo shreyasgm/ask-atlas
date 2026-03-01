@@ -1,0 +1,34 @@
+{
+  "question_id": "113",
+  "execution_timestamp": "2026-02-28T22:44:53.587534+00:00",
+  "source": "atlas_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products",
+  "results": {
+    "data": [
+      {
+        "country": "Kenya",
+        "new_products": 24,
+        "usd_per_capita": "$5",
+        "usd_total": "$260.47 million"
+      },
+      {
+        "country": "Uganda",
+        "new_products": 28,
+        "usd_per_capita": "$5",
+        "usd_total": "$210.90 million"
+      },
+      {
+        "country": "Tanzania",
+        "new_products": 17,
+        "usd_per_capita": "$7",
+        "usd_total": "$468.11 million"
+      },
+      {
+        "country": "Ethiopia",
+        "new_products": 21,
+        "usd_per_capita": "$2",
+        "usd_total": "$181.47 million"
+      }
+    ]
+  }
+}

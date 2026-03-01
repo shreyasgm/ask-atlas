@@ -1,0 +1,17 @@
+{
+  "question_id": "47",
+  "execution_timestamp": "2026-02-28T22:57:55.560423+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2021&exporter=country-276",
+  "results": {
+    "data": [
+      {
+        "metric": "Self-exports",
+        "country": "Germany",
+        "year": "2021",
+        "value": "No data / $0",
+        "note": "Country-to-self trade is not recorded or is zero"
+      }
+    ]
+  }
+}

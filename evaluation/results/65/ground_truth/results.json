@@ -1,0 +1,15 @@
+{
+  "question_id": "65",
+  "execution_timestamp": "2026-02-28T22:44:53.587534+00:00",
+  "source": "atlas_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/404",
+  "results": {
+    "data": [
+      {
+        "metric": "Population",
+        "value": "52,444,000",
+        "year": "2024"
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "question_id": "120",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T04:18:55.402081+00:00",
+  "browser_value": "Ethiopia 21/$2/$181M, Sudan 7/$4/$184M, Uganda 28/$5/$211M",
+  "gt_value": "Ethiopia 21/$2/$181.47M, Sudan 7/$4/$183.89M, Uganda 28/$5/$210.90M",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products",
+  "match_note": "Formatting: browser rounds values"
+}

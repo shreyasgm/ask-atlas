@@ -15,9 +15,10 @@ archive/
 test_queries.ipynb
 .streamlit/
 src/setup/whitelist_ip_addresses.py
-evaluation/results/**/agent_runs/
 evaluation/questions/
-evaluation/results/
+# Track ground truth data but ignore agent runs and other eval outputs
+evaluation/results/*/*
+!evaluation/results/*/ground_truth/
 evaluation/evaluations/
 evaluation/logs/
 evaluation/runs/

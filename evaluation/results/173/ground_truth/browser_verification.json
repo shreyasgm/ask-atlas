@@ -1,0 +1,10 @@
+{
+  "question_id": "173",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:31:04.674573+00:00",
+  "browser_value": "N/A",
+  "gt_value": "Kenya Coffee distance=0.6623",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "Distance values not displayed in browser tooltip or table as numeric text."
+}

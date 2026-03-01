@@ -1,0 +1,40 @@
+{
+  "question_id": "223",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4&exporter=country-404",
+  "results": {
+    "data": [
+      {
+        "rank": 1,
+        "product": "Baby carriages (8715 HS12)",
+        "cog": 1.9832,
+        "distance": null
+      },
+      {
+        "rank": 2,
+        "product": "Silver clad metals (7107 HS12)",
+        "cog": 1.8678,
+        "distance": null
+      },
+      {
+        "rank": 3,
+        "product": "Acetals and hemiacetals (2911 HS12)",
+        "cog": 1.8154,
+        "distance": null
+      },
+      {
+        "rank": 4,
+        "product": "Slates and boards, with writing or drawing surfaces (9610 HS12)",
+        "cog": 1.7848,
+        "distance": null
+      },
+      {
+        "rank": 5,
+        "product": "Music, printed or in manuscript (4904 HS12)",
+        "cog": 1.7843,
+        "distance": null
+      }
+    ]
+  }
+}

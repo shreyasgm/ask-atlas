@@ -1,0 +1,34 @@
+{
+  "question_id": "90",
+  "execution_timestamp": "2026-02-28T22:44:53.587534+00:00",
+  "source": "atlas_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/840/export-basket",
+  "results": {
+    "data": [
+      {
+        "rank": 1,
+        "product_name": "Business",
+        "hs92_code": "ict",
+        "export_value": "$403.30 billion",
+        "raw_export_value": 403299000000.0003,
+        "share": "12.6%"
+      },
+      {
+        "rank": 2,
+        "product_name": "Insurance & finance",
+        "hs92_code": "financial",
+        "export_value": "$222.68 billion",
+        "raw_export_value": 222675000000.0002,
+        "share": "7.0%"
+      },
+      {
+        "rank": 3,
+        "product_name": "Travel & tourism",
+        "hs92_code": "travel",
+        "export_value": "$213.78 billion",
+        "raw_export_value": 213779000000.00012,
+        "share": "6.7%"
+      }
+    ]
+  }
+}

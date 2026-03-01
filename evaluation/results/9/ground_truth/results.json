@@ -1,0 +1,34 @@
+{
+  "question_id": "9",
+  "execution_timestamp": "2026-03-01T06:00:00.000000+00:00",
+  "source": "atlas_explore_page",
+  "source_method": "browser_treemap",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2017&exporter=country-152",
+  "results": {
+    "data": [
+      {
+        "metric": "Minerals vs services share",
+        "country": "Chile",
+        "year": "2017",
+        "total_value": "$74B",
+        "minerals_breakdown": {
+          "Copper ore": "$15.2B",
+          "Iron ores": "$936M",
+          "Molybdenum ore": "$923M"
+        },
+        "minerals_total": "$17.06B",
+        "minerals_share": "23.1%",
+        "services_breakdown": {
+          "Transport": "$3.32B",
+          "Travel & tourism": "$3.15B",
+          "Unspecified": "$1.34B",
+          "Business": "$859M",
+          "Insurance & finance": "$527M"
+        },
+        "services_total": "$9.20B",
+        "services_share": "12.4%",
+        "note": "All values collected from browser treemap. Total $74B matches browser display."
+      }
+    ]
+  }
+}

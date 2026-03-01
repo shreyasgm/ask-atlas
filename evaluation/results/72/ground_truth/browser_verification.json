@@ -1,0 +1,10 @@
+{
+  "question_id": "72",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T03:44:04.197384+00:00",
+  "browser_value": "49.1 million",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/724",
+  "gt_value": "49,078,000",
+  "match": true,
+  "match_note": "Formatting: browser shows 49.1 million, GT has raw number"
+}

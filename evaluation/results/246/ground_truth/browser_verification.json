@@ -1,0 +1,10 @@
+{
+  "question_id": "246",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "HS92 data: 1995-2024",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "Data availability range might be visible in year selector dropdown but not easily extractable."
+}

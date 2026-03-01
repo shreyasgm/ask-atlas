@@ -1,0 +1,17 @@
+{
+  "question_id": "60",
+  "execution_timestamp": "2026-02-28T22:44:44.630156+00:00",
+  "source": "expected_behavior",
+  "results": {
+    "data": [
+      {
+        "expected_behavior": "provide_data",
+        "description": "Germany's total service import value for 2021 should be available via the services unilateral schema. The agent should provide the data.",
+        "country": "Germany",
+        "year": 2021,
+        "data_type": "services imports",
+        "reason": "Services import data should be available via unilateral services schema"
+      }
+    ]
+  }
+}

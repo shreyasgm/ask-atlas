@@ -1,0 +1,10 @@
+{
+  "question_id": "188",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T07:15:00.000000+00:00",
+  "browser_value": "Coffee global total $45B (markets view: product-HS92-726)",
+  "gt_value": "$45.35 billion",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&product=product-HS92-726",
+  "match_note": "CORRECTED: Previous verification checked wrong page (global products treemap showed only one Coffee entry $11.4B). Markets view shows global Coffee exporters totaling $45B, matching GT $45.35B."
+}

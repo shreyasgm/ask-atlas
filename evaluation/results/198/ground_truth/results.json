@@ -1,0 +1,18 @@
+{
+  "question_id": "198",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&exporter=country-356&importer=country-156",
+  "results": {
+    "data": [
+      {
+        "metric": "Total bilateral exports",
+        "exporter": "India",
+        "importer": "China",
+        "value": "$15.78 billion",
+        "raw_value": 15784742986.0,
+        "year": "2024"
+      }
+    ]
+  }
+}

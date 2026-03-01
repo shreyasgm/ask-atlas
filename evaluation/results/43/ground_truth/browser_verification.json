@@ -1,0 +1,10 @@
+{
+  "question_id": "43",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T05:31:04.674573+00:00",
+  "browser_value": "ECI rank 124th, worsened 24 positions, few opportunities, less complex than expected",
+  "gt_value": "eci_rank=124, coi_rank=99, coi_classification=low, strategic_approach=ResourceBasedDiversification",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/288",
+  "match_note": "ECI rank 124 matches. 'Few opportunities' matches low COI (GT coi_rank=99)."
+}

@@ -1,0 +1,18 @@
+{
+  "question_id": "200",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&exporter=country-76&importer=country-156&tradeDirection=imports",
+  "results": {
+    "data": [
+      {
+        "metric": "Total bilateral imports",
+        "importer": "Brazil",
+        "exporter": "China",
+        "value": "$69.93 billion",
+        "raw_value": 69928916828.0,
+        "year": "2024"
+      }
+    ]
+  }
+}

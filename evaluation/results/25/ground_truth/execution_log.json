@@ -1,0 +1,13 @@
+{
+  "steps": [
+    {
+      "query_file": "01.sql",
+      "start_time": "2026-02-19T20:35:47.564723+00:00Z",
+      "end_time": "2026-02-19T20:35:47.828976+00:00Z",
+      "status": "success",
+      "rows_returned": 1,
+      "error_log": []
+    }
+  ],
+  "error_log": []
+}

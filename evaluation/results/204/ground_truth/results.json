@@ -1,0 +1,19 @@
+{
+  "question_id": "204",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-404&importer=country-840&product=product-HS12-725",
+  "results": {
+    "data": [
+      {
+        "metric": "Bilateral product exports",
+        "exporter": "Kenya",
+        "importer": "USA",
+        "product": "Coffee (0901 HS12)",
+        "value": "$50.36 million",
+        "raw_value": 50359788.0,
+        "year": "2024"
+      }
+    ]
+  }
+}

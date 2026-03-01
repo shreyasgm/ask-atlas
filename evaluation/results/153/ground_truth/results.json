@@ -1,0 +1,16 @@
+{
+  "question_id": "153",
+  "execution_timestamp": "2026-03-01T03:46:35.287573+00:00",
+  "source": "atlas_country_page",
+  "source_method": "browser_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket",
+  "results": {
+    "data": [
+      {
+        "metric": "5-year average export growth rate",
+        "value": "-2.3%",
+        "description": "Exports have declined by an annual average of 2.3% over the past five years, which has been a drag on overall economic growth, as exports represent a shrinking segment of the economy."
+      }
+    ]
+  }
+}

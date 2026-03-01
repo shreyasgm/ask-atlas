@@ -1,0 +1,10 @@
+{
+  "question_id": "145",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T05:13:41.515313+00:00",
+  "browser_value": "as complex as expected",
+  "gt_value": "as complex as expected",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/724",
+  "match_note": "GT was collected directly from browser (source_method=browser_country_page). Complexity-income relationship \u2014 browser-sourced GT"
+}

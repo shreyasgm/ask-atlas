@@ -1,0 +1,16 @@
+{
+  "question_id": "177",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024",
+  "results": {
+    "data": [
+      {
+        "metric": "PCI",
+        "product": "T-shirts, knit (6109 HS12)",
+        "value": -0.9605,
+        "year": "2024"
+      }
+    ]
+  }
+}

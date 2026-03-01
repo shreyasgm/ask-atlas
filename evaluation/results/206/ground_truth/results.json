@@ -1,0 +1,28 @@
+{
+  "question_id": "206",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-276&importer=country-840",
+  "results": {
+    "data": [
+      {
+        "rank": 1,
+        "product": "Cars (8703 HS12)",
+        "export_value": "$25.32 billion",
+        "raw_export_value": 25319821575.0
+      },
+      {
+        "rank": 2,
+        "product": "Blood (3002 HS12)",
+        "export_value": "$16.10 billion",
+        "raw_export_value": 16103963077.0
+      },
+      {
+        "rank": 3,
+        "product": "Medicaments, packaged (3004 HS12)",
+        "export_value": "$11.06 billion",
+        "raw_export_value": 11060238288.0
+      }
+    ]
+  }
+}

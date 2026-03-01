@@ -1,0 +1,10 @@
+{
+  "question_id": "10",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T04:53:07.125991+00:00",
+  "browser_value": "Copper ore $8.05B, Gold $6.13B, Petroleum $1.63B",
+  "gt_value": "Copper ore $8.04B, Gold $6.12B, Lead ore (rank 3)",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2016&exporter=country-604",
+  "match_note": "Top 2 match: Copper ore $8.05B/$8.04B, Gold $6.13B/$6.12B. Rank 3 differs (GT=Lead ore, browser shows Petroleum $1.63B between them)"
+}

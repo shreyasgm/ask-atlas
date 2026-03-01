@@ -1,0 +1,19 @@
+{
+  "question_id": "112",
+  "execution_timestamp": "2026-03-01T04:30:00.000000+00:00",
+  "source": "atlas_country_page",
+  "source_method": "graphql_api_browser_verified",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products",
+  "results": {
+    "data": [
+      {
+        "metric": "New product share of exports",
+        "value": "2%",
+        "value_precise": "1.6%",
+        "new_product_export_value": 260465008.0,
+        "total_export_value": 16218559749.40366,
+        "note": "Browser summary shows 2% (rounded). API calculation gives 1.6%. Both values retained; browser display value is primary."
+      }
+    ]
+  }
+}

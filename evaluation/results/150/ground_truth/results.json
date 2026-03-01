@@ -1,0 +1,15 @@
+{
+  "question_id": "150",
+  "execution_timestamp": "2026-03-01T03:39:21.413833+00:00",
+  "source": "atlas_country_page",
+  "source_method": "browser_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/792",
+  "results": {
+    "data": [
+      {
+        "metric": "Complexity trend driver",
+        "description": "Turkiye's improving complexity has been driven by diversifying its exports."
+      }
+    ]
+  }
+}

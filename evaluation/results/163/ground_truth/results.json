@@ -1,0 +1,17 @@
+{
+  "question_id": "163",
+  "execution_timestamp": "2026-03-01T03:45:46.383862+00:00",
+  "source": "atlas_country_page",
+  "source_method": "browser_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/356/market-share",
+  "results": {
+    "data": [
+      {
+        "metric": "Sectors driving export growth (market share)",
+        "value": "Services",
+        "structural_transformation": "not yet started",
+        "description": "India has not yet started the traditional process of structural transformation. Global market share in textile exports in India has stagnated over the previous decade; electronics and machinery have yet to take-off in India, limiting its income growth. India's export growth in the past five years has been driven by Services, driven by expanding its global market share."
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "question_id": "219",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T05:05:33.601888+00:00",
+  "browser_value": "$15,882 (from country page stat card)",
+  "gt_value": "$15,882",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/792",
+  "match_note": "Turkiye country page stat card shows GDP per capita matching GT"
+}

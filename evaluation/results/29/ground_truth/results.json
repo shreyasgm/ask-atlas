@@ -1,0 +1,60 @@
+{
+  "question_id": "29",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?exporter=country-792",
+  "results": {
+    "data": [
+      {
+        "sector": "product-HS12-401",
+        "growth": "$-18.80 billion",
+        "contribution": "279.2%"
+      },
+      {
+        "sector": "product-HS12-170",
+        "growth": "$-4.00 billion",
+        "contribution": "59.4%"
+      },
+      {
+        "sector": "product-HS12-402",
+        "growth": "$-3.60 billion",
+        "contribution": "53.5%"
+      },
+      {
+        "sector": "product-HS12-182",
+        "growth": "$3.12 billion",
+        "contribution": "-46.4%"
+      },
+      {
+        "sector": "product-HS12-185",
+        "growth": "$2.88 billion",
+        "contribution": "-42.8%"
+      },
+      {
+        "sector": "product-HS12-171",
+        "growth": "$2.06 billion",
+        "contribution": "-30.6%"
+      },
+      {
+        "sector": "product-HS12-138",
+        "growth": "$1.20 billion",
+        "contribution": "-17.8%"
+      },
+      {
+        "sector": "product-HS12-192",
+        "growth": "$951.67 million",
+        "contribution": "-14.1%"
+      },
+      {
+        "sector": "product-HS12-129",
+        "growth": "$731.06 million",
+        "contribution": "-10.9%"
+      },
+      {
+        "sector": "product-HS12-160",
+        "growth": "$-673.12 million",
+        "contribution": "10.0%"
+      }
+    ]
+  }
+}

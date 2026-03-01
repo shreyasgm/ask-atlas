@@ -1,0 +1,10 @@
+{
+  "question_id": "194",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:26:14.587679+00:00",
+  "browser_value": "HS92: China $139B, Taiwan $139B, S. Korea $112B (total $767B)",
+  "gt_value": "HS12: Taiwan $164.13B, China $142.29B, S. Korea $114.08B",
+  "match": false,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&product=product-HS92-1745",
+  "match_note": "Classification mismatch: GT used HS12 (different product scope). HS92 shows China/Taiwan essentially tied at $139B. HS12 shows Taiwan clearly #1 at $164B. Values differ 15-18%."
+}

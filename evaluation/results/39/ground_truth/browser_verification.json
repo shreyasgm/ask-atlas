@@ -1,0 +1,10 @@
+{
+  "question_id": "39",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T05:05:33.601888+00:00",
+  "browser_value": "Not visited (would need country page)",
+  "gt_value": "ECI 0.8182, rank 32nd",
+  "match": null,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/458/export-complexity",
+  "match_note": "Not visited in this session. Country page would show ECI ranking on export-complexity page."
+}

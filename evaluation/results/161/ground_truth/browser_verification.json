@@ -1,0 +1,10 @@
+{
+  "question_id": "161",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T05:13:41.515313+00:00",
+  "browser_value": "not yet started",
+  "gt_value": "not yet started",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/231/market-share",
+  "match_note": "GT was collected directly from browser (source_method=browser_country_page). Structural transformation status \u2014 browser-sourced GT"
+}

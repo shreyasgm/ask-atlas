@@ -1,0 +1,10 @@
+{
+  "question_id": "60",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "Behavioral expectation: agent should provide data",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "Behavioral/expectation test \u2014 GT specifies expected agent behavior, not a specific numeric answer."
+}

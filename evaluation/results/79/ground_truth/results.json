@@ -1,0 +1,16 @@
+{
+  "question_id": "79",
+  "execution_timestamp": "2026-02-28T22:44:53.587534+00:00",
+  "source": "atlas_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket",
+  "results": {
+    "data": [
+      {
+        "metric": "Trade balance",
+        "value": "trade surplus",
+        "export_value": 377651747244.83,
+        "import_value": 367679021629.48
+      }
+    ]
+  }
+}

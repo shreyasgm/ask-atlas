@@ -1,0 +1,10 @@
+{
+  "question_id": "75",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T03:42:42.708156+00:00",
+  "browser_value": "$378 billion",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket",
+  "match_note": "Browser shows rounded $378B, GT has precise $377.65B - formatting only",
+  "gt_value": "$377.65 billion",
+  "match": true
+}

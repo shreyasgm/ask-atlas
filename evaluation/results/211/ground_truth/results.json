@@ -1,0 +1,18 @@
+{
+  "question_id": "211",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-840&tradeDirection=imports",
+  "results": {
+    "data": [
+      {
+        "metric": "Product import value",
+        "country": "USA",
+        "product": "Petroleum oils, refined (2710 HS12)",
+        "value": "$54.11 billion",
+        "raw_value": 54110620166.0,
+        "year": "2024"
+      }
+    ]
+  }
+}

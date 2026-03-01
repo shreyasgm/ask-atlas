@@ -1,0 +1,131 @@
+{
+  "question_id": "16",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-724&startYear=2014&endYear=2024",
+  "results": {
+    "data": [
+      {
+        "year": 2014,
+        "total_services": 136944647595.0,
+        "by_sector": {
+          "product-HS92-401": 71656276953.0,
+          "product-HS92-400": 15584992602.0,
+          "product-HS92-402": 15311180861.0,
+          "product-HS92-404": 5699369754.0,
+          "product-HS92-403": 28692827425.0
+        }
+      },
+      {
+        "year": 2015,
+        "total_services": 121048902388.0,
+        "by_sector": {
+          "product-HS92-401": 62448953541.0,
+          "product-HS92-403": 26213692866.0,
+          "product-HS92-402": 13938094232.0,
+          "product-HS92-404": 4632042527.0,
+          "product-HS92-400": 13816119222.0
+        }
+      },
+      {
+        "year": 2016,
+        "total_services": 129706004993.0,
+        "by_sector": {
+          "product-HS92-401": 66981503900.0,
+          "product-HS92-402": 14372346050.0,
+          "product-HS92-403": 28926720771.0,
+          "product-HS92-400": 14743900975.0,
+          "product-HS92-404": 4681533297.0
+        }
+      },
+      {
+        "year": 2017,
+        "total_services": 143683412476.0,
+        "by_sector": {
+          "product-HS92-404": 4958266196.0,
+          "product-HS92-400": 15927293069.0,
+          "product-HS92-401": 75906055118.0,
+          "product-HS92-402": 16327488080.0,
+          "product-HS92-403": 30564310013.0
+        }
+      },
+      {
+        "year": 2018,
+        "total_services": 154304819759.0,
+        "by_sector": {
+          "product-HS92-404": 4617166503.0,
+          "product-HS92-402": 17577659750.0,
+          "product-HS92-400": 18603792019.0,
+          "product-HS92-401": 81419752957.0,
+          "product-HS92-403": 32086448530.0
+        }
+      },
+      {
+        "year": 2019,
+        "total_services": 155918836941.0,
+        "by_sector": {
+          "product-HS92-404": 4665186357.0,
+          "product-HS92-403": 34494161119.0,
+          "product-HS92-401": 79571115718.0,
+          "product-HS92-402": 18319162353.0,
+          "product-HS92-400": 18869211394.0
+        }
+      },
+      {
+        "year": 2020,
+        "total_services": 88997096007.0,
+        "by_sector": {
+          "product-HS92-400": 17493711303.0,
+          "product-HS92-403": 32149818301.0,
+          "product-HS92-401": 18380414701.0,
+          "product-HS92-404": 5011572014.0,
+          "product-HS92-402": 15961579688.0
+        }
+      },
+      {
+        "year": 2021,
+        "total_services": 116812727333.0,
+        "by_sector": {
+          "product-HS92-404": 6247228234.0,
+          "product-HS92-402": 17392369484.0,
+          "product-HS92-400": 20367575142.0,
+          "product-HS92-403": 38629398486.0,
+          "product-HS92-401": 34176155987.0
+        }
+      },
+      {
+        "year": 2022,
+        "total_services": 163990377212.0,
+        "by_sector": {
+          "product-HS92-400": 22945895130.0,
+          "product-HS92-402": 20882216970.0,
+          "product-HS92-401": 72083329486.0,
+          "product-HS92-403": 42430990005.0,
+          "product-HS92-404": 5647945621.0
+        }
+      },
+      {
+        "year": 2023,
+        "total_services": 197061150712.0,
+        "by_sector": {
+          "product-HS92-403": 49124633800.0,
+          "product-HS92-400": 25536273518.0,
+          "product-HS92-402": 21584302622.0,
+          "product-HS92-401": 92144280110.0,
+          "product-HS92-404": 8671660662.0
+        }
+      },
+      {
+        "year": 2024,
+        "total_services": 220609914792.0,
+        "by_sector": {
+          "product-HS92-402": 20006047567.0,
+          "product-HS92-404": 10449984161.0,
+          "product-HS92-400": 27526276257.0,
+          "product-HS92-401": 106656535197.0,
+          "product-HS92-403": 55971071610.0
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "question_id": "32",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "ECI trend from 2009 onward",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "ECI time series rendered as SVG chart paths. ECI values not extractable as text."
+}

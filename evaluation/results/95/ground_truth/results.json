@@ -1,0 +1,28 @@
+{
+  "question_id": "95",
+  "execution_timestamp": "2026-02-28T22:44:53.587534+00:00",
+  "source": "atlas_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/231/export-basket",
+  "results": {
+    "data": [
+      {
+        "rank": 1,
+        "country": "United States of America",
+        "share": "14.6%",
+        "export_value": "$390.98 million"
+      },
+      {
+        "rank": 2,
+        "country": "China",
+        "share": "12.2%",
+        "export_value": "$327.54 million"
+      },
+      {
+        "rank": 3,
+        "country": "Saudi Arabia",
+        "share": "11.8%",
+        "export_value": "$315.60 million"
+      }
+    ]
+  }
+}

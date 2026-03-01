@@ -1,0 +1,20 @@
+{
+  "question_id": "218",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-404&startYear=2010&endYear=2024&year=2024",
+  "results": {
+    "data": [
+      {
+        "metric": "Export change",
+        "country": "Kenya",
+        "start_year": "2010",
+        "end_year": "2024",
+        "start_value": "$3.77 billion",
+        "end_value": "$16.22 billion",
+        "change_pct": "330.0%",
+        "raw_change": 3.299508920707993
+      }
+    ]
+  }
+}

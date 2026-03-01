@@ -1,0 +1,14 @@
+{
+  "question_id": "53",
+  "execution_timestamp": "2026-02-28T22:44:44.630156+00:00",
+  "source": "expected_behavior",
+  "results": {
+    "data": [
+      {
+        "expected_behavior": "refuse_off_topic",
+        "description": "This is a general knowledge question unrelated to trade data. The agent should politely decline and explain it is a trade data system.",
+        "reason": "Off-topic: general knowledge question"
+      }
+    ]
+  }
+}

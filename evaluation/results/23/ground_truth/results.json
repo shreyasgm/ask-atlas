@@ -1,0 +1,31 @@
+{
+  "question_id": "23",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-410&startYear=2014&endYear=2024",
+  "results": {
+    "data": [
+      {
+        "year": "2014",
+        "korea_value": "$58.32 billion",
+        "global_value": "$506.07 billion",
+        "share": "11.5%",
+        "raw_share": 0.11524636378576929
+      },
+      {
+        "year": "2019",
+        "korea_value": "$75.35 billion",
+        "global_value": "$636.87 billion",
+        "share": "11.8%",
+        "raw_share": 0.11830819686556983
+      },
+      {
+        "year": "2024",
+        "korea_value": "$117.65 billion",
+        "global_value": "$935.72 billion",
+        "share": "12.6%",
+        "raw_share": 0.12573432268959708
+      }
+    ]
+  }
+}

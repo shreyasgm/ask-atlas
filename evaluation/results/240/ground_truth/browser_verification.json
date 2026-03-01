@@ -1,0 +1,10 @@
+{
+  "question_id": "240",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "Coffee natural_resource=false",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "Product metadata classification (natural resource flag) not visible as labeled attribute on browser pages."
+}

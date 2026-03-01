@@ -1,0 +1,14 @@
+{
+  "question_id": "56",
+  "execution_timestamp": "2026-02-28T22:44:44.630156+00:00",
+  "source": "expected_behavior",
+  "results": {
+    "data": [
+      {
+        "expected_behavior": "refuse_coding_task",
+        "description": "The agent should refuse, explaining it is a trade data Q&A system and cannot generate code for external tasks.",
+        "reason": "Coding task outside scope"
+      }
+    ]
+  }
+}

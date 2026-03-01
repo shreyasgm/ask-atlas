@@ -1,0 +1,19 @@
+{
+  "question_id": "205",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-76&importer=country-156&product=product-HS12-876",
+  "results": {
+    "data": [
+      {
+        "metric": "Bilateral product exports",
+        "exporter": "Brazil",
+        "importer": "China",
+        "product": "Iron ores and concentrates (2601 HS12)",
+        "value": "$19.43 billion",
+        "raw_value": 19431840737.0,
+        "year": "2024"
+      }
+    ]
+  }
+}

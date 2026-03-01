@@ -1,0 +1,16 @@
+{
+  "question_id": "106",
+  "execution_timestamp": "2026-02-28T22:44:53.587534+00:00",
+  "source": "atlas_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/792/export-complexity",
+  "results": {
+    "data": [
+      {
+        "product_name": "Travel & tourism",
+        "hs92_code": "travel",
+        "pci": "N/A",
+        "raw_pci": null
+      }
+    ]
+  }
+}

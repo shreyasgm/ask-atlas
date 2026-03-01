@@ -1,0 +1,15 @@
+{
+  "question_id": "46",
+  "execution_timestamp": "2026-02-28T22:44:44.630156+00:00",
+  "source": "expected_behavior",
+  "results": {
+    "data": [
+      {
+        "expected_behavior": "explain_historical_entity",
+        "description": "The Soviet Union dissolved in 1991 and is not present as a location in the Atlas database. The agent should explain this and suggest looking at successor states like Russia.",
+        "entity": "Soviet Union",
+        "reason": "Historical entity not in Atlas"
+      }
+    ]
+  }
+}

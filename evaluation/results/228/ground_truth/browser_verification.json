@@ -1,0 +1,10 @@
+{
+  "question_id": "228",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:26:14.587679+00:00",
+  "browser_value": "HS92 top (Photographic film): $2.61B",
+  "gt_value": "HS12 top (Baby carriages): $2.36B",
+  "match": false,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4&exporter=country-792",
+  "match_note": "Classification mismatch \u2014 different top product."
+}

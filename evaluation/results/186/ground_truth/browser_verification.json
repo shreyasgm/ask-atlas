@@ -1,0 +1,10 @@
+{
+  "question_id": "186",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T04:23:38.218802+00:00",
+  "browser_value": "Electronic integrated circuits $767B",
+  "gt_value": "$818.32 billion",
+  "match": false,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=group-1",
+  "match_note": "DISCREPANCY: Browser $767B vs API $818.32B (6.2%). Needs investigation."
+}

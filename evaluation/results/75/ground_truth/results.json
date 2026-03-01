@@ -1,0 +1,15 @@
+{
+  "question_id": "75",
+  "execution_timestamp": "2026-02-28T22:44:53.587534+00:00",
+  "source": "atlas_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket",
+  "results": {
+    "data": [
+      {
+        "metric": "Total exports",
+        "value": "$377.65 billion",
+        "raw_value": 377651747244.83
+      }
+    ]
+  }
+}

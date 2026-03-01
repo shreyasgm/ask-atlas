@@ -1,0 +1,10 @@
+{
+  "question_id": "17",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T04:53:07.125991+00:00",
+  "browser_value": "China $164B, USA $139B, Taiwan $55.7B, South Korea $54.4B",
+  "gt_value": "Services Partners $170.89B, China $163.96B, USA (rank 3)",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2021&exporter=country-392&view=markets",
+  "match_note": "China $164B matches GT $163.96B. Services Partners shown separately in GT but not as named block in browser markets view"
+}

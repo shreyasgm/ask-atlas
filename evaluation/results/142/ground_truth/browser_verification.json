@@ -1,0 +1,10 @@
+{
+  "question_id": "142",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T05:13:41.515313+00:00",
+  "browser_value": "moderately",
+  "gt_value": "moderately",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/404",
+  "match_note": "GT was collected directly from browser (source_method=browser_country_page). Growth projection speed \u2014 browser-sourced GT"
+}

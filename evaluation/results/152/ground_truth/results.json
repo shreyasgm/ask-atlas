@@ -1,0 +1,16 @@
+{
+  "question_id": "152",
+  "execution_timestamp": "2026-03-01T03:42:42.708156+00:00",
+  "source": "atlas_country_page",
+  "source_method": "browser_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/76/export-basket",
+  "results": {
+    "data": [
+      {
+        "metric": "Non-oil export growth rate",
+        "value": "3.2%",
+        "description": "Non-oil exports have grown by 3.2% annually over the past five years, outpacing the global average growth."
+      }
+    ]
+  }
+}

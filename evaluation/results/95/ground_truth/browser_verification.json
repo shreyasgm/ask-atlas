@@ -1,0 +1,9 @@
+{
+  "question_id": "95",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T03:47:15.536520+00:00",
+  "browser_value": "United States of America (14.60%), China (12.23%), Saudi Arabia (11.78%)",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/231/export-basket",
+  "gt_value": "United States of America (14.6%), China (12.2%), Saudi Arabia (11.8%)",
+  "match": true
+}

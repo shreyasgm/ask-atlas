@@ -1,0 +1,17 @@
+{
+  "question_id": "149",
+  "execution_timestamp": "2026-03-01T03:39:21.413833+00:00",
+  "source": "atlas_country_page",
+  "source_method": "browser_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/792",
+  "results": {
+    "data": [
+      {
+        "metric": "ECI rank change over decade",
+        "value": "improved 3 positions",
+        "current_rank": "42nd",
+        "description": "Compared to a decade prior, Turkiye's economy has become more complex, improving 3 positions in the ECI ranking."
+      }
+    ]
+  }
+}

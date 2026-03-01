@@ -1,0 +1,9 @@
+{
+  "question_id": "93",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T03:40:26.167392+00:00",
+  "browser_value": "Germany (7.99%), United Kingdom (5.90%), United States of America (5.66%)",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/792/export-basket",
+  "gt_value": "Germany (8.0%), United Kingdom (5.9%), United States of America (5.7%)",
+  "match": true
+}

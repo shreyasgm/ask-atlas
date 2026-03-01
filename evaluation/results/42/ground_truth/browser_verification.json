@@ -1,0 +1,10 @@
+{
+  "question_id": "42",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "eci=-0.0133, eci_rank=84, diversification_grade=C",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "Qualitative risk assessment. Country page would show ECI rank but not diversification risk analysis."
+}

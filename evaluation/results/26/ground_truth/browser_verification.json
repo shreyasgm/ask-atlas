@@ -1,0 +1,10 @@
+{
+  "question_id": "26",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:26:14.587679+00:00",
+  "browser_value": "2010: $76B, 2020: $308B, implied CAGR: ~15.0%",
+  "gt_value": "start: $74.42B, end: $269.63B, CAGR: 13.7% (SITC classification)",
+  "match": "partial",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2020&exporter=country-704",
+  "match_note": "2010 values close ($76B vs $74.42B). 2020 differs: $308B (HS92+services) vs $269.63B (SITC goods-only). GT used SITC classification per note."
+}

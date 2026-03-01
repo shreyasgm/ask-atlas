@@ -1,0 +1,10 @@
+{
+  "question_id": "193",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:26:14.587679+00:00",
+  "browser_value": "Brazil $10.5B (global total $45B)",
+  "gt_value": "Brazil $10.47B",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&product=product-HS92-726",
+  "match_note": "Brazil $10.5B matches GT $10.47B. Also confirms global Coffee total ~$45B."
+}

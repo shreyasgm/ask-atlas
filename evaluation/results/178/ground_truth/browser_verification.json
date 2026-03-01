@@ -1,0 +1,10 @@
+{
+  "question_id": "178",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "Electronic ICs PCI=1.4504",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "PCI available via treemap tooltip 'Show more' but requires clicking exact product. Previous session verified Coffee PCI and T-shirts PCI correctly."
+}

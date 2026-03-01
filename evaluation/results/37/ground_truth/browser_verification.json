@@ -1,0 +1,10 @@
+{
+  "question_id": "37",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T05:31:04.674573+00:00",
+  "browser_value": "ECI rank 76th, many opportunities to diversify, as complex as expected",
+  "gt_value": "coi=1.9722, coi_rank=4, coi_classification=high",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/818",
+  "match_note": "Browser 'many opportunities' confirms high COI (GT coi_rank=4). Exact COI value not shown on page."
+}

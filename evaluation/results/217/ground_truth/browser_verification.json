@@ -1,0 +1,10 @@
+{
+  "question_id": "217",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T04:53:07.125991+00:00",
+  "browser_value": "2024 total $378B",
+  "gt_value": "end value $377.65 billion",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-76&startYear=2015&endYear=2024",
+  "match_note": "Browser 2024 value $378B matches GT $377.65B. Start year value not directly extractable from chart"
+}

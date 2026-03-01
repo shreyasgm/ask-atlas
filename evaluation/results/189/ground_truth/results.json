@@ -1,0 +1,17 @@
+{
+  "question_id": "189",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024",
+  "results": {
+    "data": [
+      {
+        "metric": "Global export value",
+        "product": "Iron ores and concentrates (2601 HS12)",
+        "value": "$141.58 billion",
+        "raw_value": 141576427314.0,
+        "year": "2024"
+      }
+    ]
+  }
+}

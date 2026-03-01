@@ -1,0 +1,10 @@
+{
+  "question_id": "111",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T04:12:59.187559+00:00",
+  "browser_value": "$260M",
+  "gt_value": "$260.47 million",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products",
+  "match_note": "Formatting: $260M vs $260.47M"
+}

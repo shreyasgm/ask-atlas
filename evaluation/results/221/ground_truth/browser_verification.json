@@ -1,0 +1,10 @@
+{
+  "question_id": "221",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:31:04.674573+00:00",
+  "browser_value": "N/A",
+  "gt_value": "Brazil ECI 2024",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "ECI overtime chart renders as SVG paths. ECI values not accessible as text \u2014 would require chart hover interaction."
+}

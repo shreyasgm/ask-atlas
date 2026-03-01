@@ -1,0 +1,10 @@
+{
+  "question_id": "245",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "1248 4-digit HS92 products",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "Total product count not displayed on browser pages. Would require counting all products in a table view."
+}

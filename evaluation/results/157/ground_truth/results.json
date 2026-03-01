@@ -1,0 +1,16 @@
+{
+  "question_id": "157",
+  "execution_timestamp": "2026-03-01T03:45:46.383862+00:00",
+  "source": "atlas_country_page",
+  "source_method": "browser_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/356/growth-dynamics",
+  "results": {
+    "data": [
+      {
+        "metric": "Export growth pattern",
+        "value": "static",
+        "description": "India has seen a static pattern of export growth, with the largest contribution to export growth coming from moderate complexity products, particularly Business and Unspecified."
+      }
+    ]
+  }
+}

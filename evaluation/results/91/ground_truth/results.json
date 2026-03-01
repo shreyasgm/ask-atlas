@@ -1,0 +1,16 @@
+{
+  "question_id": "91",
+  "execution_timestamp": "2026-02-28T22:44:53.587534+00:00",
+  "source": "atlas_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/840/export-basket",
+  "results": {
+    "data": [
+      {
+        "product_name": "Business",
+        "hs92_code": "ict",
+        "export_value": "$403.30 billion",
+        "raw_export_value": 403299000000.0003
+      }
+    ]
+  }
+}

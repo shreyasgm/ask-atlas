@@ -1,0 +1,27 @@
+{
+  "question_id": "8",
+  "execution_timestamp": "2026-03-01T06:00:00.000000+00:00",
+  "source": "atlas_explore_page",
+  "source_method": "browser_treemap",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2022&exporter=country-250",
+  "results": {
+    "data": [
+      {
+        "metric": "Services share of total exports",
+        "country": "France",
+        "year": "2022",
+        "total_value": "$948B",
+        "services_breakdown": {
+          "Business": "$127B",
+          "Transport": "$93.6B",
+          "Travel & tourism": "$59.2B",
+          "Unspecified": "$49.2B",
+          "Insurance & finance": "$34.2B"
+        },
+        "services_total": "$363.2B",
+        "services_share": "38.3%",
+        "note": "Services values collected from browser treemap by zooming into services categories. Total $948B matches browser display."
+      }
+    ]
+  }
+}

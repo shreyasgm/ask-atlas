@@ -1,0 +1,10 @@
+{
+  "question_id": "15",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "ICT growth $112B\u2192$316B vs Travel $8B\u2192$7B",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "Multi-year service sector comparison requires extracting specific sector values across 7 years. Not efficiently verifiable."
+}

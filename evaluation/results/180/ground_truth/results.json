@@ -1,0 +1,17 @@
+{
+  "question_id": "180",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility?year=2024&exporter=country-356",
+  "results": {
+    "data": [
+      {
+        "metric": "COG",
+        "country": "India",
+        "product": "Electronic integrated circuits (8542 HS12)",
+        "value": 0.2778,
+        "year": "2024"
+      }
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "question_id": "158",
+  "execution_timestamp": "2026-03-01T03:45:46.383862+00:00",
+  "source": "atlas_country_page",
+  "source_method": "browser_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/356/growth-dynamics",
+  "results": {
+    "data": [
+      {
+        "metric": "Sectors driving export growth",
+        "value": "Services",
+        "description": "India's export growth in the past five years has been driven by Services. India's growth in Services has not been by good luck, by simply concentrating in a growing global sector. Rather, export growth in Services has been driven by expanding its global market share."
+      }
+    ]
+  }
+}

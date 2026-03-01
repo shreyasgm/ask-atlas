@@ -1,0 +1,10 @@
+{
+  "question_id": "3",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:00:36.006317+00:00",
+  "browser_value": "Total $520B (2018)",
+  "gt_value": "Service exports $519.78 billion",
+  "match": null,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-702&startYear=2018&endYear=2018",
+  "match_note": "Browser total $520B \u2248 GT services $519.78B, but total includes goods+services. Cannot separate from browser total alone."
+}

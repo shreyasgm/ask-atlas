@@ -1,0 +1,27 @@
+{
+  "question_id": "12",
+  "execution_timestamp": "2026-03-01T06:00:00.000000+00:00",
+  "source": "atlas_explore_page",
+  "source_method": "browser_treemap",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2022&exporter=country-756",
+  "results": {
+    "data": [
+      {
+        "metric": "Services share of total exports",
+        "country": "Switzerland",
+        "year": "2022",
+        "total_value": "$533B",
+        "services_breakdown": {
+          "Business": "$64.6B",
+          "Insurance & finance": "$33.7B",
+          "Transport": "$21.4B",
+          "Travel & tourism": "$17.1B",
+          "Unspecified": "$15.3B"
+        },
+        "services_total": "$152.1B",
+        "services_share": "28.5%",
+        "note": "Services values collected from browser treemap by zooming into services categories. Total $533B matches browser display."
+      }
+    ]
+  }
+}

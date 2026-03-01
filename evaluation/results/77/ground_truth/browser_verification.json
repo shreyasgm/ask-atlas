@@ -1,0 +1,10 @@
+{
+  "question_id": "77",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T04:23:38.218802+00:00",
+  "browser_value": "Not visible in page text (current account balance)",
+  "gt_value": "$-57.89 billion",
+  "match": null,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/76/new-products",
+  "match_note": "Current account balance not shown in country page text. Only trade surplus/deficit visible."
+}

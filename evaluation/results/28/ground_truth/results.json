@@ -1,0 +1,24 @@
+{
+  "question_id": "28",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?exporter=country-643",
+  "results": {
+    "data": [
+      {
+        "year": "2015",
+        "mineral_fuels_value": "$161.98 billion",
+        "total_exports": "$350.60 billion",
+        "share": "46.2%",
+        "raw_share": 0.4620003976859307
+      },
+      {
+        "year": "2021",
+        "mineral_fuels_value": "$206.63 billion",
+        "total_exports": "$532.43 billion",
+        "share": "38.8%",
+        "raw_share": 0.3880855885069825
+      }
+    ]
+  }
+}

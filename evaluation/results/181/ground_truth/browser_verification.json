@@ -1,0 +1,10 @@
+{
+  "question_id": "181",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:31:04.674573+00:00",
+  "browser_value": "N/A",
+  "gt_value": "Kenya T-shirts COG=0.0",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "COG values not extractable from browser."
+}

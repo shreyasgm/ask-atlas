@@ -1,0 +1,16 @@
+{
+  "question_id": "159",
+  "execution_timestamp": "2026-03-01T03:40:13.588418+00:00",
+  "source": "atlas_country_page",
+  "source_method": "browser_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/792/market-share",
+  "results": {
+    "data": [
+      {
+        "metric": "Structural transformation status",
+        "value": "started",
+        "description": "Turkiye has started the process of structural transformation. A key source of economic growth, this process reallocates economic activity from low to high productivity sectors. It broadly moves activities out of agriculture into textiles, followed by electronics and/or machinery manufacturing. While Turkiye has a presence in textile exports, its global market share in electronics has stagnated over the previous decade."
+      }
+    ]
+  }
+}

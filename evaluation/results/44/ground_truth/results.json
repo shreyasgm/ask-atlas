@@ -1,0 +1,29 @@
+{
+  "question_id": "44",
+  "execution_timestamp": "2026-03-01T03:51:32.377976+00:00",
+  "source": "atlas_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/398",
+  "results": {
+    "data": [
+      {
+        "metric": "Resource dependence vs complexity",
+        "country": "Kazakhstan",
+        "eci": "0.3790",
+        "eci_rank": 55,
+        "coi_rank": 66,
+        "resource_export_share": "50.9%",
+        "total_exports": "$93.21 billion"
+      }
+    ]
+  },
+  "source_method": "graphql_api_browser_enriched",
+  "browser_narrative": {
+    "complexity_income": "Kazakhstan is less complex than expected for its income level.",
+    "eci_ranking": "55th most complex country",
+    "eci_rank_change": "Kazakhstan's economy has become more complex, improving 26 positions in the ECI ranking.",
+    "complexity_driver": "Kazakhstan's improving complexity has occurred despite the stagnant diversification of its exports, potentially risking the sustainability of its gains in complexity.",
+    "income_classification": "upper-middle-income",
+    "growth_projection": "Kazakhstan is projected to grow moderately. 3.9% annually, ranking in the top quartile of countries globally.",
+    "opportunities": "Kazakhstan is positioned to take advantage of a moderate number of opportunities to diversify its production using its existing knowhow."
+  }
+}

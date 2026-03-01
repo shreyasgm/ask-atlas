@@ -1,0 +1,10 @@
+{
+  "question_id": "19",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "Trade balance across top 10 partners",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "Trade balance requires both import and export views for 10 partners. Not efficiently verifiable."
+}

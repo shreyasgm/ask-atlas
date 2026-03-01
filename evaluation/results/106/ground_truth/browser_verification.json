@@ -1,0 +1,10 @@
+{
+  "question_id": "106",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T04:53:07.125991+00:00",
+  "browser_value": "Travel & tourism mentioned in narrative but no PCI value",
+  "gt_value": "N/A",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/792/export-complexity",
+  "match_note": "Services products do not have PCI values, consistent with GT N/A"
+}

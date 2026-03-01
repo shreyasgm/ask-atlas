@@ -1,0 +1,16 @@
+{
+  "question_id": "143",
+  "execution_timestamp": "2026-03-01T03:44:04.197384+00:00",
+  "source": "atlas_country_page",
+  "source_method": "browser_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/724",
+  "results": {
+    "data": [
+      {
+        "metric": "GDP per capita growth 5yr avg",
+        "value": "0.9%",
+        "description": "GDP per capita growth has averaged 0.9% over the past five years, above regional averages."
+      }
+    ]
+  }
+}

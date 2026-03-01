@@ -1,0 +1,44 @@
+{
+  "question_id": "42",
+  "execution_timestamp": "2026-02-28T22:57:18.829130+00:00",
+  "source": "atlas_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/32",
+  "results": {
+    "data": [
+      {
+        "metric": "Diversification profile",
+        "country": "Argentina",
+        "eci": "-0.0133",
+        "eci_rank": 84,
+        "diversification_grade": "C",
+        "top_export_sectors": [
+          {
+            "sector": "product-HS12-196",
+            "share": "20.1%",
+            "value": "$18.90 billion"
+          },
+          {
+            "sector": "product-HS12-109",
+            "share": "9.6%",
+            "value": "$9.03 billion"
+          },
+          {
+            "sector": "product-HS12-122",
+            "share": "7.4%",
+            "value": "$7.02 billion"
+          },
+          {
+            "sector": "product-HS12-185",
+            "share": "7.0%",
+            "value": "$6.56 billion"
+          },
+          {
+            "sector": "product-HS12-126",
+            "share": "6.8%",
+            "value": "$6.43 billion"
+          }
+        ]
+      }
+    ]
+  }
+}

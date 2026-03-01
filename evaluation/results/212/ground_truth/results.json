@@ -1,0 +1,18 @@
+{
+  "question_id": "212",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-231&tradeDirection=imports",
+  "results": {
+    "data": [
+      {
+        "metric": "Product import value",
+        "country": "Ethiopia",
+        "product": "Medicaments, packaged (3004 HS12)",
+        "value": "$243.94 million",
+        "raw_value": 243944566.0,
+        "year": "2024"
+      }
+    ]
+  }
+}

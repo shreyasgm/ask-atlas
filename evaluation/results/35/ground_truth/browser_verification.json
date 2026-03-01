@@ -1,0 +1,10 @@
+{
+  "question_id": "35",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "High-complexity share 21.6% (2014)",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "Requires categorizing products by complexity level and computing share. Not available as single browser value."
+}

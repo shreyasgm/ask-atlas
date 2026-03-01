@@ -1,0 +1,20 @@
+{
+  "question_id": "4",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-276",
+  "results": {
+    "data": [
+      {
+        "metric": "Automotive export share",
+        "country": "Germany",
+        "year": "2024",
+        "automotive_value": "$253.03 billion",
+        "total_value": "$1.97 trillion",
+        "share": "12.8%",
+        "raw_share": 0.12819057822355417,
+        "note": "Automotive = HS chapter 87 (Vehicles)"
+      }
+    ]
+  }
+}

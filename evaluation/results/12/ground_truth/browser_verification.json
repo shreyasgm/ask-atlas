@@ -1,0 +1,10 @@
+{
+  "question_id": "12",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:00:36.006317+00:00",
+  "browser_value": "Total $533B; Business $64.6B, Insurance $33.7B, Transport $21.4B, Travel $17.1B",
+  "gt_value": "Services $533.13B, goods $533.13B, share 50.0%",
+  "match": false,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2022&exporter=country-756",
+  "match_note": "DISCREPANCY: Same GT double-counting bug as Q8/Q9. Browser total $533B = GT services_value. GT incorrectly sets goods=services=total."
+}

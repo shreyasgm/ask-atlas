@@ -1,0 +1,17 @@
+{
+  "question_id": "57",
+  "execution_timestamp": "2026-02-28T22:44:44.630156+00:00",
+  "source": "expected_behavior",
+  "results": {
+    "data": [
+      {
+        "expected_behavior": "explain_data_limitation",
+        "description": "Bilateral services trade data by partner country is not available in the Atlas database. Only unilateral (total) services data exists. The agent should explain this limitation.",
+        "country": "United States",
+        "partner": "China",
+        "data_type": "bilateral services",
+        "reason": "Bilateral services data not available"
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "question_id": "24",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:05:33.601888+00:00",
+  "browser_value": "Germany total $2T, Cars $158B visible",
+  "gt_value": "Germany automotive $253.03B, global $1.70T, share 14.9%",
+  "match": null,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-276",
+  "match_note": "Cannot verify full sector share from treemap. Individual products visible."
+}

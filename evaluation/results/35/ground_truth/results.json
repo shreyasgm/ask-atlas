@@ -1,0 +1,31 @@
+{
+  "question_id": "35",
+  "execution_timestamp": "2026-02-28T22:57:18.829130+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?exporter=country-360",
+  "results": {
+    "data": [
+      {
+        "year": "2014",
+        "high_complexity_value": "$42.68 billion",
+        "total_exports": "$197.27 billion",
+        "share": "21.6%",
+        "raw_share": 0.21636916078680307
+      },
+      {
+        "year": "2019",
+        "high_complexity_value": "$49.05 billion",
+        "total_exports": "$199.01 billion",
+        "share": "24.6%",
+        "raw_share": 0.24646428267849033
+      },
+      {
+        "year": "2024",
+        "high_complexity_value": "$67.57 billion",
+        "total_exports": "$298.03 billion",
+        "share": "22.7%",
+        "raw_share": 0.22672429491152188
+      }
+    ]
+  }
+}

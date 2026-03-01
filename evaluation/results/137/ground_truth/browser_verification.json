@@ -1,0 +1,9 @@
+{
+  "question_id": "137",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T03:43:13.727992+00:00",
+  "browser_value": "1.7%",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/76/summary",
+  "gt_value": "1.7%",
+  "match": true
+}

@@ -1,0 +1,10 @@
+{
+  "question_id": "47",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T04:53:07.125991+00:00",
+  "browser_value": "No data (page shows no Total Value)",
+  "gt_value": "No data / $0",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-276&importer=country-276",
+  "match_note": "Browser confirms no self-trade data for Germany"
+}

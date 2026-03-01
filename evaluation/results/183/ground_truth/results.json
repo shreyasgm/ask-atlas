@@ -1,0 +1,18 @@
+{
+  "question_id": "183",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-404",
+  "results": {
+    "data": [
+      {
+        "metric": "Global market share",
+        "country": "Kenya",
+        "product": "Electronic integrated circuits (8542 HS12)",
+        "value": "0.0%",
+        "raw_value": 6.426446581881023e-07,
+        "year": "2024"
+      }
+    ]
+  }
+}

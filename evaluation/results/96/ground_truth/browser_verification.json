@@ -1,0 +1,10 @@
+{
+  "question_id": "96",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T04:18:55.402081+00:00",
+  "browser_value": "Agriculture (export dynamic driven by Agriculture)",
+  "gt_value": "Agriculture",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products",
+  "match_note": "Browser narrative confirms Agriculture as largest sector"
+}

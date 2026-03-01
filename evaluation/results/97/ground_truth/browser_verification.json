@@ -1,0 +1,10 @@
+{
+  "question_id": "97",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T04:12:59.187559+00:00",
+  "browser_value": "0.77",
+  "gt_value": "0.8230",
+  "match": false,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/724/growth-dynamics",
+  "match_note": "DISCREPANCY: Browser growth dynamics chart shows 0.77, API returned 0.8230. GT updated to browser value."
+}

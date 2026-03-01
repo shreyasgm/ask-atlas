@@ -1,0 +1,16 @@
+{
+  "question_id": "141",
+  "execution_timestamp": "2026-03-01T03:36:03.799043+00:00",
+  "source": "atlas_country_page",
+  "source_method": "browser_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/404",
+  "results": {
+    "data": [
+      {
+        "metric": "Complexity-income relationship",
+        "value": "slightly more complex than expected",
+        "description": "Kenya is slightly more complex than expected for its income level. As a result, its economy is projected to grow moderately."
+      }
+    ]
+  }
+}

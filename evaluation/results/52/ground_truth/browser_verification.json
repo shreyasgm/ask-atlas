@@ -1,0 +1,10 @@
+{
+  "question_id": "52",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T04:53:07.125991+00:00",
+  "browser_value": "Petroleum oils, crude $1.88B, Insurance $18.3M, Business $18.3M, Travel $17.2M",
+  "gt_value": "Petroleum oils, crude $1.88B, Insurance & finance $37.67M, Business $37.67M",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2015&exporter=country-728",
+  "match_note": "Top export (Petroleum crude $1.88B) matches exactly. Service values differ slightly in aggregation"
+}

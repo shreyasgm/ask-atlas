@@ -1,0 +1,20 @@
+{
+  "question_id": "190",
+  "execution_timestamp": "2026-03-01T06:00:00.000000+00:00",
+  "source": "atlas_explore_page",
+  "source_method": "browser_feasibility_table",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4",
+  "results": {
+    "data": [
+      {
+        "metric": "5-year export growth rate (CAGR)",
+        "product": "Cars (8703 HS92)",
+        "global_size": "$873B",
+        "growth_5yr": "-3.4%",
+        "growth_direction": "negative",
+        "year": "2024",
+        "note": "Browser feasibility table shows blue down arrow with 3.4%, confirming negative growth."
+      }
+    ]
+  }
+}

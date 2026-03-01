@@ -1,0 +1,9 @@
+{
+  "question_id": "114",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T03:47:15.536520+00:00",
+  "browser_value": "B",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/231/new-products",
+  "gt_value": "B",
+  "match": true
+}

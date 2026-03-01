@@ -1,0 +1,45 @@
+{
+  "question_id": "34",
+  "execution_timestamp": "2026-02-28T22:57:18.829130+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-710",
+  "results": {
+    "data": [
+      {
+        "rank": 1,
+        "product": "Hydrides, nitrides, azides, silicides and borides (2850 HS12)",
+        "pci": 1.66,
+        "rca": 2.3,
+        "export_value": "$7.68 million"
+      },
+      {
+        "rank": 2,
+        "product": "Platinum clad metals (7111 HS12)",
+        "pci": 1.4982,
+        "rca": 4.1,
+        "export_value": "$3.16 million"
+      },
+      {
+        "rank": 3,
+        "product": "Ketones and quinones (2914 HS12)",
+        "pci": 1.2839,
+        "rca": 4.49,
+        "export_value": "$135.67 million"
+      },
+      {
+        "rank": 4,
+        "product": "Compounds of precious metals (2843 HS12)",
+        "pci": 1.2399,
+        "rca": 2.33,
+        "export_value": "$103.10 million"
+      },
+      {
+        "rank": 5,
+        "product": "Phenols, phenol-alcohols (2907 HS12)",
+        "pci": 1.1037,
+        "rca": 1.64,
+        "export_value": "$36.06 million"
+      }
+    ]
+  }
+}

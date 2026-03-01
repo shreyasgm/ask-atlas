@@ -1,0 +1,10 @@
+{
+  "question_id": "250",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "SITC Coffee code=0711, Kenya RCA=26.59",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "SITC product codes and RCA values not extractable from browser."
+}

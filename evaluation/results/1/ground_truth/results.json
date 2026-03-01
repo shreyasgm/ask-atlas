@@ -1,0 +1,20 @@
+{
+  "question_id": "1",
+  "execution_timestamp": "2026-02-19T20:35:47.629298+00:00Z",
+  "results": {
+    "data": [
+      {
+        "category": "Goods",
+        "export_value": 223341722802
+      },
+      {
+        "category": "Services",
+        "export_value": 34044413056
+      }
+    ]
+  },
+  "execution_stats": {
+    "queries_executed": 1,
+    "total_rows": 2
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "question_id": "52",
+  "execution_timestamp": "2026-02-28T22:57:55.560423+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2015&exporter=country-728",
+  "results": {
+    "data": [
+      {
+        "rank": 1,
+        "product": "Petroleum oils, crude (2709 HS12)",
+        "export_value": "$1.88 billion"
+      },
+      {
+        "rank": 2,
+        "product": "Insurance & finance (financial HS12)",
+        "export_value": "$37.67 million"
+      },
+      {
+        "rank": 3,
+        "product": "Business (ict HS12)",
+        "export_value": "$18.26 million"
+      },
+      {
+        "rank": 4,
+        "product": "Travel & tourism (travel HS12)",
+        "export_value": "$17.18 million"
+      },
+      {
+        "rank": 5,
+        "product": "Unspecified (unspecified HS12)",
+        "export_value": "$12.92 million"
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "question_id": "206",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T04:53:07.125991+00:00",
+  "browser_value": "Cars $25.3B, Serums/Blood $16.1B, Medicaments $11.1B",
+  "gt_value": "Cars $25.32B, Blood $16.10B, Medicaments $11.06B",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-276&importer=country-840",
+  "match_note": "All 3 products match: Cars $25.3B/$25.32B, Blood $16.1B/$16.10B, Medicaments $11.1B/$11.06B"
+}

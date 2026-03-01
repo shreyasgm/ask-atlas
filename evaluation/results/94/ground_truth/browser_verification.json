@@ -1,0 +1,10 @@
+{
+  "question_id": "94",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T04:18:55.402081+00:00",
+  "browser_value": "Services (export growth driven by Services, expanding global market share)",
+  "gt_value": "Services",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/792/paths",
+  "match_note": "Browser narrative confirms Services as dominant market share sector"
+}

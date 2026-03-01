@@ -1,0 +1,18 @@
+{
+  "question_id": "250",
+  "execution_timestamp": "2026-02-28T22:57:55.560423+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-404",
+  "results": {
+    "data": [
+      {
+        "metric": "SITC Coffee + RCA",
+        "country": "Kenya",
+        "sitc_code": "0711",
+        "sitc_name": "Coffee green, roasted; coffee substitutes containing coffee",
+        "classification": "SITC",
+        "rca": 15.2629
+      }
+    ]
+  }
+}
