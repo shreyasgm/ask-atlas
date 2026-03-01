@@ -1,0 +1,20 @@
+{
+  "question_id": "20",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-702",
+  "results": {
+    "data": [
+      {
+        "metric": "Trade overview",
+        "country": "Singapore",
+        "year": "2024",
+        "goods_exports": "$761.76 billion",
+        "goods_imports": "$758.94 billion",
+        "services_exports": "$761.76 billion",
+        "services_imports": "$758.94 billion",
+        "note": "Re-export data is not directly broken out in the Atlas. Singapore's high import-to-export ratio in goods reflects its role as a re-export hub."
+      }
+    ]
+  }
+}

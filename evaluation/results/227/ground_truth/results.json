@@ -1,0 +1,32 @@
+{
+  "question_id": "227",
+  "execution_timestamp": "2026-03-01T06:00:00.000000+00:00",
+  "source": "atlas_explore_page",
+  "source_method": "browser_feasibility_table",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4&exporter=country-792",
+  "results": {
+    "data": [
+      {
+        "rank": 1,
+        "product": "Photographic film, developed (3705 HS92)"
+      },
+      {
+        "rank": 2,
+        "product": "Apparatus and equipment for photographic laboratories, n.e.c. (9010 HS92)"
+      },
+      {
+        "rank": 3,
+        "product": "Machines for working materials by laser and similar means (8456 HS92)"
+      },
+      {
+        "rank": 4,
+        "product": "Cermets (8113 HS92)"
+      },
+      {
+        "rank": 5,
+        "product": "Nickel plates (7506 HS92)"
+      }
+    ],
+    "note": "Top 5 growth opportunities for Turkiye ranked by opportunity gain, HS92 classification. Verified from browser feasibility table. Same top 5 as Kenya because opportunity gain ranking is influenced by global product characteristics and both countries have similar nearby/distance profiles for these niche products."
+  }
+}

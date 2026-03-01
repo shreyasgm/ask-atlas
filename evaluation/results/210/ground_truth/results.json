@@ -1,0 +1,28 @@
+{
+  "question_id": "210",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-840&tradeDirection=imports",
+  "results": {
+    "data": [
+      {
+        "rank": 1,
+        "product": "Business (ict HS12)",
+        "import_value": "$344.10 billion",
+        "raw_import_value": 344098000000.0
+      },
+      {
+        "rank": 2,
+        "product": "Cars (8703 HS12)",
+        "import_value": "$193.33 billion",
+        "raw_import_value": 193332912602.0
+      },
+      {
+        "rank": 3,
+        "product": "Travel & tourism (travel HS12)",
+        "import_value": "$178.91 billion",
+        "raw_import_value": 178911999999.0
+      }
+    ]
+  }
+}

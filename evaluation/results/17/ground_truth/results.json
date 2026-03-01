@@ -1,0 +1,40 @@
+{
+  "question_id": "17",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2021&exporter=country-392&view=markets",
+  "results": {
+    "data": [
+      {
+        "rank": 1,
+        "country": "Services Partners",
+        "export_value": "$170.89 billion",
+        "share": "18.4%"
+      },
+      {
+        "rank": 2,
+        "country": "China",
+        "export_value": "$163.96 billion",
+        "share": "17.6%"
+      },
+      {
+        "rank": 3,
+        "country": "United States of America",
+        "export_value": "$139.31 billion",
+        "share": "15.0%"
+      },
+      {
+        "rank": 4,
+        "country": "Taiwan",
+        "export_value": "$55.72 billion",
+        "share": "6.0%"
+      },
+      {
+        "rank": 5,
+        "country": "South Korea",
+        "export_value": "$54.43 billion",
+        "share": "5.9%"
+      }
+    ]
+  }
+}

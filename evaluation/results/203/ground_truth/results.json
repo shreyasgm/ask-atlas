@@ -1,0 +1,21 @@
+{
+  "question_id": "203",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&exporter=country-792&importer=country-276",
+  "results": {
+    "data": [
+      {
+        "metric": "Trade balance",
+        "country": "Turkiye",
+        "partner": "Germany",
+        "value": "$-6.83 billion",
+        "raw_value": -6831384355.0,
+        "status": "deficit",
+        "exports": "$20.38 billion",
+        "imports": "$27.21 billion",
+        "year": "2024"
+      }
+    ]
+  }
+}

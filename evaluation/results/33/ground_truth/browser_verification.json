@@ -1,0 +1,10 @@
+{
+  "question_id": "33",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T05:31:04.674573+00:00",
+  "browser_value": "ECI rank 45th, improved 17 positions, more complex than expected, many opportunities",
+  "gt_value": "eci=0.6290, eci_rank=45, diversification_grade=APlus, diversity_rank=36",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/704",
+  "match_note": "ECI rank 45 matches. Narrative confirms complexity profile. Exact ECI/diversity values not shown on country page."
+}

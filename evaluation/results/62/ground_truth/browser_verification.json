@@ -1,0 +1,9 @@
+{
+  "question_id": "62",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T04:12:59.187559+00:00",
+  "browser_value": "$7,159",
+  "gt_value": "$7,159",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/404"
+}

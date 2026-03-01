@@ -1,0 +1,17 @@
+{
+  "question_id": "97",
+  "execution_timestamp": "2026-03-01T04:30:00.000000+00:00",
+  "source": "atlas_country_page",
+  "source_method": "graphql_api_browser_verified",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/724/growth-dynamics",
+  "results": {
+    "data": [
+      {
+        "metric": "ECI value",
+        "value": "0.77",
+        "raw_value_api": 0.8229609131813049,
+        "note": "Browser growth dynamics chart displays ECI (2024): 0.77. API returned 0.8230. Updated to browser-displayed value (what end-users see)."
+      }
+    ]
+  }
+}

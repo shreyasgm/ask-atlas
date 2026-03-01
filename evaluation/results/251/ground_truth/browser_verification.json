@@ -1,0 +1,10 @@
+{
+  "question_id": "251",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "HS2022 Germany top: Business $191.29B",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "HS 2022 classification switch via URL parameter not confirmed. Product names may differ across classifications."
+}

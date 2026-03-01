@@ -1,0 +1,10 @@
+{
+  "question_id": "189",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T04:23:38.218802+00:00",
+  "browser_value": "Iron ores $142B",
+  "gt_value": "$141.58 billion",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=group-1",
+  "match_note": "Formatting"
+}

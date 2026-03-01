@@ -1,0 +1,18 @@
+{
+  "question_id": "58",
+  "execution_timestamp": "2026-02-28T22:44:44.630156+00:00",
+  "source": "expected_behavior",
+  "results": {
+    "data": [
+      {
+        "expected_behavior": "explain_data_limitation",
+        "description": "1960 predates available data. SITC data starts in 1962, HS data starts in 1995. The agent should indicate the earliest available year and offer alternatives.",
+        "country": "United Kingdom",
+        "year_requested": 1960,
+        "earliest_sitc": 1962,
+        "earliest_hs": 1995,
+        "reason": "Year predates available data"
+      }
+    ]
+  }
+}

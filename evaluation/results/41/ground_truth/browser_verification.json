@@ -1,0 +1,10 @@
+{
+  "question_id": "41",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T05:31:04.674573+00:00",
+  "browser_value": "ECI rank 40th, many opportunities, slightly more complex than expected, stagnant complexity despite diversification",
+  "gt_value": "coi_rank=6, coi_classification=high, strategic_approach=ParsimoniousIndustrialPolicy",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/620",
+  "match_note": "Browser 'many opportunities' matches high COI (GT coi_rank=6). Strategic approach not verified from main page."
+}

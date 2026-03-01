@@ -1,0 +1,10 @@
+{
+  "question_id": "38",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T05:31:04.674573+00:00",
+  "browser_value": "ECI rank 4th, worsened 1 position, lack of diversification of exports, moderate number of opportunities",
+  "gt_value": "eci=1.5621, eci_rank=4, diversity=240",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/410",
+  "match_note": "ECI rank 4 matches GT. Complexity narrative consistent with GT."
+}

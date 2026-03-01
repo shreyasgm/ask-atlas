@@ -1,0 +1,31 @@
+{
+  "question_id": "31",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-170&startYear=2014&endYear=2024",
+  "results": {
+    "data": [
+      {
+        "year": "2014",
+        "colombia_exports": "$63.36 billion",
+        "global_exports": "$27.50 trillion",
+        "share": "0.2%",
+        "raw_share": 0.0023036593883394266
+      },
+      {
+        "year": "2019",
+        "colombia_exports": "$49.78 billion",
+        "global_exports": "$29.30 trillion",
+        "share": "0.2%",
+        "raw_share": 0.0016987375567645287
+      },
+      {
+        "year": "2024",
+        "colombia_exports": "$69.05 billion",
+        "global_exports": "$36.82 trillion",
+        "share": "0.2%",
+        "raw_share": 0.0018754540546243586
+      }
+    ]
+  }
+}

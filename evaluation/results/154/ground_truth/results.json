@@ -1,0 +1,16 @@
+{
+  "question_id": "154",
+  "execution_timestamp": "2026-03-01T03:46:35.287573+00:00",
+  "source": "atlas_country_page",
+  "source_method": "browser_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/276/export-basket",
+  "results": {
+    "data": [
+      {
+        "metric": "Non-oil export growth rate",
+        "value": "-2.4%",
+        "description": "Non-oil exports have declined by 2.4% annually over the past five years, falling below the global average growth."
+      }
+    ]
+  }
+}

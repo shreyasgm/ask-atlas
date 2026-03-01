@@ -1,0 +1,10 @@
+{
+  "question_id": "218",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:00:36.006317+00:00",
+  "browser_value": "Kenya 2020 total $9.8B (from single-year page)",
+  "gt_value": "2010: $3.77B, 2024: $16.22B, change 330.0%",
+  "match": null,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-404&startYear=2010&endYear=2024",
+  "match_note": "Verified 2020 midpoint ($9.8B). Start/end values require chart hover interaction not feasible from text extraction."
+}

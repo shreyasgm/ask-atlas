@@ -1,0 +1,17 @@
+{
+  "question_id": "99",
+  "execution_timestamp": "2026-03-01T05:00:00.000000+00:00",
+  "source": "atlas_country_page",
+  "source_method": "graphql_api_browser_verified",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/356/growth-dynamics",
+  "results": {
+    "data": [
+      {
+        "metric": "ECI value",
+        "value": "0.63",
+        "raw_value_api": 0.7164531350135803,
+        "note": "Browser growth dynamics chart displays ECI (2024): 0.63. API returned 0.7165. Systematic API-vs-browser ECI divergence (same pattern as Q97 Spain)."
+      }
+    ]
+  }
+}

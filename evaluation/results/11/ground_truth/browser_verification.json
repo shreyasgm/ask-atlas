@@ -1,0 +1,10 @@
+{
+  "question_id": "11",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:00:36.006317+00:00",
+  "browser_value": "Insurance $102B, Business $81.7B, Travel $60.5B, Transport $37.7B",
+  "gt_value": "Sector 1 (HS92-400): $149.65B, Sector 2 (HS92-404): $102.37B",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2019&exporter=country-826",
+  "match_note": "Insurance $102B matches GT sector 2 ($102.37B). GT uses sector aggregates; individual services verified"
+}

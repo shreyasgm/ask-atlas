@@ -1,0 +1,10 @@
+{
+  "question_id": "51",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T04:53:07.125991+00:00",
+  "browser_value": "Bananas not visible in treemap (too small)",
+  "gt_value": "RCA 0.0, export value $4,968",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-392",
+  "match_note": "Bananas not visible in Japan treemap consistent with near-zero RCA and $4,968 exports"
+}

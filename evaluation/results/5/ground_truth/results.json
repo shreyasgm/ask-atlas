@@ -1,0 +1,40 @@
+{
+  "question_id": "5",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2021&exporter=country-124",
+  "results": {
+    "data": [
+      {
+        "rank": 1,
+        "sector": "product-HS12-126",
+        "export_value": "$116.11 billion",
+        "raw_export_value": 116110690589.0
+      },
+      {
+        "rank": 2,
+        "sector": "product-HS12-403",
+        "export_value": "$49.33 billion",
+        "raw_export_value": 49332908340.0
+      },
+      {
+        "rank": 3,
+        "sector": "product-HS12-185",
+        "export_value": "$44.05 billion",
+        "raw_export_value": 44051002233.0
+      },
+      {
+        "rank": 4,
+        "sector": "product-HS12-182",
+        "export_value": "$32.15 billion",
+        "raw_export_value": 32151334363.0
+      },
+      {
+        "rank": 5,
+        "sector": "product-HS12-400",
+        "export_value": "$31.17 billion",
+        "raw_export_value": 31169521622.0
+      }
+    ]
+  }
+}

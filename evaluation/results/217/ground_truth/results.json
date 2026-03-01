@@ -1,0 +1,20 @@
+{
+  "question_id": "217",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-76&startYear=2015&endYear=2024&year=2024",
+  "results": {
+    "data": [
+      {
+        "metric": "Export change",
+        "country": "Brazil",
+        "start_year": "2015",
+        "end_year": "2024",
+        "start_value": "$215.64 billion",
+        "end_value": "$377.65 billion",
+        "change_pct": "75.1%",
+        "raw_change": 0.7512877338368426
+      }
+    ]
+  }
+}

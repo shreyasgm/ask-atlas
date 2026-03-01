@@ -1,0 +1,10 @@
+{
+  "question_id": "90",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T04:23:38.218802+00:00",
+  "browser_value": "Business $403B, Insurance & finance $223B, Travel & tourism $214B",
+  "gt_value": "Business $403.30B, Insurance & finance $222.68B, Travel & tourism $213.78B",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-840",
+  "match_note": "Formatting"
+}

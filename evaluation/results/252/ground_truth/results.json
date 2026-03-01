@@ -1,0 +1,18 @@
+{
+  "question_id": "252",
+  "execution_timestamp": "2026-02-28T22:57:55.560423+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-76",
+  "results": {
+    "data": [
+      {
+        "metric": "Products with RCA > 1",
+        "country": "Brazil",
+        "year": "2024",
+        "hs92_count": 174,
+        "hs12_count": 166,
+        "difference": 8
+      }
+    ]
+  }
+}

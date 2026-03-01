@@ -1,0 +1,31 @@
+{
+  "question_id": "43",
+  "execution_timestamp": "2026-03-01T03:51:01.120525+00:00",
+  "source": "atlas_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/288/strategic-approach",
+  "results": {
+    "data": [
+      {
+        "metric": "Diversification potential",
+        "country": "Ghana",
+        "eci": "-1.1063",
+        "eci_rank": 124,
+        "coi_rank": 99,
+        "coi_classification": "low",
+        "strategic_approach": "Strategic Bets Approach",
+        "diversification_grade": "B",
+        "diversity_rank": 101
+      }
+    ]
+  },
+  "source_method": "graphql_api_browser_enriched",
+  "browser_narrative": {
+    "strategic_approach": "Strategic Bets Approach - Few nearby opportunities call for coordinated long jumps into strategic areas with future diversification potential.",
+    "high_potential_sectors": "Industrial Machinery and Electrical machinery and equipment",
+    "export_complexity": "Ghana's largest goods exports are in moderate and low complexity products, Stone and Minerals, respectively.",
+    "structural_transformation": "Ghana has not yet started the traditional process of structural transformation.",
+    "diversification_grade": "B",
+    "diversity_rank": "101st of 145",
+    "new_products": "14 new products since 2009, contributed $93 in income per capita"
+  }
+}

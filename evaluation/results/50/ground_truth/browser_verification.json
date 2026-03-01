@@ -1,0 +1,10 @@
+{
+  "question_id": "50",
+  "source_method": "browser_country_page",
+  "verification_timestamp": "2026-03-01T04:53:07.125991+00:00",
+  "browser_value": "Page not found (Uh-oh. The page you are looking for could not be found.)",
+  "gt_value": "Not a supported country",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/438",
+  "match_note": "Browser confirms Liechtenstein is not supported \u2014 404 page"
+}

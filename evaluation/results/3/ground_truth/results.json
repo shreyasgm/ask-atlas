@@ -1,0 +1,17 @@
+{
+  "question_id": "3",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-702&startYear=2018&endYear=2018",
+  "results": {
+    "data": [
+      {
+        "metric": "Service exports",
+        "country": "Singapore",
+        "year": "2018",
+        "value": "$519.78 billion",
+        "raw_value": 519778596002.0
+      }
+    ]
+  }
+}

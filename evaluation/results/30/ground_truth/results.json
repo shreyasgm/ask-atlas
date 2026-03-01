@@ -1,0 +1,19 @@
+{
+  "question_id": "30",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-756&startYear=2012&endYear=2020",
+  "results": {
+    "data": [
+      {
+        "metric": "Pharma export growth",
+        "country": "Switzerland",
+        "period": "2012-2020",
+        "start_value": "$47.32 billion",
+        "end_value": "$82.87 billion",
+        "cagr": "7.3%",
+        "note": "HS12 data starts 2012, so 2012-2020 used instead of 2010-2020"
+      }
+    ]
+  }
+}

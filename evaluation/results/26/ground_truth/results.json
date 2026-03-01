@@ -1,0 +1,20 @@
+{
+  "question_id": "26",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-704&startYear=2010&endYear=2020",
+  "results": {
+    "data": [
+      {
+        "metric": "Export CAGR",
+        "country": "Vietnam",
+        "period": "2010-2020",
+        "start_value": "$74.42 billion",
+        "end_value": "$269.63 billion",
+        "cagr": "13.7%",
+        "raw_cagr": 0.13738584048021774,
+        "note": "Used SITC classification for 2010-2020 range (HS12 starts 2012)"
+      }
+    ]
+  }
+}

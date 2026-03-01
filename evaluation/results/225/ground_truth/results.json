@@ -1,0 +1,19 @@
+{
+  "question_id": "225",
+  "execution_timestamp": "2026-03-01T06:00:00.000000+00:00",
+  "source": "atlas_explore_page",
+  "source_method": "browser_feasibility_table",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4&exporter=country-404",
+  "results": {
+    "data": [
+      {
+        "metric": "Global export value of top opportunity",
+        "country": "Kenya",
+        "product": "Photographic film, developed (3705 HS92)",
+        "value": "$2.61B",
+        "year": "2024",
+        "note": "HS92 classification. Value from browser feasibility table GLOBAL SIZE column."
+      }
+    ]
+  }
+}

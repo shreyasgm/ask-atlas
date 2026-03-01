@@ -1,0 +1,10 @@
+{
+  "question_id": "30",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "Pharma growth $47.32B\u2192$82.87B, CAGR 7.3%",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "Finding specific pharma sector values across 2 years requires product-level extraction. Not efficiently verifiable."
+}

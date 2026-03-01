@@ -1,0 +1,43 @@
+{
+  "question_id": "37",
+  "execution_timestamp": "2026-03-01T03:49:28.222059+00:00",
+  "source": "atlas_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/818",
+  "results": {
+    "data": [
+      {
+        "country": "Egypt",
+        "coi": "1.9722",
+        "coi_rank": 4,
+        "coi_classification": "high"
+      },
+      {
+        "country": "Turkey",
+        "coi": "2.1297",
+        "coi_rank": 3,
+        "coi_classification": "high"
+      },
+      {
+        "country": "South Africa",
+        "coi": "2.2271",
+        "coi_rank": 1,
+        "coi_classification": "high"
+      },
+      {
+        "country": "Kenya",
+        "coi": "1.6222",
+        "coi_rank": 8,
+        "coi_classification": "high"
+      }
+    ]
+  },
+  "source_method": "graphql_api_browser_enriched",
+  "browser_narrative": {
+    "complexity_income": "Egypt is as complex as expected for its income level.",
+    "eci_ranking": "76th most complex country",
+    "eci_rank_change": "Egypt's economy has become less complex, worsening 3 positions in the ECI ranking.",
+    "complexity_driver": "Egypt's worsening complexity has occurred in spite of the increasing diversification of its exports, as the country has diversified into lower complexity products.",
+    "growth_projection": "Egypt is projected to grow moderately. 4.0% annually, ranking in the top quartile of countries globally.",
+    "opportunities": "Egypt is positioned to take advantage of many opportunities to diversify its production using its existing knowhow."
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "question_id": "25",
+  "execution_timestamp": "2026-03-01T06:00:00.000000+00:00",
+  "source": "atlas_explore_page",
+  "source_method": "browser_treemap",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?exporter=country-724",
+  "results": {
+    "data": [
+      {
+        "metric": "Percentage change in total export value",
+        "country": "Spain",
+        "export_value_2016": "$393B",
+        "export_value_2021": "$462B",
+        "percentage_change": 17.6,
+        "note": "Total export values (goods + services) from browser treemap for 2016 and 2021."
+      }
+    ]
+  }
+}

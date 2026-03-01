@@ -1,0 +1,10 @@
+{
+  "question_id": "249",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:31:04.674573+00:00",
+  "browser_value": "$809B (productClassification=SITC URL param used, but HS92 may still be default)",
+  "gt_value": "$806.09B (SITC)",
+  "match": "partial",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2020&exporter=country-392&productClassification=SITC",
+  "match_note": "Browser $809B close to GT $806.09B. Unable to confirm SITC classification actually applied \u2014 URL param may be ignored. The ~$3B difference could be classification or rounding."
+}

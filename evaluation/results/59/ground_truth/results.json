@@ -1,0 +1,18 @@
+{
+  "question_id": "59",
+  "execution_timestamp": "2026-02-28T22:44:44.630156+00:00",
+  "source": "expected_behavior",
+  "results": {
+    "data": [
+      {
+        "expected_behavior": "explain_entity_mapping",
+        "description": "Taiwan and Chinese Taipei refer to the same entity. The agent should recognize this and clarify how this entity is represented in the Atlas database.",
+        "entities": [
+          "Taiwan",
+          "Chinese Taipei"
+        ],
+        "reason": "Same entity under different names"
+      }
+    ]
+  }
+}

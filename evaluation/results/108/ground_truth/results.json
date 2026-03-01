@@ -1,0 +1,14 @@
+{
+  "question_id": "108",
+  "execution_timestamp": "2026-02-28T22:44:53.587534+00:00",
+  "source": "atlas_country_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/countries/404/new-products",
+  "results": {
+    "data": [
+      {
+        "metric": "Diversity rank",
+        "value": "38th of 145"
+      }
+    ]
+  }
+}

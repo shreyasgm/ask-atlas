@@ -1,0 +1,17 @@
+{
+  "question_id": "215",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?year=2015&exporter=country-792&startYear=2000&endYear=2024",
+  "results": {
+    "data": [
+      {
+        "metric": "Total exports",
+        "country": "Turkiye",
+        "value": "$208.58 billion",
+        "raw_value": 208584125885.0,
+        "year": "2015"
+      }
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "question_id": "209",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-231&tradeDirection=imports",
+  "results": {
+    "data": [
+      {
+        "metric": "Top imported product",
+        "country": "Ethiopia",
+        "product": "Commodities not specified according to kind (9999 HS12)",
+        "import_value": "$688.25 million",
+        "raw_import_value": 688245096.0,
+        "year": "2024"
+      }
+    ]
+  }
+}

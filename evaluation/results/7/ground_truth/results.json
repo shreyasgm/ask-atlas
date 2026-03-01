@@ -1,0 +1,20 @@
+{
+  "question_id": "7",
+  "execution_timestamp": "2026-02-28T22:51:54.886005+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2019&exporter=country-710",
+  "results": {
+    "data": [
+      {
+        "metric": "Minerals share of exports",
+        "country": "South Africa",
+        "year": "2019",
+        "minerals_value": "$44.90 billion",
+        "total_value": "$115.53 billion",
+        "share": "38.9%",
+        "raw_share": 0.3886558317649721,
+        "note": "Minerals = HS chapters 25-27, 71"
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "question_id": "211",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T04:53:07.125991+00:00",
+  "browser_value": "$53.8B",
+  "gt_value": "$54.11 billion",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&importer=country-840&tradeDirection=imports",
+  "match_note": "Browser $53.8B vs GT $54.11B \u2014 minor 0.6% rounding difference"
+}

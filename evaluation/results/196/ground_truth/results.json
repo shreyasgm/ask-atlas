@@ -1,0 +1,18 @@
+{
+  "question_id": "196",
+  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&view=markets&exporter=country-404&importer=country-840",
+  "results": {
+    "data": [
+      {
+        "metric": "Total bilateral exports",
+        "exporter": "Kenya",
+        "importer": "USA",
+        "value": "$607.93 million",
+        "raw_value": 607925370.0,
+        "year": "2024"
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "question_id": "191",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "Electronic ICs (8542 HS92): Global Size $767B, 5yr growth 19%",
+  "gt_value": "Electronic ICs (8542 HS12): CAGR 3.7% (constant USD)",
+  "match": "partial",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/feasibility/table?year=2024&productLevel=4",
+  "match_note": "Browser shows 19% cumulative 5yr growth. As CAGR: (1.19)^0.2 - 1 = 3.5%, close to GT 3.7% CAGR. Browser likely shows nominal cumulative % while GT uses real CAGR."
+}

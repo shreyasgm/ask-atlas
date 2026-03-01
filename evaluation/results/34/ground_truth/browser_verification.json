@@ -1,0 +1,10 @@
+{
+  "question_id": "34",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "Top products by PCI with RCA>1",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "Requires identifying products with RCA>1 and ranking by PCI. PCI/RCA values not available in browser tooltip together."
+}

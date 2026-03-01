@@ -1,0 +1,10 @@
+{
+  "question_id": "22",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T04:53:07.125991+00:00",
+  "browser_value": "China total $3.8T; Electronics products: Computers $167B, Electronic ICs $139B, Electrical transformers $44.6B, Telephones $31.6B",
+  "gt_value": "China electronics $847.72B, global $3.03T, share 28.0%",
+  "match": null,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&exporter=country-156",
+  "match_note": "Unable to fully verify: can see individual electronics products but cannot sum all HS chapter 85 from treemap. China total $3.8T shown."
+}

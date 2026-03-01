@@ -1,0 +1,10 @@
+{
+  "question_id": "210",
+  "source_method": "browser_explore_page",
+  "verification_timestamp": "2026-03-01T04:53:07.125991+00:00",
+  "browser_value": "Business $344B, Cars $193B, Travel $179B",
+  "gt_value": "Business $344.10B, Cars $193.33B, Travel $178.91B",
+  "match": true,
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024&importer=country-840&tradeDirection=imports",
+  "match_note": "All 3 match within rounding"
+}

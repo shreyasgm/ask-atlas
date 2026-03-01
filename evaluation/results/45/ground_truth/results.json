@@ -1,0 +1,17 @@
+{
+  "question_id": "45",
+  "execution_timestamp": "2026-02-28T22:57:55.560423+00:00",
+  "source": "atlas_explore_page",
+  "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-798&year=2020",
+  "results": {
+    "data": [
+      {
+        "metric": "Total exports",
+        "country": "Tuvalu",
+        "year": "2020",
+        "value": "$15.72 million",
+        "raw_value": 15722595.0
+      }
+    ]
+  }
+}

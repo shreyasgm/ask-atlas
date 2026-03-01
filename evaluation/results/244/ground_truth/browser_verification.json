@@ -1,0 +1,10 @@
+{
+  "question_id": "244",
+  "source_method": "not_browser_verifiable",
+  "verification_timestamp": "2026-03-01T05:33:40.904613+00:00",
+  "browser_value": "N/A",
+  "gt_value": "HS92 0901 \u2192 HS12 0901 (Coffee)",
+  "match": null,
+  "atlas_url": "",
+  "match_note": "HS code mapping not visible on browser. Would require switching classifications and finding same product."
+}
