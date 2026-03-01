@@ -1167,3 +1167,13 @@ When the Atlas says a country is "more complex than expected for its income leve
 - **Less complex than expected**: ECI rank is worse (higher number) than the upper prediction bound
 
 The `growthProjectionRelativeToIncome` enum (`More`, `ModeratelyMore`, `Same`, `ModeratelyLess`, `Less`) conveys this.
+
+---
+
+## Known API Quirks
+
+> **Services exportValue caveat:** `countryYear.exportValue` returns the same total (goods + services combined) regardless of whether `productClass` or `servicesClass` is specified. The classification parameter has no effect on aggregate export values. Do NOT sum `countryYear(productClass: HS92).exportValue + countryYear(servicesClass: unilateral).exportValue` — this will double-count. To compute services share: use `countryProductYear` to get per-product export values, then identify services products by their non-numeric product codes (services categories like "Business", "Transport", "Travel & tourism"). Sum services product values and divide by the total.
+
+> **ECI classification caveat:** ECI values differ by product classification. The growth dynamics chart on Country Pages always displays SITC ECI (no selector available). The `countryProfile.latestEci` field returns HS12 ECI. Use `countryYear(eciProductClass: SITC)` on the Country Pages API to get the chart-displayed value. On the Explore API, pass `productClass: SITC` to `countryYear` for SITC ECI, or `productClass: HS92` for HS92 ECI. The Explore API defaults to HS92 when `productClass` is omitted.
+
+> **RCA>1 count caveat:** The Product Space visualization on Country Pages displays a filtered count of "Export Products (RCA>1)" that is approximately 25-30% lower than the count returned by both the Explore API (`countryProductYear` with `exportRca >= 1`) and the Country Pages API (`countryProfile.diversity`). Both API sources return the full count of products meeting the RCA>=1 threshold. The browser applies additional visualization-level filtering. Counting products with `exportRca >= 1` from the API is a perfectly legitimate approach. The browser count reflects a visualization choice, not the true analytical count.
