@@ -43,7 +43,12 @@ export default function MessageList({
               {msg.pipelineSteps && msg.pipelineSteps.length > 0 && (
                 <PipelineStepper steps={msg.pipelineSteps} />
               )}
-              <AssistantMessage message={msg} />
+              <AssistantMessage
+                message={msg}
+                pipelineStarted={
+                  isStreaming && index === lastAssistantIndex && pipelineSteps.length > 0
+                }
+              />
             </div>
           );
         })}
