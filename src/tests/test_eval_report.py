@@ -756,3 +756,219 @@ class TestBudgetViolations:
         )
 
         assert "budget_violations" not in report
+
+
+# ---------------------------------------------------------------------------
+# Tests: pipeline latency in report
+# ---------------------------------------------------------------------------
+
+
+class TestPipelineLatency:
+    """Tests for per-pipeline latency aggregation in _aggregate_latency()."""
+
+    def _make_timing_results(self):
+        """Reuse the same fixture shape as TestLatencyAnalysis."""
+        return [
+            {
+                "question_id": "1",
+                "question_text": "Brazil exports?",
+                "category": "Trade Values",
+                "difficulty": "easy",
+                "status": "success",
+                "duration_s": 10.0,
+                "step_timing_summary": {
+                    "by_node": {
+                        "agent": {
+                            "wall_time_ms": 2000,
+                            "llm_time_ms": 1800,
+                            "io_time_ms": 0,
+                            "call_count": 1,
+                        },
+                    },
+                    "by_pipeline": {
+                        "agent": {
+                            "wall_time_ms": 2000,
+                            "llm_time_ms": 1800,
+                            "io_time_ms": 0,
+                            "call_count": 1,
+                        },
+                        "query_tool": {
+                            "wall_time_ms": 7000,
+                            "llm_time_ms": 3500,
+                            "io_time_ms": 2800,
+                            "call_count": 2,
+                        },
+                    },
+                    "total": {
+                        "wall_time_ms": 9000,
+                        "llm_time_ms": 5300,
+                        "io_time_ms": 2800,
+                        "overhead_ms": 900,
+                    },
+                },
+            },
+            {
+                "question_id": "2",
+                "question_text": "India ECI?",
+                "category": "Complexity",
+                "difficulty": "medium",
+                "status": "success",
+                "duration_s": 15.0,
+                "step_timing_summary": {
+                    "by_node": {
+                        "agent": {
+                            "wall_time_ms": 3000,
+                            "llm_time_ms": 2500,
+                            "io_time_ms": 0,
+                            "call_count": 1,
+                        },
+                    },
+                    "by_pipeline": {
+                        "agent": {
+                            "wall_time_ms": 3000,
+                            "llm_time_ms": 2500,
+                            "io_time_ms": 0,
+                            "call_count": 1,
+                        },
+                        "atlas_graphql": {
+                            "wall_time_ms": 1000,
+                            "llm_time_ms": 800,
+                            "io_time_ms": 0,
+                            "call_count": 1,
+                        },
+                    },
+                    "total": {
+                        "wall_time_ms": 4000,
+                        "llm_time_ms": 3300,
+                        "io_time_ms": 0,
+                        "overhead_ms": 700,
+                    },
+                },
+            },
+        ]
+
+    def test_report_includes_avg_by_pipeline(self):
+        """When timing data has by_pipeline, report should include avg_by_pipeline."""
+        run_results = self._make_timing_results()
+        report = generate_report(
+            run_results,
+            {},
+            {
+                "1": {"category": "Trade Values", "difficulty": "easy"},
+                "2": {"category": "Complexity", "difficulty": "medium"},
+            },
+        )
+
+        assert "latency_analysis" in report
+        la = report["latency_analysis"]
+        assert "avg_by_pipeline" in la
+        assert "agent" in la["avg_by_pipeline"]
+
+    def test_pipeline_averages_computed_correctly(self):
+        """Verify arithmetic: agent appears in both, query_tool in Q1, atlas_graphql in Q2."""
+        run_results = self._make_timing_results()
+        report = generate_report(
+            run_results,
+            {},
+            {
+                "1": {"category": "Trade Values", "difficulty": "easy"},
+                "2": {"category": "Complexity", "difficulty": "medium"},
+            },
+        )
+
+        avg_by_pipeline = report["latency_analysis"]["avg_by_pipeline"]
+
+        # "agent" appears in both questions: avg wall = (2000+3000)/2 = 2500
+        assert avg_by_pipeline["agent"]["avg_wall_time_ms"] == pytest.approx(
+            2500.0, abs=1
+        )
+        assert avg_by_pipeline["agent"]["appearances"] == 2
+
+        # "query_tool" only in Q1: avg wall = 7000/1 = 7000
+        assert avg_by_pipeline["query_tool"]["avg_wall_time_ms"] == pytest.approx(
+            7000.0, abs=1
+        )
+        assert avg_by_pipeline["query_tool"]["appearances"] == 1
+
+        # "atlas_graphql" only in Q2: avg wall = 1000/1 = 1000
+        assert avg_by_pipeline["atlas_graphql"]["avg_wall_time_ms"] == pytest.approx(
+            1000.0, abs=1
+        )
+        assert avg_by_pipeline["atlas_graphql"]["appearances"] == 1
+
+        # Verify LLM time for agent: (1800+2500)/2 = 2150
+        assert avg_by_pipeline["agent"]["avg_llm_time_ms"] == pytest.approx(
+            2150.0, abs=1
+        )
+
+    def test_markdown_includes_pipeline_section(self):
+        """report_to_markdown should include Pipeline Latency heading."""
+        run_results = self._make_timing_results()
+        report = generate_report(
+            run_results,
+            {},
+            {
+                "1": {"category": "Trade Values", "difficulty": "easy"},
+                "2": {"category": "Complexity", "difficulty": "medium"},
+            },
+        )
+        md = report_to_markdown(report)
+
+        assert "### Pipeline Latency" in md
+        assert "agent" in md
+        assert "query_tool" in md
+
+    def test_no_pipeline_data_no_section(self):
+        """When timing data lacks by_pipeline, avg_by_pipeline should be absent."""
+        run_results = [
+            {
+                "question_id": "1",
+                "question_text": "Test?",
+                "category": "A",
+                "difficulty": "easy",
+                "status": "success",
+                "duration_s": 5.0,
+            },
+        ]
+        report = generate_report(
+            run_results, {}, {"1": {"category": "A", "difficulty": "easy"}}
+        )
+
+        # No timing data at all → no latency_analysis
+        assert "latency_analysis" not in report
+
+        # Also test: timing present but no by_pipeline key
+        run_results_no_pipeline = [
+            {
+                "question_id": "1",
+                "question_text": "Test?",
+                "category": "A",
+                "difficulty": "easy",
+                "status": "success",
+                "duration_s": 5.0,
+                "step_timing_summary": {
+                    "by_node": {
+                        "agent": {
+                            "wall_time_ms": 1000,
+                            "llm_time_ms": 800,
+                            "io_time_ms": 0,
+                            "call_count": 1,
+                        },
+                    },
+                    "total": {
+                        "wall_time_ms": 1000,
+                        "llm_time_ms": 800,
+                        "io_time_ms": 0,
+                        "overhead_ms": 200,
+                    },
+                },
+            },
+        ]
+        report2 = generate_report(
+            run_results_no_pipeline, {}, {"1": {"category": "A", "difficulty": "easy"}}
+        )
+        la = report2.get("latency_analysis", {})
+        assert la.get("avg_by_pipeline") is None or la.get("avg_by_pipeline") == {}
+        # Markdown should not include Pipeline Latency section
+        md = report_to_markdown(report2)
+        assert "### Pipeline Latency" not in md
