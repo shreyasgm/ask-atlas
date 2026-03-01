@@ -258,3 +258,4 @@ src/tests/fixtures/seed.sql
 # Frontend
 node_modules/
 frontend/.firebase/
+experiments/
