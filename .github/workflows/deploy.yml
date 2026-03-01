@@ -39,13 +39,13 @@ jobs:
             --image=us-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/ask-atlas/backend:${{ steps.tag.outputs.TAG }} \
             --region=${{ secrets.GCP_REGION }} \
             --port=8000 \
-            --memory=1Gi \
+            --memory=2Gi \
             --cpu=2 \
             --cpu-boost \
             --timeout=900 \
-            --concurrency=10 \
-            --min-instances=0 \
-            --max-instances=5 \
+            --concurrency=80 \
+            --min-instances=1 \
+            --max-instances=10 \
             --execution-environment=gen2 \
             --no-use-http2 \
             --no-session-affinity \
