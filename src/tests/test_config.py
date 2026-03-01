@@ -1,7 +1,8 @@
-"""Unit tests for application configuration.
+"""Tests for application configuration.
 
 Validates that Settings loads from env and has sensible defaults.
-No database or external service required.
+Unit tests need no database or external service.
+Integration tests verify that API keys are set for the configured providers.
 """
 
 import os
@@ -300,3 +301,39 @@ class TestGetPromptModel:
             for key in settings.prompt_model_assignments:
                 result = get_prompt_model(key)
                 assert result == "mock-llm"
+
+
+# ---------------------------------------------------------------------------
+# Integration tests — require real API keys
+# ---------------------------------------------------------------------------
+
+_PROVIDER_TO_KEY_FIELD = {
+    "openai": "openai_api_key",
+    "anthropic": "anthropic_api_key",
+    "google-genai": "google_api_key",
+}
+
+
+@pytest.mark.integration
+class TestApiKeysForConfiguredProviders:
+    """Verify that API keys are set for every provider referenced in model_config."""
+
+    def test_frontier_provider_key_is_set(self):
+        """API key for the frontier model's provider must be present."""
+        settings = get_settings()
+        field = _PROVIDER_TO_KEY_FIELD[settings.frontier_model_provider]
+        value = getattr(settings, field)
+        assert value, (
+            f"Frontier provider {settings.frontier_model_provider!r} requires "
+            f"{field} to be set"
+        )
+
+    def test_lightweight_provider_key_is_set(self):
+        """API key for the lightweight model's provider must be present."""
+        settings = get_settings()
+        field = _PROVIDER_TO_KEY_FIELD[settings.lightweight_model_provider]
+        value = getattr(settings, field)
+        assert value, (
+            f"Lightweight provider {settings.lightweight_model_provider!r} requires "
+            f"{field} to be set"
+        )
