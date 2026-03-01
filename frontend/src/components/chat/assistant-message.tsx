@@ -12,6 +12,9 @@ import GraphqlSummaryBlock from './graphql-summary-block';
 import QueryResultTable from './query-result-table';
 import SqlBlock from './sql-block';
 
+const REHYPE_PLUGINS = [rehypeKatex];
+const REMARK_PLUGINS = [remarkGfm, remarkMath];
+
 const MARKDOWN_COMPONENTS: Components = {
   h3: (props) => <h3 className="text-sm font-bold" {...props} />,
   li: (props) => <li className="ml-4 text-sm" {...props} />,
@@ -80,8 +83,8 @@ export default memo(function AssistantMessage({ message, pipelineStarted }: Assi
             <div className="flex flex-col gap-1">
               <Markdown
                 components={MARKDOWN_COMPONENTS}
-                rehypePlugins={[rehypeKatex]}
-                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={REHYPE_PLUGINS}
+                remarkPlugins={REMARK_PLUGINS}
               >
                 {message.content}
               </Markdown>
@@ -97,7 +100,7 @@ export default memo(function AssistantMessage({ message, pipelineStarted }: Assi
               <div className="mt-2 flex flex-col gap-1">
                 <QueryResultTable columns={qr.columns} rows={qr.rows} />
                 <p className="font-mono text-xs text-muted-foreground">
-                  {qr.rowCount} rows in {qr.executionTimeMs}ms
+                  {qr.rowCount.toLocaleString()} rows in {qr.executionTimeMs.toLocaleString()}ms
                 </p>
               </div>
             )}

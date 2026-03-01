@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import type {
   ChatMessage,
   ClassificationSchema,
@@ -12,6 +13,7 @@ import ChatInput from '@/components/chat/chat-input';
 import ChatTopBar from '@/components/chat/chat-top-bar';
 import MessageList from '@/components/chat/message-list';
 import TradeTogglesBar from '@/components/chat/trade-toggles-bar';
+import ErrorBoundary from '@/components/ui/error-boundary';
 
 interface CenterPanelProps {
   entitiesData: EntitiesData | null;
@@ -30,7 +32,7 @@ interface CenterPanelProps {
   queryStats: QueryAggregateStats | null;
 }
 
-export default function CenterPanel({
+export default memo(function CenterPanel({
   entitiesData,
   error,
   isRestoredThread,
@@ -46,8 +48,10 @@ export default function CenterPanel({
   pipelineSteps,
   queryStats,
 }: CenterPanelProps) {
-  const firstUserMessage = messages.find((m) => m.role === 'user');
-  const chatTitle = firstUserMessage ? firstUserMessage.content.slice(0, 60) : '';
+  const chatTitle = useMemo(() => {
+    const firstUserMessage = messages.find((m) => m.role === 'user');
+    return firstUserMessage ? firstUserMessage.content.slice(0, 60) : '';
+  }, [messages]);
 
   return (
     <div className="flex min-w-0 flex-1 flex-col">
@@ -58,15 +62,17 @@ export default function CenterPanel({
         onSystemModeChange={onSystemModeChange}
         overrides={overrides}
       />
-      <MessageList
-        entitiesData={entitiesData}
-        error={error}
-        isRestoredThread={isRestoredThread}
-        isStreaming={isStreaming}
-        messages={messages}
-        pipelineSteps={pipelineSteps}
-        queryStats={queryStats}
-      />
+      <ErrorBoundary>
+        <MessageList
+          entitiesData={entitiesData}
+          error={error}
+          isRestoredThread={isRestoredThread}
+          isStreaming={isStreaming}
+          messages={messages}
+          pipelineSteps={pipelineSteps}
+          queryStats={queryStats}
+        />
+      </ErrorBoundary>
       <div className="border-t border-border">
         <div className="mx-auto w-full max-w-2xl px-4 py-4">
           <ChatInput disabled={isStreaming} onSend={onSend} />
@@ -74,4 +80,4 @@ export default function CenterPanel({
       </div>
     </div>
   );
-}
+});

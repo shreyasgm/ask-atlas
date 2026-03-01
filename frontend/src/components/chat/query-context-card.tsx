@@ -1,5 +1,5 @@
 import { BookOpen, ChevronDown, ChevronUp, Database } from 'lucide-react';
-import { useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import type { EntitiesData, QueryAggregateStats } from '@/types/chat';
 import { cn } from '@/lib/utils';
 import { getEntityBadgeClass } from '@/utils/entity-colors';
@@ -9,26 +9,31 @@ interface QueryContextCardProps {
   queryStats: QueryAggregateStats | null;
 }
 
-export default function QueryContextCard({ entitiesData, queryStats }: QueryContextCardProps) {
+export default memo(function QueryContextCard({ entitiesData, queryStats }: QueryContextCardProps) {
   const [expanded, setExpanded] = useState(false);
+
+  const schema = entitiesData?.schemas[0] ?? '';
+  const allCodes = useMemo(
+    () => (entitiesData ? entitiesData.products.flatMap((p) => p.codes) : []),
+    [entitiesData],
+  );
+  const countries = entitiesData?.countries ?? [];
+  const hasGraphql = entitiesData?.graphqlClassification !== null;
+  const hasDocs = (entitiesData?.docsConsulted.length ?? 0) > 0;
+  const validGraphqlEntities = useMemo(() => {
+    const entities = entitiesData?.graphqlEntities;
+    return entities
+      ? Object.entries(entities).filter(
+          ([, val]) => val != null && val !== '' && String(val).length <= 60,
+        )
+      : [];
+  }, [entitiesData]);
 
   if (!entitiesData) {
     return null;
   }
 
-  const schema = entitiesData.schemas[0] ?? '';
-  const allCodes = entitiesData.products.flatMap((p) => p.codes);
-  const countries = entitiesData.countries ?? [];
-  const hasGraphql = entitiesData.graphqlClassification !== null;
-  const hasDocs = entitiesData.docsConsulted.length > 0;
-
   if (expanded) {
-    const validGraphqlEntities = entitiesData.graphqlEntities
-      ? Object.entries(entitiesData.graphqlEntities).filter(
-          ([, val]) => val != null && val !== '' && String(val).length <= 60,
-        )
-      : [];
-
     return (
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-border dark:bg-card">
         <div className="flex">
@@ -37,7 +42,7 @@ export default function QueryContextCard({ entitiesData, queryStats }: QueryCont
             {/* Header */}
             <button
               aria-label="Collapse query context"
-              className="flex w-full items-center justify-between"
+              className="flex w-full items-center justify-between rounded focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               onClick={() => setExpanded(false)}
               type="button"
             >
@@ -50,7 +55,7 @@ export default function QueryContextCard({ entitiesData, queryStats }: QueryCont
 
             {/* Country row */}
             {countries.length > 0 && (
-              <div className="flex items-center gap-1.5 text-xs">
+              <div className="flex flex-wrap items-center gap-1.5 text-xs">
                 <span className="font-medium text-slate-600 dark:text-slate-400">Countries:</span>
                 {countries.map((c) => (
                   <span
@@ -195,18 +200,18 @@ export default function QueryContextCard({ entitiesData, queryStats }: QueryCont
               <p className="font-mono text-[10px] text-slate-400">
                 {queryStats.totalQueries > 0 && (
                   <>
-                    {queryStats.totalQueries} SQL{' '}
+                    {queryStats.totalQueries.toLocaleString()} SQL{' '}
                     {queryStats.totalQueries === 1 ? 'query' : 'queries'} &middot;{' '}
-                    {queryStats.totalRows} rows &middot;{' '}
+                    {queryStats.totalRows.toLocaleString()} rows &middot;{' '}
                     {(queryStats.totalExecutionTimeMs / 1000).toFixed(1)}s
                   </>
                 )}
                 {queryStats.totalQueries > 0 && queryStats.totalGraphqlTimeMs > 0 && '  |  '}
                 {queryStats.totalGraphqlTimeMs > 0 && (
                   <>
-                    {queryStats.totalGraphqlQueries} GraphQL{' '}
+                    {queryStats.totalGraphqlQueries.toLocaleString()} GraphQL{' '}
                     {queryStats.totalGraphqlQueries === 1 ? 'query' : 'queries'} &middot;{' '}
-                    {queryStats.totalGraphqlTimeMs}ms
+                    {queryStats.totalGraphqlTimeMs.toLocaleString()}ms
                   </>
                 )}
                 {(queryStats.totalQueries > 0 || queryStats.totalGraphqlTimeMs > 0) && '  |  '}
@@ -223,14 +228,14 @@ export default function QueryContextCard({ entitiesData, queryStats }: QueryCont
   return (
     <button
       aria-label="Expand query context"
-      className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 dark:border-border dark:bg-card"
+      className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 transition-colors hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none dark:border-border dark:bg-card dark:hover:bg-card/80"
       onClick={() => setExpanded(true)}
       type="button"
     >
       <div className="flex flex-col gap-1.5">
         {/* Country row */}
         {countries.length > 0 && (
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <Database className="h-3.5 w-3.5 text-blue-500" />
             <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
               Countries:
@@ -247,7 +252,7 @@ export default function QueryContextCard({ entitiesData, queryStats }: QueryCont
         )}
         {/* Products row */}
         {allCodes.length > 0 && (
-          <div className={`flex items-center gap-1.5 ${countries.length > 0 ? 'pl-5' : ''}`}>
+          <div className={cn('flex items-center gap-1.5', countries.length > 0 && 'pl-5')}>
             {countries.length === 0 && <Database className="h-3.5 w-3.5 text-blue-500" />}
             <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
               Products ({schema}):
@@ -269,7 +274,10 @@ export default function QueryContextCard({ entitiesData, queryStats }: QueryCont
         {/* GraphQL + Docs badges row */}
         {(hasGraphql || hasDocs) && (
           <div
-            className={`flex items-center gap-2 ${countries.length > 0 || allCodes.length > 0 ? 'pl-5' : ''}`}
+            className={cn(
+              'flex items-center gap-2',
+              (countries.length > 0 || allCodes.length > 0) && 'pl-5',
+            )}
           >
             {countries.length === 0 && allCodes.length === 0 && (
               <Database className="h-3.5 w-3.5 text-blue-500" />
@@ -303,4 +311,4 @@ export default function QueryContextCard({ entitiesData, queryStats }: QueryCont
       <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
     </button>
   );
-}
+});

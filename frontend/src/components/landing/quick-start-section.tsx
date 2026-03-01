@@ -1,9 +1,21 @@
+import type { KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { Card, CardContent } from '@/components/ui/card';
 import { QUICK_START_TILES } from '@/constants/landing-data';
 
 export default function QuickStartSection() {
   const navigate = useNavigate();
+
+  function handleCardActivate(query: string) {
+    navigate('/chat?' + new URLSearchParams({ q: query }).toString());
+  }
+
+  function handleKeyDown(e: KeyboardEvent, query: string) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleCardActivate(query);
+    }
+  }
 
   return (
     <section className="flex w-full flex-col items-center gap-6 px-5 py-10 sm:px-8 lg:px-32">
@@ -14,9 +26,10 @@ export default function QuickStartSection() {
       <div className="grid w-full max-w-[1200px] grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         {QUICK_START_TILES.map((tile) => (
           <Card
-            className="cursor-pointer transition-shadow hover:shadow-md"
+            className="cursor-pointer transition-shadow hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring"
             key={tile.title}
-            onClick={() => navigate('/chat?' + new URLSearchParams({ q: tile.query }).toString())}
+            onClick={() => handleCardActivate(tile.query)}
+            onKeyDown={(e) => handleKeyDown(e, tile.query)}
             role="button"
             tabIndex={0}
           >
