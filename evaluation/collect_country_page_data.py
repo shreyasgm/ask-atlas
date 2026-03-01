@@ -25,6 +25,11 @@ ENDPOINT = "https://atlas.hks.harvard.edu/api/countries/graphql"
 BASE_DIR = Path(__file__).resolve().parent
 RESULTS_DIR = BASE_DIR / "results"
 
+RATE_DELAY = 0.5  # seconds between requests
+
+# Semaphore — set inside main() for Python 3.12 compatibility
+SEM: asyncio.Semaphore
+
 COUNTRIES: dict[str, dict] = {
     "Kenya": {"id": "location-404", "iso": 404},
     "Spain": {"id": "location-724", "iso": 724},
@@ -182,12 +187,15 @@ def atlas_url(iso: int, subpage: str = "") -> str:
 
 
 async def gql(client: httpx.AsyncClient, query: str, variables: dict) -> dict:
-    """Execute a GraphQL query and return the data dict."""
-    resp = await client.post(
-        ENDPOINT,
-        json={"query": query, "variables": variables},
-        timeout=30,
-    )
+    """Execute a GraphQL query with rate limiting."""
+    async with SEM:
+        resp = await client.post(
+            ENDPOINT,
+            json={"query": query, "variables": variables},
+            headers={"User-Agent": "ask-atlas-gt"},
+            timeout=30,
+        )
+        await asyncio.sleep(RATE_DELAY)
     resp.raise_for_status()
     body = resp.json()
     if "errors" in body:
@@ -1041,6 +1049,9 @@ ASSIGNMENTS: dict[str, list[str]] = {
 
 
 async def main() -> None:
+    global SEM
+    SEM = asyncio.Semaphore(2)
+
     print("Fetching data from Atlas GraphQL API...")
 
     async with httpx.AsyncClient() as client:
