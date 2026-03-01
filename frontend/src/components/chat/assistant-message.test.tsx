@@ -90,6 +90,26 @@ describe('AssistantMessage', () => {
     expect(katexElements.length).toBeGreaterThan(0);
   });
 
+  it('shows loading indicator when streaming with no content and pipeline not started', () => {
+    const msg = makeMessage({ isStreaming: true });
+    render(<AssistantMessage message={msg} />);
+    expect(screen.getByText('Processing your question...')).toBeInTheDocument();
+    expect(screen.getByText('Ask-Atlas Assistant')).toBeInTheDocument();
+  });
+
+  it('hides loading indicator when pipeline has started', () => {
+    const msg = makeMessage({ isStreaming: true });
+    render(<AssistantMessage message={msg} pipelineStarted />);
+    expect(screen.queryByText('Processing your question...')).not.toBeInTheDocument();
+  });
+
+  it('hides loading indicator once content arrives', () => {
+    const msg = makeMessage({ content: 'Here are the results', isStreaming: true });
+    render(<AssistantMessage message={msg} />);
+    expect(screen.queryByText('Processing your question...')).not.toBeInTheDocument();
+    expect(screen.getByText('Here are the results')).toBeInTheDocument();
+  });
+
   it('hides query result table until SQL collapsible is expanded', async () => {
     const user = userEvent.setup();
     const msg = makeMessage({

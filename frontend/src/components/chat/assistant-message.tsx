@@ -1,6 +1,6 @@
 import type { Components } from 'react-markdown';
-import { Bot } from 'lucide-react';
-import { memo } from 'react';
+import { Bot, Loader } from 'lucide-react';
+import { memo, useEffect, useState } from 'react';
 import Markdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
@@ -35,9 +35,24 @@ const MARKDOWN_COMPONENTS: Components = {
 
 interface AssistantMessageProps {
   message: ChatMessage;
+  pipelineStarted?: boolean;
 }
 
-export default memo(function AssistantMessage({ message }: AssistantMessageProps) {
+export default memo(function AssistantMessage({ message, pipelineStarted }: AssistantMessageProps) {
+  const isLoading = message.isStreaming && !message.content && !pipelineStarted;
+  const [showColdStartHint, setShowColdStartHint] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading) {
+      return;
+    }
+    const timer = setTimeout(() => setShowColdStartHint(true), 4000);
+    return () => {
+      clearTimeout(timer);
+      setShowColdStartHint(false);
+    };
+  }, [isLoading]);
+
   const hasDataSources =
     message.queryResults.length > 0 ||
     message.atlasLinks.length > 0 ||
@@ -46,21 +61,32 @@ export default memo(function AssistantMessage({ message }: AssistantMessageProps
 
   return (
     <div className="flex flex-col gap-2">
-      {message.content && (
+      {(message.content || isLoading) && (
         <>
           <div className="flex items-center gap-2">
             <Bot className="h-4 w-4 text-blue-500" />
             <span className="text-xs font-semibold text-blue-500">Ask-Atlas Assistant</span>
           </div>
-          <div className="flex flex-col gap-1">
-            <Markdown
-              components={MARKDOWN_COMPONENTS}
-              rehypePlugins={[rehypeKatex]}
-              remarkPlugins={[remarkGfm, remarkMath]}
-            >
-              {message.content}
-            </Markdown>
-          </div>
+          {isLoading ? (
+            <div className="flex items-center gap-2">
+              <Loader className="h-3.5 w-3.5 animate-spin text-blue-500" />
+              <span className="text-sm text-muted-foreground">
+                {showColdStartHint
+                  ? 'Starting up the backend — this can take up to 15 seconds on first use'
+                  : 'Processing your question...'}
+              </span>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1">
+              <Markdown
+                components={MARKDOWN_COMPONENTS}
+                rehypePlugins={[rehypeKatex]}
+                remarkPlugins={[remarkGfm, remarkMath]}
+              >
+                {message.content}
+              </Markdown>
+            </div>
+          )}
         </>
       )}
 
