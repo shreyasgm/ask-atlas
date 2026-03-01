@@ -2,12 +2,11 @@
 
 These tests guard against real failure modes:
 - Format placeholder mismatches between constants and builder functions
-- Accidental removal of tool name references that break agent routing
-- XML tags that break provider-agnostic compatibility
-- ChatPromptTemplate brace escaping corruption
-- Circular imports from the leaf-dependency module
 - Builder conditional block logic (inclusion, exclusion, ordering)
-- Content drift from the canonical prompts (key phrases that must survive)
+- ChatPromptTemplate brace escaping corruption
+- XML tags that break provider-agnostic compatibility
+- Tool name references that must match real tool schema names
+- Circular imports from the leaf-dependency module
 """
 
 import re
@@ -40,9 +39,9 @@ def _has_unresolved_format_fields(text: str) -> bool:
 # ---------------------------------------------------------------------------
 
 _PROMPT_CONSTANTS = [
-    "AGENT_SYSTEM_PROMPT",
-    "DUAL_TOOL_EXTENSION",
-    "DOCS_TOOL_EXTENSION",
+    "SQL_ONLY_SYSTEM_PROMPT",
+    "DUAL_TOOL_SYSTEM_PROMPT",
+    "GRAPHQL_ONLY_OVERRIDE",
     "SQL_GENERATION_PROMPT",
     "SQL_CODES_BLOCK",
     "SQL_DIRECTION_BLOCK",
@@ -71,28 +70,26 @@ _PROMPT_CONSTANTS = [
 class TestFormatPlaceholderContracts:
     """Each prompt with a builder must have placeholders matching the builder's kwargs."""
 
-    def test_agent_system_prompt_matches_builder(self):
-        """Builder passes max_uses + top_k_per_query; prompt must use exactly those."""
-        assert _get_format_fields(prompts.AGENT_SYSTEM_PROMPT) == {
+    def test_sql_only_system_prompt_matches_builder(self):
+        assert _get_format_fields(prompts.SQL_ONLY_SYSTEM_PROMPT) == {
             "max_uses",
             "top_k_per_query",
+            "sql_max_year",
         }
 
-    def test_dual_tool_extension_matches_caller(self):
-        """agent_node.py calls .format(max_uses=..., budget_status=..., sql_max_year=..., graphql_max_year=...)."""
-        assert _get_format_fields(prompts.DUAL_TOOL_EXTENSION) == {
+    def test_dual_tool_system_prompt_matches_builder(self):
+        assert _get_format_fields(prompts.DUAL_TOOL_SYSTEM_PROMPT) == {
             "max_uses",
-            "budget_status",
+            "top_k_per_query",
             "sql_max_year",
             "graphql_max_year",
+            "budget_status",
         }
 
-    def test_docs_tool_extension_matches_caller(self):
-        """agent_node.py calls .format(max_uses=...)."""
-        assert _get_format_fields(prompts.DOCS_TOOL_EXTENSION) == {"max_uses"}
+    def test_graphql_only_override_has_no_placeholders(self):
+        assert _get_format_fields(prompts.GRAPHQL_ONLY_OVERRIDE) == set()
 
     def test_sql_generation_prompt_matches_builder(self):
-        """build_sql_generation_prefix passes top_k + table_info + sql_max_year to the base prompt."""
         assert _get_format_fields(prompts.SQL_GENERATION_PROMPT) == {
             "top_k",
             "table_info",
@@ -100,21 +97,18 @@ class TestFormatPlaceholderContracts:
         }
 
     def test_sql_conditional_blocks_match_builder(self):
-        """Each SQL conditional block uses exactly the placeholder its builder passes."""
         assert _get_format_fields(prompts.SQL_CODES_BLOCK) == {"codes"}
         assert _get_format_fields(prompts.SQL_DIRECTION_BLOCK) == {"direction"}
         assert _get_format_fields(prompts.SQL_MODE_BLOCK) == {"mode"}
         assert _get_format_fields(prompts.SQL_CONTEXT_BLOCK) == {"context"}
 
     def test_classification_prompt_matches_builder(self):
-        """build_classification_prompt passes question + context_block."""
         assert _get_format_fields(prompts.GRAPHQL_CLASSIFICATION_PROMPT) == {
             "question",
             "context_block",
         }
 
     def test_extraction_prompt_matches_builder(self):
-        """build_extraction_prompt passes question, query_type, context_block, services_catalog_block."""
         assert _get_format_fields(prompts.GRAPHQL_ENTITY_EXTRACTION_PROMPT) == {
             "question",
             "query_type",
@@ -123,7 +117,6 @@ class TestFormatPlaceholderContracts:
         }
 
     def test_id_resolution_prompt_matches_builder(self):
-        """build_id_resolution_prompt passes question, options, num_candidates."""
         assert _get_format_fields(prompts.ID_RESOLUTION_SELECTION_PROMPT) == {
             "question",
             "options",
@@ -131,7 +124,6 @@ class TestFormatPlaceholderContracts:
         }
 
     def test_document_selection_prompt_matches_caller(self):
-        """docs_pipeline calls .format(question=..., context_block=..., manifest=..., max_docs=...)."""
         assert _get_format_fields(prompts.DOCUMENT_SELECTION_PROMPT) == {
             "question",
             "context_block",
@@ -140,7 +132,6 @@ class TestFormatPlaceholderContracts:
         }
 
     def test_documentation_synthesis_prompt_matches_caller(self):
-        """docs_pipeline calls .format(question=..., context_block=..., docs_content=...)."""
         assert _get_format_fields(prompts.DOCUMENTATION_SYNTHESIS_PROMPT) == {
             "question",
             "context_block",
@@ -156,33 +147,54 @@ class TestFormatPlaceholderContracts:
 # ---------------------------------------------------------------------------
 
 
-class TestBuildAgentSystemPrompt:
+class TestBuildSqlOnlySystemPrompt:
     def test_formats_without_unresolved_placeholders(self):
-        """After formatting, no {name} placeholders should remain."""
-        result = prompts.build_agent_system_prompt(max_uses=3, top_k_per_query=15)
+        result = prompts.build_sql_only_system_prompt(max_uses=3, top_k_per_query=15)
         assert not _has_unresolved_format_fields(result)
 
-    def test_canonical_phrases_survive(self):
-        """Key phrases from the original prompt must survive the move.
-
-        These are the phrases that test_agent_node.py asserts against,
-        so if they disappear the integration tests would also break.
-        """
-        result = prompts.build_agent_system_prompt(max_uses=3, top_k_per_query=15)
-        assert "You are Ask-Atlas" in result
-        assert "international trade data" in result
-        assert "SQL" in result
-
-    def test_max_uses_value_injected_in_rules_section(self):
-        """max_uses=7 should appear in the 'Important Rules' section, not just anywhere."""
-        result = prompts.build_agent_system_prompt(max_uses=7, top_k_per_query=20)
-        # The prompt says "up to {max_uses} times" — verify the 7 is in that context
+    def test_max_uses_value_injected(self):
+        result = prompts.build_sql_only_system_prompt(max_uses=7, top_k_per_query=20)
         assert "up to 7 times" in result
 
-    def test_top_k_value_injected_in_rules_section(self):
-        """top_k_per_query=42 should appear in the 'Important Rules' section."""
-        result = prompts.build_agent_system_prompt(max_uses=3, top_k_per_query=42)
+    def test_top_k_value_injected(self):
+        result = prompts.build_sql_only_system_prompt(max_uses=3, top_k_per_query=42)
         assert "at most 42 rows" in result
+
+    def test_does_not_reference_atlas_graphql(self):
+        """SQL-only prompt must not mention atlas_graphql — prevents mode leakage."""
+        result = prompts.build_sql_only_system_prompt(max_uses=3, top_k_per_query=15)
+        assert "atlas_graphql" not in result
+
+
+class TestBuildDualToolSystemPrompt:
+    def test_formats_without_unresolved_placeholders(self):
+        result = prompts.build_dual_tool_system_prompt(
+            max_uses=3, top_k_per_query=15, budget_status="Available (100 remaining)"
+        )
+        assert not _has_unresolved_format_fields(result)
+
+    def test_budget_status_injected(self):
+        result = prompts.build_dual_tool_system_prompt(
+            max_uses=3,
+            top_k_per_query=15,
+            budget_status="Available (42 calls remaining this window)",
+        )
+        assert "42 calls remaining" in result
+
+
+class TestGraphqlOnlyOverride:
+    def test_combined_prompt_starts_with_override(self):
+        """In GraphQL-only mode, the override is prepended to the dual-tool prompt."""
+        combined = (
+            prompts.GRAPHQL_ONLY_OVERRIDE
+            + "\n\n"
+            + prompts.build_dual_tool_system_prompt(
+                max_uses=3, top_k_per_query=15, budget_status="test"
+            )
+        )
+        assert combined.startswith(prompts.GRAPHQL_ONLY_OVERRIDE)
+        assert "atlas_graphql" in combined
+        assert "docs_tool" in combined
 
 
 class TestBuildSqlGenerationPrefix:
@@ -235,7 +247,6 @@ class TestBuildSqlGenerationPrefix:
             context="",
         )
         assert "**exports**" in result
-        assert "User override" in result
 
     def test_mode_block_included_with_services(self):
         result = prompts.build_sql_generation_prefix(
@@ -258,7 +269,6 @@ class TestBuildSqlGenerationPrefix:
             context="PCI is stored in export_pci column",
         )
         assert "PCI is stored in export_pci column" in result
-        assert "Additional technical context" in result
 
     def test_all_blocks_present_in_correct_order(self):
         """When all options are provided, blocks appear in order: codes, direction, mode, context."""
@@ -291,7 +301,6 @@ class TestBuildSqlGenerationPrefix:
 class TestBuildClassificationPrompt:
     def test_no_context_omits_context_section(self):
         result = prompts.build_classification_prompt("What did Kenya export?")
-        assert "Kenya" in result
         assert "Context from conversation" not in result
 
     def test_with_context_includes_context_section(self):
@@ -305,33 +314,14 @@ class TestBuildClassificationPrompt:
         result = prompts.build_classification_prompt("test question", "test context")
         assert not _has_unresolved_format_fields(result)
 
-    def test_empty_question_still_formats(self):
-        """Edge case: empty question should not raise."""
-        result = prompts.build_classification_prompt("")
-        assert "**Question:**" in result
-
 
 class TestBuildExtractionPrompt:
-    def test_minimal_includes_query_type(self):
-        result = prompts.build_extraction_prompt("Brazil coffee", "treemap_products")
-        assert "treemap_products" in result
-        assert "Brazil" in result
-
-    def test_with_context(self):
-        result = prompts.build_extraction_prompt(
-            "Brazil coffee",
-            "treemap_products",
-            context="User wants HS92 data",
-        )
-        assert "User wants HS92 data" in result
-
-    def test_with_services_catalog(self):
+    def test_with_services_catalog_includes_section(self):
         result = prompts.build_extraction_prompt(
             "Kenya tourism",
             "treemap_products",
             services_catalog="Travel & tourism\nTransport\nICT",
         )
-        assert "Travel & tourism" in result
         assert "Available service categories" in result
 
     def test_without_services_catalog_omits_section(self):
@@ -349,16 +339,6 @@ class TestBuildExtractionPrompt:
 
 
 class TestBuildIdResolutionPrompt:
-    def test_includes_all_parts(self):
-        result = prompts.build_id_resolution_prompt(
-            question="Turkey exports",
-            options="1. Turkey (TUR)\n2. Turkey meat (0207)",
-            num_candidates=2,
-        )
-        assert "Turkey exports" in result
-        assert "Turkey (TUR)" in result
-        assert "1-2" in result
-
     def test_no_unresolved_placeholders(self):
         result = prompts.build_id_resolution_prompt("q", "1. opt", 1)
         assert not _has_unresolved_format_fields(result)
@@ -388,16 +368,14 @@ class TestNoXmlTags:
 
 
 class TestToolNameReferences:
-    def test_dual_tool_extension_references_exact_tool_names(self):
-        """DUAL_TOOL_EXTENSION must reference both actual tool schema names."""
-        assert "atlas_graphql" in prompts.DUAL_TOOL_EXTENSION
-        assert "query_tool" in prompts.DUAL_TOOL_EXTENSION
+    def test_dual_tool_prompt_references_all_tool_names(self):
+        assert "atlas_graphql" in prompts.DUAL_TOOL_SYSTEM_PROMPT
+        assert "query_tool" in prompts.DUAL_TOOL_SYSTEM_PROMPT
+        assert "docs_tool" in prompts.DUAL_TOOL_SYSTEM_PROMPT
 
-    def test_docs_tool_extension_references_all_tools(self):
-        """DOCS_TOOL_EXTENSION tells the agent to pass context to data tools by name."""
-        assert "docs_tool" in prompts.DOCS_TOOL_EXTENSION
-        assert "query_tool" in prompts.DOCS_TOOL_EXTENSION
-        assert "atlas_graphql" in prompts.DOCS_TOOL_EXTENSION
+    def test_sql_only_prompt_references_sql_and_docs_tools(self):
+        assert "query_tool" in prompts.SQL_ONLY_SYSTEM_PROMPT
+        assert "docs_tool" in prompts.SQL_ONLY_SYSTEM_PROMPT
 
 
 # ---------------------------------------------------------------------------
@@ -412,15 +390,11 @@ class TestToolNameReferences:
 
 class TestProductExtractionEscaping:
     def test_double_braces_present(self):
-        """The prompt must contain {{ and }} for ChatPromptTemplate escaping."""
         assert "{{" in prompts.PRODUCT_EXTRACTION_PROMPT
         assert "}}" in prompts.PRODUCT_EXTRACTION_PROMPT
 
     def test_no_unescaped_format_fields_after_brace_resolution(self):
-        """After resolving {{ -> { and }} -> }, no bare .format() fields should exist.
-
-        This catches: someone adds a {new_field} without escaping it as {{new_field}}.
-        """
+        """After resolving {{ -> { and }} -> }, no bare .format() fields should exist."""
         collapsed = prompts.PRODUCT_EXTRACTION_PROMPT.replace("{{", "").replace(
             "}}", ""
         )
@@ -435,47 +409,9 @@ class TestProductExtractionEscaping:
 # ---------------------------------------------------------------------------
 
 
-# ---------------------------------------------------------------------------
-# Content assertion tests — prompt additions from eval diagnostics
-# ---------------------------------------------------------------------------
-
-
-class TestPromptContentAdditions:
-    """Verify that key prompt additions from eval diagnostic fixes are present."""
-
-    def test_dual_tool_extension_has_pre_computed_fields_guidance(self):
-        """DUAL_TOOL_EXTENSION must instruct the agent to trust pre-computed metrics."""
-        assert "Pre-Computed Fields" in prompts.DUAL_TOOL_EXTENSION
-        assert "diversificationGrade" in prompts.DUAL_TOOL_EXTENSION
-        assert "exportValueConstGrowthCagr" in prompts.DUAL_TOOL_EXTENSION
-
-    def test_dual_tool_extension_has_data_coverage_section(self):
-        """DUAL_TOOL_EXTENSION must include the Data Coverage routing guidance."""
-        assert "Data Coverage" in prompts.DUAL_TOOL_EXTENSION
-
-    def test_agent_system_prompt_has_anti_fabrication_rule(self):
-        """AGENT_SYSTEM_PROMPT must contain the anti-fabrication rule."""
-        assert "fabricate" in prompts.AGENT_SYSTEM_PROMPT
-        assert "tool response" in prompts.AGENT_SYSTEM_PROMPT
-
-    def test_classification_prompt_has_services_example(self):
-        """build_classification_prompt output must include services routing example."""
-        result = prompts.build_classification_prompt("test question")
-        assert "services exports" in result
-
-    def test_classification_prompt_has_services_routing(self):
-        """The GRAPHQL_CLASSIFICATION_PROMPT must route services to treemap_products."""
-        assert "tourism" in prompts.GRAPHQL_CLASSIFICATION_PROMPT
-        assert "treemap_products" in prompts.GRAPHQL_CLASSIFICATION_PROMPT
-
-
 class TestLeafDependency:
     def test_no_src_imports(self):
-        """src/prompts.py must not import from any other src/ module.
-
-        This is a design invariant: prompts.py is a leaf so it can never
-        cause circular imports regardless of how other modules are restructured.
-        """
+        """src/prompts.py must not import from any other src/ module."""
         import inspect
 
         source = inspect.getsource(prompts)

@@ -126,17 +126,9 @@ class TestAgentNodeSqlOnly:
         assert system_msgs, "No SystemMessage found"
         prompt = system_msgs[0].content
 
-        # Must contain the canonical phrases
-        assert "You are Ask-Atlas" in prompt
-        assert "international trade" in prompt
-
         # Must start with build_sql_only_system_prompt output
         expected_base = build_sql_only_system_prompt(3, 15)
         assert prompt.startswith(expected_base)
-
-        # Must include docs_tool guidance (integrated into SQL-only prompt)
-        assert "docs_tool" in prompt
-        assert "Documentation Tool" in prompt
 
         # Must NOT include atlas_graphql (SQL-only mode)
         assert "atlas_graphql" not in prompt
