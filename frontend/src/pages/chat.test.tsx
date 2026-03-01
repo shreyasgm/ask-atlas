@@ -260,6 +260,9 @@ describe('ChatPage - streaming', () => {
 
   it('shows pipeline stepper during streaming', () => {
     mockHookReturn.isStreaming = true;
+    mockHookReturn.messages = [
+      msg({ content: '', id: 'a1', isStreaming: true, role: 'assistant' }),
+    ];
     mockHookReturn.pipelineSteps = [
       {
         label: 'Generating SQL query',

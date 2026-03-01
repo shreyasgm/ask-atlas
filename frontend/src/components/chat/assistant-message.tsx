@@ -111,9 +111,11 @@ export default memo(function AssistantMessage({ message, pipelineStarted }: Assi
 
       {message.docsConsulted.length > 0 && <DocsBlock files={message.docsConsulted} />}
 
-      {message.atlasLinks.length > 0 && <AtlasLinks links={message.atlasLinks} />}
+      {!message.isStreaming && message.atlasLinks.length > 0 && (
+        <AtlasLinks links={message.atlasLinks} />
+      )}
 
-      {hasDataSources && (
+      {!message.isStreaming && hasDataSources && (
         <p className="font-mono text-xs text-muted-foreground">
           Source: Atlas of Economic Complexity
         </p>

@@ -43,6 +43,9 @@ export default function MessageList({
               {msg.pipelineSteps && msg.pipelineSteps.length > 0 && (
                 <PipelineStepper steps={msg.pipelineSteps} />
               )}
+              {isStreaming && index === lastAssistantIndex && pipelineSteps.length > 0 && (
+                <PipelineStepper steps={pipelineSteps} />
+              )}
               <AssistantMessage
                 message={msg}
                 pipelineStarted={
@@ -52,7 +55,6 @@ export default function MessageList({
             </div>
           );
         })}
-        {isStreaming && pipelineSteps.length > 0 && <PipelineStepper steps={pipelineSteps} />}
         {error && (
           <div
             className="flex items-start gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3"
