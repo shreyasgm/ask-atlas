@@ -85,7 +85,7 @@ graph TB
 A LangGraph StateGraph with an outer agent loop (the LLM decides which tool to call) wrapping three deterministic pipelines — SQL, GraphQL, and Docs:
 
 ```mermaid
-graph LR
+graph TD
     START([START]) --> agent
     agent -->|no tool_calls| END_NODE([END])
     agent -->|queries exceeded?| mqe[max_queries_exceeded]
