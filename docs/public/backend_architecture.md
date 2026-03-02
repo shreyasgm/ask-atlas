@@ -20,15 +20,14 @@
 9. [State Schema](#9-state-schema)
 10. [File Structure](#10-file-structure)
 11. [LLM Prompts Inventory](#11-llm-prompts-inventory)
-12. [Implementation Phases](#12-implementation-phases)
-13. [Evaluation Strategy](#13-evaluation-strategy)
-    - 13.1 [Tier 1 — Unit Tests](#131-tier-1--unit-tests-no-llm-no-db)
-    - 13.2 [Tier 2 — Component Evaluation](#132-tier-2--component-evaluation-real-llm-no-llm-as-judge)
-    - 13.3 [Tier 3 — Trajectory Evaluation](#133-tier-3--trajectory-evaluation-new)
-    - 13.4 [Tier 4 — End-to-End](#134-tier-4--end-to-end-existing-eval-system-extended)
-    - 13.5 [Manual E2E Verification](#135-manual-ee-verification)
-    - 13.6 [Evaluation Datasets & Collection](#136-evaluation-datasets--collection)
-14. [Documentation Tool (docs_tool)](#14-documentation-tool-docs_tool)
+12. [Evaluation Strategy](#12-evaluation-strategy)
+    - 12.1 [Tier 1 — Unit Tests](#121-tier-1--unit-tests-no-llm-no-db)
+    - 12.2 [Tier 2 — Component Evaluation](#122-tier-2--component-evaluation-real-llm-no-llm-as-judge)
+    - 12.3 [Tier 3 — Trajectory Evaluation](#123-tier-3--trajectory-evaluation-new)
+    - 12.4 [Tier 4 — End-to-End](#124-tier-4--end-to-end-existing-eval-system-extended)
+    - 12.5 [Manual E2E Verification](#125-manual-ee-verification)
+    - 12.6 [Evaluation Datasets & Collection](#126-evaluation-datasets--collection)
+13. [Documentation Tool (docs_tool)](#13-documentation-tool-docs_tool)
 
 ---
 
@@ -1042,13 +1041,13 @@ class AtlasAgentState(TypedDict):
     # === Docs pipeline state (reset by extract_docs_question at cycle start) ===
     docs_question: str                   # Question extracted from docs_tool tool_call args
     docs_context: str                    # Broader user query / reasoning for why docs are needed; "" if omitted
-    docs_selected_files: list[str]       # Document filenames selected by the LLM (Step A of Node 2, §14.3)
-    docs_result: str                     # Synthesized documentation response from the LLM (Step C of Node 2, §14.3)
+    docs_selected_files: list[str]       # Document filenames selected by the LLM (Step A of Node 2, §13.3)
+    docs_synthesis: str                  # Synthesized documentation response from the LLM (Step C of Node 2, §13.3)
 ```
 
 **Reset semantics:** Each pipeline's state fields are reset to defaults at the start of every tool call cycle (by the respective `extract_*` node) to prevent cross-turn leakage.
 
-**Context fields:** Default to `""` when the agent omits context. See §14.5 for per-node usage.
+**Context fields:** Default to `""` when the agent omits context. See §13.5 for per-node usage.
 
 **`dict` fields:** GraphQL state fields use `dict` (not Pydantic models) for reliable LangGraph state serialization. Pydantic models (§5) are used for structured LLM output parsing, then converted to `dict` before writing to state.
 
@@ -1065,7 +1064,7 @@ class AtlasAgentState(TypedDict):
 | `src/graphql_pipeline.py` | All GraphQL pipeline nodes: `extract_graphql_question`, `classify_query`, `extract_entities`, `resolve_ids` (includes inline Atlas link generation), `build_and_execute_graphql`, `format_graphql_results`. Two Pydantic schemas (`GraphQLQueryClassification`, `GraphQLEntityExtraction`) with description constants. Classification, extraction, and ID selection LLM chains. | ~700 |
 | `src/graphql_client.py` | `AtlasGraphQLClient` (httpx), `GraphQLBudgetTracker`, `CircuitBreaker`, GraphQL query template builders. | ~350 |
 | `src/atlas_links.py` | `generate_atlas_links()` helper function (called inline from `resolve_ids`, not a graph node). Deterministic URL builders, product classification registry, query-type→link dispatch, `AtlasLink` dataclass, frontier country list. | ~200 |
-| `src/docs_pipeline.py` | Docs pipeline nodes: `extract_docs_question`, `select_and_synthesize`, `format_docs_results`. `DocsToolInput` schema. Document manifest loader. Selection and synthesis LLM chains. | ~250 |
+| `src/docs_pipeline.py` | Docs pipeline nodes: `extract_docs_question`, `select_docs`, `synthesize_docs`, `format_docs_results`. `DocsToolInput` schema. Document manifest loader. Selection and synthesis LLM chains. | ~250 |
 
 ### Documentation Files
 
@@ -1083,8 +1082,8 @@ class AtlasAgentState(TypedDict):
 | `src/state.py` | Add GraphQL pipeline state fields, docs pipeline state fields, and context fields (`pipeline_context`, `graphql_context`, `docs_context`) for structured question/context separation. |
 | `src/config.py` | Add `AgentMode` enum, `agent_mode` setting (default: `"auto"`). Rename `query_model`/`metadata_model` to `frontier_model`/`lightweight_model`. Add `prompt_model_assignments` setting and `get_prompt_model()` helper for per-prompt model resolution. |
 | `model_config.py` | Add `AGENT_MODE = "auto"` default. Rename `QUERY_MODEL`/`METADATA_MODEL` to `FRONTIER_MODEL`/`LIGHTWEIGHT_MODEL`. Add `PROMPT_MODEL_ASSIGNMENTS` dict mapping each prompt key to `"frontier"` or `"lightweight"`. |
-| `src/sql_pipeline.py` | **Renamed from `src/generate_query.py`**. Remove graph construction (moved to `graph.py`). Remove agent node (moved to `agent_node.py`). Keep all SQL pipeline node functions + SQL prompts. Minor refactors for clean imports. |
-| `src/streaming.py` | **Renamed from `src/text_to_sql.py`**. Update `PIPELINE_NODES`/`NODE_LABELS` to include GraphQL + docs nodes (see complete map below). Extend `_extract_pipeline_state` for GraphQL and docs events. Extend turn summary builder for atlas_links. |
+| `src/sql_pipeline.py` | SQL pipeline node functions (formerly `src/generate_query.py`). Graph construction lives in `graph.py`, agent node in `agent_node.py`. |
+| `src/streaming.py` | `AtlasTextToSQL` orchestrator, `StreamData`, pipeline node registry (`NODE_LABELS`), `_extract_pipeline_state` for all three pipelines (SQL, GraphQL, docs), turn summary builder. (Formerly `src/text_to_sql.py`.) |
 | `src/api.py` | Track GraphQL events + atlas_links in SSE generator. Add `mode` parameter to `/api/chat/stream`. Persist atlas_links in turn summaries. |
 | `src/cache.py` | Add country lookup cache (24h TTL), product ID cache (24h TTL), services catalog cache (24h TTL, full list of service category names and IDs from `productHs92(servicesClass: unilateral)` query), GraphQL response cache (optional). **Lazy fetching with warm-on-first-request:** Catalogs are NOT fetched at server startup (avoids cold-start delays and startup failures if the API is down). Instead, the first `resolve_ids` call triggers the fetch and caches the result. Subsequent calls use the cache. Consider adding a background task in `create_async` to warm the cache shortly after the first request. |
 | `src/product_and_schema_lookup.py` | No changes to internals. Used by SQL pipeline as-is. |
@@ -1125,8 +1124,9 @@ NODE_LABELS = {
     "format_graphql_results": "Formatting results",
     # Docs pipeline
     "extract_docs_question": "Extracting question",
-    "select_and_synthesize": "Consulting documentation",
-    "format_docs_results": "Preparing documentation",
+    "select_docs": "Selecting documents",
+    "synthesize_docs": "Synthesizing response",
+    "format_docs_results": "Formatting results",
 }
 ```
 
@@ -1218,45 +1218,11 @@ Prompts 1, 3, 3b, 4, 8, and 9 are **new** and must be drafted + vetted. Prompts 
 
 ---
 
-## 12. Implementation Phases
-
-**Phase 1: Infrastructure** — `src/atlas_links.py` (deterministic URL builders, product classification registry, frontier list), `src/graphql_client.py` (budget tracker + HTTP client + query template builders), cache extensions. Pure functions and HTTP, no graph changes. Full unit tests. Also add `AgentMode` enum to `src/config.py`, rename model settings from `query_model`/`metadata_model` to `frontier_model`/`lightweight_model`, and add per-prompt model assignment configuration (`PROMPT_MODEL_ASSIGNMENTS` in `model_config.py`, `get_prompt_model()` helper in `src/config.py`).
-
-**Phase 2: GraphQL Pipeline Nodes** — `src/graphql_pipeline.py` with all nodes. `GraphQLQueryClassification` and `GraphQLEntityExtraction` Pydantic schemas with description constants, reasoning fields, and reject support. Dual-source ID resolution (verify standard codes + search + LLM select). Query template builders. Services catalog caching and conditional injection. Classification, extraction, and selection LLM prompts (drafted → user-vetted). SQL pipeline services enhancement (inject service category names into Prompt #6 when services detected). Unit tests with mocked LLM + HTTP.
-
-**Phase 3: Graph Rewrite** — `src/graph.py` (full graph construction with both pipelines, conditional routing, sequential GraphQL pipeline). `src/agent_node.py` (dynamic tool binding, mode resolution, prompt assembly). Rename `generate_query.py` → `sql_pipeline.py` (extract SQL nodes, remove graph construction). Test graph wiring — verify SQL-only mode produces identical behavior to current system, verify dual-tool routing, verify rejection path.
-
-**Phase 4: Streaming** — Rename `text_to_sql.py` → `streaming.py`. Update pipeline node registry for GraphQL nodes. Extend `_extract_pipeline_state` for GraphQL events. Extend turn summary builder for atlas_links. Update `src/api.py` for mode parameter and GraphQL event tracking.
-
-**Phase 5: Agent Prompt & Eval** — System prompt drafting (requires user vetting per CLAUDE.md). Evaluation questions for GraphQL routing accuracy, rejection accuracy, link generation correctness. Integration tests with real GraphQL APIs.
-
-### Documentation Tool Phases
-
-The docs tool depends on the graph rewrite (Phase 3) for multi-tool graph infrastructure. It can be implemented alongside or after the main redesign phases:
-
-| Backend Redesign Phase | Docs Tool Work |
-|----------------------|----------------|
-| Phase 1: Infrastructure | — |
-| Phase 2: GraphQL Pipeline Nodes | — |
-| Phase 3: Graph Rewrite | Docs Phase A can start (pipeline nodes, standalone) |
-| Phase 4: Streaming | Wire docs pipeline streaming |
-| Phase 5: Agent Prompt & Eval | Docs Phase B (graph integration) + Docs Phase C (eval) |
-
-**Docs Phase 0: Documentation Content** (issue #50, can proceed in parallel with all engineering) — Write the 4 initial markdown documentation files. Content creation, not engineering.
-
-**Docs Phase A: Docs Pipeline Nodes** — Create `src/docs_pipeline.py` with all 3 nodes. Create document manifest loader (scans directory, extracts descriptions). Draft selection and synthesis LLM prompts (require user vetting). Tests in `src/tests/test_docs_pipeline.py` with mocked LLM. Standalone — not wired into graph yet.
-
-**Docs Phase B: Graph Integration** — Add docs pipeline nodes to `build_atlas_graph()`. Extend `route_after_agent` for `docs_tool`. Add `_docs_tool_schema` to agent tool binding. Add context-passing guidance to agent system prompt (requires user vetting). Update streaming node labels. Add `docs_*` fields to state.
-
-**Docs Phase C: Evaluation** — Add methodology questions to eval set. Test docs_tool routing, context passing, query budget isolation, progressive disclosure, synthesis quality.
-
----
-
-## 13. Evaluation Strategy
+## 12. Evaluation Strategy
 
 **TDD throughout:** Write tests first, then implement. `PYTHONPATH=$(pwd) pytest -m "not db and not integration and not eval"` after every change.
 
-### 13.1 Tier 1 — Unit Tests (no LLM, no DB)
+### 12.1 Tier 1 — Unit Tests (no LLM, no DB)
 
 Mocked LLM + mocked HTTP. Run with `pytest -m "not db and not integration and not eval"`. Target: <30 seconds.
 
@@ -1276,7 +1242,8 @@ Mocked LLM + mocked HTTP. Run with `pytest -m "not db and not integration and no
 | Node | Test Strategy | Key Assertions |
 |------|--------------|----------------|
 | `extract_docs_question` | Direct invocation with mock state | Extracts question from `tool_calls[0]["args"]`; resets all `docs_*` state fields |
-| `select_and_synthesize` | Direct invocation with mocked LLM + test docs | Selection LLM picks correct docs; handles single and multiple doc selection; synthesis is comprehensive (includes related concepts); fallback to all docs when selection fails; fallback to raw docs when synthesis fails; error handling never raises |
+| `select_docs` | Direct invocation with mocked LLM + test docs | Selection LLM picks correct docs; handles single and multiple doc selection; fallback to all docs when selection fails; error handling never raises |
+| `synthesize_docs` | Direct invocation with mocked LLM + selected docs | Synthesis is comprehensive (includes related concepts); fallback to raw docs when synthesis fails; error handling never raises |
 | `format_docs_results` | Direct invocation with success/failure states | Correct ToolMessage content; does NOT increment `queries_executed`; handles parallel `tool_calls` gracefully |
 
 #### Infrastructure Unit Tests
@@ -1300,12 +1267,12 @@ Mocked LLM + mocked HTTP. Run with `pytest -m "not db and not integration and no
 | Circuit breaker tripped | `circuit_breaker.is_open() == True` | Same as budget exhaustion — agent sees only SQL tool |
 | GraphQL API error handling | Mock HTTP 500 in `build_and_execute_graphql` | Node writes error to state (doesn't raise); `format_graphql_results` returns error ToolMessage; links (generated in `resolve_ids`) are discarded |
 | Concurrent budget access | Multiple simultaneous graph invocations | Budget tracker correctly counts across concurrent requests; no race conditions with `asyncio.Lock`; consume-on-success prevents failed requests from burning budget |
-| Docs tool happy path | `FakeToolCallingModel` calls `docs_tool` | Full pipeline fires: extract → select_and_synthesize → format → agent gets ToolMessage with documentation |
+| Docs tool happy path | `FakeToolCallingModel` calls `docs_tool` | Full pipeline fires: extract → select_docs → synthesize_docs → format → agent gets ToolMessage with documentation |
 | Docs + SQL in sequence | `FakeToolCallingModel` calls `docs_tool` then `query_tool` | Docs pipeline returns documentation; SQL pipeline fires normally; `queries_executed` only incremented by SQL, not docs |
 | Docs tool does not affect query budget | Call `docs_tool` 5 times, then `query_tool` | `queries_executed == 1` (only SQL counted) |
 | Context passing | Agent calls `docs_tool` then `query_tool` with `context` field populated | Verify `pipeline_context` reaches `generate_sql`; verify `extract_products` uses only `pipeline_question` (not context) |
 
-### 13.2 Tier 2 — Component Evaluation (real LLM, no LLM-as-judge)
+### 12.2 Tier 2 — Component Evaluation (real LLM, no LLM-as-judge)
 
 Run with `pytest -m "integration"`. Real LLM calls against curated test sets with known correct answers. No judge needed — compare predicted vs. expected values.
 
@@ -1326,7 +1293,7 @@ Run with `pytest -m "integration"`. Real LLM calls against curated test sets wit
 - Compare result sets (not just text comparison) — captures semantic equivalence
 - This catches cases where different SQL produces the same correct result
 
-### 13.3 Tier 3 — Trajectory Evaluation (new)
+### 12.3 Tier 3 — Trajectory Evaluation (new)
 
 Verify the agent uses the RIGHT tool, not just gets the right answer. Uses LangChain's `agentevals` library.
 
@@ -1344,7 +1311,7 @@ Verify the agent uses the RIGHT tool, not just gets the right answer. Uses LangC
 - Questions that should be rejected by GraphQL and fall back to SQL: complex multi-table joins, ad-hoc aggregations, questions about specific HS codes at 6-digit level
 - Budget exhaustion scenario: verify auto mode degrades to SQL-only when budget <= 5
 
-### 13.4 Tier 4 — End-to-End (existing eval system, extended)
+### 12.4 Tier 4 — End-to-End (existing eval system, extended)
 
 Extends the existing 246-question eval (`evaluation/`) with new categories and dimensions.
 
@@ -1366,7 +1333,7 @@ Extends the existing 246-question eval (`evaluation/`) with new categories and d
 - Criteria: Did the answer come from the most suitable data source? (e.g., GraphQL for derived metrics, SQL for custom aggregations)
 - Adjust existing dimension weights: factual_correctness (0.30), data_accuracy (0.25), completeness (0.15), reasoning_quality (0.15), data_source_appropriateness (0.15)
 
-### 13.5 Manual E2E Verification
+### 12.5 Manual E2E Verification
 
 - Ask "What is Kenya's diversification grade?" → verify GraphQL routing + Atlas link
 - Ask "Compare Brazil and India coffee exports" → verify agent uses both tools
@@ -1379,7 +1346,7 @@ Extends the existing 246-question eval (`evaluation/`) with new categories and d
 - Verify frontier country (USA) gets Explore feasibility link (not `growth-opportunities`)
 - Verify ambiguous query shows resolution_notes on atlas links
 
-### 13.6 Evaluation Datasets & Collection
+### 12.6 Evaluation Datasets & Collection
 
 Detailed collection workflows, ground truth policies, curation tooling, and collection phases are in [`docs/evaluation_data_collection.md`](evaluation_data_collection.md).
 
@@ -1425,17 +1392,17 @@ Detailed collection workflows, ground truth policies, curation tooling, and coll
 
 ---
 
-## 14. Documentation Tool (docs_tool)
+## 13. Documentation Tool (docs_tool)
 
 > **Related issues:** #50 (write technical docs — content prerequisite), #54 (technical info injection — this design supersedes/extends the earlier analysis in `docs/technical_info_injection_design.md`)
 
-### 14.1 Motivation
+### 13.1 Motivation
 
 Complex queries require understanding of what metrics mean, how they're computed, and how Atlas data differs from raw Comtrade. Currently, ~13 metric definitions live statically in `AGENT_PREFIX` (~400 tokens, always injected). These are broad but miss critical nuances (time comparability, normalized variants, storage patterns). More importantly, the agent has no access to deeper methodology documentation that would help it reason about complex questions.
 
 The docs_tool solves this by providing on-demand access to technical documentation without polluting the main agent context or the SQL/GraphQL pipeline prompts.
 
-### 14.2 Architecture
+### 13.2 Architecture
 
 #### What the Docs Tool Is
 
@@ -1470,14 +1437,16 @@ Our docs_tool implements this same principle:
 
 This prevents loading all documentation into context for every query. A simple trade question never touches documentation. A methodology question loads only the relevant doc(s).
 
-### 14.3 Docs Pipeline Detail
+### 13.3 Docs Pipeline Detail
 
-#### Pipeline Nodes (3 nodes)
+#### Pipeline Nodes (4 nodes)
 
 ```
 [extract_docs_question]         Extract question + context from tool_call args; reset docs_* state
          |
-[select_and_synthesize]         LLM selects docs → load → LLM synthesizes response (using both question + context)
+[select_docs]                   LLM selects relevant docs from manifest (using both question + context)
+         |
+[synthesize_docs]               Load selected docs → LLM synthesizes response
          |
 [format_docs_results]           Build ToolMessage → back to agent
 ```
@@ -1486,11 +1455,9 @@ This prevents loading all documentation into context for every query. A simple t
 
 Same pattern as `extract_tool_question` (SQL) and `extract_graphql_question` (GraphQL). Extracts the `question` and `context` strings from `tool_calls[0]["args"]` into `docs_question` and `docs_context` respectively. Resets all `docs_*` state fields. If `context` is not provided in the tool call args, `docs_context` defaults to empty string.
 
-#### Node 2: `select_and_synthesize`
+#### Node 2: `select_docs`
 
-Two-step LLM process using the lightweight model:
-
-**Step A — Document Selection (LLM call #1):**
+LLM-based document selection using the lightweight model:
 
 Present the question + context + a document manifest to the lightweight model. The manifest contains a short description of each available document (~100 tokens per doc). The LLM selects which document(s) to read. Both `docs_question` and `docs_context` are provided — the question drives selection, while the context (the broader user query) may reveal additional relevant documents. For example, a question of "What is PCI?" with context "The user wants to analyze semiconductor exports for middle-income countries" might prompt selection of both `metrics_glossary.md` and `data_coverage.md`.
 
@@ -1498,29 +1465,27 @@ The manifest is built automatically from the documentation directory — each ma
 
 This is the progressive disclosure step — the LLM sees lightweight descriptions (not full content) and decides what to load. For a small doc set (3-5 docs), the selection prompt is ~300-500 tokens total.
 
-**Step B — Load Selected Documents (file I/O):**
+**Error handling:** If the selection LLM call fails, fall back to loading all documents.
 
-Read the selected markdown files from disk. Each file is loaded in full.
+#### Node 3: `synthesize_docs`
 
-**Step C — Synthesis (LLM call #2):**
+Loads the selected markdown files from disk, then presents the loaded documentation + `docs_question` + `docs_context` to the lightweight model. The LLM synthesizes a response. When context is provided, the synthesis can be tailored to the broader user intent — e.g., emphasizing time comparability caveats when the context reveals a multi-year analysis.
 
-Present the loaded documentation + `docs_question` + `docs_context` to the lightweight model. The LLM synthesizes a response. When context is provided, the synthesis can be tailored to the broader user intent — e.g., emphasizing time comparability caveats when the context reveals a multi-year analysis.
-
-The synthesis prompt should instruct the LLM to be **liberal and comprehensive** in its response:
+The synthesis prompt instructs the LLM to be **liberal and comprehensive** in its response:
 - If the user asks about one metric (e.g., PCI), also include brief definitions of closely related metrics (e.g., ECI, COG, distance) and how they relate
 - If the user asks about one technical aspect, include descriptions of related technical aspects
 - The goal is to provide enough context that the agent receiving this response can formulate comprehensive, well-informed sub-queries and answers
 - The response should be thorough but focused — not a dump of the entire document, but not narrowly scoped to just the exact question either
 
-**Error handling:** If the selection LLM call fails, fall back to loading all documents. If the synthesis LLM call fails, return the raw concatenated documentation. The pipeline must never raise — it should always return a ToolMessage (same error-safety principle as the GraphQL pipeline).
+**Error handling:** If the synthesis LLM call fails, return the raw concatenated documentation. The pipeline must never raise — it should always return a ToolMessage (same error-safety principle as the GraphQL pipeline).
 
 **RetryPolicy:** `RetryPolicy(max_attempts=2, backoff_factor=1.5)` for LLM calls (same pattern as `classify_query` / `extract_entities` in the GraphQL pipeline).
 
-#### Node 3: `format_docs_results`
+#### Node 4: `format_docs_results`
 
 Creates a `ToolMessage` with the synthesized response and routes back to the agent. Does NOT increment `queries_executed`.
 
-### 14.4 Tool Schemas: Question/Context Separation
+### 13.4 Tool Schemas: Question/Context Separation
 
 All three tools use a structured `question` + `context` separation. The `context` field is optional (defaults to empty string) and carries background information that helps the pipeline produce better results without polluting the question that drives core pipeline logic.
 
@@ -1583,7 +1548,7 @@ class AtlasGraphQLInput(BaseModel):
 
 The extract nodes (`extract_tool_question`, `extract_graphql_question`) write `context` from `tool_calls[0]["args"]` into `pipeline_context` and `graphql_context` respectively. If the agent omits the context argument, it defaults to empty string.
 
-### 14.5 Context Passing to Sub-Queries
+### 13.5 Context Passing to Sub-Queries
 
 When the agent calls `docs_tool` and learns technical context, it should pass that context to subsequent tool calls via the structured `context` parameter. The separation of `question` and `context` is structural — not a formatting convention in a single string.
 
@@ -1643,13 +1608,13 @@ The `question` and `context` flow through each pipeline differently:
 
 | Node | Uses `docs_question` | Uses `docs_context` |
 |------|---------------------|-------------------|
-| `select_and_synthesize` (selection step) | Yes — primary driver for document selection | **Yes** — broader user intent may reveal additional relevant documents |
-| `select_and_synthesize` (synthesis step) | Yes — the question to answer | **Yes** — tailors synthesis to the actual use case rather than giving a generic response |
+| `select_docs` | Yes — primary driver for document selection | **Yes** — broader user intent may reveal additional relevant documents |
+| `synthesize_docs` | Yes — the question to answer | **Yes** — tailors synthesis to the actual use case rather than giving a generic response |
 | `format_docs_results` | No (uses synthesis result) | No |
 
 The agent system prompt should include guidance on when and how to populate the `context` field in tool calls. This is part of the triple-tool agent prompt that must be drafted and vetted.
 
-### 14.6 Routing Logic
+### 13.6 Routing Logic
 
 The `route_after_agent` function from the [Graph Topology](#4-graph-topology) section, extended for three tools:
 
@@ -1669,7 +1634,7 @@ def route_after_agent(state: AtlasAgentState) -> str:
     return END
 ```
 
-### 14.7 Documentation Files
+### 13.7 Documentation Files
 
 #### Initial Document Set
 
@@ -1693,16 +1658,16 @@ The document manifest is built dynamically by scanning the directory and extract
 
 The actual documentation content is issue #50 (Write economic complexity technical documentation). The documentation files must be written before the docs_tool can be useful. The engineering work (pipeline nodes, graph integration) can proceed in parallel with content creation.
 
-### 14.8 Existing Metric Definitions: Keep As-Is
+### 13.8 Existing Metric Definitions: Keep As-Is
 
 #### Current State in SQL Pipeline
 
-The `AGENT_PREFIX` system prompt (`src/generate_query.py:708-782`) already contains ~13 metric definitions covering:
+The agent system prompt (`src/prompts.py`) already contains ~13 metric definitions covering:
 - **Pre-calculated metrics:** RCA, diversity, ubiquity, product proximity, distance, ECI, PCI, COI, COG
 - **Calculable metrics:** Market share, new products, product space
 - **Policy guidance:** How to use distance (feasibility), PCI (attractiveness), and COG (strategic value) for diversification analysis
 
-The SQL generation chain prompt (`src/generate_query.py:121-172`) also lists pre-calculated metrics with usage guidance.
+The SQL generation chain prompt (`src/prompts.py`) also lists pre-calculated metrics with usage guidance.
 
 #### Assessment: These Provide Real Value
 
@@ -1739,11 +1704,11 @@ The GraphQL pipeline does NOT need separate metric catalog injection:
 
 The GraphQL pipeline's classification prompt (LLM Prompt #3) will be drafted with appropriate query type descriptions during implementation. This is a prompt authoring task, not an injection mechanism task.
 
-### 14.9 Progressive Disclosure: Skills Pattern Analysis
+### 13.9 Progressive Disclosure: Skills Pattern Analysis
 
 We adopt the three-tier progressive disclosure principle from the Anthropic Agent Skills pattern (tool description → doc descriptions → full docs). The docs_tool runs its own LLM calls in isolation — documentation content never pollutes the SQL generation prompt or conversation history. We don't adopt the SKILL.md format itself since our docs are consumed by pipeline code, not injected into the agent prompt. We also use explicit tool calls rather than implicit skill matching.
 
-### 14.10 Example Query Control Paths
+### 13.10 Example Query Control Paths
 
 #### Path 1: Simple trade query — no docs involvement
 **"What were India's banana exports in 2015?"**
@@ -1766,9 +1731,10 @@ Agent → docs_tool(
   )
   → docs_question = "How does Atlas handle importer/exporter discrepancies?"
   → docs_context = "The user wants to understand data methodology."
-  → select_and_synthesize:
+  → select_docs:
     → Selection LLM reads doc manifest + question + context → picks trade_methodology.md
     → Loads trade_methodology.md
+  → synthesize_docs:
     → Synthesis LLM extracts BACI reconciliation explanation
       (liberally includes related info: mirror flows, CIF/FOB, data quality)
   → Returns focused ToolMessage
@@ -1784,9 +1750,10 @@ Agent → calls docs_tool(
     context="The user asked: For middle-income countries, analyze PCI of
       semiconductor exports 2012-2015 and their complexity profiles."
   )
-  → select_and_synthesize:
+  → select_docs:
     → Selection LLM → picks metrics_glossary.md
       (context reveals multi-year analysis → may also pick data_coverage.md)
+  → synthesize_docs:
     → Synthesis LLM returns comprehensive response, tailored to the
       broader context (emphasizes time comparability, country-product
       level metrics, and multi-year caveats):
@@ -1832,6 +1799,6 @@ This is the key control path that demonstrates the full architecture:
 3. **Context passes to sub-queries as structured fields** — `generate_sql` sees metric guidance; `extract_products` sees only the clean question
 4. **Existing AGENT_PREFIX definitions** provide the broad metric overview that helps the agent reason about decomposition
 
-### 14.11 Relationship to `docs/technical_info_injection_design.md`
+### 13.11 Relationship to `docs/technical_info_injection_design.md`
 
 This design supersedes the YAML metric catalog recommendation in `docs/technical_info_injection_design.md` (issue #54). The multi-tool agent makes a tool-based approach more natural than conditional injection. The YAML catalog remains a valid future optimization if docs_tool + context passing proves insufficient for metric-heavy SQL queries.
