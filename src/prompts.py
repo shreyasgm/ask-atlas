@@ -250,7 +250,8 @@ cross-country analysis, and questions atlas_graphql rejects.
 | Custom aggregation, GROUP BY across countries | query_tool | SQL flexibility |
 | Complex multi-table JOINs | query_tool | SQL flexibility |
 | Cross-country comparisons (avg ECI across group) | query_tool | Aggregation across entities |
-| Queries requiring services trade schemas | query_tool | Direct schema access |
+| Custom aggregations across goods + services schemas | query_tool | SQL flexibility |
+| Bilateral services trade by partner country | query_tool | Only SQL has partner-level services data |
 | Questions atlas_graphql rejects | query_tool | Fallback |
 | Metric definitions, methodology | docs_tool | Documentation |
 
@@ -273,7 +274,17 @@ explore the country's existing export strengths instead.)
   (pre-computed feasibility rankings with correct RCA filtering and COG sorting)
 - "What are Sub-Saharan Africa's total exports?" -> atlas_graphql (regional/group aggregate data)
 - "What were India's top 3 exported products?" -> query_tool (needs services; UNION goods + services)
-- "What are India's top goods exports?" -> atlas_graphql (goods-only, no services needed)""",
+- "What are India's top goods exports?" -> atlas_graphql (goods-only, no services needed)
+- "What are bilateral service exports from USA to China?" -> query_tool (bilateral services by partner is SQL-only)
+
+**Classification does not change tool routing:**
+Instructions like "Use HS 1992" or "Use SITC" specify which product classification to pass \
+to the chosen tool, NOT which tool to use. Route based on question type per the table above.
+
+**GraphQL-only pre-computed metrics:**
+Growth dynamics labels, 5-year export growth rates, new product counts, strategic approach \
+descriptions, and complexity-income classifications are ONLY available via `atlas_graphql` \
+(Country Pages API). These metrics have no SQL equivalent — do not attempt SQL queries for them.""",
         # --- Data year coverage ---
         """\
 **Data Year Coverage:**
@@ -298,14 +309,26 @@ and validated classification thresholds.
 - `exportValueConstGrowthCagr` is the constant-dollar CAGR — always prefer it over computing \
 your own CAGR from nominal export values, which would give a different (incorrect) result.
 - Classification labels like "promising", "troubling", "mixed", "static" are computed from \
-constant-price dynamics. Report them as-is.""",
+constant-price dynamics. Report them as-is.
+- `eciRankChange`: A POSITIVE value means the country's rank WORSENED (moved to a higher \
+rank number = less complex). A NEGATIVE value means the country IMPROVED (moved to a lower \
+rank number = more complex). Example: eciRankChange = +5 means "dropped 5 places".
+- Structural transformation stages: `NotStarted` = "has not yet started structural \
+transformation", `TextilesOnly` = "has started structural transformation", \
+`Completed` = "has completed structural transformation".
+- Growth projection classification: `moderate` = "moderately", `slow` = "slowly", \
+`rapid` = "rapidly". Use these adverbs when describing growth projection.
+- `growthProjectionRelativeToIncome` has 5 values: More, ModeratelyMore, Same, \
+ModeratelyLess, Less — describing how the country's growth projection compares \
+to others in its income group.""",
         _DATA_DESCRIPTION_BLOCK,
         _SERVICES_AWARENESS_BLOCK,
         """\
 **Including Services Data:**
-`atlas_graphql` returns goods data only and cannot provide services data. When services must \
-be included (per the Services Awareness rules above), always use `query_tool` with a UNION ALL \
-query combining goods (hs12) and services (services_unilateral) tables.""",
+`atlas_graphql` supports both goods and services data for most Explore API query types. \
+Country Pages queries return pre-computed aggregate metrics not broken down by goods vs. \
+services. Use `query_tool` only when you need custom SQL aggregations across both goods \
+and services schemas (e.g., computing service share of total exports via UNION ALL).""",
         _METRICS_REFERENCE_BLOCK,
         _DOCS_TOOL_BLOCK,
         # --- Dual-tool operational limits ---
@@ -657,25 +680,28 @@ each query type in detail — read them carefully before classifying.
 
 **Decision flowchart:**
 1. Is this about a specific country's profile, overview, or key metrics?
-   -> country_profile or country_profile_exports or country_profile_complexity
+   -> country_profile or country_profile_exports or country_profile_partners or country_profile_complexity
 2. Is this about how a country's trade changed over time?
    -> country_lookback (summary) or overtime_products / overtime_partners (time-series)
 3. Is this about what products a country exports (composition)?
    -> treemap_products or country_profile_exports
-4. Is this about trade between TWO specific countries?
+4. Is this about who a country trades with (export destinations)?
+   -> country_profile_partners or treemap_partners
+5. Is this about trade between TWO specific countries?
    -> treemap_bilateral, explore_bilateral, or bilateral_aggregate
-5. Is this about a product's global market share?
+6. Is this about a product's global market share?
    -> marketshare
-6. Is this about growth opportunities or diversification?
+7. Is this about growth opportunities or diversification?
    -> feasibility, feasibility_table, or growth_opportunities
-7. Is this about a region or country group?
+8. Is this about a region or country group?
    -> explore_group
-8. Does this require custom aggregation, multi-country comparison, or complex SQL?
+9. Does this require custom aggregation, multi-country comparison, or complex SQL?
    -> reject (fall back to SQL tool)
 
 **High-level routing heuristics:**
 - Country overview / profile / economy summary -> country_profile
 - What a country exports (breakdown/composition) -> country_profile_exports or treemap_products
+- Who a country trades with / export destinations -> country_profile_partners or treemap_partners
 - Economic complexity, ECI, COI rankings -> country_profile_complexity
 - How exports changed over N years (growth dynamics) -> country_lookback
 - New products gained RCA in -> new_products
@@ -691,6 +717,7 @@ each query type in detail — read them carefully before classifying.
 - Data coverage questions (what years/countries available) -> explore_data_availability
 - Diversification grade, growth projection relative to income -> country_profile
 - Export growth classification (promising, troubling, static, mixed) -> country_lookback
+- Country-year ECI/COI with specific classification (SITC) -> country_year, api_target: country_pages
 - If the question requires custom SQL aggregation, complex multi-table joins, calculations \
 across many countries, or data not in the Atlas APIs -> reject
 
@@ -772,6 +799,10 @@ Example 17:
 Question: "What are Kenya's top services exports — tourism, transport, ICT?"
 -> query_type: treemap_products, api_target: explore
 
+Example 18:
+Question: "What is Spain's ECI value? Use SITC classification."
+-> query_type: country_year, api_target: country_pages
+
 {context_block}
 
 **Question:** {question}
@@ -794,8 +825,8 @@ For countries, provide your best-guess ISO 3166-1 alpha-3 code (e.g., KEN for Ke
 For products, provide your best-guess HS code (e.g., 0901 for coffee) or service category name.
 
 **Field relevance by query type:**
-- country_profile / country_profile_exports / country_profile_complexity: country (required)
-- country_lookback: country (required), lookback_years (if mentioned, default 5)
+- country_profile / country_profile_exports / country_profile_partners / country_profile_complexity: country (required)
+- country_lookback: country (required), lookback_years (if mentioned, default 5), product_class (if mentioned)
 - new_products: country (required)
 - treemap_products / overtime_products / product_space / feasibility*: country (required), year or year range
 - treemap_partners / overtime_partners: country (required), year or year range
@@ -803,7 +834,7 @@ For products, provide your best-guess HS code (e.g., 0901 for coffee) or service
 - marketshare: country (required), product (required), year range
 - product_info: product (required), year
 - explore_group: group_name and group_type (required)
-- country_year: country (required), year
+- country_year: country (required), year, product_class (if SITC or non-default classification explicitly mentioned)
 - global_datum: year or year range (if mentioned)
 
 **Services class:**
@@ -828,6 +859,8 @@ For products, provide your best-guess HS code (e.g., 0901 for coffee) or service
 - "HS 2012" or "HS12" -> product_class: HS12
 - "SITC" -> product_class: SITC
 - Country Pages API only supports HS and SITC product classes.
+- For questions about whether a product is a natural resource or green product, use product_class: HS92.
+  The naturalResource and greenProduct metadata fields are only available in the HS92 classification.
 - If the user mentions a service (tourism, transport, ICT, etc.), the product_code_guess should be \
 the service category name as it appears in the Atlas (e.g., "Travel & tourism", "Transport")
 {services_catalog_block}
