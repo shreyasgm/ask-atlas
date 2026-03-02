@@ -1,14 +1,14 @@
 {
   "question_id": "240",
-  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
-  "source": "atlas_explore_page",
-  "atlas_url": "https://atlas.hks.harvard.edu/explore/treemap?year=2024",
+  "execution_timestamp": "2026-03-01T22:00:00.000000+00:00",
+  "source": "atlas_explore_api",
+  "atlas_url": "https://atlas.hks.harvard.edu/api/graphql",
   "results": {
     "data": [
       {
         "metric": "Natural resource classification",
-        "product": "Coffee (0901 HS12)",
-        "value": false
+        "product": "Iron ores and concentrates (2601 HS92)",
+        "value": true
       }
     ]
   }

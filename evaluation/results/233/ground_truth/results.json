@@ -6,12 +6,11 @@
   "results": {
     "data": [
       {
-        "metric": "5-year export CAGR",
-        "group": "Sub-Saharan Africa",
-        "value": "4.6%",
-        "raw_value": 0.046011621066470276,
-        "start_year": "2019",
-        "end_year": "2024"
+        "metric": "Total export value",
+        "group": "low",
+        "value": "$97.39 billion",
+        "raw_value": 97388272560.0,
+        "year": "2024"
       }
     ]
   }

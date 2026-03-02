@@ -6,38 +6,12 @@
   "results": {
     "data": [
       {
-        "metric": "Group members",
-        "group": "European Union",
-        "count": 27,
-        "members": [
-          "Austria",
-          "Belgium",
-          "Bulgaria",
-          "Croatia",
-          "Cyprus",
-          "Czechia",
-          "Denmark",
-          "Estonia",
-          "Finland",
-          "France",
-          "Germany",
-          "Greece",
-          "Hungary",
-          "Ireland",
-          "Italy",
-          "Latvia",
-          "Lithuania",
-          "Luxembourg",
-          "Malta",
-          "Netherlands",
-          "Poland",
-          "Portugal",
-          "Romania",
-          "Slovakia",
-          "Slovenia",
-          "Spain",
-          "Sweden"
-        ]
+        "metric": "5-year export CAGR",
+        "group": "low",
+        "value": "7.3%",
+        "raw_value": 0.07316761270713723,
+        "start_year": "2019",
+        "end_year": "2024"
       }
     ]
   }

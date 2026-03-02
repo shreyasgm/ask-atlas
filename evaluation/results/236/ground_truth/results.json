@@ -7,9 +7,9 @@
     "data": [
       {
         "metric": "5-year export CAGR",
-        "group": "low",
-        "value": "7.3%",
-        "raw_value": 0.07316761270713723,
+        "group": "European Union",
+        "value": "3.5%",
+        "raw_value": 0.034792582571760544,
         "start_year": "2019",
         "end_year": "2024"
       }

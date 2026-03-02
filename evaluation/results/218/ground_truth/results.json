@@ -1,6 +1,6 @@
 {
   "question_id": "218",
-  "execution_timestamp": "2026-02-28T22:44:52.624798+00:00",
+  "execution_timestamp": "2026-03-02T01:48:06.706799+00:00",
   "source": "atlas_explore_page",
   "atlas_url": "https://atlas.hks.harvard.edu/explore/overtime?exporter=country-404&startYear=2010&endYear=2024&year=2024",
   "results": {
@@ -10,10 +10,12 @@
         "country": "Kenya",
         "start_year": "2010",
         "end_year": "2024",
-        "start_value": "$3.77 billion",
+        "start_value": "$8.73 billion",
         "end_value": "$16.22 billion",
-        "change_pct": "330.0%",
-        "raw_change": 3.299508920707993
+        "change_pct": "85.7%",
+        "raw_change": 0.8573037407270642,
+        "raw_start_value": 8732314157.0,
+        "raw_end_value": 16218559749.0
       }
     ]
   }
