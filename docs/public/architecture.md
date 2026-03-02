@@ -22,7 +22,6 @@ Ask Atlas is an AI-powered agent that answers natural language questions about i
 14. [Evaluation System](#evaluation-system)
 15. [Technical Metrics Reference](#technical-metrics-reference)
 16. [Known Technical Debt](#known-technical-debt)
-17. [Roadmap](#roadmap)
 
 ---
 
@@ -269,13 +268,14 @@ GraphQL pipeline (6 nodes):
 | 5 | `build_and_execute_graphql` | Executing GraphQL query |
 | 6 | `format_graphql_results` | Formatting results |
 
-Docs pipeline (3 nodes):
+Docs pipeline (4 nodes):
 
 | Order | Node Name | UI Label |
 |-------|-----------|----------|
 | 1 | `extract_docs_question` | Extracting question |
-| 2 | `select_and_synthesize` | Selecting and synthesizing docs |
-| 3 | `format_docs_results` | Formatting results |
+| 2 | `select_docs` | Selecting documents |
+| 3 | `synthesize_docs` | Synthesizing response |
+| 4 | `format_docs_results` | Formatting results |
 
 ### LangGraph StateGraph (`src/graph.py`)
 
@@ -323,8 +323,9 @@ graph LR
     beg --> fgr
     fgr --> agent
 
-    edq --> ss[select_and_synthesize]
-    ss --> fdr[format_docs_results]
+    edq --> sd[select_docs]
+    sd --> syd[synthesize_docs]
+    syd --> fdr[format_docs_results]
     fdr --> agent
 
     mqe --> agent
@@ -345,7 +346,8 @@ graph LR
     style beg fill:#fff3e0,stroke:#F57C00
     style fgr fill:#e8f5e9,stroke:#388E3C
     style edq fill:#f3e5f5,stroke:#7B1FA2
-    style ss fill:#f3e5f5,stroke:#7B1FA2
+    style sd fill:#f3e5f5,stroke:#7B1FA2
+    style syd fill:#f3e5f5,stroke:#7B1FA2
     style fdr fill:#e8f5e9,stroke:#388E3C
     style tcn fill:#fff3e0,stroke:#E65100
     style mqe fill:#ffebee,stroke:#c62828
@@ -416,9 +418,11 @@ graph LR
 
 1. **`extract_docs_question`** — Extracts question + context from tool args.
 
-2. **`select_and_synthesize`** — Lightweight LLM selects up to `max_docs_per_selection` relevant docs from a pre-loaded manifest (YAML frontmatter in `src/docs/*.md`), then synthesizes a response.
+2. **`select_docs`** — Lightweight LLM selects up to `max_docs_per_selection` relevant docs from a pre-loaded manifest (YAML frontmatter in `src/docs/*.md`).
 
-3. **`format_docs_results`** — Returns the synthesized response as a `ToolMessage`.
+3. **`synthesize_docs`** — Lightweight LLM synthesizes a response from the selected documents.
+
+4. **`format_docs_results`** — Returns the synthesized response as a `ToolMessage`.
 
 **Query generation chain** (SQL): LCEL composition: `prompt | llm | StrOutputParser() | _strip`. The prompt injects:
 - Table DDL with descriptions
@@ -672,7 +676,8 @@ The `/api/chat/stream` endpoint returns `text/event-stream`. Events are sent in 
   - **`resolve_ids`**: `{ "stage": "resolve_ids", "resolved_params": {...} }`
   - **`format_graphql_results`**: `{ "stage": "format_graphql_results", "atlas_links": [...], "execution_time_ms": N }`
 - **Docs pipeline:**
-  - **`select_and_synthesize`**: `{ "stage": "select_and_synthesize", "selected_files": [...], "synthesis": "..." }`
+  - **`select_docs`**: `{ "stage": "select_docs", "selected_files": [...] }`
+  - **`synthesize_docs`**: `{ "stage": "synthesize_docs", "synthesis": "..." }`
 - Other stages: `{ "stage": "<node_name>", ... }` with stage-specific fields
 
 ### Conversation Tracking
@@ -1190,81 +1195,3 @@ The `app.py` Streamlit entry point still exists but is not the production fronte
 ### In-Memory Fallbacks
 
 Both the checkpointer (`MemorySaver`) and conversation store (`InMemoryConversationStore`) have in-memory fallbacks when `CHECKPOINT_DB_URL` is not set. These work for single-process development but lose state on restart and don't work across multiple Uvicorn workers.
-
----
-
-## Roadmap
-
-Prioritized open issues from [GitHub](https://github.com/shreyasgm/ask-atlas/issues).
-
-### Bugs
-
-| # | Title | Labels |
-|---|-------|--------|
-| 93 | GraphQL Explore API responses overflow agent context window for data-rich queries | bug |
-| 79 | Product code resolution works rarely, mostly because of LLM non-determinism | bug, backend |
-| 74 | Not functional after migration to ask-atlas-gl | bug |
-| 70 | Default classification schema for Goods should be HS2012 | bug, backend |
-
-### Feature Enhancements
-
-| # | Title | Labels |
-|---|-------|--------|
-| 96 | Parallel tool execution (docs + data) | enhancement |
-| 95 | Within-session docs synthesis dedup | enhancement |
-| 94 | Revisit agent base system prompt for token efficiency | — |
-| 78 | Add suggestion pills below assistant responses | enhancement |
-| 77 | Show resolved entities inline in chat messages instead of sidebar | frontend |
-| 76 | Remove right sidebar panel from chat workspace | frontend |
-| 75 | Add a "loading" indicator after user submits query | — |
-| 71 | Add HS digit-level toggle (4-digit / 6-digit / Auto) | cross-stack |
-| 67 | Add Firebase Auth to protect API endpoints | cross-stack |
-| 68 | Add per-user rate limiting | backend |
-| 58 | Add Upstash Redis as shared cache tier | backend |
-| 34 | HITL product picker API | backend |
-| 32 | Product Code Picker disambiguation modal | frontend |
-| 23 | Typeahead autocomplete for products/countries | backend |
-
-### Infrastructure & Quality
-
-| # | Title | Labels |
-|---|-------|--------|
-| 90 | Evaluation Judge Extensions & Trajectory Testing | testing, eval |
-| 89 | Evaluation Dataset Collection (Phase 0 + Phase 1) | eval |
-| 73 | Design and build for mobile | frontend |
-| 72 | Add dark mode support | frontend |
-| 69 | Set up GCP billing alerts | infrastructure |
-| 64 | Add usage analytics and monitoring | — |
-| 61 | Review updated Atlas database and adapt backend | backend |
-| 60 | Run full evals and produce performance report | eval |
-| 57 | Research modern chatbot UI patterns | frontend |
-| 56 | Frontend test strategy audit | frontend |
-| 55 | Frontend code audit | frontend |
-| 39 | Add Playwright E2E tests | testing |
-
-### Completed (formerly tracked here)
-
-| # | Title | Status |
-|---|-------|--------|
-| 42 | Hybrid backend: GraphQL API alongside SQL | Implemented — GraphQL pipeline now live alongside SQL |
-| 15 | Decompose monolithic query tool into separate tools | Implemented — agent now has `query_tool`, `atlas_graphql`, `docs_tool` |
-| 54 | Design and implement technical info injection | Implemented — docs pipeline with `src/docs/` manifest |
-| 48 | Add Atlas verification links to responses | Implemented — `src/atlas_links.py` + `AtlasLinks` frontend component |
-| 62 | SSE streaming broken: Firebase Hosting buffers response | Fixed — frontend connects directly to Cloud Run |
-| 63 | Backend CORS whitelist missing production origins | Fixed |
-| 65 | Trade toggle bar truncated on mobile viewport | Fixed |
-| 66 | GitHub link in header points to wrong repository | Fixed |
-| 80 | Config & Model Naming Refactor | Implemented |
-| 81 | GraphQL HTTP Client, Budget Tracker & Circuit Breaker | Implemented |
-| 82 | Atlas Link Generation Module | Implemented |
-| 83 | Cache Extensions for GraphQL Catalogs | Implemented |
-| 84 | GraphQL Pipeline Nodes | Implemented |
-| 85 | Graph Rewrite & Agent Node | Implemented |
-| 86 | Streaming & API Updates for GraphQL | Implemented |
-
-### Deferred
-
-| # | Title | Labels |
-|---|-------|--------|
-| 16 | Human-in-the-loop approval for expensive queries | cross-stack |
-| 52 | Add web search tool | backend |
