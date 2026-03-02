@@ -316,7 +316,7 @@ class TestGraphQLQueryClassification:
         assert {"api_target", "query_type", "reasoning", "rejection_reason"} == fields
 
     def test_all_query_types_present(self):
-        """The query_type literal must include all 22 valid types + reject."""
+        """The query_type literal must include all valid types + reject."""
         import typing
 
         field_info = GraphQLQueryClassification.model_fields["query_type"]
@@ -324,6 +324,7 @@ class TestGraphQLQueryClassification:
         expected = {
             "country_profile",
             "country_profile_exports",
+            "country_profile_partners",
             "country_profile_complexity",
             "country_lookback",
             "new_products",
@@ -1072,14 +1073,26 @@ class TestBuildGraphQLQuery:
         assert "growthProjection" in query
         assert variables["location"] == "location-404"
 
-    def test_country_profile_exports_reuses_country_profile_builder(self):
-        """country_profile_exports uses the same countryProfile query."""
+    def test_country_profile_exports_uses_treemap_builder(self):
+        """country_profile_exports uses treeMap(CPY_C) for product-level data."""
         query, variables = build_graphql_query(
             "country_profile_exports",
             {"location": "location-404"},
         )
-        assert "countryProfile" in query
-        assert "latestEci" in query
+        assert "treeMap" in query
+        assert "CPY_C" in query
+        assert "exportValue" in query
+        assert variables["location"] == "location-404"
+
+    def test_country_profile_partners_uses_treemap_builder(self):
+        """country_profile_partners uses treeMap(CCY_C) for partner-level data."""
+        query, variables = build_graphql_query(
+            "country_profile_partners",
+            {"location": "location-404"},
+        )
+        assert "treeMap" in query
+        assert "CCY_C" in query
+        assert "exportValue" in query
         assert variables["location"] == "location-404"
 
     def test_country_profile_complexity_reuses_country_profile_builder(self):
@@ -2161,6 +2174,7 @@ class TestBuildersExtended:
             "explore_data_availability",
             "country_profile",
             "country_profile_exports",
+            "country_profile_partners",
             "country_profile_complexity",
             "country_lookback",
             "new_products",
