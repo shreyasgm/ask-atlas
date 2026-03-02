@@ -86,6 +86,7 @@ jobs:
       - run: pnpm build
         env:
           VITE_API_BASE_URL: REDACTED_CLOUD_RUN_URL
+          VITE_PUBLIC_POSTHOG_KEY: ${{ secrets.POSTHOG_API_KEY }}
 
       - name: Deploy to Firebase Hosting
         run: npx firebase-tools deploy --only hosting:app --project=${{ secrets.GCP_PROJECT_ID }}
