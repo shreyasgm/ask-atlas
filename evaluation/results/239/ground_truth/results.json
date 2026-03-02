@@ -6,9 +6,39 @@
   "results": {
     "data": [
       {
-        "metric": "Natural resource classification",
-        "product": "Iron ores and concentrates (2601 HS12)",
-        "value": false
+        "metric": "Group members",
+        "group": "low",
+        "count": 28,
+        "members": [
+          "Afghanistan",
+          "Burkina Faso",
+          "Burundi",
+          "Central African Republic",
+          "Chad",
+          "Democratic Republic of the Congo",
+          "Eritrea",
+          "Ethiopia",
+          "Guinea",
+          "Guinea-Bissau",
+          "Liberia",
+          "Madagascar",
+          "Malawi",
+          "Mali",
+          "Mozambique",
+          "Niger",
+          "North Korea",
+          "Rwanda",
+          "Sierra Leone",
+          "Somalia",
+          "South Sudan",
+          "Sudan",
+          "Syria",
+          "The Gambia",
+          "Togo",
+          "Uganda",
+          "Venezuela",
+          "Yemen"
+        ]
       }
     ]
   }

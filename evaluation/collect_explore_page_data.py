@@ -479,6 +479,16 @@ def next_id() -> int:
     return qid
 
 
+def reserve_id() -> int:
+    """Reserve a QID slot without emitting a question.
+
+    Use this BEFORE data-dependent guards (``if ... continue``) in loops
+    to ensure QIDs stay stable regardless of data availability.  If the
+    data check passes, pass the reserved QID to ``emit()``.
+    """
+    return next_id()
+
+
 def emit(
     text: str,
     category_id: str,
@@ -486,9 +496,20 @@ def emit(
     difficulty: str,
     url: str,
     data: list[dict],
+    *,
+    qid: int | None = None,
 ) -> None:
-    """Write ground truth result and track question for eval_questions.json."""
-    qid = next_id()
+    """Write ground truth result and track question for eval_questions.json.
+
+    Args:
+        qid: Pre-reserved question ID from ``reserve_id()``.  When provided,
+            ``next_id()`` is NOT called — the caller already consumed the slot.
+            When ``None`` (default, backward-compatible), ``next_id()`` is called
+            internally.  Using ``reserve_id()`` + explicit ``qid`` is preferred
+            in loops with data-dependent guards to prevent off-by-one shifts.
+    """
+    if qid is None:
+        qid = next_id()
     if QUESTION_FILTER is not None and qid not in QUESTION_FILTER:
         return
     r = make_result(qid, url, data)
@@ -1453,6 +1474,7 @@ def gen_trade_time_series() -> None:
 
     # Template 24: ECI in year (1)
     for country, year in [("Brazil", 2024)]:
+        qid = reserve_id()
         row = get_year_row(time_series.get(country, []), year)
         if not row or row.get("eci") is None:
             continue
@@ -1478,10 +1500,15 @@ def gen_trade_time_series() -> None:
                     "year": str(year),
                 }
             ],
+            qid=qid,
         )
 
     # Template 25: ECI change between years (2)
+    # NOTE: reserve_id() BEFORE data guards to prevent QID shift when data is
+    # missing (e.g., Kenya 2010 ECI is null under HS12).  See off-by-one
+    # post-mortem in evaluation/graphql_testing/SYNTHESIS.md §3.
     for country, y1, y2 in [("Turkiye", 2015, 2024), ("Kenya", 2010, 2024)]:
+        qid = reserve_id()
         r1 = get_year_row(time_series.get(country, []), y1)
         r2 = get_year_row(time_series.get(country, []), y2)
         if not r1 or not r2:
@@ -1514,6 +1541,7 @@ def gen_trade_time_series() -> None:
                     "change": f"{e2 - e1:+.4f}",
                 }
             ],
+            qid=qid,
         )
 
 
