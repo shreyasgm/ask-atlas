@@ -3,4 +3,5 @@
 coverage/
 dist/
 tsconfig.tsbuildinfo
+.env*.local
 vite.config.ts.timestamp-*
