@@ -1387,8 +1387,42 @@ def _build_country_country_product_year(params: dict) -> tuple[str, dict]:
     return query, variables
 
 
+def _build_country_year_cp(params: dict) -> tuple[str, dict]:
+    """Build countryYear query (Country Pages API).
+
+    Supports eciProductClass for SITC/HS-specific ECI values.
+    """
+    location = params.get("location", "")
+    year = params.get("year") or params.get("year_min", 2024)
+    variables: dict[str, Any] = {"location": location, "year": int(year)}
+
+    product_class = params.get("product_class")
+    if product_class:
+        variables["eciProductClass"] = product_class
+
+    pc_var = ", $eciProductClass: ProductClass" if product_class else ""
+    pc_arg = "\n        eciProductClass: $eciProductClass" if product_class else ""
+    query = f"""
+    query CY($location: ID!, $year: Int!{pc_var}) {{
+      countryYear(
+        location: $location
+        year: $year{pc_arg}
+      ) {{
+        eci eciRank coi coiRank
+        exportValue importValue exportValueRank
+        population gdp gdpRank gdpPpp gdpPerCapita gdpPerCapitaPpp
+      }}
+    }}
+    """
+    return query, variables
+
+
 def _build_country_year(params: dict) -> tuple[str, dict]:
-    """Build countryYear query (Explore API)."""
+    """Build countryYear query (Explore or Country Pages API)."""
+    # Country Pages path: format_ids_for_api sets "location" for country_pages
+    if "location" in params:
+        return _build_country_year_cp(params)
+    # Explore API path (original)
     variables: dict[str, Any] = {"countryId": params.get("country_id")}
     year = params.get("year")
     if year:
@@ -1578,9 +1612,13 @@ def _build_country_lookback(params: dict) -> tuple[str, dict]:
     if lookback and lookback in _LOOKBACK_YEAR_MAP:
         variables["yearRange"] = _LOOKBACK_YEAR_MAP[lookback]
 
+    product_class = params.get("product_class")
+    if product_class:
+        variables["productClass"] = product_class
+
     query = """
-    query CL($id: ID!, $yearRange: LookBackYearRange) {
-      countryLookback(id: $id, yearRange: $yearRange) {
+    query CL($id: ID!, $yearRange: LookBackYearRange, $productClass: ProductClass) {
+      countryLookback(id: $id, yearRange: $yearRange, productClass: $productClass) {
         id
         eciRankChange eciChange
         exportValueConstGrowthCagr
