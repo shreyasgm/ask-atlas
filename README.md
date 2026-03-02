@@ -111,8 +111,9 @@ graph TD
     beg --> fgr
     fgr --> agent
 
-    edq --> ss[select_and_synthesize]
-    ss --> fdr[format_docs_results]
+    edq --> sd[select_docs]
+    sd --> syd[synthesize_docs]
+    syd --> fdr[format_docs_results]
     fdr --> agent
 
     mqe --> agent
@@ -133,7 +134,8 @@ graph TD
     style beg fill:#fff3e0,stroke:#F57C00
     style fgr fill:#e8f5e9,stroke:#388E3C
     style edq fill:#f3e5f5,stroke:#7B1FA2
-    style ss fill:#f3e5f5,stroke:#7B1FA2
+    style sd fill:#f3e5f5,stroke:#7B1FA2
+    style syd fill:#f3e5f5,stroke:#7B1FA2
     style fdr fill:#e8f5e9,stroke:#388E3C
     style mqe fill:#ffebee,stroke:#c62828
 ```
