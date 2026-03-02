@@ -78,9 +78,13 @@ QUERY_TYPE_DESCRIPTION = (
     "                    diversification grade, growth projection relative to income,\n"
     "                    peer comparisons (countryProfile API).\n"
     "- country_profile_exports : Country export basket — top exports by product, export\n"
-    "                            composition, export diversification (countryProfile API).\n"
+    "                            composition, export diversification (treeMap CPY_C API).\n"
     "                            Use when the user asks about what a country exports, its\n"
     "                            export basket, or export composition.\n"
+    "- country_profile_partners : Country trade partner breakdown — top export destinations,\n"
+    "                             trade partner composition (treeMap CCY_C API). Use when the\n"
+    "                             user asks who a country trades with, its main export\n"
+    "                             destinations, or trade partner breakdown.\n"
     "- country_profile_complexity : Country complexity metrics — ECI, COI, complexity\n"
     "                               rankings, growth projections (countryProfile API).\n"
     "                               Use when the user asks about a country's economic\n"
@@ -130,9 +134,13 @@ QUERY_TYPE_DESCRIPTION = (
     "- For country overview / profile questions, prefer country_profile.\n"
     "- For questions specifically about a country's export basket or export composition,\n"
     "  prefer country_profile_exports.\n"
+    "- For questions about a country's trade partners or export destinations,\n"
+    "  prefer country_profile_partners.\n"
     "- For questions about economic complexity, ECI, COI, or complexity rankings,\n"
     "  prefer country_profile_complexity.\n"
-    "- For questions about services trade, use servicesClass: unilateral in the Explore API."
+    "- For questions about services trade, use servicesClass: unilateral in the Explore API.\n"
+    "- For questions about whether a product is a natural resource or green product,\n"
+    "  use product_info with productClass HS92 (naturalResource metadata is only in HS92)."
 )
 
 API_TARGET_DESCRIPTION = (
@@ -146,8 +154,8 @@ API_TARGET_DESCRIPTION = (
     "                  profiles including countryProfile (46 fields), countryLookback (growth dynamics),\n"
     "                  newProductsCountry, growth_opportunities (productSpace), peer comparisons, and\n"
     "                  policy recommendations. Used by country_profile, country_profile_exports,\n"
-    "                  country_profile_complexity, country_lookback, new_products, and\n"
-    "                  growth_opportunities query types.\n"
+    "                  country_profile_partners, country_profile_complexity, country_lookback,\n"
+    "                  new_products, and growth_opportunities query types.\n"
     "                  Note: Country Pages only supports productClass 'HS' (= HS92) and 'SITC'."
 )
 
@@ -198,6 +206,7 @@ class GraphQLQueryClassification(BaseModel):
     query_type: Literal[
         "country_profile",
         "country_profile_exports",
+        "country_profile_partners",
         "country_profile_complexity",
         "country_lookback",
         "new_products",
@@ -1111,6 +1120,18 @@ _POST_PROCESS_RULES: dict[str, dict] = {
         "top_n": 20,
         "enrich": "none",
     },
+    "country_profile_exports": {
+        "root": "treeMap",
+        "sort": "exportValue",
+        "top_n": 20,
+        "enrich": "none",
+    },
+    "country_profile_partners": {
+        "root": "treeMap",
+        "sort": "exportValue",
+        "top_n": 20,
+        "enrich": "none",
+    },
 }
 
 _FILTERS: dict[str, Callable] = {
@@ -1657,6 +1678,65 @@ def _build_product_table(params: dict) -> tuple[str, dict]:
     return query, variables
 
 
+def _build_cp_treemap_products(params: dict) -> tuple[str, dict]:
+    """Build treeMap(facet: CPY_C) query (Country Pages API).
+
+    Returns product-level export data including services for a country's
+    export basket.  Used by ``country_profile_exports`` to get individual
+    product breakdown rather than just aggregate countryProfile data.
+    """
+    location = params.get("location", "")
+    product_class = params.get("product_class", "HS")
+    product_level = params.get("product_level", "fourDigit")
+    year = params.get("year", 2024)
+    variables: dict[str, Any] = {
+        "location": location,
+        "productClass": product_class,
+        "productLevel": product_level,
+        "year": int(year),
+    }
+    query = """
+    query TMProducts($location: ID!, $productClass: ProductClass!,
+                      $productLevel: ProductLevel!, $year: Int!) {
+      treeMap(facet: CPY_C, location: $location, productClass: $productClass,
+              productLevel: $productLevel, year: $year) {
+        ... on TreeMapProduct {
+          product { id shortName code }
+          exportValue
+        }
+      }
+    }
+    """
+    return query, variables
+
+
+def _build_cp_treemap_partners(params: dict) -> tuple[str, dict]:
+    """Build treeMap(facet: CCY_C) query (Country Pages API).
+
+    Returns bilateral trade partner breakdown (goods only) for a country.
+    """
+    location = params.get("location", "")
+    product_class = params.get("product_class", "HS")
+    year = params.get("year", 2024)
+    variables: dict[str, Any] = {
+        "location": location,
+        "productClass": product_class,
+        "year": int(year),
+    }
+    query = """
+    query TMPartners($location: ID!, $productClass: ProductClass!, $year: Int!) {
+      treeMap(facet: CCY_C, location: $location, productClass: $productClass,
+              year: $year) {
+        ... on TreeMapLocation {
+          location { id shortName longName }
+          exportValue
+        }
+      }
+    }
+    """
+    return query, variables
+
+
 def _build_global_datum(params: dict) -> tuple[str, dict]:
     """Build globalDatum query (Country Pages API)."""
     query = """
@@ -1883,7 +1963,8 @@ _QUERY_BUILDERS: dict[str, Callable[[dict], tuple[str, dict]]] = {
     "product_table": _build_product_table,
     # Country Pages API queries
     "country_profile": _build_country_profile,
-    "country_profile_exports": _build_country_profile,
+    "country_profile_exports": _build_cp_treemap_products,
+    "country_profile_partners": _build_cp_treemap_partners,
     "country_profile_complexity": _build_country_profile,
     "country_lookback": _build_country_lookback,
     "new_products": _build_new_products,
