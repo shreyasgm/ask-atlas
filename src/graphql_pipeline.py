@@ -1396,7 +1396,7 @@ def _build_country_year_cp(params: dict) -> tuple[str, dict]:
     year = params.get("year") or params.get("year_min", 2024)
     variables: dict[str, Any] = {"location": location, "year": int(year)}
 
-    product_class = params.get("product_class")
+    product_class = _normalize_cp_product_class(params.get("product_class"))
     if product_class:
         variables["eciProductClass"] = product_class
 
@@ -1569,6 +1569,19 @@ _LOOKBACK_YEAR_MAP = {
 }
 
 
+def _normalize_cp_product_class(raw: str | None) -> str | None:
+    """Normalize product_class for the Country Pages API.
+
+    Country Pages accepts only 'HS' and 'SITC' — not the revision-specific
+    codes (HS92, HS12, HS22) used by the Explore API.
+    """
+    if not raw:
+        return raw
+    if raw.upper().startswith("HS"):
+        return "HS"
+    return raw
+
+
 def _build_country_profile(params: dict) -> tuple[str, dict]:
     """Build countryProfile query (Country Pages API)."""
     location = params.get("location", "")
@@ -1594,9 +1607,17 @@ def _build_country_profile(params: dict) -> tuple[str, dict]:
         growthProjection growthProjectionRank
         growthProjectionClassification
         growthProjectionRelativeToIncome
+        growthProjectionPercentileClassification
         diversificationGrade diversityRank diversity
         policyRecommendation
         currentAccount { quantity year }
+        structuralTransformationStep
+        structuralTransformationSector { shortName }
+        structuralTransformationDirection
+        marketShareMainSector { shortName }
+        marketShareMainSectorDirection
+        marketShareMainSectorPositiveGrowth
+        newProductsComplexityStatusGrowthPrediction
       }
     }
     """
@@ -1612,7 +1633,7 @@ def _build_country_lookback(params: dict) -> tuple[str, dict]:
     if lookback and lookback in _LOOKBACK_YEAR_MAP:
         variables["yearRange"] = _LOOKBACK_YEAR_MAP[lookback]
 
-    product_class = params.get("product_class")
+    product_class = _normalize_cp_product_class(params.get("product_class"))
     if product_class:
         variables["productClass"] = product_class
 
@@ -1658,7 +1679,7 @@ def _build_new_products(params: dict) -> tuple[str, dict]:
 def _build_growth_opportunities(params: dict) -> tuple[str, dict]:
     """Build growth opportunities query (Country Pages productSpace API)."""
     location = params.get("location", "")
-    product_class = params.get("product_class", "HS")
+    product_class = _normalize_cp_product_class(params.get("product_class")) or "HS"
     year = params.get("year")
     variables: dict[str, Any] = {"location": location, "productClass": product_class}
     if year:
@@ -1724,7 +1745,7 @@ def _build_cp_treemap_products(params: dict) -> tuple[str, dict]:
     product breakdown rather than just aggregate countryProfile data.
     """
     location = params.get("location", "")
-    product_class = params.get("product_class", "HS")
+    product_class = _normalize_cp_product_class(params.get("product_class")) or "HS"
     product_level = params.get("product_level", "fourDigit")
     year = params.get("year", 2024)
     variables: dict[str, Any] = {
@@ -1754,7 +1775,7 @@ def _build_cp_treemap_partners(params: dict) -> tuple[str, dict]:
     Returns bilateral trade partner breakdown (goods only) for a country.
     """
     location = params.get("location", "")
-    product_class = params.get("product_class", "HS")
+    product_class = _normalize_cp_product_class(params.get("product_class")) or "HS"
     year = params.get("year", 2024)
     variables: dict[str, Any] = {
         "location": location,
