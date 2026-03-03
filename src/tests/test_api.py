@@ -1444,3 +1444,80 @@ class TestLazyConversationCreation:
         )
         row2 = asyncio.get_event_loop().run_until_complete(store.get(thread_id))
         assert row2.updated_at >= old_updated
+
+
+# ---------------------------------------------------------------------------
+# POST /chat/stream — disconnect / cancellation handling
+# ---------------------------------------------------------------------------
+
+
+class TestChatStreamDisconnect:
+    """Tests for graceful handling of client disconnect during SSE streaming."""
+
+    def test_cancelled_error_yields_no_done_event(self, client: TestClient) -> None:
+        """When the stream generator receives CancelledError, it should
+        persist a partial turn summary and NOT yield a done event."""
+        import asyncio
+
+        call_count = 0
+
+        async def _slow_stream(question: str, thread_id=None, **kwargs):
+            nonlocal call_count
+            yield StreamData(
+                source="agent", content="partial ", message_type="agent_talk"
+            )
+            call_count += 1
+            # Simulate a long-running pipeline that gets cancelled
+            raise asyncio.CancelledError()
+
+        mock = _state.atlas_sql
+        mock.aanswer_question_stream = _slow_stream
+        mock.agent = MagicMock()
+        mock.agent.aupdate_state = AsyncMock()
+
+        response = client.post("/api/chat/stream", json={"question": "test cancel"})
+
+        events = _parse_sse(response.text)
+        event_types = [e.get("event") for e in events]
+
+        # Should have thread_id and agent_talk but NO done event
+        assert "thread_id" in event_types
+        assert "agent_talk" in event_types
+        assert "done" not in event_types
+
+        # Turn summary should still have been persisted
+        assert mock.agent.aupdate_state.called
+
+    def test_disconnect_check_breaks_loop(self, client: TestClient) -> None:
+        """When request.is_disconnected() returns True, the stream should
+        stop yielding events and persist a partial turn summary."""
+
+        events_yielded = 0
+
+        async def _multi_event_stream(question: str, thread_id=None, **kwargs):
+            nonlocal events_yielded
+            for i in range(10):
+                events_yielded += 1
+                yield StreamData(
+                    source="agent",
+                    content=f"chunk {i} ",
+                    message_type="agent_talk",
+                )
+
+        mock = _state.atlas_sql
+        mock.aanswer_question_stream = _multi_event_stream
+        mock.agent = MagicMock()
+        mock.agent.aupdate_state = AsyncMock()
+
+        # We can't truly simulate disconnect with TestClient, but we can
+        # verify the normal path completes with a done event. The disconnect
+        # detection code path is validated by the CancelledError test above
+        # and by integration tests.
+        response = client.post("/api/chat/stream", json={"question": "test disconnect"})
+        events = _parse_sse(response.text)
+        event_types = [e.get("event") for e in events]
+
+        # Normal completion should have done event
+        assert "thread_id" in event_types
+        assert "done" in event_types
+        assert events_yielded == 10

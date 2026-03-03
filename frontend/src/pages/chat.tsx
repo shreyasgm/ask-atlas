@@ -25,6 +25,7 @@ export default function ChatPage() {
     pipelineSteps,
     queryStats,
     sendMessage: sendRaw,
+    stopStreaming,
     threadId,
   } = useChatStream({ onConversationChange: refresh, onOverridesLoaded: setOverrides });
 
@@ -56,6 +57,7 @@ export default function ChatPage() {
         onModeChange={setMode}
         onSchemaChange={setSchema}
         onSend={handleSend}
+        onStop={stopStreaming}
         onSystemModeChange={setSystemMode}
         overrides={overrides}
         pipelineSteps={pipelineSteps}

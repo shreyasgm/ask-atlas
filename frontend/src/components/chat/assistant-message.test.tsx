@@ -11,6 +11,7 @@ function makeMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
     docsConsulted: [],
     graphqlSummaries: [],
     id: 'msg-1',
+    interrupted: false,
     isStreaming: false,
     queryResults: [],
     role: 'assistant',
@@ -108,6 +109,25 @@ describe('AssistantMessage', () => {
     render(<AssistantMessage message={msg} />);
     expect(screen.queryByText('Processing your question...')).not.toBeInTheDocument();
     expect(screen.getByText('Here are the results')).toBeInTheDocument();
+  });
+
+  it('shows "Response was stopped" when message is interrupted', () => {
+    const msg = makeMessage({ content: 'Partial content here', interrupted: true });
+    render(<AssistantMessage message={msg} />);
+    expect(screen.getByText('Response was stopped')).toBeInTheDocument();
+    expect(screen.getByText('Partial content here')).toBeInTheDocument();
+  });
+
+  it('shows "Response was stopped" when interrupted with no content', () => {
+    const msg = makeMessage({ interrupted: true });
+    render(<AssistantMessage message={msg} />);
+    expect(screen.getByText('Response was stopped')).toBeInTheDocument();
+  });
+
+  it('does not show "Response was stopped" on normal messages', () => {
+    const msg = makeMessage({ content: 'Normal response' });
+    render(<AssistantMessage message={msg} />);
+    expect(screen.queryByText('Response was stopped')).not.toBeInTheDocument();
   });
 
   it('hides query result table until SQL collapsible is expanded', async () => {

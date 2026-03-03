@@ -1283,3 +1283,90 @@ describe('history hydration from turn_summaries', () => {
     expect(result.current.queryStats).toBeNull();
   });
 });
+
+describe('stopStreaming', () => {
+  it('is a function on the hook return value', () => {
+    globalThis.fetch = vi.fn();
+    const { result } = renderHook(() => useChatStream());
+    expect(typeof result.current.stopStreaming).toBe('function');
+  });
+
+  it('aborts in-flight stream, preserves partial content, and sets interrupted', async () => {
+    // Create a stream that delivers initial data then blocks until abort signal fires
+    const encoder = new TextEncoder();
+
+    globalThis.fetch = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+      const signal = init?.signal as AbortSignal | undefined;
+
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          // Immediately enqueue thread_id + partial agent_talk
+          controller.enqueue(
+            encoder.encode(
+              `event: thread_id\ndata: ${JSON.stringify({ thread_id: 'stop-test' })}\n\n` +
+                `event: agent_talk\ndata: ${JSON.stringify({ content: 'Partial ', message_type: 'agent_talk', source: 'agent' })}\n\n` +
+                `event: agent_talk\ndata: ${JSON.stringify({ content: 'content', message_type: 'agent_talk', source: 'agent' })}\n\n`,
+            ),
+          );
+          // When the abort signal fires, error the stream so reader.read() throws
+          if (signal) {
+            signal.addEventListener('abort', () => {
+              controller.error(new DOMException('The operation was aborted.', 'AbortError'));
+            });
+          }
+        },
+      });
+
+      return Promise.resolve({ body: stream, ok: true });
+    });
+
+    const { result } = renderHook(() => useChatStream());
+
+    // Send a message to start streaming
+    act(() => result.current.sendMessage('test stop'));
+
+    // Wait for streaming to start and partial content to arrive
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(true);
+    });
+
+    // Allow rAF to flush content
+    await waitFor(() => {
+      const assistant = result.current.messages.find((m) => m.role === 'assistant');
+      expect(assistant?.content).toContain('Partial');
+    });
+
+    // Call stopStreaming
+    act(() => result.current.stopStreaming());
+
+    // Wait for abort to complete
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    // Verify partial content is preserved and message is marked interrupted
+    const assistant = result.current.messages.find((m) => m.role === 'assistant');
+    expect(assistant).toBeDefined();
+    expect(assistant?.content).toContain('Partial content');
+    expect(assistant?.interrupted).toBe(true);
+    expect(assistant?.isStreaming).toBe(false);
+
+    // Pipeline steps should be cleared
+    expect(result.current.pipelineSteps).toEqual([]);
+  });
+
+  it('normal completion does NOT set interrupted', async () => {
+    globalThis.fetch = mockFetchWithEvents(STANDARD_EVENTS);
+    const { result } = renderHook(() => useChatStream());
+
+    act(() => result.current.sendMessage('test normal'));
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+      expect(result.current.messages.length).toBeGreaterThanOrEqual(2);
+    });
+
+    const assistant = result.current.messages.find((m) => m.role === 'assistant');
+    expect(assistant?.interrupted).toBe(false);
+  });
+});

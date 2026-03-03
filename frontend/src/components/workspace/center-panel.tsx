@@ -25,6 +25,7 @@ interface CenterPanelProps {
   onModeChange: (v: TradeMode | null) => void;
   onSchemaChange: (v: ClassificationSchema | null) => void;
   onSend: (text: string) => void;
+  onStop: () => void;
   onSystemModeChange: (v: SystemMode | null) => void;
   onToggleSidebar: () => void;
   overrides: TradeOverrides;
@@ -42,6 +43,7 @@ export default memo(function CenterPanel({
   onModeChange,
   onSchemaChange,
   onSend,
+  onStop,
   onSystemModeChange,
   onToggleSidebar,
   overrides,
@@ -75,7 +77,12 @@ export default memo(function CenterPanel({
       </ErrorBoundary>
       <div className="border-t border-border">
         <div className="mx-auto w-full max-w-2xl px-4 py-4">
-          <ChatInput disabled={isStreaming} onSend={onSend} />
+          <ChatInput
+            disabled={isStreaming}
+            isStreaming={isStreaming}
+            onSend={onSend}
+            onStop={onStop}
+          />
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import type { Components } from 'react-markdown';
-import { Bot, Loader } from 'lucide-react';
+import { Bot, Loader, OctagonX } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import Markdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
@@ -64,7 +64,7 @@ export default memo(function AssistantMessage({ message, pipelineStarted }: Assi
 
   return (
     <div className="flex flex-col gap-2">
-      {(message.content || isLoading) && (
+      {(message.content || isLoading || message.interrupted) && (
         <>
           <div className="flex items-center gap-2">
             <Bot className="h-4 w-4 text-blue-500" />
@@ -88,6 +88,12 @@ export default memo(function AssistantMessage({ message, pipelineStarted }: Assi
               >
                 {message.content}
               </Markdown>
+            </div>
+          )}
+          {message.interrupted && (
+            <div className="flex items-center gap-1.5">
+              <OctagonX className="h-3 w-3 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground italic">Response was stopped</p>
             </div>
           )}
         </>

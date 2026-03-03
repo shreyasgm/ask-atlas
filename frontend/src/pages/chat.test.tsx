@@ -17,6 +17,7 @@ function msg(overrides: Partial<ChatMessage>): ChatMessage {
     docsConsulted: [],
     graphqlSummaries: [],
     id: 'test',
+    interrupted: false,
     isStreaming: false,
     queryResults: [],
     role: 'user',
@@ -27,6 +28,7 @@ function msg(overrides: Partial<ChatMessage>): ChatMessage {
 // Mock the hooks
 const mockSendMessage = vi.fn();
 const mockClearChat = vi.fn();
+const mockStopStreaming = vi.fn();
 const mockDeleteConversation = vi.fn();
 const mockRefresh = vi.fn();
 const mockResetAll = vi.fn();
@@ -45,6 +47,7 @@ let mockHookReturn: {
   pipelineSteps: Array<PipelineStep>;
   queryStats: QueryAggregateStats | null;
   sendMessage: typeof mockSendMessage;
+  stopStreaming: typeof mockStopStreaming;
   threadId: null | string;
 };
 
@@ -93,6 +96,7 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
   mockSendMessage.mockReset();
   mockClearChat.mockReset();
+  mockStopStreaming.mockReset();
   mockDeleteConversation.mockReset();
   mockRefresh.mockReset();
   mockResetAll.mockReset();
@@ -110,6 +114,7 @@ beforeEach(() => {
     pipelineSteps: [],
     queryStats: null,
     sendMessage: mockSendMessage,
+    stopStreaming: mockStopStreaming,
     threadId: null,
   };
   mockToggleReturn = {
@@ -255,7 +260,14 @@ describe('ChatPage - streaming', () => {
   it('disables input while streaming', () => {
     mockHookReturn.isStreaming = true;
     renderChat();
-    expect(screen.getByPlaceholderText(/ask about trade data/i)).toBeDisabled();
+    expect(screen.getByPlaceholderText(/generating response/i)).toBeDisabled();
+  });
+
+  it('shows stop button while streaming', () => {
+    mockHookReturn.isStreaming = true;
+    renderChat();
+    expect(screen.getByRole('button', { name: /stop generating/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /send/i })).not.toBeInTheDocument();
   });
 
   it('shows pipeline stepper during streaming', () => {
