@@ -510,12 +510,16 @@ class AtlasTextToSQL:
         instance.engine = create_engine(
             db_uri,
             execution_options={"postgresql_readonly": True},
-            connect_args={"connect_timeout": 10},
-            pool_size=5,
-            max_overflow=5,
+            connect_args={
+                "connect_timeout": 10,
+                "options": "-c statement_timeout=30000",
+            },
+            pool_size=3,
+            max_overflow=2,
             pool_timeout=30,
             pool_recycle=1800,
             pool_pre_ping=True,
+            pool_reset_on_return="rollback",
         )
 
         # Async engine: used for query execution and product lookups (true async I/O).
@@ -524,13 +528,23 @@ class AtlasTextToSQL:
         instance.async_engine = create_async_engine(
             async_url,
             execution_options={"postgresql_readonly": True},
-            connect_args={"connect_timeout": 10},
-            pool_size=10,
-            max_overflow=20,
+            connect_args={
+                "connect_timeout": 10,
+                "options": "-c statement_timeout=30000",
+            },
+            pool_size=5,
+            max_overflow=10,
             pool_timeout=30,
             pool_recycle=1800,
             pool_pre_ping=True,
+            pool_reset_on_return="rollback",
         )
+
+        # Attach pool health listeners for monitoring
+        from src.db_pool_health import attach_pool_listeners
+
+        attach_pool_listeners(instance.engine)
+        attach_pool_listeners(instance.async_engine)
 
         instance.db = SQLDatabaseWithSchemas(engine=instance.engine)
         instance.table_descriptions = cls._load_json_as_dict(table_descriptions_json)
