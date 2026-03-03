@@ -53,9 +53,10 @@ def validate_sql(sql: str, valid_tables: set[str]) -> ValidationResult:
     Checks performed:
         1. Empty / whitespace-only SQL — reject.
         2. Syntax parse via sqlglot — catch ``ParseError``.
-        3. Table existence — extracted tables checked against *valid_tables*.
-        4. ``SELECT *`` detection — warn but allow.
-        5. Leading LIKE wildcard (``LIKE '%...'``) — warn but allow.
+        3. Write-operation blocking — reject DML/DDL statements.
+        4. Table existence — extracted tables checked against *valid_tables*.
+        5. ``SELECT *`` detection — warn but allow.
+        6. Leading LIKE wildcard (``LIKE '%...'``) — warn but allow.
 
     Args:
         sql: The SQL query string to validate.
@@ -85,7 +86,33 @@ def validate_sql(sql: str, valid_tables: set[str]) -> ValidationResult:
             sql=sql,
         )
 
-    # 3. Table existence
+    # 3. Write-operation blocking (defense-in-depth for read-only DB)
+    _BLOCKED_NODE_TYPES = (exp.Insert, exp.Update, exp.Delete, exp.Drop, exp.Alter)
+    for node_type in _BLOCKED_NODE_TYPES:
+        if parsed.find(node_type):
+            return ValidationResult(
+                is_valid=False,
+                errors=[
+                    f"Write operations are not allowed. "
+                    f"Detected: {node_type.__name__}."
+                ],
+                sql=sql,
+            )
+
+    stripped_upper = sql.strip().upper()
+    _BLOCKED_PREFIXES = ("TRUNCATE", "CREATE", "GRANT", "REVOKE")
+    for prefix in _BLOCKED_PREFIXES:
+        if stripped_upper.startswith(prefix):
+            return ValidationResult(
+                is_valid=False,
+                errors=[
+                    f"Write operations are not allowed. "
+                    f"Detected: {prefix} statement."
+                ],
+                sql=sql,
+            )
+
+    # 4. Table existence
     query_tables: set[str] = set()
     for table_node in parsed.find_all(exp.Table):
         db = table_node.db  # schema in sqlglot terms
@@ -100,7 +127,7 @@ def validate_sql(sql: str, valid_tables: set[str]) -> ValidationResult:
             f"Valid tables: {', '.join(sorted(valid_tables))}"
         )
 
-    # 4. SELECT * warning
+    # 5. SELECT * warning
     for select_node in parsed.find_all(exp.Select):
         for sel_expr in select_node.expressions:
             if isinstance(sel_expr, exp.Star):
@@ -109,7 +136,7 @@ def validate_sql(sql: str, valid_tables: set[str]) -> ValidationResult:
                 )
                 break
 
-    # 5. Leading LIKE wildcard warning
+    # 6. Leading LIKE wildcard warning
     for like_node in parsed.find_all(exp.Like):
         pattern_expr = like_node.expression
         if isinstance(pattern_expr, exp.Literal) and pattern_expr.is_string:

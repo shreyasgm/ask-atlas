@@ -144,6 +144,71 @@ class TestValidateSql:
         assert result.is_valid is True
         assert result.errors == []
 
+    # --- Write-operation blocking (Tier 1A) ---
+
+    def test_insert_blocked(self):
+        sql = "INSERT INTO hs92.country_year (country_id) VALUES (1)"
+        result = validate_sql(sql, self.VALID_TABLES)
+        assert result.is_valid is False
+        assert any("write" in e.lower() or "insert" in e.lower() for e in result.errors)
+
+    def test_update_blocked(self):
+        sql = "UPDATE hs92.country_year SET export_value = 0 WHERE country_id = 1"
+        result = validate_sql(sql, self.VALID_TABLES)
+        assert result.is_valid is False
+        assert any("write" in e.lower() or "update" in e.lower() for e in result.errors)
+
+    def test_delete_blocked(self):
+        sql = "DELETE FROM hs92.country_year WHERE country_id = 1"
+        result = validate_sql(sql, self.VALID_TABLES)
+        assert result.is_valid is False
+        assert any("write" in e.lower() or "delete" in e.lower() for e in result.errors)
+
+    def test_drop_blocked(self):
+        sql = "DROP TABLE hs92.country_year"
+        result = validate_sql(sql, self.VALID_TABLES)
+        assert result.is_valid is False
+        assert any("write" in e.lower() or "drop" in e.lower() for e in result.errors)
+
+    def test_alter_blocked(self):
+        sql = "ALTER TABLE hs92.country_year ADD COLUMN foo integer"
+        result = validate_sql(sql, self.VALID_TABLES)
+        assert result.is_valid is False
+        assert any("write" in e.lower() or "alter" in e.lower() for e in result.errors)
+
+    def test_truncate_blocked(self):
+        sql = "TRUNCATE TABLE hs92.country_year"
+        result = validate_sql(sql, self.VALID_TABLES)
+        assert result.is_valid is False
+        assert any(
+            "write" in e.lower() or "truncate" in e.lower() for e in result.errors
+        )
+
+    def test_create_blocked(self):
+        sql = "CREATE TABLE foo.bar (id integer)"
+        result = validate_sql(sql, self.VALID_TABLES)
+        assert result.is_valid is False
+        assert any("write" in e.lower() or "create" in e.lower() for e in result.errors)
+
+    def test_grant_blocked(self):
+        sql = "GRANT SELECT ON hs92.country_year TO public"
+        result = validate_sql(sql, self.VALID_TABLES)
+        assert result.is_valid is False
+        assert any("write" in e.lower() or "grant" in e.lower() for e in result.errors)
+
+    def test_revoke_blocked(self):
+        sql = "REVOKE SELECT ON hs92.country_year FROM public"
+        result = validate_sql(sql, self.VALID_TABLES)
+        assert result.is_valid is False
+        assert any("write" in e.lower() or "revoke" in e.lower() for e in result.errors)
+
+    def test_select_still_works_after_write_blocking(self):
+        """Regression: SELECT queries must still pass after adding write checks."""
+        sql = "SELECT country_id, export_value FROM hs92.country_year WHERE year = 2022"
+        result = validate_sql(sql, self.VALID_TABLES)
+        assert result.is_valid is True
+        assert result.errors == []
+
     def test_classification_product_table_in_join(self):
         """Joining classification.product_hs92 should pass when it's in valid_tables."""
         valid = {

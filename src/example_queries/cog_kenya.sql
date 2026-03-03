@@ -6,8 +6,8 @@ WITH latest_year AS (
 SELECT
     p.code as product_code,
     p.name_en as product_name,
-    cpy.normalized_cog,
-    RANK() OVER (ORDER BY cpy.normalized_cog DESC) as cog_rank
+    cpy.cog,
+    RANK() OVER (ORDER BY cpy.cog DESC) as cog_rank
 FROM hs92.country_product_year_4 cpy
 JOIN classification.location_country loc
     ON cpy.country_id = loc.country_id
@@ -15,6 +15,6 @@ JOIN classification.location_country loc
 JOIN classification.product_hs92 p
     ON cpy.product_id = p.product_id
 WHERE cpy.year = (SELECT max_year FROM latest_year)
-    AND cpy.normalized_cog IS NOT NULL
-ORDER BY normalized_cog DESC
+    AND cpy.cog IS NOT NULL
+ORDER BY cog DESC
 LIMIT 15;
