@@ -1,8 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { ChatMessage } from '@/types/chat';
 import AssistantMessage from './assistant-message';
+
+vi.mock('@/hooks/use-backend-ready', () => ({
+  useBackendReady: vi.fn(() => false),
+}));
 
 function makeMessage(overrides: Partial<ChatMessage> = {}): ChatMessage {
   return {
@@ -156,5 +160,44 @@ describe('AssistantMessage', () => {
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.getByText('Brazil')).toBeInTheDocument();
     expect(screen.getByText('1 rows in 42ms')).toBeInTheDocument();
+  });
+
+  it('shows "Processing..." instead of cold-start hint when backend is warm', async () => {
+    const { useBackendReady } = await import('@/hooks/use-backend-ready');
+    vi.mocked(useBackendReady).mockReturnValue(true);
+
+    const msg = makeMessage({ isStreaming: true });
+    render(<AssistantMessage message={msg} />);
+
+    // Fast-forward past the 4-second cold-start timer
+    vi.useFakeTimers();
+    vi.advanceTimersByTime(5000);
+    vi.useRealTimers();
+
+    // Even after the timer fires, we should still see "Processing..." because backend is warm
+    expect(screen.getByText('Processing your question...')).toBeInTheDocument();
+    expect(screen.queryByText(/Starting up the backend/)).not.toBeInTheDocument();
+
+    vi.mocked(useBackendReady).mockReturnValue(false);
+  });
+
+  it('shows cold-start hint when backend is cold and timer fires', async () => {
+    const { useBackendReady } = await import('@/hooks/use-backend-ready');
+    vi.mocked(useBackendReady).mockReturnValue(false);
+
+    vi.useFakeTimers();
+    const msg = makeMessage({ isStreaming: true });
+    render(<AssistantMessage message={msg} />);
+
+    // Initially shows "Processing..."
+    expect(screen.getByText('Processing your question...')).toBeInTheDocument();
+
+    // After 4 seconds, should show cold-start hint
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+
+    expect(screen.getByText(/Starting up the backend/)).toBeInTheDocument();
+    vi.useRealTimers();
   });
 });

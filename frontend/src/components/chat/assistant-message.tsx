@@ -6,6 +6,7 @@ import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import type { ChatMessage } from '@/types/chat';
+import { useBackendReady } from '@/hooks/use-backend-ready';
 import AtlasLinks from './atlas-links';
 import DocsBlock from './docs-block';
 import GraphqlSummaryBlock from './graphql-summary-block';
@@ -42,6 +43,7 @@ interface AssistantMessageProps {
 }
 
 export default memo(function AssistantMessage({ message, pipelineStarted }: AssistantMessageProps) {
+  const backendReady = useBackendReady();
   const isLoading = message.isStreaming && !message.content && !pipelineStarted;
   const [showColdStartHint, setShowColdStartHint] = useState(false);
 
@@ -74,7 +76,7 @@ export default memo(function AssistantMessage({ message, pipelineStarted }: Assi
             <div className="flex items-center gap-2">
               <Loader className="h-3.5 w-3.5 animate-spin text-blue-500" />
               <span className="text-sm text-muted-foreground">
-                {showColdStartHint
+                {!backendReady && showColdStartHint
                   ? 'Starting up the backend — this can take up to 15 seconds on first use'
                   : 'Processing your question...'}
               </span>
