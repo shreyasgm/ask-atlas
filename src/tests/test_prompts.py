@@ -411,12 +411,21 @@ class TestProductExtractionEscaping:
 
 class TestLeafDependency:
     def test_no_src_imports(self):
-        """src/prompts.py must not import from any other src/ module."""
+        """src/prompts/ package must not import from any other src/ module."""
         import inspect
+        import pkgutil
 
-        source = inspect.getsource(prompts)
-        src_imports = re.findall(r"(?:^|\n)\s*(?:from|import)\s+src\.", source)
-        assert not src_imports, (
-            f"src/prompts.py must be a leaf dependency with zero src/ imports, "
-            f"found: {src_imports}"
-        )
+        # Collect source from __init__.py and every submodule.
+        sources: dict[str, str] = {"__init__": inspect.getsource(prompts)}
+        for importer, modname, ispkg in pkgutil.walk_packages(
+            prompts.__path__, prefix=prompts.__name__ + "."
+        ):
+            mod = __import__(modname, fromlist=["__name__"])
+            sources[modname] = inspect.getsource(mod)
+
+        for modname, source in sources.items():
+            src_imports = re.findall(r"(?:^|\n)\s*(?:from|import)\s+src\.", source)
+            assert not src_imports, (
+                f"{modname} must be a leaf dependency with zero src/ imports, "
+                f"found: {src_imports}"
+            )
