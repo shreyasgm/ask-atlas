@@ -1377,3 +1377,22 @@ class TestGenerateSqlNodeTokenUsage:
         assert usage["tool_pipeline"] == "query_tool"
         assert usage["node"] == "generate_sql"
         assert result["pipeline_sql"] == "SELECT * FROM hs92.country_year LIMIT 5"
+
+
+class TestSqlFormatResultsTruncation:
+    """Fix 3: SQL response size cap."""
+
+    async def test_sql_format_results_truncates_large_content(self):
+        """Large SQL results should be truncated."""
+        large_content = "x" * 20_000  # exceeds 15K cap
+        msg = _make_tool_call_message(tool_call_id="call_big")
+        state = _base_state(
+            messages=[msg],
+            pipeline_result=large_content,
+            last_error="",
+            queries_executed=0,
+        )
+        result = await format_results_node(state)
+        content = result["messages"][0].content
+        assert len(content) <= 15_200  # allow some margin for notice
+        assert "[Response truncated" in content

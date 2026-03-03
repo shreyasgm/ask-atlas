@@ -680,6 +680,16 @@ async def format_results_node(state: AtlasAgentState) -> dict:
         else:
             content = state.get("pipeline_result", "SQL query returned no results.")
 
+        # Cap response size to prevent context-window overflow
+        max_chars = 15_000
+        if len(content) > max_chars:
+            truncated_notice = (
+                f"\n\n[Response truncated from {len(content):,} to "
+                f"{max_chars:,} chars. "
+                f"The data above is partial — answer based on what is shown.]"
+            )
+            content = content[: max_chars - len(truncated_notice)] + truncated_notice
+
         messages: list[ToolMessage] = [
             ToolMessage(
                 content=content, tool_call_id=tool_calls[0]["id"], name="query_tool"

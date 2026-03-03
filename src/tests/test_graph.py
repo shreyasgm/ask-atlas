@@ -54,10 +54,7 @@ def _build_graph(
     mock_db = _make_mock_db()
     mock_engine = _make_mock_engine()
 
-    with (
-        patch("src.sql_pipeline.ProductAndSchemaLookup") as mock_lookup_cls,
-        patch("src.graphql_pipeline.classify_query") as _,
-    ):
+    with (patch("src.sql_pipeline.ProductAndSchemaLookup") as mock_lookup_cls,):
         mock_lookup = MagicMock()
         mock_lookup_cls.return_value = mock_lookup
 
@@ -262,7 +259,7 @@ class TestRetryPolicyConfiguration:
     """Verify LangGraph RetryPolicy is attached to GraphQL nodes that make LLM calls."""
 
     def _build_real_graph(self):
-        """Build graph without patching classify_query so RetryPolicy config is preserved."""
+        """Build graph so RetryPolicy config is preserved."""
         mock_db = _make_mock_db()
         mock_engine = _make_mock_engine()
         fake_model = FakeToolCallingModel(responses=[AIMessage(content="done")])
@@ -281,19 +278,11 @@ class TestRetryPolicyConfiguration:
                 agent_mode=AgentMode.SQL_ONLY,
             )
 
-    def test_classify_query_has_retry_policy(self):
-        """classify_query makes an LLM call and should have RetryPolicy."""
+    def test_plan_query_has_retry_policy(self):
+        """plan_query makes an LLM call and should have RetryPolicy."""
         graph = self._build_real_graph()
-        node = graph.nodes["classify_query"]
-        assert node.retry_policy is not None, "classify_query should have RetryPolicy"
-        policy = node.retry_policy[0]
-        assert policy.max_attempts == 3
-
-    def test_extract_entities_has_retry_policy(self):
-        """extract_entities makes an LLM call and should have RetryPolicy."""
-        graph = self._build_real_graph()
-        node = graph.nodes["extract_entities"]
-        assert node.retry_policy is not None, "extract_entities should have RetryPolicy"
+        node = graph.nodes["plan_query"]
+        assert node.retry_policy is not None, "plan_query should have RetryPolicy"
         policy = node.retry_policy[0]
         assert policy.max_attempts == 3
 
@@ -319,8 +308,7 @@ class TestRetryPolicyConfiguration:
 
 _GRAPHQL_STAGES = frozenset(
     {
-        "classify_query",
-        "extract_entities",
+        "plan_query",
         "resolve_ids",
         "build_and_execute_graphql",
         "format_graphql_results",

@@ -72,8 +72,7 @@ PIPELINE_SEQUENCE = [
 
 GRAPHQL_PIPELINE_SEQUENCE = [
     "extract_graphql_question",
-    "classify_query",
-    "extract_entities",
+    "plan_query",
     "resolve_ids",
     "build_and_execute_graphql",
     "format_graphql_results",
@@ -98,8 +97,7 @@ NODE_LABELS = {
     "max_queries_exceeded": "Query limit reached",
     # GraphQL pipeline
     "extract_graphql_question": "Extracting question",
-    "classify_query": "Classifying query type",
-    "extract_entities": "Extracting entities",
+    "plan_query": "Classifying and extracting entities",
     "resolve_ids": "Resolving entity IDs",
     "build_and_execute_graphql": "Querying Atlas API",
     "format_graphql_results": "Formatting results",
@@ -229,14 +227,12 @@ def _extract_pipeline_state(node_name: str, state_snapshot: dict) -> dict:
     elif node_name == "extract_graphql_question":
         base["question"] = state_snapshot.get("graphql_question", "")
 
-    elif node_name == "classify_query":
+    elif node_name == "plan_query":
         classification = state_snapshot.get("graphql_classification") or {}
         query_type = classification.get("query_type", "")
         base["query_type"] = query_type
         base["is_rejected"] = query_type == "reject"
         base["rejection_reason"] = classification.get("rejection_reason", "")
-
-    elif node_name == "extract_entities":
         base["entities"] = state_snapshot.get("graphql_entity_extraction") or {}
 
     elif node_name == "resolve_ids":
@@ -573,7 +569,8 @@ class AtlasTextToSQL:
         from src.cache import (
             country_catalog,
             group_catalog,
-            product_catalog,
+            hs12_product_catalog,
+            hs92_product_catalog,
             services_catalog,
             wire_catalog_fetchers,
         )
@@ -606,7 +603,10 @@ class AtlasTextToSQL:
             graphql_client=graphql_client,
             country_pages_client=country_pages_client,
             country_cache=country_catalog,
-            product_cache=product_catalog,
+            product_caches={
+                "HS92": hs92_product_catalog,
+                "HS12": hs12_product_catalog,
+            },
             services_cache=services_catalog,
             group_cache=group_catalog,
             agent_mode=AgentMode(_settings.agent_mode),
@@ -815,12 +815,12 @@ class AtlasTextToSQL:
                 if pipeline_snapshot.get("last_error"):
                     return "format_results"
                 return "execute_sql"
-            if current_node == "classify_query":
+            if current_node == "plan_query":
                 # Check if query was rejected → skip to format_graphql_results
                 classification = pipeline_snapshot.get("graphql_classification") or {}
                 if classification.get("query_type") == "reject":
                     return "format_graphql_results"
-                return "extract_entities"
+                return "resolve_ids"
             # Check SQL pipeline sequence
             try:
                 idx = PIPELINE_SEQUENCE.index(current_node)

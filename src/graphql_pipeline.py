@@ -1,9 +1,12 @@
 """GraphQL pipeline node functions for the Atlas agent graph.
 
-Provides 6 async node functions that form a linear pipeline:
+Provides 5 async node functions that form a linear pipeline:
 
-    extract_graphql_question → classify_query → extract_entities
+    extract_graphql_question → plan_query
     → resolve_ids → build_and_execute_graphql → format_graphql_results
+
+``plan_query`` combines the former ``classify_query`` + ``extract_entities``
+into a single LLM call, roughly halving latency for those two steps.
 
 Each node reads from ``AtlasAgentState`` and returns a partial dict update.
 Nodes that need external dependencies (LLM, caches, HTTP client) receive
@@ -23,9 +26,11 @@ from src.atlas_links import generate_atlas_links
 from src.cache import CatalogCache
 from src.graphql_client import AtlasGraphQLClient, BudgetExhaustedError, GraphQLError
 from src.prompts import (
+    GRAPHQL_DATA_MAX_YEAR,
     build_classification_prompt,
     build_extraction_prompt,
     build_id_resolution_prompt,
+    build_query_plan_prompt,
 )
 from src.state import AtlasAgentState
 from src.token_usage import (
@@ -40,11 +45,16 @@ logger = logging.getLogger(__name__)
 # Module-level constants
 # ---------------------------------------------------------------------------
 
+MAX_RESPONSE_CHARS: int = 15_000
+"""Cap on formatted response content sent to the LLM (~3.7K tokens).
+
+Prevents context-window overflow when post-processed data is still large.
+"""
+
 GRAPHQL_PIPELINE_NODES = frozenset(
     {
         "extract_graphql_question",
-        "classify_query",
-        "extract_entities",
+        "plan_query",
         "resolve_ids",
         "build_and_execute_graphql",
         "format_graphql_results",
@@ -63,6 +73,42 @@ _GRAPHQL_STATE_DEFAULTS: dict[str, Any] = {
     "graphql_raw_response": None,
     "graphql_execution_time_ms": 0,
     "graphql_atlas_links": [],
+}
+
+# ---------------------------------------------------------------------------
+# Deterministic api_target override: every query_type has exactly one valid
+# API target.  After classification, we override whatever the LLM chose.
+# ---------------------------------------------------------------------------
+
+_QUERY_TYPE_TO_API: dict[str, str] = {
+    "country_profile": "country_pages",
+    "country_profile_exports": "country_pages",
+    "country_profile_partners": "country_pages",
+    "country_profile_complexity": "country_pages",
+    "country_lookback": "country_pages",
+    "new_products": "country_pages",
+    "growth_opportunities": "country_pages",
+    "global_datum": "country_pages",
+    "treemap_products": "explore",
+    "treemap_partners": "explore",
+    "treemap_bilateral": "explore",
+    "overtime_products": "explore",
+    "overtime_partners": "explore",
+    "marketshare": "explore",
+    "product_space": "explore",
+    "feasibility": "explore",
+    "feasibility_table": "explore",
+    "product_table": "explore",
+    "country_year": "explore",
+    "product_info": "explore",
+    "bilateral_aggregate": "explore",
+    "explore_bilateral": "explore",
+    "explore_group": "explore",
+    "explore_data_availability": "explore",
+    "group_products": "explore",
+    "group_bilateral": "explore",
+    "group_membership": "explore",
+    "global_product": "explore",
 }
 
 # ---------------------------------------------------------------------------
@@ -121,8 +167,18 @@ QUERY_TYPE_DESCRIPTION = (
     "                        total export or import value between two specific countries\n"
     "                        (countryCountryYear API).\n"
     "- explore_bilateral : Bilateral trade data between two countries (countryCountryProductYear API).\n"
-    "- explore_group : Regional or group-level trade data — continents, income groups,\n"
-    "                  trade blocs (groupYear, groupGroupProductYear APIs).\n"
+    "- explore_group : Regional or group-level aggregate trade data — continents, income groups,\n"
+    "                  trade blocs. Use for total export/import values of a group (groupYear API).\n"
+    "- group_products : Product-level trade between a country and a group — e.g. 'What does Kenya\n"
+    "                   export to the EU?' (countryGroupProductYear API). Requires country AND\n"
+    "                   partner group.\n"
+    "- group_bilateral : Product-level trade between a group (as exporter) and a country — e.g.\n"
+    "                    'What does the EU export to Kenya?' (groupCountryProductYear API).\n"
+    "                    Requires group AND partner country.\n"
+    "- group_membership : Lists countries belonging to a regional/trade group (e.g., 'Which countries\n"
+    "                      are in the EU?', 'Members of ASEAN'). Returns member country IDs.\n"
+    "- global_product : Global product-level data — total world exports/imports, PCI for products\n"
+    "                    without a specific country (e.g., 'What are the top exported products globally?').\n"
     "- global_datum : Global-level questions not tied to a specific country.\n"
     "- explore_data_availability : Questions about data coverage — which years, products,\n"
     "                              or countries have data available (dataAvailability API).\n"
@@ -138,6 +194,8 @@ QUERY_TYPE_DESCRIPTION = (
     "  prefer country_profile_partners.\n"
     "- For questions about economic complexity, ECI, COI, or complexity rankings,\n"
     "  prefer country_profile_complexity.\n"
+    "- For questions about what a country exports to a GROUP (e.g., EU, Africa), prefer group_products.\n"
+    "- For questions about what a GROUP exports to a country, prefer group_bilateral.\n"
     "- For questions about services trade, use servicesClass: unilateral in the Explore API.\n"
     "- For questions about whether a product is a natural resource or green product,\n"
     "  use product_info with productClass HS92 (naturalResource metadata is only in HS92)."
@@ -226,6 +284,10 @@ class GraphQLQueryClassification(BaseModel):
         "bilateral_aggregate",
         "explore_bilateral",
         "explore_group",
+        "group_products",
+        "group_bilateral",
+        "group_membership",
+        "global_product",
         "global_datum",
         "explore_data_availability",
         "reject",
@@ -292,11 +354,22 @@ class GraphQLEntityExtraction(BaseModel):
         default=None, description="End of time range for overtime queries."
     )
     group_name: Optional[str] = Field(
-        default=None, description="Country group name (e.g., 'ASEAN', 'EU')."
+        default=None,
+        description="Country group name for the exporter side (e.g., 'ASEAN', 'EU'). "
+        "Used for explore_group and group_bilateral query types.",
     )
     group_type: Optional[str] = Field(
         default=None,
         description=GROUP_TYPE_DESCRIPTION,
+    )
+    partner_group_name: Optional[str] = Field(
+        default=None,
+        description="Partner group name for the importer/destination side (e.g., 'EU', 'Africa'). "
+        "Used for group_products query type where a country exports TO a group.",
+    )
+    partner_group_type: Optional[str] = Field(
+        default=None,
+        description="Group type for the partner group (same options as group_type).",
     )
     lookback_years: Literal[3, 5, 10, 15] | None = Field(
         default=None,
@@ -311,6 +384,15 @@ class GraphQLEntityExtraction(BaseModel):
             "names a specific goods product."
         ),
     )
+    trade_direction: Optional[Literal["exports", "imports"]] = Field(
+        default=None,
+        description=(
+            "Trade direction inferred from the question. Set to 'imports' when the question "
+            "asks about imports, imported products, import sources, or top import partners. "
+            "Set to 'exports' when the question explicitly asks about exports. "
+            "Leave null when direction is ambiguous or not mentioned (defaults to exports)."
+        ),
+    )
 
     @field_validator("reasoning", mode="before")
     @classmethod
@@ -319,6 +401,169 @@ class GraphQLEntityExtraction(BaseModel):
         if isinstance(v, str) and len(v) > 300:
             return v[:297] + "..."
         return v
+
+
+class GraphQLQueryPlan(BaseModel):
+    """Combined classification + entity extraction for a user question.
+
+    Merges GraphQLQueryClassification and GraphQLEntityExtraction into a single
+    schema so both steps can be performed in one LLM call, roughly halving the
+    latency of the GraphQL pipeline.
+
+    Downstream code splits this back into classification and extraction dicts
+    for compatibility with resolve_ids, build_and_execute_graphql, etc.
+    """
+
+    # --- Classification fields ---
+    reasoning: str = Field(
+        description="Step-by-step reasoning for classification and entity extraction (max 300 chars).",
+    )
+    query_type: Literal[
+        "country_profile",
+        "country_profile_exports",
+        "country_profile_partners",
+        "country_profile_complexity",
+        "country_lookback",
+        "new_products",
+        "treemap_products",
+        "treemap_partners",
+        "treemap_bilateral",
+        "overtime_products",
+        "overtime_partners",
+        "marketshare",
+        "product_space",
+        "feasibility",
+        "feasibility_table",
+        "growth_opportunities",
+        "product_table",
+        "country_year",
+        "product_info",
+        "bilateral_aggregate",
+        "explore_bilateral",
+        "explore_group",
+        "group_products",
+        "group_bilateral",
+        "group_membership",
+        "global_product",
+        "global_datum",
+        "explore_data_availability",
+        "reject",
+    ] = Field(description=QUERY_TYPE_DESCRIPTION)
+    rejection_reason: Optional[str] = Field(
+        default=None,
+        description="Why the query was rejected. Only set when query_type is 'reject'.",
+    )
+    api_target: Literal["explore", "country_pages"] | None = Field(
+        default=None,
+        description=API_TARGET_DESCRIPTION,
+    )
+
+    # --- Entity extraction fields ---
+    country_name: Optional[str] = Field(
+        default=None, description="Primary country mentioned in the question."
+    )
+    country_code_guess: Optional[str] = Field(
+        default=None, description="ISO 3166-1 alpha-3 code guess (e.g., 'KEN')."
+    )
+    partner_name: Optional[str] = Field(
+        default=None, description="Partner/destination country for bilateral queries."
+    )
+    partner_code_guess: Optional[str] = Field(
+        default=None, description="ISO3 code guess for the partner country."
+    )
+    product_name: Optional[str] = Field(
+        default=None, description="Product or commodity mentioned."
+    )
+    product_code_guess: Optional[str] = Field(
+        default=None, description="HS code guess (e.g., '0901' for coffee)."
+    )
+    product_level: Optional[Literal["section", "twoDigit", "fourDigit", "sixDigit"]] = (
+        Field(
+            default="fourDigit",
+            description=PRODUCT_LEVEL_DESCRIPTION,
+        )
+    )
+    product_class: Optional[Literal["HS92", "HS12", "HS22", "SITC"]] = Field(
+        default=None,
+        description=PRODUCT_CLASS_DESCRIPTION,
+    )
+    year: Optional[int] = Field(
+        default=None, description="Specific year mentioned (e.g., 2024)."
+    )
+    year_min: Optional[int] = Field(
+        default=None, description="Start of time range for overtime queries."
+    )
+    year_max: Optional[int] = Field(
+        default=None, description="End of time range for overtime queries."
+    )
+    group_name: Optional[str] = Field(
+        default=None,
+        description="Country group name for the exporter side (e.g., 'ASEAN', 'EU'). "
+        "Used for explore_group and group_bilateral query types.",
+    )
+    group_type: Optional[str] = Field(
+        default=None,
+        description=GROUP_TYPE_DESCRIPTION,
+    )
+    partner_group_name: Optional[str] = Field(
+        default=None,
+        description="Partner group name for the importer/destination side (e.g., 'EU', 'Africa'). "
+        "Used for group_products query type where a country exports TO a group.",
+    )
+    partner_group_type: Optional[str] = Field(
+        default=None,
+        description="Group type for the partner group (same options as group_type).",
+    )
+    lookback_years: Literal[3, 5, 10, 15] | None = Field(
+        default=None,
+        description="Lookback period in years for Country Pages growth dynamics (country_lookback query type).",
+    )
+    services_class: Optional[Literal["unilateral", "bilateral"]] = Field(
+        default=None,
+        description=(
+            "Set to 'unilateral' when the question asks about total/all exports/products "
+            "or doesn't specifically limit to goods. Set to 'bilateral' for bilateral "
+            "services trade. Leave null when the question explicitly says 'goods' or "
+            "names a specific goods product."
+        ),
+    )
+    trade_direction: Optional[Literal["exports", "imports"]] = Field(
+        default=None,
+        description=(
+            "Trade direction inferred from the question. Set to 'imports' when the question "
+            "asks about imports, imported products, import sources, or top import partners. "
+            "Set to 'exports' when the question explicitly asks about exports. "
+            "Leave null when direction is ambiguous or not mentioned (defaults to exports)."
+        ),
+    )
+
+    @field_validator("reasoning", mode="before")
+    @classmethod
+    def truncate_reasoning(cls, v: str) -> str:
+        """Truncate reasoning to 300 chars to avoid LLM over-generation failures."""
+        if isinstance(v, str) and len(v) > 300:
+            return v[:297] + "..."
+        return v
+
+    # Fields that belong to the classification dict (not entity extraction)
+    _CLASSIFICATION_FIELDS: frozenset[str] = frozenset(
+        {"reasoning", "query_type", "rejection_reason", "api_target"}
+    )
+
+    def split(self) -> tuple[dict, dict | None]:
+        """Split into (classification_dict, extraction_dict) for downstream compat.
+
+        Returns:
+            Tuple of (classification dict, extraction dict or None if rejected).
+        """
+        full = self.model_dump()
+        classification = {k: full[k] for k in self._CLASSIFICATION_FIELDS}
+        if classification["query_type"] == "reject":
+            return classification, None
+        extraction = {
+            k: v for k, v in full.items() if k not in self._CLASSIFICATION_FIELDS
+        }
+        return classification, extraction
 
 
 # ---------------------------------------------------------------------------
@@ -385,9 +630,26 @@ async def classify_query(state: AtlasAgentState, *, lightweight_model: Any) -> d
     usage_record = make_usage_record_from_callback(
         "classify_query", "atlas_graphql", usage_handler
     )
+
+    classification_dict = classification.model_dump()
+
+    # Deterministic api_target override: the LLM should not need to decide
+    # which API to hit — each query_type maps to exactly one target.
+    qt = classification_dict.get("query_type", "")
+    if qt in _QUERY_TYPE_TO_API:
+        canonical_target = _QUERY_TYPE_TO_API[qt]
+        # Special case: country_year routes to country_pages when the LLM
+        # explicitly chose it (for per-classification ECI queries).
+        if (
+            qt == "country_year"
+            and classification_dict.get("api_target") == "country_pages"
+        ):
+            canonical_target = "country_pages"
+        classification_dict["api_target"] = canonical_target
+
     return {
-        "graphql_classification": classification.model_dump(),
-        "graphql_api_target": classification.api_target,
+        "graphql_classification": classification_dict,
+        "graphql_api_target": classification_dict.get("api_target"),
         "token_usage": [usage_record],
         "step_timing": [t.record],
     }
@@ -444,6 +706,77 @@ async def extract_entities(state: AtlasAgentState, *, lightweight_model: Any) ->
 
 
 # ---------------------------------------------------------------------------
+# Node 2+3 merged: plan_query (replaces classify_query + extract_entities)
+# ---------------------------------------------------------------------------
+
+
+async def plan_query(state: AtlasAgentState, *, lightweight_model: Any) -> dict:
+    """Classify AND extract entities in a single LLM call.
+
+    Replaces the sequential ``classify_query`` → ``extract_entities`` pair,
+    roughly halving the latency for these two steps.
+
+    Args:
+        state: Current agent state with ``graphql_question`` populated.
+        lightweight_model: LangChain chat model for structured output.
+
+    Returns:
+        Dict with ``graphql_classification``, ``graphql_entity_extraction``,
+        ``graphql_api_target``, ``token_usage``, and ``step_timing``.
+    """
+    import time
+    from langchain_core.callbacks import UsageMetadataCallbackHandler
+
+    async with node_timer("plan_query", "atlas_graphql") as t:
+        question = state["graphql_question"]
+        context = state.get("graphql_context", "")
+
+        chain = lightweight_model.with_structured_output(
+            GraphQLQueryPlan, method="function_calling"
+        )
+        prompt = build_query_plan_prompt(question, context)
+        usage_handler = UsageMetadataCallbackHandler()
+        llm_start = time.monotonic()
+        plan: GraphQLQueryPlan = await chain.ainvoke(
+            prompt, config={"callbacks": [usage_handler]}
+        )
+        t.mark_llm(llm_start, time.monotonic())
+
+    usage_record = make_usage_record_from_callback(
+        "plan_query", "atlas_graphql", usage_handler
+    )
+
+    classification_dict, extraction_dict = plan.split()
+
+    # Deterministic api_target override (same logic as classify_query)
+    qt = classification_dict.get("query_type", "")
+    if qt in _QUERY_TYPE_TO_API:
+        canonical_target = _QUERY_TYPE_TO_API[qt]
+        # Allow Country Pages for single-year / classification-specific ECI
+        if (
+            qt == "country_year"
+            and classification_dict.get("api_target") == "country_pages"
+        ):
+            canonical_target = "country_pages"
+        # Force Explore when a year range is detected — Country Pages only
+        # supports a single year parameter and silently drops year_min/year_max.
+        if qt == "country_year" and extraction_dict:
+            year_min = extraction_dict.get("year_min")
+            year_max = extraction_dict.get("year_max")
+            if year_min and year_max and year_min != year_max:
+                canonical_target = "explore"
+        classification_dict["api_target"] = canonical_target
+
+    return {
+        "graphql_classification": classification_dict,
+        "graphql_api_target": classification_dict.get("api_target"),
+        "graphql_entity_extraction": extraction_dict,
+        "token_usage": [usage_record],
+        "step_timing": [t.record],
+    }
+
+
+# ---------------------------------------------------------------------------
 # Node 4: resolve_ids
 # ---------------------------------------------------------------------------
 
@@ -453,7 +786,7 @@ async def resolve_ids(
     *,
     lightweight_model: Any,
     country_cache: CatalogCache,
-    product_cache: CatalogCache,
+    product_caches: dict[str, CatalogCache],
     group_cache: CatalogCache | None = None,
     services_cache: CatalogCache,
 ) -> dict:
@@ -466,7 +799,9 @@ async def resolve_ids(
         state: Current agent state with extraction populated.
         lightweight_model: LangChain chat model for disambiguation.
         country_cache: Country catalog cache.
-        product_cache: Product catalog cache.
+        product_caches: Product catalog caches keyed by classification
+            (e.g. ``{"HS92": ..., "HS12": ...}``).  The extracted
+            ``product_class`` selects which cache to use; defaults to HS12.
         services_cache: Services catalog cache.
 
     Returns:
@@ -487,7 +822,7 @@ async def resolve_ids(
             _t,
             lightweight_model=lightweight_model,
             country_cache=country_cache,
-            product_cache=product_cache,
+            product_caches=product_caches,
             group_cache=group_cache,
             services_cache=services_cache,
         )
@@ -499,7 +834,7 @@ async def _resolve_ids_inner(
     *,
     lightweight_model: Any,
     country_cache: CatalogCache,
-    product_cache: CatalogCache,
+    product_caches: dict[str, CatalogCache],
     group_cache: CatalogCache | None = None,
     services_cache: CatalogCache,
 ) -> dict:
@@ -556,14 +891,18 @@ async def _resolve_ids_inner(
             resolved["partner_id"] = partner["countryId"]
             resolved["partner_name"] = partner.get("nameShortEn", partner_name)
 
-    # Resolve product
+    # Resolve product — select cache by product_class
     product_name = extraction.get("product_name")
     product_code = extraction.get("product_code_guess")
     if product_name or product_code:
+        product_class = extraction.get("product_class") or "HS12"
+        active_product_cache = product_caches.get(
+            product_class, next(iter(product_caches.values()))
+        )
         product = await _resolve_entity(
             name=product_name,
             code_guess=product_code,
-            cache=product_cache,
+            cache=active_product_cache,
             index_name="code",
             search_field="nameShortEn",
             llm=lightweight_model,
@@ -574,7 +913,7 @@ async def _resolve_ids_inner(
             resolved["product_id"] = product["productId"]
             resolved["product_name"] = product.get("nameShortEn", product_name)
 
-    # If product not found in product_cache, try services_cache
+    # If product not found in the selected cache, try services_cache
     if "product_id" not in resolved and (product_name or product_code):
         service_entry = await _resolve_entity(
             name=product_name,
@@ -609,11 +948,18 @@ async def _resolve_ids_inner(
         "product_class",
         "group_name",
         "group_type",
+        "partner_group_name",
+        "partner_group_type",
         "services_class",
+        "trade_direction",
     ):
         val = extraction.get(field_name)
         if val is not None:
             resolved[field_name] = val
+
+    # Fallback: use override_direction from frontend UI toggle if LLM didn't extract
+    if "trade_direction" not in resolved and state.get("override_direction"):
+        resolved["trade_direction"] = state["override_direction"]
 
     # Resolve group_name to group_id if a group cache is available
     group_name = extraction.get("group_name")
@@ -630,10 +976,59 @@ async def _resolve_ids_inner(
         )
         if group_entry:
             resolved["group_id"] = group_entry["groupId"]
+            resolved["group_name"] = group_entry.get("groupName", group_name)
         else:
             resolution_notes.append(
                 f"Could not resolve group '{group_name}' in catalog"
             )
+
+    # Resolve partner_group_name to partner_group_id (for CGPY queries)
+    partner_group_name = extraction.get("partner_group_name")
+    if partner_group_name and group_cache is not None:
+        partner_group_entry = await _resolve_entity(
+            name=partner_group_name,
+            code_guess=None,
+            cache=group_cache,
+            index_name="name",
+            search_field="groupName",
+            llm=lightweight_model,
+            question=question,
+            usage_sink=usage_sink,
+        )
+        if partner_group_entry:
+            resolved["partner_group_id"] = partner_group_entry["groupId"]
+            resolved["partner_group_name"] = partner_group_entry.get(
+                "groupName", partner_group_name
+            )
+        else:
+            resolution_notes.append(
+                f"Could not resolve partner group '{partner_group_name}' in catalog"
+            )
+
+    # Entity-derived query type validation: auto-correct the query_type when
+    # resolved entities clearly indicate a different type than what the LLM
+    # classified.  Mirrors the frontend's determineEndpointFacet pattern.
+    has_country = "country_id" in resolved
+    has_partner = "partner_id" in resolved
+    has_group = "group_id" in resolved
+    has_partner_group = "partner_group_id" in resolved
+
+    if has_country and has_partner_group and query_type not in ("group_products",):
+        logger.info(
+            "Auto-correcting query_type from %r to 'group_products' "
+            "(country + partner_group resolved)",
+            query_type,
+        )
+        query_type = "group_products"
+        api_target = _QUERY_TYPE_TO_API["group_products"]
+    elif has_group and has_partner and query_type not in ("group_bilateral",):
+        logger.info(
+            "Auto-correcting query_type from %r to 'group_bilateral' "
+            "(group + partner resolved)",
+            query_type,
+        )
+        query_type = "group_bilateral"
+        api_target = _QUERY_TYPE_TO_API["group_bilateral"]
 
     # Generate atlas links BEFORE formatting IDs (links expect canonical form)
     atlas_links: list[dict] = []
@@ -808,14 +1203,22 @@ def format_ids_for_api(
             result["location"] = f"location-{country_id}"
         if "product_id" in result:
             product_id = _strip_id_prefix(result.pop("product_id"))
-            result["product"] = f"product-HS-{product_id}"
+            pc = result.get("product_class", "HS")
+            prefix = "SITC" if pc == "SITC" else "HS"
+            result["product"] = f"product-{prefix}-{product_id}"
         if "partner_id" in result:
             partner_id = _strip_id_prefix(result.pop("partner_id"))
             result["partner"] = f"location-{partner_id}"
     else:
         # Explore API: ensure IDs are bare integers (strip any prefixes
         # that the catalog may have stored)
-        for key in ("country_id", "product_id", "partner_id"):
+        for key in (
+            "country_id",
+            "product_id",
+            "partner_id",
+            "group_id",
+            "partner_group_id",
+        ):
             if key in result:
                 try:
                     result[key] = _strip_id_prefix(result[key])
@@ -953,8 +1356,9 @@ async def build_and_execute_graphql(
 async def format_graphql_results(
     state: AtlasAgentState,
     *,
-    product_cache: CatalogCache | None = None,
+    product_caches: dict[str, CatalogCache] | None = None,
     country_cache: CatalogCache | None = None,
+    services_cache: CatalogCache | None = None,
 ) -> dict:
     """Create a ToolMessage from the GraphQL pipeline results.
 
@@ -967,8 +1371,10 @@ async def format_graphql_results(
 
     Args:
         state: Current agent state with raw GraphQL response.
-        product_cache: Optional product catalog cache for name enrichment.
+        product_caches: Product catalog caches keyed by classification
+            (e.g. ``{"HS92": ..., "HS12": ...}``).
         country_cache: Optional country catalog cache for name enrichment.
+        services_cache: Optional services catalog cache for name enrichment.
     """
     async with node_timer("format_graphql_results", "atlas_graphql") as _fmt_t:
         last_msg = state["messages"][-1]
@@ -1004,13 +1410,87 @@ async def format_graphql_results(
             # Success — post-process then serialize
             import json
 
-            processed = post_process_response(
-                query_type,
-                raw_response,
-                product_cache=product_cache,
-                country_cache=country_cache,
-            )
+            trade_direction = (entity_extraction or {}).get(
+                "trade_direction"
+            ) or "exports"
+            resolved = state.get("graphql_resolved_params") or {}
+            product_class = (entity_extraction or {}).get("product_class") or "HS12"
+            if query_type == "group_membership":
+                processed = post_process_group_membership(
+                    raw_response,
+                    group_id=resolved.get("group_id"),
+                    group_name=resolved.get("group_name"),
+                    country_cache=country_cache,
+                )
+            else:
+                processed = post_process_response(
+                    query_type,
+                    raw_response,
+                    trade_direction=trade_direction,
+                    product_caches=product_caches,
+                    product_class=product_class,
+                    country_cache=country_cache,
+                    services_cache=services_cache,
+                )
             content = json.dumps(processed, indent=2, default=str)
+
+            # Cap response size to prevent context-window overflow
+            if len(content) > MAX_RESPONSE_CHARS:
+                truncated_notice = (
+                    f"\n\n[Response truncated from {len(content):,} to "
+                    f"{MAX_RESPONSE_CHARS:,} chars. "
+                    f"The data above is partial — answer based on what is shown.]"
+                )
+                content = (
+                    content[: MAX_RESPONSE_CHARS - len(truncated_notice)]
+                    + truncated_notice
+                )
+
+            # Build data-quality warnings
+            warnings: list[str] = []
+            rules = _POST_PROCESS_RULES.get(query_type)
+            if rules:
+                root_key = rules["root"]
+                items = processed.get(root_key, [])
+                if isinstance(items, list) and len(items) == 0:
+                    warnings.append(
+                        "WARNING: The query returned zero results. This may mean the data "
+                        "is not available for this country/product/year combination. "
+                        "Report this to the user — do NOT guess or fabricate data."
+                    )
+
+                # Year range mismatch
+                if entity_extraction:
+                    requested_min = entity_extraction.get("year_min")
+                    requested_max = entity_extraction.get("year_max")
+                    if (
+                        requested_min
+                        and requested_max
+                        and isinstance(items, list)
+                        and items
+                    ):
+                        years = sorted(
+                            {item.get("year") for item in items if item.get("year")}
+                        )
+                        if years and (
+                            years[0] > requested_min or years[-1] < requested_max
+                        ):
+                            warnings.append(
+                                f"WARNING: Requested year range {requested_min}-{requested_max} "
+                                f"but data only covers {years[0]}-{years[-1]}. "
+                                f"Report the actual coverage to the user."
+                            )
+
+            # Import direction note
+            if trade_direction == "imports":
+                warnings.append(
+                    "NOTE: This query was for IMPORTS. Use the importValue field "
+                    "(not exportValue) when reporting results to the user."
+                )
+
+            if warnings:
+                content = "\n".join(warnings) + "\n\n" + content
+
             atlas_links = state.get("graphql_atlas_links", [])
 
         messages: list[ToolMessage] = [
@@ -1116,7 +1596,7 @@ _POST_PROCESS_RULES: dict[str, dict] = {
     },
     "growth_opportunities": {
         "root": "productSpace",
-        "sort": "cog",
+        "sort": "rca",
         "top_n": 20,
         "enrich": "none",
     },
@@ -1132,6 +1612,31 @@ _POST_PROCESS_RULES: dict[str, dict] = {
         "top_n": 20,
         "enrich": "none",
     },
+    "group_products": {
+        "root": "countryGroupProductYear",
+        "sort": "exportValue",
+        "top_n": 20,
+        "enrich": "product",
+    },
+    "group_bilateral": {
+        "root": "groupCountryProductYear",
+        "sort": "exportValue",
+        "top_n": 20,
+        "enrich": "product",
+    },
+    "global_product": {
+        "root": "productYear",
+        "sort": "exportValue",
+        "top_n": 20,
+        "enrich": "product",
+    },
+    "country_year": {
+        "root": "countryYear",
+        "sort": "year",
+        "sort_ascending": True,
+        "top_n": 30,
+        "enrich": "none",
+    },
 }
 
 _FILTERS: dict[str, Callable] = {
@@ -1143,16 +1648,23 @@ def post_process_response(
     query_type: str,
     raw_response: dict,
     *,
-    product_cache: CatalogCache | None = None,
+    trade_direction: str = "exports",
+    product_caches: dict[str, CatalogCache] | None = None,
+    product_class: str = "HS12",
     country_cache: CatalogCache | None = None,
+    services_cache: CatalogCache | None = None,
 ) -> dict:
     """Sort, truncate, and enrich large GraphQL responses before sending to the LLM.
 
     Args:
         query_type: Classified query type (e.g., "treemap_products").
         raw_response: Raw GraphQL API response dict.
-        product_cache: Optional product catalog cache for name enrichment.
+        trade_direction: "exports" or "imports" — determines which value field to sort by.
+        product_caches: Product catalog caches keyed by classification
+            (e.g. ``{"HS92": ..., "HS12": ...}``).
+        product_class: Which classification to use for enrichment (default HS12).
         country_cache: Optional country catalog cache for name enrichment.
+        services_cache: Optional services catalog cache for name enrichment.
 
     Returns:
         Post-processed response dict, or raw_response if no rules apply.
@@ -1173,11 +1685,15 @@ def post_process_response(
     if filter_name and filter_name in _FILTERS:
         items = [item for item in items if _FILTERS[filter_name](item)]
 
-    # Sort by sort field descending (nulls last)
+    # Override sort field for imports
     sort_field = rules["sort"]
+    if trade_direction == "imports" and sort_field == "exportValue":
+        sort_field = "importValue"
+
+    sort_ascending = rules.get("sort_ascending", False)
     items.sort(
         key=lambda x: (x.get(sort_field) is not None, x.get(sort_field) or 0),
-        reverse=True,
+        reverse=not sort_ascending,
     )
 
     # Truncate
@@ -1186,10 +1702,14 @@ def post_process_response(
 
     # Enrich with human-readable names
     enrich_type = rules.get("enrich", "none")
-    if enrich_type == "product" and product_cache is not None:
+    if enrich_type == "product" and product_caches:
+        product_cache = product_caches.get(
+            product_class, next(iter(product_caches.values()))
+        )
         if not product_cache.is_populated:
             logger.warning(
-                "Product cache not populated — skipping enrichment for %s",
+                "Product cache (%s) not populated — skipping enrichment for %s",
+                product_class,
                 query_type,
             )
         else:
@@ -1197,6 +1717,14 @@ def post_process_response(
                 pid = item.get("productId")
                 if pid is not None:
                     entry = product_cache.lookup_sync("id", str(pid))
+                    # Fall back to services cache for service product IDs
+                    # (e.g., IDs 14, 400-404 which are not in the HS product cache)
+                    if (
+                        entry is None
+                        and services_cache is not None
+                        and services_cache.is_populated
+                    ):
+                        entry = services_cache.lookup_sync("id", str(pid))
                     if entry:
                         item["productName"] = entry.get("nameShortEn", "")
                         item["productCode"] = entry.get("code", "")
@@ -1220,6 +1748,8 @@ def post_process_response(
             "totalItems": total_items,
             "shownItems": len(items),
             "sortField": sort_field,
+            "tradeDirection": trade_direction,
+            "summary": f"Showing top {len(items)} of {total_items} items, sorted by {sort_field} ({trade_direction}).",
         },
     }
 
@@ -1269,8 +1799,8 @@ def _build_country_product_year(params: dict) -> tuple[str, dict]:
         variables["yearMin"] = year
         variables["yearMax"] = year
     else:
-        variables["yearMin"] = params.get("year_min", 2024)
-        variables["yearMax"] = params.get("year_max", 2024)
+        variables["yearMin"] = params.get("year_min", GRAPHQL_DATA_MAX_YEAR)
+        variables["yearMax"] = params.get("year_max", GRAPHQL_DATA_MAX_YEAR)
 
     if "product_id" in params:
         variables["productId"] = params["product_id"]
@@ -1309,6 +1839,11 @@ def _build_country_country_year(params: dict) -> tuple[str, dict]:
 
     Supports optional ``partner_id`` for bilateral aggregate filtering.
     When absent, returns all partner rows (treemap_partners / overtime_partners).
+
+    NOTE: The API resolver performs a pandas groupby after unioning goods and
+    services tables, so CCY.exportValue is the goods+services total aggregated
+    into a single row per (country, partner, year).  This differs from CPY/CCPY
+    where goods and services appear as separate product rows.
     """
     variables: dict[str, Any] = {"countryId": params.get("country_id")}
     year = params.get("year")
@@ -1316,8 +1851,8 @@ def _build_country_country_year(params: dict) -> tuple[str, dict]:
         variables["yearMin"] = year
         variables["yearMax"] = year
     else:
-        variables["yearMin"] = params.get("year_min", 2024)
-        variables["yearMax"] = params.get("year_max", 2024)
+        variables["yearMin"] = params.get("year_min", GRAPHQL_DATA_MAX_YEAR)
+        variables["yearMax"] = params.get("year_max", GRAPHQL_DATA_MAX_YEAR)
 
     if "partner_id" in params:
         variables["partnerCountryId"] = params["partner_id"]
@@ -1358,8 +1893,8 @@ def _build_country_country_product_year(params: dict) -> tuple[str, dict]:
         variables["yearMin"] = year
         variables["yearMax"] = year
     else:
-        variables["yearMin"] = params.get("year_min", 2024)
-        variables["yearMax"] = params.get("year_max", 2024)
+        variables["yearMin"] = params.get("year_min", GRAPHQL_DATA_MAX_YEAR)
+        variables["yearMax"] = params.get("year_max", GRAPHQL_DATA_MAX_YEAR)
 
     services_class = params.get("services_class")
     if services_class:
@@ -1393,7 +1928,7 @@ def _build_country_year_cp(params: dict) -> tuple[str, dict]:
     Supports eciProductClass for SITC/HS-specific ECI values.
     """
     location = params.get("location", "")
-    year = params.get("year") or params.get("year_min", 2024)
+    year = params.get("year") or params.get("year_min", GRAPHQL_DATA_MAX_YEAR)
     variables: dict[str, Any] = {"location": location, "year": int(year)}
 
     product_class = _normalize_cp_product_class(params.get("product_class"))
@@ -1429,8 +1964,8 @@ def _build_country_year(params: dict) -> tuple[str, dict]:
         variables["yearMin"] = year
         variables["yearMax"] = year
     else:
-        variables["yearMin"] = params.get("year_min", 2024)
-        variables["yearMax"] = params.get("year_max", 2024)
+        variables["yearMin"] = params.get("year_min", GRAPHQL_DATA_MAX_YEAR)
+        variables["yearMax"] = params.get("year_max", GRAPHQL_DATA_MAX_YEAR)
 
     services_class = params.get("services_class")
     if services_class:
@@ -1468,8 +2003,8 @@ def _build_product_year(params: dict) -> tuple[str, dict]:
         variables["yearMin"] = year
         variables["yearMax"] = year
     else:
-        variables["yearMin"] = params.get("year_min", 2024)
-        variables["yearMax"] = params.get("year_max", 2024)
+        variables["yearMin"] = params.get("year_min", GRAPHQL_DATA_MAX_YEAR)
+        variables["yearMax"] = params.get("year_max", GRAPHQL_DATA_MAX_YEAR)
 
     services_class = params.get("services_class")
     if services_class:
@@ -1492,6 +2027,34 @@ def _build_product_year(params: dict) -> tuple[str, dict]:
         pci complexityEnum
       }}
     }}
+    """
+    return query, variables
+
+
+def _build_global_product_year(params: dict) -> tuple[str, dict]:
+    """Build productYear query for global product data (Explore API).
+
+    Used for country-agnostic product queries like "top exported products
+    globally". Returns all products for a given year with export/import
+    values and PCI.
+    """
+    product_class = params.get("product_class") or "HS92"
+    product_level = _product_level_to_int(params.get("product_level", "fourDigit"))
+    year = params.get("year") or params.get("year_max") or GRAPHQL_DATA_MAX_YEAR
+    variables: dict[str, Any] = {
+        "productClass": product_class,
+        "productLevel": product_level,
+        "yearMin": int(year),
+        "yearMax": int(year),
+    }
+    query = """
+    query PY($productClass: ProductClass!, $productLevel: Int!,
+             $yearMin: Int!, $yearMax: Int!) {
+      productYear(productClass: $productClass, productLevel: $productLevel,
+                  yearMin: $yearMin, yearMax: $yearMax) {
+        productId year exportValue importValue pci
+      }
+    }
     """
     return query, variables
 
@@ -1528,7 +2091,15 @@ def _build_data_availability(params: dict) -> tuple[str, dict]:
 
 
 def _build_group_year(params: dict) -> tuple[str, dict]:
-    """Build groupYear query (Explore API)."""
+    """Build groupYear query (Explore API).
+
+    NOTE: The API's groupYear resolver joins classification.location_group_member
+    with the goods-only CY model.  It does NOT union with services tables.
+    Therefore groupYear.exportValue represents goods-only trade.  By contrast,
+    countryYear explicitly unions goods + services CY tables.  When reporting
+    group-level export totals, the agent should caveat that the figure excludes
+    services trade.
+    """
     variables: dict[str, Any] = {}
     if "group_id" in params:
         variables["groupId"] = params["group_id"]
@@ -1539,8 +2110,8 @@ def _build_group_year(params: dict) -> tuple[str, dict]:
         variables["yearMin"] = year
         variables["yearMax"] = year
     else:
-        variables["yearMin"] = params.get("year_min", 2024)
-        variables["yearMax"] = params.get("year_max", 2024)
+        variables["yearMin"] = params.get("year_min", GRAPHQL_DATA_MAX_YEAR)
+        variables["yearMax"] = params.get("year_max", GRAPHQL_DATA_MAX_YEAR)
 
     query = """
     query GY($groupId: Int, $groupType: GroupType, $yearMin: Int, $yearMax: Int) {
@@ -1553,6 +2124,89 @@ def _build_group_year(params: dict) -> tuple[str, dict]:
         groupId year
         exportValue importValue
         population gdp gdpPpp
+      }
+    }
+    """
+    return query, variables
+
+
+def _build_country_group_product_year(params: dict) -> tuple[str, dict]:
+    """Build countryGroupProductYear query (Explore API — CGPY).
+
+    Answers "What does country X export to group Y?" with product-level data.
+    The API joins CCPY with group membership, summing by (country, product, year).
+    Special case: partnerGroupId = 1 (World) uses CPY tables internally.
+    """
+    variables: dict[str, Any] = {
+        "countryId": params.get("country_id"),
+        "partnerGroupId": params.get("partner_group_id"),
+        "productLevel": _product_level_to_int(params.get("product_level", "fourDigit")),
+        "productClass": params.get("product_class", "HS12"),
+    }
+    year = params.get("year")
+    if year:
+        variables["yearMin"] = year
+        variables["yearMax"] = year
+    else:
+        variables["yearMin"] = params.get("year_min", GRAPHQL_DATA_MAX_YEAR)
+        variables["yearMax"] = params.get("year_max", GRAPHQL_DATA_MAX_YEAR)
+
+    query = """
+    query CGPY($countryId: Int!, $partnerGroupId: Int!,
+               $productLevel: Int!, $productClass: ProductClass,
+               $yearMin: Int, $yearMax: Int) {
+      countryGroupProductYear(
+        countryId: $countryId
+        partnerGroupId: $partnerGroupId
+        productLevel: $productLevel
+        productClass: $productClass
+        yearMin: $yearMin
+        yearMax: $yearMax
+      ) {
+        countryId partnerGroupId productId productLevel year
+        exportValue importValue
+      }
+    }
+    """
+    return query, variables
+
+
+def _build_group_country_product_year(params: dict) -> tuple[str, dict]:
+    """Build groupCountryProductYear query (Explore API — GCPY).
+
+    Answers "What does group X export to country Y?" with product-level data.
+    The API joins CCPY with group membership (members as exporters), summing
+    by (group, product, year).  Special case: groupId = 1 (World) flips
+    export/import direction internally.
+    """
+    variables: dict[str, Any] = {
+        "groupId": params.get("group_id"),
+        "partnerCountryId": params.get("partner_id"),
+        "productLevel": _product_level_to_int(params.get("product_level", "fourDigit")),
+        "productClass": params.get("product_class", "HS12"),
+    }
+    year = params.get("year")
+    if year:
+        variables["yearMin"] = year
+        variables["yearMax"] = year
+    else:
+        variables["yearMin"] = params.get("year_min", GRAPHQL_DATA_MAX_YEAR)
+        variables["yearMax"] = params.get("year_max", GRAPHQL_DATA_MAX_YEAR)
+
+    query = """
+    query GCPY($groupId: Int!, $partnerCountryId: Int!,
+               $productLevel: Int!, $productClass: ProductClass,
+               $yearMin: Int, $yearMax: Int) {
+      groupCountryProductYear(
+        groupId: $groupId
+        partnerCountryId: $partnerCountryId
+        productLevel: $productLevel
+        productClass: $productClass
+        yearMin: $yearMin
+        yearMax: $yearMax
+      ) {
+        groupId partnerCountryId productId productLevel year
+        exportValue importValue
       }
     }
     """
@@ -1658,10 +2312,14 @@ def _build_country_lookback(params: dict) -> tuple[str, dict]:
 
 
 def _build_new_products(params: dict) -> tuple[str, dict]:
-    """Build newProductsCountry query (Country Pages API)."""
+    """Build newProductsCountry + comparison query (Country Pages API).
+
+    Includes ``newProductsComparisonCountries`` for peer comparison context
+    alongside the primary new-products data.
+    """
     location = params.get("location", "")
-    year = params.get("year", 2024)
-    variables: dict[str, Any] = {"location": location, "year": year}
+    year = params.get("year", GRAPHQL_DATA_MAX_YEAR)
+    variables: dict[str, Any] = {"location": location, "year": int(year)}
     query = """
     query NP($location: ID!, $year: Int!) {
       newProductsCountry(location: $location, year: $year) {
@@ -1670,6 +2328,12 @@ def _build_new_products(params: dict) -> tuple[str, dict]:
         newProductExportValue
         newProductExportValuePerCapita
         newProducts { id code shortName longName }
+      }
+      newProductsComparisonCountries(location: $location, year: $year) {
+        location { id shortName }
+        newProductCount
+        newProductExportValue
+        newProductExportValuePerCapita
       }
     }
     """
@@ -1688,8 +2352,8 @@ def _build_growth_opportunities(params: dict) -> tuple[str, dict]:
     query GO($location: ID!, $productClass: ProductClass!, $year: Int) {
       productSpace(location: $location, productClass: $productClass, year: $year) {
         product { id shortName code }
-        exportValue exportRca
-        cog cogRank distance distanceRank
+        exportValue importValue rca
+        x y
       }
     }
     """
@@ -1708,8 +2372,8 @@ def _build_product_table(params: dict) -> tuple[str, dict]:
         variables["yearMin"] = year
         variables["yearMax"] = year
     else:
-        variables["yearMin"] = params.get("year_min", 2024)
-        variables["yearMax"] = params.get("year_max", 2024)
+        variables["yearMin"] = params.get("year_min", GRAPHQL_DATA_MAX_YEAR)
+        variables["yearMax"] = params.get("year_max", GRAPHQL_DATA_MAX_YEAR)
 
     if "product_id" in params:
         variables["productId"] = params["product_id"]
@@ -1747,7 +2411,7 @@ def _build_cp_treemap_products(params: dict) -> tuple[str, dict]:
     location = params.get("location", "")
     product_class = _normalize_cp_product_class(params.get("product_class")) or "HS"
     product_level = params.get("product_level", "fourDigit")
-    year = params.get("year", 2024)
+    year = params.get("year", GRAPHQL_DATA_MAX_YEAR)
     variables: dict[str, Any] = {
         "location": location,
         "productClass": product_class,
@@ -1776,7 +2440,7 @@ def _build_cp_treemap_partners(params: dict) -> tuple[str, dict]:
     """
     location = params.get("location", "")
     product_class = _normalize_cp_product_class(params.get("product_class")) or "HS"
-    year = params.get("year", 2024)
+    year = params.get("year", GRAPHQL_DATA_MAX_YEAR)
     variables: dict[str, Any] = {
         "location": location,
         "productClass": product_class,
@@ -1852,8 +2516,8 @@ def _build_treemap_cpy(params: dict) -> tuple[str, dict]:
         variables["yearMin"] = year
         variables["yearMax"] = year
     else:
-        variables["yearMin"] = params.get("year_min", 2024)
-        variables["yearMax"] = params.get("year_max", 2024)
+        variables["yearMin"] = params.get("year_min", GRAPHQL_DATA_MAX_YEAR)
+        variables["yearMax"] = params.get("year_max", GRAPHQL_DATA_MAX_YEAR)
 
     if "product_id" in params:
         variables["productId"] = params["product_id"]
@@ -1875,7 +2539,7 @@ def _build_treemap_cpy(params: dict) -> tuple[str, dict]:
         yearMin: $yearMin
         yearMax: $yearMax{sc_arg}
       ) {{
-        productId year exportValue
+        productId year exportValue importValue
       }}
     }}
     """
@@ -1890,8 +2554,8 @@ def _build_treemap_ccy(params: dict) -> tuple[str, dict]:
         variables["yearMin"] = year
         variables["yearMax"] = year
     else:
-        variables["yearMin"] = params.get("year_min", 2024)
-        variables["yearMax"] = params.get("year_max", 2024)
+        variables["yearMin"] = params.get("year_min", GRAPHQL_DATA_MAX_YEAR)
+        variables["yearMax"] = params.get("year_max", GRAPHQL_DATA_MAX_YEAR)
 
     services_class = params.get("services_class")
     if services_class:
@@ -1927,8 +2591,8 @@ def _build_treemap_ccpy(params: dict) -> tuple[str, dict]:
         variables["yearMin"] = year
         variables["yearMax"] = year
     else:
-        variables["yearMin"] = params.get("year_min", 2024)
-        variables["yearMax"] = params.get("year_max", 2024)
+        variables["yearMin"] = params.get("year_min", GRAPHQL_DATA_MAX_YEAR)
+        variables["yearMax"] = params.get("year_max", GRAPHQL_DATA_MAX_YEAR)
 
     services_class = params.get("services_class")
     if services_class:
@@ -1948,7 +2612,7 @@ def _build_treemap_ccpy(params: dict) -> tuple[str, dict]:
         yearMin: $yearMin
         yearMax: $yearMax{sc_arg}
       ) {{
-        productId year exportValue
+        productId year exportValue importValue
       }}
     }}
     """
@@ -1967,8 +2631,8 @@ def _build_feasibility_cpy(params: dict) -> tuple[str, dict]:
         variables["yearMin"] = year
         variables["yearMax"] = year
     else:
-        variables["yearMin"] = params.get("year_min", 2024)
-        variables["yearMax"] = params.get("year_max", 2024)
+        variables["yearMin"] = params.get("year_min", GRAPHQL_DATA_MAX_YEAR)
+        variables["yearMax"] = params.get("year_max", GRAPHQL_DATA_MAX_YEAR)
 
     if "product_id" in params:
         variables["productId"] = params["product_id"]
@@ -1990,11 +2654,103 @@ def _build_feasibility_cpy(params: dict) -> tuple[str, dict]:
         yearMin: $yearMin
         yearMax: $yearMax{sc_arg}
       ) {{
-        productId year exportValue exportRca cog distance
+        productId year exportValue importValue exportRca cog distance
       }}
     }}
     """
     return query, variables
+
+
+def _build_group_membership(params: dict) -> tuple[str, dict]:
+    """Build locationGroup query with members (Explore API)."""
+    variables: dict[str, Any] = {}
+    group_type = params.get("group_type")
+    if group_type:
+        variables["groupType"] = group_type
+    query = """
+    query LG($groupType: GroupType) {
+      locationGroup(groupType: $groupType) {
+        groupId groupName groupType members
+      }
+    }
+    """
+    return query, variables
+
+
+def post_process_group_membership(
+    raw_response: dict,
+    *,
+    group_id: int | None = None,
+    group_name: str | None = None,
+    country_cache: CatalogCache | None = None,
+) -> dict:
+    """Post-process locationGroup response for group membership queries.
+
+    Filters to the target group, enriches member IDs with country names.
+
+    Args:
+        raw_response: Raw GraphQL response with ``locationGroup`` key.
+        group_id: Target group ID to filter to.
+        group_name: Fallback group name for matching (case-insensitive).
+        country_cache: Country catalog cache for member name enrichment.
+
+    Returns:
+        Dict with group info and enriched members list.
+    """
+    groups = raw_response.get("locationGroup", [])
+    if not groups:
+        return {"error": "No groups returned", "locationGroup": []}
+
+    # Filter to target group — priority: group_id > exact name > substring name > first
+    target = None
+    if group_id is not None:
+        target = next((g for g in groups if g.get("groupId") == group_id), None)
+    if target is None and group_name:
+        name_lower = group_name.strip().lower()
+        # Exact name match
+        target = next(
+            (
+                g
+                for g in groups
+                if (g.get("groupName") or "").strip().lower() == name_lower
+            ),
+            None,
+        )
+        # Substring match (handles abbreviations like "EU" → "European Union")
+        if target is None:
+            target = next(
+                (
+                    g
+                    for g in groups
+                    if name_lower in (g.get("groupName") or "").strip().lower()
+                ),
+                None,
+            )
+    if target is None:
+        target = groups[0]  # Fallback to first group
+
+    raw_members = target.get("members", [])
+    enriched_members: list[dict[str, str]] = []
+    for member_id_str in raw_members:
+        entry: dict[str, str] = {"id": member_id_str}
+        # Enrich with country name from cache
+        if country_cache is not None and country_cache.is_populated:
+            try:
+                numeric_id = _strip_id_prefix(member_id_str)
+                country_entry = country_cache.lookup_sync("id", str(numeric_id))
+                if country_entry:
+                    entry["name"] = country_entry.get("nameShortEn", "")
+            except (ValueError, KeyError):
+                pass
+        enriched_members.append(entry)
+
+    return {
+        "groupId": target.get("groupId"),
+        "groupName": target.get("groupName"),
+        "groupType": target.get("groupType"),
+        "memberCount": len(enriched_members),
+        "members": enriched_members,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -2018,8 +2774,12 @@ _QUERY_BUILDERS: dict[str, Callable[[dict], tuple[str, dict]]] = {
     "bilateral_aggregate": _build_country_country_year,
     "explore_bilateral": _build_country_country_product_year,
     "explore_group": _build_group_year,
+    "group_products": _build_country_group_product_year,
+    "group_bilateral": _build_group_country_product_year,
+    "group_membership": _build_group_membership,
     "explore_data_availability": _build_data_availability,
     "product_table": _build_product_table,
+    "global_product": _build_global_product_year,
     # Country Pages API queries
     "country_profile": _build_country_profile,
     "country_profile_exports": _build_cp_treemap_products,

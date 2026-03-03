@@ -171,6 +171,10 @@ def country_page_url(country_id: int, subpage: str | None = None) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _group_importer_param(group_id: int) -> str:
+    return f"group-{group_id}"
+
+
 def explore_treemap_url(
     *,
     year: int,
@@ -180,17 +184,34 @@ def explore_treemap_url(
     product_id: int | None = None,
     view: str | None = None,
     group_id: int | None = None,
+    partner_group_id: int | None = None,
+    product_level: int | None = None,
+    trade_direction: str | None = None,
 ) -> str:
-    """Build an explore treemap URL."""
+    """Build an explore treemap URL.
+
+    URL parameters match the official Atlas frontend patterns:
+    ``?exporter=country-{m49}&importer=group-{id}&year=2024&productClass=HS92&productLevel=4``
+    """
     params = [f"year={year}"]
     if group_id is not None:
         params.append(f"exporter={_group_exporter_param(group_id)}")
     elif country_id is not None:
         params.append(f"exporter={_exporter_param(country_id)}")
-    if partner_id is not None:
+    if partner_group_id is not None:
+        params.append(f"importer={_group_importer_param(partner_group_id)}")
+    elif partner_id is not None:
         params.append(f"importer={_exporter_param(partner_id)}")
-    if product_classification and product_id is not None:
-        params.append(f"product={_product_param(product_classification, product_id)}")
+    if product_classification:
+        if product_id is not None:
+            params.append(
+                f"product={_product_param(product_classification, product_id)}"
+            )
+        params.append(f"productClass={product_classification}")
+    if product_level is not None:
+        params.append(f"productLevel={product_level}")
+    if trade_direction:
+        params.append(f"tradeDirection={trade_direction}")
     if view:
         params.append(f"view={view}")
     return f"{ATLAS_BASE_URL}/explore/treemap?{'&'.join(params)}"
@@ -684,6 +705,49 @@ def _handle_product_table(params: dict) -> list[AtlasLink]:
     ]
 
 
+# --- Group-country product handlers ---
+
+
+def _handle_group_products(params: dict) -> list[AtlasLink]:
+    """Country exports to a group — e.g. 'What does Kenya export to the EU?'"""
+    cid = params.get("country_id")
+    pgid = params.get("partner_group_id")
+    if cid is None or pgid is None:
+        return []
+    name = params.get("country_name", str(cid))
+    partner_name = params.get("partner_group_name", f"Group {pgid}")
+    year = _get_year(params)
+    notes = _get_notes(params)
+    return [
+        AtlasLink(
+            url=explore_treemap_url(year=year, country_id=cid, partner_group_id=pgid),
+            label=f"{name} \u2192 {partner_name} ({year})",
+            link_type="explore_page",
+            resolution_notes=notes,
+        )
+    ]
+
+
+def _handle_group_bilateral(params: dict) -> list[AtlasLink]:
+    """Group exports to a country — e.g. 'What does the EU export to Kenya?'"""
+    gid = params.get("group_id")
+    pid = params.get("partner_id")
+    if gid is None or pid is None:
+        return []
+    group_name = params.get("group_name", f"Group {gid}")
+    partner_name = params.get("partner_name", str(pid))
+    year = _get_year(params)
+    notes = _get_notes(params)
+    return [
+        AtlasLink(
+            url=explore_treemap_url(year=year, group_id=gid, partner_id=pid),
+            label=f"{group_name} \u2192 {partner_name} ({year})",
+            link_type="explore_page",
+            resolution_notes=notes,
+        )
+    ]
+
+
 # ---------------------------------------------------------------------------
 # Query-type → handler dispatch table
 # ---------------------------------------------------------------------------
@@ -713,6 +777,9 @@ _QUERY_TYPE_HANDLERS: dict[str, Callable[[dict], list[AtlasLink]]] = {
     "product_space": _handle_product_space,
     "feasibility": _handle_feasibility,
     "feasibility_table": _handle_feasibility_table,
+    # Group-product queries
+    "group_products": _handle_group_products,
+    "group_bilateral": _handle_group_bilateral,
     # No link generated (explicitly listed for documentation):
     # "global_datum"              → returns []
     # "explore_data_availability" → returns []
