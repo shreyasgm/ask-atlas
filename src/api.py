@@ -327,6 +327,20 @@ async def cache_stats() -> dict:
     return registry.stats()
 
 
+@router.get("/debug/pool")
+async def pool_stats() -> dict:
+    """Read-only diagnostic endpoint for DB connection pool metrics."""
+    from src.db_pool_health import get_pool_stats
+
+    atlas_sql = _state.atlas_sql
+    if atlas_sql is None:
+        return {"error": "Service not ready"}
+    return get_pool_stats(
+        sync_engine=getattr(atlas_sql, "engine", None),
+        async_engine=getattr(atlas_sql, "async_engine", None),
+    )
+
+
 @router.post("/threads")
 async def create_thread() -> dict:
     """Generate a new conversation thread ID."""
