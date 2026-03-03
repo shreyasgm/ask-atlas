@@ -29,16 +29,24 @@ interface UseChatStreamReturn {
   pipelineSteps: Array<PipelineStep>;
   queryStats: QueryAggregateStats | null;
   sendMessage: (question: string, overrides?: TradeOverrides) => void;
+  stopStreaming: () => void;
   threadId: null | string;
 }
 
 /** Parse an SSE stream from a ReadableStream<Uint8Array>. */
 async function* parseSSE(
   body: ReadableStream<Uint8Array>,
+  signal?: AbortSignal,
 ): AsyncGenerator<{ data: string; event: string }> {
   const decoder = new TextDecoder();
   const reader = body.getReader();
   let buffer = '';
+
+  // When the abort signal fires, cancel the reader so a blocked reader.read() resolves.
+  // The .catch() handles the case where the reader was already released after normal stream end.
+  if (signal) {
+    signal.addEventListener('abort', () => reader.cancel().catch(() => {}), { once: true });
+  }
 
   try {
     while (true) {
@@ -93,6 +101,7 @@ function createMessage(
     docsConsulted: [],
     graphqlSummaries: [],
     id: `msg-${Date.now()}-${messageCounter}`,
+    interrupted: false,
     isStreaming,
     queryResults: [],
     role,
@@ -123,6 +132,10 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
   const [isRestoredThread, setIsRestoredThread] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
+  // Synchronous guard — React state batching means setIsStreaming(true) doesn't
+  // take effect immediately, so concurrent sendMessage calls all see isStreaming=false.
+  // This ref flips synchronously to prevent duplicate fetches.
+  const streamingRef = useRef(false);
   const initialQuerySent = useRef(false);
   const historyLoaded = useRef<string | null>(null);
   // Session-level cache: threadId → array of pipelineSteps (one per assistant turn)
@@ -139,9 +152,10 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
   const sendMessage = useCallback(
     (question: string, overrides?: TradeOverrides) => {
       const trimmed = question.trim();
-      if (!trimmed || isStreaming) {
+      if (!trimmed || streamingRef.current) {
         return;
       }
+      streamingRef.current = true;
 
       // Abort any in-flight request
       if (abortControllerRef.current) {
@@ -220,6 +234,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
 
           if (!response.ok) {
             setError(`Server error: ${response.status} ${response.statusText}`);
+            streamingRef.current = false;
             setIsStreaming(false);
             setMessages((prev) => prev.filter((m) => m.id !== assistantMsg.id));
             return;
@@ -227,6 +242,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
 
           if (!response.body) {
             setError('No response body');
+            streamingRef.current = false;
             setIsStreaming(false);
             return;
           }
@@ -234,7 +250,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
           // Start rAF flush loop
           rafId = requestAnimationFrame(flushContent);
 
-          for await (const { data, event } of parseSSE(response.body)) {
+          for await (const { data, event } of parseSSE(response.body, controller.signal)) {
             if (controller.signal.aborted) {
               break;
             }
@@ -294,6 +310,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
                   }
                   return []; // Clear global steps
                 });
+                streamingRef.current = false;
                 setIsStreaming(false);
                 if (parsed.total_queries != null || parsed.total_graphql_queries != null) {
                   setQueryStats({
@@ -524,8 +541,41 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
             }
           }
 
-          // Stream ended without a done event — final flush
+          // Stream ended — either naturally or via reader.cancel() from abort signal
           stopRaf();
+
+          // If the stream ended because we aborted, preserve partial content
+          if (controller.signal.aborted) {
+            clearTimeout(timeoutId);
+            if (timedOut) {
+              setError('Request timed out. The server may be unavailable.');
+            }
+            streamingRef.current = false;
+            setIsStreaming(false);
+            // Snapshot pipeline steps onto the message before clearing
+            setPipelineSteps((currentSteps) => {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsg.id
+                    ? {
+                        ...m,
+                        content: contentAcc,
+                        interrupted: !timedOut,
+                        isStreaming: false,
+                        ...(currentSteps.length > 0 ? { pipelineSteps: currentSteps } : {}),
+                      }
+                    : m,
+                ),
+              );
+              if (currentSteps.length > 0 && streamThreadId) {
+                const cached = pipelineStepsCache.current.get(streamThreadId) ?? [];
+                cached.push(currentSteps);
+                pipelineStepsCache.current.set(streamThreadId, cached);
+              }
+              return [];
+            });
+            return;
+          }
         } catch (error: unknown) {
           stopRaf();
           clearTimeout(timeoutId);
@@ -540,11 +590,30 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
             if (timedOut) {
               setError('Request timed out. The server may be unavailable.');
             }
-            // Always reset streaming state on abort (including StrictMode cleanup)
+            // Preserve partial content and mark as interrupted (unless timeout)
+            streamingRef.current = false;
             setIsStreaming(false);
-            setMessages((prev) =>
-              prev.map((m) => (m.id === assistantMsg.id ? { ...m, isStreaming: false } : m)),
-            );
+            setPipelineSteps((currentSteps) => {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsg.id
+                    ? {
+                        ...m,
+                        content: contentAcc,
+                        interrupted: !timedOut,
+                        isStreaming: false,
+                        ...(currentSteps.length > 0 ? { pipelineSteps: currentSteps } : {}),
+                      }
+                    : m,
+                ),
+              );
+              if (currentSteps.length > 0 && streamThreadId) {
+                const cached = pipelineStepsCache.current.get(streamThreadId) ?? [];
+                cached.push(currentSteps);
+                pipelineStepsCache.current.set(streamThreadId, cached);
+              }
+              return [];
+            });
             return;
           }
 
@@ -553,6 +622,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
               ? String((error as { message: unknown }).message)
               : 'Unknown error';
           setError(message);
+          streamingRef.current = false;
           setIsStreaming(false);
           setMessages((prev) =>
             prev.map((m) => (m.id === assistantMsg.id ? { ...m, isStreaming: false } : m)),
@@ -560,7 +630,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
         }
       })();
     },
-    [isStreaming, navigate, threadId],
+    [navigate, threadId],
   );
 
   const clearChat = useCallback(() => {
@@ -570,6 +640,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
     setEntitiesData(null);
     setError(null);
     setIsRestoredThread(false);
+    streamingRef.current = false;
     setIsStreaming(false);
     setMessages([]);
     setPipelineSteps([]);
@@ -577,6 +648,12 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
     setThreadId(null);
     navigate('/chat', { replace: true });
   }, [navigate]);
+
+  const stopStreaming = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+  }, []);
 
   // Reset historyLoaded when navigating away from a thread (e.g. clearChat → /chat).
   // This allows re-loading the same thread if the user navigates back to it.
@@ -783,6 +860,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
     pipelineSteps,
     queryStats,
     sendMessage,
+    stopStreaming,
     threadId,
   };
 }

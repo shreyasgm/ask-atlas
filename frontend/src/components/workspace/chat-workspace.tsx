@@ -27,6 +27,7 @@ interface ChatWorkspaceProps {
   onModeChange: (v: TradeMode | null) => void;
   onSchemaChange: (v: ClassificationSchema | null) => void;
   onSend: (text: string) => void;
+  onStop: () => void;
   onSystemModeChange: (v: SystemMode | null) => void;
   overrides: TradeOverrides;
   pipelineSteps: Array<PipelineStep>;
@@ -68,6 +69,7 @@ export default function ChatWorkspace({
   onModeChange,
   onSchemaChange,
   onSend,
+  onStop,
   onSystemModeChange,
   overrides,
   pipelineSteps,
@@ -128,6 +130,7 @@ export default function ChatWorkspace({
         onModeChange={onModeChange}
         onSchemaChange={onSchemaChange}
         onSend={onSend}
+        onStop={onStop}
         onSystemModeChange={onSystemModeChange}
         onToggleSidebar={toggleSidebar}
         overrides={overrides}

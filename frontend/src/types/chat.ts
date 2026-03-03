@@ -37,6 +37,7 @@ export interface ChatMessage {
   docsConsulted: Array<string>;
   graphqlSummaries: Array<GraphqlSummary>;
   id: string;
+  interrupted: boolean;
   isStreaming: boolean;
   pipelineSteps?: Array<PipelineStep>;
   queryResults: Array<QueryResult>;

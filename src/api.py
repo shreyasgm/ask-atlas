@@ -1,5 +1,6 @@
 """FastAPI application for the Ask-Atlas backend."""
 
+import asyncio
 import json
 import logging
 import os
@@ -14,7 +15,7 @@ from typing import Literal
 from fastapi import APIRouter, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
@@ -248,8 +249,6 @@ async def request_logging_middleware(request: Request, call_next):
 @app.middleware("http")
 async def timeout_middleware(request: Request, call_next):
     """Apply a timeout to all requests."""
-    import asyncio
-
     try:
         return await asyncio.wait_for(
             call_next(request), timeout=REQUEST_TIMEOUT_SECONDS
@@ -507,6 +506,7 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
     async def _event_generator() -> AsyncGenerator[dict, None]:
         t_start = time.monotonic()
         event_count = 0
+        was_cancelled = False
 
         # Aggregate stats for the done event
         total_queries = 0
@@ -542,6 +542,16 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                 override_mode=body.override_mode,
                 agent_mode=body.mode,
             ):
+                # Check for client disconnect between events
+                if await request.is_disconnected():
+                    logger.info(
+                        "SSE client disconnected  thread=%s  after %d events",
+                        thread_id,
+                        event_count,
+                    )
+                    was_cancelled = True
+                    break
+
                 event_count += 1
                 if stream_data.message_type in ("node_start", "pipeline_state"):
                     stage = (stream_data.payload or {}).get(
@@ -665,6 +675,13 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                             }
                         ),
                     }
+        except asyncio.CancelledError:
+            logger.info(
+                "SSE stream cancelled  thread=%s  after %d events",
+                thread_id,
+                event_count,
+            )
+            was_cancelled = True
         except Exception:
             logger.exception(
                 "SSE stream error  thread=%s  after %d events",
@@ -673,24 +690,78 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
             )
             raise
 
-        # Persist turn summary to checkpoint
+        # Persist turn summary and (on cancel) repair orphan tool calls.
+        # After CancelledError, any ``await`` re-raises CancelledError, so
+        # we must shield the cleanup from further cancellation.
+        config = {"configurable": {"thread_id": thread_id}}
+
+        async def _post_stream_cleanup() -> None:
+            """Turn summary + checkpoint repair, shielded from cancel."""
+            try:
+                summary = _build_turn_summary(
+                    stream_queries,
+                    stream_entities,
+                    atlas_links=stream_atlas_links or None,
+                    docs_consulted=stream_docs_consulted or None,
+                    graphql_summaries=stream_graphql_summaries or None,
+                    total_graphql_time_ms=total_graphql_time_ms,
+                )
+                await atlas_sql.agent.aupdate_state(
+                    config, {"turn_summaries": [summary]}
+                )
+            except Exception:
+                logger.warning(
+                    "Failed to persist turn summary for thread %s",
+                    thread_id,
+                    exc_info=True,
+                )
+
+            if not was_cancelled:
+                return
+
+            # Repair incomplete tool calls so the next request doesn't fail
+            # with OpenAI's "tool_calls must be followed by tool messages".
+            try:
+                state = await atlas_sql.agent.aget_state(config)
+                messages = state.values.get("messages", [])
+                pending_tool_ids: set[str] = set()
+                for msg in messages:
+                    if isinstance(msg, AIMessage) and msg.tool_calls:
+                        for tc in msg.tool_calls:
+                            pending_tool_ids.add(tc["id"])
+                    elif hasattr(msg, "tool_call_id"):
+                        pending_tool_ids.discard(msg.tool_call_id)
+
+                if pending_tool_ids:
+                    stub_messages = [
+                        ToolMessage(
+                            content="[Cancelled by user]",
+                            tool_call_id=tc_id,
+                        )
+                        for tc_id in pending_tool_ids
+                    ]
+                    await atlas_sql.agent.aupdate_state(
+                        config, {"messages": stub_messages}
+                    )
+                    logger.info(
+                        "Repaired %d orphan tool_call(s) for thread %s",
+                        len(stub_messages),
+                        thread_id,
+                    )
+            except Exception:
+                logger.warning(
+                    "Failed to repair checkpoint for thread %s",
+                    thread_id,
+                    exc_info=True,
+                )
+
         try:
-            summary = _build_turn_summary(
-                stream_queries,
-                stream_entities,
-                atlas_links=stream_atlas_links or None,
-                docs_consulted=stream_docs_consulted or None,
-                graphql_summaries=stream_graphql_summaries or None,
-                total_graphql_time_ms=total_graphql_time_ms,
-            )
-            config = {"configurable": {"thread_id": thread_id}}
-            await atlas_sql.agent.aupdate_state(config, {"turn_summaries": [summary]})
-        except Exception:
-            logger.warning(
-                "Failed to persist turn summary for thread %s",
-                thread_id,
-                exc_info=True,
-            )
+            await asyncio.shield(_post_stream_cleanup())
+        except asyncio.CancelledError:
+            logger.debug("Cleanup shielded from cancellation for thread %s", thread_id)
+
+        if was_cancelled:
+            return
 
         # Extract token usage and timing from checkpoint state
         token_usage_data = None

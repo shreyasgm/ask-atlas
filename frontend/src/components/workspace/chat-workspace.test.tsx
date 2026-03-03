@@ -18,6 +18,7 @@ const DEFAULT_PROPS = {
   onModeChange: vi.fn(),
   onSchemaChange: vi.fn(),
   onSend: vi.fn(),
+  onStop: vi.fn(),
   onSystemModeChange: vi.fn(),
   overrides: { direction: null, mode: null, schema: null, systemMode: null },
   pipelineSteps: [],

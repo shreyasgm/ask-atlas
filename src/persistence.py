@@ -143,9 +143,28 @@ class AsyncCheckpointerManager:
         if self._db_url:
             try:
                 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+                from psycopg.rows import dict_row
+                from psycopg_pool import AsyncConnectionPool
 
-                self._async_conn = AsyncPostgresSaver.from_conn_string(self._db_url)
-                saver = await self._async_conn.__aenter__()
+                # Use a connection pool instead of a single connection so that
+                # connections left dirty by cancelled SSE streams (asyncio.CancelledError
+                # mid-query) are detected and discarded automatically.
+                # ``check`` runs a health query before handing a connection to a caller.
+                pool = AsyncConnectionPool(
+                    self._db_url,
+                    min_size=1,
+                    max_size=3,
+                    open=False,
+                    kwargs={
+                        "autocommit": True,
+                        "prepare_threshold": 0,
+                        "row_factory": dict_row,
+                    },
+                    check=AsyncConnectionPool.check_connection,
+                )
+                await pool.open()
+                self._pool = pool
+                saver = AsyncPostgresSaver(conn=pool)
                 await saver.setup()
                 await setup_app_tables(self._db_url)
                 logger.info("Using AsyncPostgresSaver for checkpoint persistence")
@@ -161,7 +180,16 @@ class AsyncCheckpointerManager:
 
     async def close(self) -> None:
         """Release resources held by the async checkpointer."""
-        if self._async_conn is not None:
+        pool = getattr(self, "_pool", None)
+        if pool is not None:
+            try:
+                await pool.close()
+            except Exception:
+                logger.warning("Error closing AsyncPostgresSaver pool", exc_info=True)
+            finally:
+                self._pool = None
+                self._checkpointer = None
+        elif self._async_conn is not None:
             try:
                 await self._async_conn.__aexit__(None, None, None)
             except Exception:
