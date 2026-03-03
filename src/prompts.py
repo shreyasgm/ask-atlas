@@ -313,14 +313,51 @@ constant-price dynamics. Report them as-is.
 - `eciRankChange`: A POSITIVE value means the country's rank WORSENED (moved to a higher \
 rank number = less complex). A NEGATIVE value means the country IMPROVED (moved to a lower \
 rank number = more complex). Example: eciRankChange = +5 means "dropped 5 places".
-- Structural transformation stages: `NotStarted` = "has not yet started structural \
-transformation", `TextilesOnly` = "has started structural transformation", \
+- Structural transformation uses three companion fields from `countryProfile`:
+  - `structuralTransformationStep` (enum): `NotStarted` = "has not yet started structural \
+transformation", `TextilesOnly` = "has started structural transformation (textiles/apparel \
+stage)", `ElectronicsOnly` = "has progressed in structural transformation (electronics \
+stage)", `MachineryOnly` = "has progressed in structural transformation (machinery stage)", \
 `Completed` = "has completed structural transformation".
+  - `structuralTransformationSector` (Product with `shortName`): names the specific sector \
+being assessed (e.g., Textiles, Electronics, Machinery).
+  - `structuralTransformationDirection` (enum): `risen` = sector market share is increasing, \
+`fallen` = declining, `stagnated` = no meaningful change.
+- Market share growth mechanism uses three `countryProfile` fields:
+  - `marketShareMainSector` (Product with `shortName`): the sector driving export growth.
+  - `marketShareMainSectorDirection`: `rising`, `falling`, or `stagnant`.
+  - `marketShareMainSectorPositiveGrowth` (Boolean): `true` means the country is gaining \
+global market share in its main sector (describe as "export growth driven by expanding global \
+market share"); `false` means the country's main sector is growing globally and the country \
+is riding that tailwind without gaining competitive share (describe as "concentrating in a \
+growing global sector").
 - Growth projection classification: `moderate` = "moderately", `slow` = "slowly", \
 `rapid` = "rapidly". Use these adverbs when describing growth projection.
 - `growthProjectionRelativeToIncome` has 5 values: More, ModeratelyMore, Same, \
 ModeratelyLess, Less — describing how the country's growth projection compares \
-to others in its income group.""",
+to others in its income group.
+- When a question asks about total exports under a specific classification (e.g., "total SITC \
+exports"), sum product-level values from `countryProductYear` rather than using \
+`countryYear.exportValue`, which is classification-independent and may differ.
+- PCI is null for services and some natural resource products in default API responses. Using \
+`mergePci: true` in treeMap queries returns computed PCI for these products. Default (null) \
+behavior matches the Atlas website display.
+- `newProductsCountry` requires an explicit `year` parameter. If the question specifies no year, \
+use the latest available data year (typically current year minus 2, matching `countryProfile`).
+- The `countryLookback` API supports per-metric yearRange overrides: `eciRankChangeYearRange`, \
+`exportValueConstGrowthCagrYearRange`, etc. The base `yearRange` sets the default for all \
+metrics. Match the year range to the question (e.g., "over the past five years" → 5, \
+"over the past decade" → 10).
+- For peer comparison dollar values, use `countryProfile` per peer country (gives exact matches). \
+The `newProductsComparisonCountries` query returns the peer list but its dollar values may \
+differ from `countryProfile`.
+- Finding the top import source for a specific product requires `countryCountryProductYear`, \
+which needs both `countryId` and `partnerCountryId`. No single API call retrieves all source \
+countries for a product import.
+- `countryLookback.gdpPcConstantCagrRegionalDifference` compares the country's GDP per capita \
+growth to its regional average: `Above` = growth exceeded regional peers, `InLine` = roughly \
+matched, `Below` = lagged behind. Use this field when asked how a country's growth compares \
+to its region. The actual CAGR value is in `gdpPerCapitaChangeConstantCagr`.""",
         _DATA_DESCRIPTION_BLOCK,
         _SERVICES_AWARENESS_BLOCK,
         """\
@@ -826,8 +863,11 @@ For products, provide your best-guess HS code (e.g., 0901 for coffee) or service
 
 **Field relevance by query type:**
 - country_profile / country_profile_exports / country_profile_partners / country_profile_complexity: country (required)
-- country_lookback: country (required), lookback_years (if mentioned, default 5), product_class (if mentioned)
-- new_products: country (required)
+- country_lookback: country (required), lookback_years (if mentioned, default 5), product_class (if mentioned). \
+The API supports per-metric yearRange overrides (e.g., `eciRankChangeYearRange`). Match the \
+lookback period to the question: "past five years" → 5, "past decade" → 10.
+- new_products: country (required). Note: `newProductsCountry` returns goods-only product counts. \
+The combined goods+services count is not available from a single API call.
 - treemap_products / overtime_products / product_space / feasibility*: country (required), year or year range
 - treemap_partners / overtime_partners: country (required), year or year range
 - treemap_bilateral / explore_bilateral: country AND partner_country (both required)
@@ -856,6 +896,7 @@ For products, provide your best-guess HS code (e.g., 0901 for coffee) or service
 **Product classification:**
 - Default to HS12 unless the user explicitly mentions a different classification.
 - Leave product_class as null unless explicitly specified — null means the system default.
+- "HS 1992" or "HS92" -> product_class: HS92
 - "HS 2012" or "HS12" -> product_class: HS12
 - "SITC" -> product_class: SITC
 - Country Pages API only supports HS and SITC product classes.
