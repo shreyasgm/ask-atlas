@@ -81,7 +81,13 @@ _DATA_INTEGRITY_BLOCK = """\
   (e.g., explaining what an ECI score means, or why a product is strategically important).
   The prohibition is on fabricating specific numbers, not on providing analysis.
 - If a tool returns an error, warning, or empty result, inform the user and explain
-  that the answer might be affected."""
+  that the answer might be affected.
+- When the tool response includes WARNING or NOTE prefixes, follow their instructions precisely.
+  These are data-quality signals. Acknowledge limitations rather than filling gaps with your own knowledge.
+- If the returned data covers fewer years than requested, explicitly state the actual coverage
+  to the user (e.g., "Data is available for 2020-2024, not the full 2010-2024 range requested").
+- If the data appears empty for a query that should have results, tell the user the data is not
+  available — never extrapolate or infer values from other queries."""
 
 _DATA_DESCRIPTION_BLOCK = """\
 **Understanding the Data:**
@@ -742,12 +748,22 @@ each query type in detail — read them carefully before classifying.
    -> treemap_bilateral, explore_bilateral, or bilateral_aggregate
 6. Is this about a product's global market share?
    -> marketshare
-7. Is this about growth opportunities or diversification?
+7. Is this about past export diversification or new products gained so far?
+   -> new_products
+8. Is this about future growth opportunities or diversification potential?
    -> feasibility, feasibility_table, or growth_opportunities
-8. Is this about a region or country group?
+9. Is this about a region or country group (aggregate totals)?
    -> explore_group
-9. Does this require custom aggregation, multi-country comparison, or complex SQL?
-   -> reject (fall back to SQL tool)
+10. Is this about what a country exports TO a group (e.g., Kenya's exports to the EU)?
+    -> group_products
+11. Is this about what a group exports TO a country (e.g., EU exports to Kenya)?
+    -> group_bilateral
+12. Is this asking which countries belong to a group?
+    -> group_membership
+13. Is this about global/worldwide product statistics without a specific country?
+    -> global_product
+14. Does this require custom aggregation, multi-country comparison, or complex SQL?
+    -> reject (fall back to SQL tool)
 
 **High-level routing heuristics:**
 - Country overview / profile / economy summary -> country_profile
@@ -759,16 +775,24 @@ each query type in detail — read them carefully before classifying.
 - Time-series of exports by product -> overtime_products
 - Time-series of exports by partner -> overtime_partners
 - Market share of a product -> marketshare
-- Growth opportunities, diversification, feasibility -> feasibility or feasibility_table
+- PAST diversification: "diversification changed", "new products gained", \
+"recently started exporting", "export basket changed" -> new_products
+- FUTURE opportunities: "growth opportunities", "diversification potential", \
+"feasibility", "what could they export", "promising new products to target" -> feasibility or growth_opportunities
 - Product space / relatedness -> product_space
 - Product-level bilateral trade between two countries -> explore_bilateral or treemap_bilateral
 - Total/aggregate bilateral trade value between two countries -> bilateral_aggregate
-- Regional/group-level data (Africa, EU, income groups) -> explore_group
+- Regional/group-level aggregate data (Africa, EU, income groups) -> explore_group
+- Product-level exports FROM a country TO a group (e.g., Kenya → EU) -> group_products
+- Product-level exports FROM a group TO a country (e.g., EU → Kenya) -> group_bilateral
+- Members of a group, countries in a group, which countries belong -> group_membership
 - Global-level aggregate data -> global_datum
 - Data coverage questions (what years/countries available) -> explore_data_availability
 - Diversification grade, growth projection relative to income -> country_profile
 - Export growth classification (promising, troubling, static, mixed) -> country_lookback
-- Country-year ECI/COI with specific classification (SITC) -> country_year, api_target: country_pages
+- Country-year time series (ECI, GDP, exports OVER TIME with year range) -> country_year, api_target: explore
+- Country-year ECI/COI with specific classification (SITC), single year -> country_year, api_target: country_pages
+- Top products globally, world's most exported, global product rankings -> global_product
 - If the question requires custom SQL aggregation, complex multi-table joins, calculations \
 across many countries, or data not in the Atlas APIs -> reject
 
@@ -854,6 +878,38 @@ Example 18:
 Question: "What is Spain's ECI value? Use SITC classification."
 -> query_type: country_year, api_target: country_pages
 
+Example 19:
+Question: "What does Kenya export to the EU?"
+-> query_type: group_products, api_target: explore
+
+Example 20:
+Question: "What does the EU export to Kenya?"
+-> query_type: group_bilateral, api_target: explore
+
+Example 21:
+Question: "What products does Brazil sell to ASEAN?"
+-> query_type: group_products, api_target: explore
+
+Example 22:
+Question: "Which countries belong to the EU?"
+-> query_type: group_membership, api_target: explore
+
+Example 23:
+Question: "What are the top 10 most exported products in the world?"
+-> query_type: global_product, api_target: explore
+
+Example 24:
+Question: "What has been Brazil's ECI trend over the last 15 years?"
+-> query_type: country_year, api_target: explore
+
+Example 25:
+Question: "How has Mexico's export diversification changed in the past decade?"
+-> query_type: new_products, api_target: country_pages
+
+Example 26:
+Question: "What are the best growth opportunities for Mexico to diversify?"
+-> query_type: feasibility, api_target: explore
+
 {context_block}
 
 **Question:** {question}
@@ -888,7 +944,11 @@ The combined goods+services count is not available from a single API call.
 - marketshare: country (required), product (required), year range
 - product_info: product (required), year
 - explore_group: group_name and group_type (required)
-- country_year: country (required), year, product_class (if SITC or non-default classification explicitly mentioned)
+- group_products: country (required), partner_group_name and partner_group_type (required)
+- group_bilateral: group_name and group_type (required), partner country (required — use partner_name/partner_code_guess)
+- group_membership: group_name (required), group_type (required)
+- country_year: country (required), year or year_min/year_max (for time series), product_class (if SITC or non-default classification explicitly mentioned)
+- global_product: product_class (optional, default HS92), product_level (optional), year (optional)
 - global_datum: year or year range (if mentioned)
 
 **Services class:**
@@ -898,6 +958,13 @@ The combined goods+services count is not available from a single API call.
 - Leave `services_class` as null when the question explicitly says "goods" or names a specific
   goods product (e.g., "coffee", "automotive", "electronics").
 - When in doubt, leave `services_class` as null — the system will use a sensible default.
+
+**Trade direction:**
+- Set `trade_direction` to "imports" when the question asks about imports, imported products,
+  import sources, top import partners, or what a country buys/sources.
+  Keywords: "imports", "imported", "buys from", "sources from", "import partners", "top imports".
+- Set `trade_direction` to "exports" when the question explicitly asks about exports.
+- Leave `trade_direction` as null when direction is not mentioned or ambiguous (defaults to exports).
 
 **Year handling:**
 - If no year mentioned, leave year fields as null (the system defaults to latest available).
@@ -961,6 +1028,22 @@ Question: "What are Kenya's total exports?" (query_type: treemap_products)
 Example 10:
 Question: "What are Kenya's coffee exports?" (query_type: treemap_products)
 -> country_name: Kenya, country_code_guess: KEN, product_name: coffee, product_code_guess: 0901, services_class: null
+
+Example 11:
+Question: "What does Kenya export to the EU?" (query_type: group_products)
+-> country_name: Kenya, country_code_guess: KEN, partner_group_name: EU, partner_group_type: trade
+
+Example 12:
+Question: "What does the EU export to Kenya?" (query_type: group_bilateral)
+-> group_name: EU, group_type: trade, partner_name: Kenya, partner_code_guess: KEN
+
+Example 13:
+Question: "What is the top imported product for USA?" (query_type: treemap_products)
+-> country_name: United States, country_code_guess: USA, trade_direction: imports
+
+Example 14:
+Question: "Which countries are in the EU?" (query_type: group_membership)
+-> group_name: EU, group_type: trade
 
 {context_block}
 
@@ -1200,6 +1283,58 @@ def build_extraction_prompt(
         query_type=query_type,
         context_block=context_block,
         services_catalog_block=services_catalog_block,
+    )
+
+
+def build_query_plan_prompt(
+    question: str,
+    context: str = "",
+    services_catalog: str = "",
+) -> str:
+    """Assemble the combined classification + entity extraction prompt.
+
+    Merges the classification and extraction prompts so that both steps
+    can be performed in a single LLM call with the GraphQLQueryPlan schema.
+
+    Args:
+        question: The user's trade-related question.
+        context: Optional conversation context.
+        services_catalog: Optional formatted services catalog for reference.
+
+    Returns:
+        Formatted combined prompt string.
+    """
+    context_block = ""
+    if context:
+        context_block = f"**Context from conversation:**\n{context}\n"
+
+    services_catalog_block = ""
+    if services_catalog:
+        services_catalog_block = (
+            f"\n**Available service categories for reference:**\n{services_catalog}"
+        )
+
+    # Combine both prompts into a single instruction.
+    # The classification prompt provides routing heuristics and examples;
+    # the extraction prompt provides entity extraction guidance and examples.
+    classification_part = GRAPHQL_CLASSIFICATION_PROMPT.format(
+        question=question,
+        context_block=context_block,
+    )
+    extraction_part = GRAPHQL_ENTITY_EXTRACTION_PROMPT.format(
+        question=question,
+        query_type="(determine from classification above)",
+        context_block=context_block,
+        services_catalog_block=services_catalog_block,
+    )
+
+    return (
+        f"{classification_part}\n\n"
+        "---\n\n"
+        "In addition to classifying the query type, extract all relevant entities "
+        "in the same response. The entity extraction guidance below tells you which "
+        "fields to populate for each query type.\n\n"
+        f"{extraction_part}"
     )
 
 

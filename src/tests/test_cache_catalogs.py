@@ -19,7 +19,7 @@ import pytest
 from src.cache import (
     CatalogCache,
     country_catalog,
-    product_catalog,
+    hs92_product_catalog,
     registry,
     services_catalog,
     wire_catalog_fetchers,
@@ -465,37 +465,37 @@ class TestProductCatalog:
     """Product catalog is dual-indexed by HS code AND by name."""
 
     def setup_method(self):
-        product_catalog.populate(SAMPLE_PRODUCTS)
+        hs92_product_catalog.populate(SAMPLE_PRODUCTS)
 
     async def test_lookup_by_hs_code(self):
         """resolve_ids verifies LLM's HS code guesses via this index."""
-        result = await product_catalog.lookup("code", "0901")
+        result = await hs92_product_catalog.lookup("code", "0901")
         assert result is not None
         assert result["nameShortEn"] == "Coffee"
         assert result["productId"] == 726
 
     async def test_lookup_by_name(self):
         """resolve_ids looks up products by name when LLM has no code guess."""
-        result = await product_catalog.lookup("name", "coffee")
+        result = await hs92_product_catalog.lookup("name", "coffee")
         assert result is not None
         assert result["code"] == "0901"
 
     async def test_lookup_by_product_id(self):
         """Reverse lookup from API response productId to entry."""
-        result = await product_catalog.lookup("id", "726")
+        result = await hs92_product_catalog.lookup("id", "726")
         assert result is not None
         assert result["code"] == "0901"
 
     async def test_search_products_by_name(self):
         """Text search finds products by partial name."""
-        results = await product_catalog.search("nameEn", "Motor cars")
+        results = await hs92_product_catalog.search("nameEn", "Motor cars")
         assert len(results) >= 1
         assert any(p["code"] == "8703" for p in results)
 
     async def test_dual_index_both_paths_resolve_same_entry(self):
         """Looking up by code or by name should find the same product."""
-        by_code = await product_catalog.lookup("code", "5201")
-        by_name = await product_catalog.lookup("name", "cotton")
+        by_code = await hs92_product_catalog.lookup("code", "5201")
+        by_name = await hs92_product_catalog.lookup("name", "cotton")
         assert by_code == by_name
         assert by_code["productId"] == 5678
 
@@ -576,19 +576,19 @@ class TestWireCatalogFetchersSetsAll:
 
         # Ensure fetchers are initially None (clean state)
         country_catalog._fetcher = None
-        product_catalog._fetcher = None
+        hs92_product_catalog._fetcher = None
         services_catalog._fetcher = None
 
         try:
             wire_catalog_fetchers(mock_client)
 
             assert country_catalog._fetcher is not None
-            assert product_catalog._fetcher is not None
+            assert hs92_product_catalog._fetcher is not None
             assert services_catalog._fetcher is not None
         finally:
             # Reset fetchers to None to avoid leaking state to other tests
             country_catalog._fetcher = None
-            product_catalog._fetcher = None
+            hs92_product_catalog._fetcher = None
             services_catalog._fetcher = None
 
     async def test_wired_fetcher_calls_client_execute(self):

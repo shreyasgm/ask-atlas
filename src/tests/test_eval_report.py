@@ -542,7 +542,7 @@ class TestLatencyAnalysis:
                             "io_time_ms": 0,
                             "call_count": 1,
                         },
-                        "classify_query": {
+                        "plan_query": {
                             "wall_time_ms": 1000,
                             "llm_time_ms": 800,
                             "io_time_ms": 0,

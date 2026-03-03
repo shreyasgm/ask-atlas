@@ -430,18 +430,36 @@ country_catalog.add_index(
 registry.register_catalog(country_catalog)
 
 # Product catalog: dual-indexed by HS code AND by name
-product_catalog = CatalogCache("product_catalog", ttl=CATALOG_TTL)
-product_catalog.add_index(
+hs92_product_catalog = CatalogCache("hs92_product_catalog", ttl=CATALOG_TTL)
+hs92_product_catalog.add_index(
     "code",
     key_fn=lambda e: (e.get("code") or "").strip() or None,
     normalize_query=lambda q: q.strip(),
 )
-product_catalog.add_index("name", key_fn=_name_key, normalize_query=_name_normalize)
-product_catalog.add_index(
+hs92_product_catalog.add_index(
+    "name", key_fn=_name_key, normalize_query=_name_normalize
+)
+hs92_product_catalog.add_index(
     "id",
     key_fn=lambda e: str(e["productId"]) if "productId" in e else None,
 )
-registry.register_catalog(product_catalog)
+registry.register_catalog(hs92_product_catalog)
+
+# HS12 Product catalog: dual-indexed by HS12 code AND by name
+hs12_product_catalog = CatalogCache("hs12_product_catalog", ttl=CATALOG_TTL)
+hs12_product_catalog.add_index(
+    "code",
+    key_fn=lambda e: (e.get("code") or "").strip() or None,
+    normalize_query=lambda q: q.strip(),
+)
+hs12_product_catalog.add_index(
+    "name", key_fn=_name_key, normalize_query=_name_normalize
+)
+hs12_product_catalog.add_index(
+    "id",
+    key_fn=lambda e: str(e["productId"]) if "productId" in e else None,
+)
+registry.register_catalog(hs12_product_catalog)
 
 # Services catalog: service category names and IDs
 services_catalog = CatalogCache("services_catalog", ttl=CATALOG_TTL)
@@ -505,8 +523,14 @@ def wire_catalog_fetchers(explore_client: AtlasGraphQLClient) -> None:
         data = await explore_client.execute(query)
         return data.get("locationGroup", [])
 
+    async def _fetch_hs12_products() -> list[dict[str, Any]]:
+        query = "{ productHs12(productLevel: 4) { productId code nameShortEn nameEn } }"
+        data = await explore_client.execute(query)
+        return data.get("productHs12", [])
+
     country_catalog.set_fetcher(_fetch_countries)
-    product_catalog.set_fetcher(_fetch_products)
+    hs92_product_catalog.set_fetcher(_fetch_products)
+    hs12_product_catalog.set_fetcher(_fetch_hs12_products)
     services_catalog.set_fetcher(_fetch_services)
     group_catalog.set_fetcher(_fetch_groups)
 

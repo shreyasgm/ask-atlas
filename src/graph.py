@@ -33,10 +33,9 @@ from src.docs_pipeline import (
 from src.graphql_client import GraphQLBudgetTracker
 from src.graphql_pipeline import (
     build_and_execute_graphql,
-    classify_query,
-    extract_entities,
     extract_graphql_question,
     format_graphql_results,
+    plan_query,
     resolve_ids,
 )
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
@@ -78,7 +77,7 @@ def build_atlas_graph(
     graphql_client=None,
     country_pages_client=None,
     country_cache=None,
-    product_cache=None,
+    product_caches: dict | None = None,
     services_cache=None,
     group_cache=None,
     agent_mode: AgentMode = AgentMode.AUTO,
@@ -102,7 +101,8 @@ def build_atlas_graph(
         graphql_client: Optional AtlasGraphQLClient instance for the Explore API.
         country_pages_client: Optional AtlasGraphQLClient for the Country Pages API.
         country_cache: Optional CatalogCache for country lookups.
-        product_cache: Optional CatalogCache for product lookups.
+        product_caches: Dict of CatalogCache instances keyed by classification
+            (e.g. ``{"HS92": ..., "HS12": ...}``).
         services_cache: Optional CatalogCache for services lookups.
         agent_mode: Operating mode (AUTO, GRAPHQL_SQL, SQL_ONLY).
         budget_tracker: Optional GraphQLBudgetTracker for AUTO mode.
@@ -169,13 +169,13 @@ def build_atlas_graph(
             ]
         }
 
-    def route_after_classify(
+    def route_after_plan(
         state: AtlasAgentState,
-    ) -> Literal["format_graphql_results", "extract_entities"]:
+    ) -> Literal["format_graphql_results", "resolve_ids"]:
         classification = state.get("graphql_classification") or {}
         if classification.get("query_type") == "reject":
             return "format_graphql_results"
-        return "extract_entities"
+        return "resolve_ids"
 
     def route_after_validation(
         state: AtlasAgentState,
@@ -236,7 +236,7 @@ def build_atlas_graph(
     #
     # RetryPolicy for nodes that make LLM calls: on transient errors (rate
     # limits, timeouts, connection failures) LangGraph retries the node
-    # automatically.  classify_query and extract_entities let errors propagate
+    # automatically.  plan_query lets errors propagate
     # (no internal try/except) so RetryPolicy can trigger.  resolve_ids has
     # its own Step-C fallback but we add RetryPolicy as a defensive layer.
     # build_and_execute_graphql handles retries internally via the GraphQL
@@ -252,20 +252,15 @@ def build_atlas_graph(
         partial(extract_graphql_question),
     )
     builder.add_node(
-        "classify_query",
-        partial(classify_query, lightweight_model=lightweight_llm),
-        retry_policy=_llm_retry,
-    )
-    builder.add_node(
-        "extract_entities",
-        partial(extract_entities, lightweight_model=lightweight_llm),
+        "plan_query",
+        partial(plan_query, lightweight_model=lightweight_llm),
         retry_policy=_llm_retry,
     )
     # resolve_ids needs catalog caches for entity resolution
     _resolve_kwargs: dict = {
         "lightweight_model": lightweight_llm,
         "country_cache": country_cache,
-        "product_cache": product_cache,
+        "product_caches": product_caches or {},
         "services_cache": services_cache,
         "group_cache": group_cache,
     }
@@ -286,8 +281,9 @@ def build_atlas_graph(
         "format_graphql_results",
         partial(
             format_graphql_results,
-            product_cache=product_cache,
+            product_caches=product_caches or {},
             country_cache=country_cache,
+            services_cache=services_cache,
         ),
     )
 
@@ -354,16 +350,15 @@ def build_atlas_graph(
     builder.add_edge("max_queries_exceeded", "agent")
 
     # GraphQL pipeline
-    builder.add_edge("extract_graphql_question", "classify_query")
+    builder.add_edge("extract_graphql_question", "plan_query")
     builder.add_conditional_edges(
-        "classify_query",
-        route_after_classify,
+        "plan_query",
+        route_after_plan,
         {
             "format_graphql_results": "format_graphql_results",
-            "extract_entities": "extract_entities",
+            "resolve_ids": "resolve_ids",
         },
     )
-    builder.add_edge("extract_entities", "resolve_ids")
     builder.add_edge("resolve_ids", "build_and_execute_graphql")
     builder.add_edge("build_and_execute_graphql", "format_graphql_results")
     builder.add_edge("format_graphql_results", "agent")
