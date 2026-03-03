@@ -50,6 +50,18 @@ def _load_enriched_data(run_dir: Path) -> dict[str, Any]:
             entry["tools_used"] = result.get("tools_used", [])
             entry["agent_mode"] = result.get("agent_mode", "")
             entry["step_timing"] = result.get("step_timing", [])
+            # Rich observability fields
+            entry["sql_history"] = result.get("sql_history", [])
+            entry["pipeline_products"] = result.get("pipeline_products")
+            entry["pipeline_result_columns"] = result.get("pipeline_result_columns", [])
+            entry["pipeline_result_rows"] = result.get("pipeline_result_rows", [])
+            entry["graphql_query"] = result.get("graphql_query")
+            entry["graphql_classification"] = result.get("graphql_classification")
+            entry["graphql_entity_extraction"] = result.get("graphql_entity_extraction")
+            entry["graphql_resolved_params"] = result.get("graphql_resolved_params")
+            entry["graphql_atlas_links"] = result.get("graphql_atlas_links", [])
+            entry["graphql_api_target"] = result.get("graphql_api_target")
+            entry["docs_selected_files"] = result.get("docs_selected_files", [])
         else:
             entry.setdefault("agent_answer", "")
             entry.setdefault("sql", "")
@@ -614,12 +626,137 @@ function buildDetailHTML(q) {
     </div>`;
   }
 
-  // SQL
-  if (q.sql) {
+  // Entity Extraction (products/countries)
+  const pp = q.pipeline_products;
+  const gee = q.graphql_entity_extraction;
+  if (pp || gee) {
+    let entityHTML = '';
+    if (pp) {
+      if (pp.classification_schemas && pp.classification_schemas.length) {
+        entityHTML += '<p style="font-size:12px;color:#64748b;margin-bottom:6px;">Schemas: <strong>' + pp.classification_schemas.map(s => esc(s)).join(', ') + '</strong></p>';
+      }
+      if (pp.products && pp.products.length) {
+        entityHTML += '<table><thead><tr><th>Product</th><th>Schema</th><th>Codes</th></tr></thead><tbody>';
+        for (const p of pp.products) {
+          entityHTML += '<tr><td>' + esc(p.name || '') + '</td><td>' + esc(p.schema || '') + '</td><td>' + esc((p.codes || []).join(', ')) + '</td></tr>';
+        }
+        entityHTML += '</tbody></table>';
+      }
+      if (pp.countries && pp.countries.length) {
+        entityHTML += '<table style="margin-top:8px"><thead><tr><th>Country</th><th>ISO3</th></tr></thead><tbody>';
+        for (const c of pp.countries) {
+          entityHTML += '<tr><td>' + esc(c.name || '') + '</td><td>' + esc(c.iso3_code || '') + '</td></tr>';
+        }
+        entityHTML += '</tbody></table>';
+      }
+    }
+    if (gee) {
+      entityHTML += '<p style="font-size:12px;color:#64748b;margin-top:8px;">GraphQL entities:</p><pre>' + esc(JSON.stringify(gee, null, 2)) + '</pre>';
+    }
+    if (entityHTML) {
+      sections += `
+      <div class="detail-section">
+        <h4>Entity Extraction</h4>
+        <div class="content">${entityHTML}</div>
+      </div>`;
+    }
+  }
+
+  // SQL History (replaces single SQL section when available)
+  const sqlHistory = q.sql_history || [];
+  if (sqlHistory.length > 0) {
+    const stageColors = { generated: '#6366f1', validated: '#22c55e', execution_error: '#ef4444' };
+    let historyHTML = '';
+    for (let i = 0; i < sqlHistory.length; i++) {
+      const h = sqlHistory[i];
+      const color = stageColors[h.stage] || '#94a3b8';
+      const hasErrors = h.errors && h.errors.length > 0;
+      historyHTML += '<div style="margin-bottom:10px;">';
+      historyHTML += '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;color:#fff;background:' + color + ';">' + esc(h.stage) + '</span>';
+      if (hasErrors) {
+        historyHTML += '<span style="margin-left:8px;color:#ef4444;font-size:12px;">' + h.errors.map(e => esc(e)).join('; ') + '</span>';
+      }
+      historyHTML += '<pre style="margin-top:4px;">' + esc(h.sql || '') + '</pre>';
+      historyHTML += '</div>';
+    }
+    sections += `
+    <div class="detail-section">
+      <h4>SQL History <span style="font-size:11px;color:#94a3b8;text-transform:none;letter-spacing:0;">(${sqlHistory.length} version${sqlHistory.length > 1 ? 's' : ''})</span></h4>
+      <div class="content">${historyHTML}</div>
+    </div>`;
+  } else if (q.sql) {
+    // Fallback: single SQL query (backward compat with old result files)
     sections += `
     <div class="detail-section">
       <h4>SQL Query</h4>
       <pre>${esc(q.sql)}</pre>
+    </div>`;
+  }
+
+  // GraphQL Classification
+  const gc = q.graphql_classification;
+  if (gc) {
+    let gcHTML = '<table><tbody>';
+    for (const [k, v] of Object.entries(gc)) {
+      gcHTML += '<tr><td style="font-weight:600;min-width:120px;">' + esc(k) + '</td><td>' + esc(String(v)) + '</td></tr>';
+    }
+    gcHTML += '</tbody></table>';
+    sections += `
+    <div class="detail-section">
+      <h4>GraphQL Classification</h4>
+      <div class="content">${gcHTML}</div>
+    </div>`;
+  }
+
+  // GraphQL Query
+  if (q.graphql_query) {
+    sections += `
+    <div class="detail-section">
+      <h4>GraphQL Query</h4>
+      <pre>${esc(q.graphql_query)}</pre>
+    </div>`;
+  }
+
+  // Atlas Links
+  const links = q.graphql_atlas_links || [];
+  if (links.length > 0) {
+    const linksHTML = links.map(l => {
+      const url = l.url || l.link || '';
+      const label = l.label || l.title || url;
+      return '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:underline;">' + esc(label) + '</a>';
+    }).join('<br>');
+    sections += `
+    <div class="detail-section">
+      <h4>Atlas Links</h4>
+      <div class="content">${linksHTML}</div>
+    </div>`;
+  }
+
+  // Query Results
+  const resCols = q.pipeline_result_columns || [];
+  const resRows = q.pipeline_result_rows || [];
+  if (resCols.length > 0) {
+    let resHTML = '<span class="badge score">' + resRows.length + ' row' + (resRows.length !== 1 ? 's' : '') + '</span>';
+    resHTML += '<div style="max-height:400px;overflow-y:auto;margin-top:8px;">';
+    resHTML += '<table><thead><tr>' + resCols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>';
+    for (const row of resRows) {
+      resHTML += '<tr>' + row.map(v => '<td>' + esc(String(v ?? '')) + '</td>').join('') + '</tr>';
+    }
+    resHTML += '</tbody></table></div>';
+    sections += `
+    <div class="detail-section">
+      <h4>Query Results</h4>
+      <div class="content">${resHTML}</div>
+    </div>`;
+  }
+
+  // Docs selected files
+  const docFiles = q.docs_selected_files || [];
+  if (docFiles.length > 0) {
+    sections += `
+    <div class="detail-section">
+      <h4>Docs Files Used</h4>
+      <div class="tools-list">${docFiles.map(f => '<span class="tool-badge">' + esc(f) + '</span>').join('')}</div>
     </div>`;
   }
 

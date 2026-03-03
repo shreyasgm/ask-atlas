@@ -140,6 +140,57 @@ async def run_single_question(
                 if raw_timing:
                     result["step_timing"] = raw_timing
                     result["step_timing_summary"] = aggregate_timing(raw_timing)
+
+                # --- Rich observability fields ---
+
+                # SQL pipeline history
+                result["sql_history"] = state.values.get("pipeline_sql_history", [])
+                result["pipeline_result_columns"] = state.values.get(
+                    "pipeline_result_columns", []
+                )
+                result["pipeline_result_rows"] = state.values.get(
+                    "pipeline_result_rows", []
+                )
+
+                # Product/entity extraction
+                pipeline_products = state.values.get("pipeline_products")
+                if pipeline_products:
+                    result["pipeline_products"] = {
+                        "classification_schemas": pipeline_products.classification_schemas,
+                        "products": [
+                            {
+                                "name": p.name,
+                                "codes": p.codes,
+                                "schema": p.classification_schema,
+                            }
+                            for p in (pipeline_products.products or [])
+                        ],
+                        "countries": [
+                            {"name": c.name, "iso3_code": c.iso3_code}
+                            for c in (pipeline_products.countries or [])
+                        ],
+                    }
+
+                # GraphQL pipeline observability
+                result["graphql_query"] = state.values.get("graphql_query")
+                result["graphql_classification"] = state.values.get(
+                    "graphql_classification"
+                )
+                result["graphql_entity_extraction"] = state.values.get(
+                    "graphql_entity_extraction"
+                )
+                result["graphql_resolved_params"] = state.values.get(
+                    "graphql_resolved_params"
+                )
+                result["graphql_atlas_links"] = state.values.get(
+                    "graphql_atlas_links", []
+                )
+                result["graphql_api_target"] = state.values.get("graphql_api_target")
+
+                # Docs pipeline
+                result["docs_selected_files"] = state.values.get(
+                    "docs_selected_files", []
+                )
             except Exception:
                 result["sql"] = ""
                 result["tools_used"] = []

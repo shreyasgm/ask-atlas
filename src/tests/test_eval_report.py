@@ -21,7 +21,7 @@ if str(_EVAL_DIR) not in sys.path:
     sys.path.insert(0, str(_EVAL_DIR))
 
 from run_eval import _select_balanced  # noqa: E402
-from report import generate_report, report_to_markdown  # noqa: E402
+from report import _detect_pipeline, generate_report, report_to_markdown  # noqa: E402
 from html_report import generate_html_report  # noqa: E402
 
 # ---------------------------------------------------------------------------
@@ -756,6 +756,225 @@ class TestBudgetViolations:
         )
 
         assert "budget_violations" not in report
+
+
+# ---------------------------------------------------------------------------
+# Tests: pipeline detection
+# ---------------------------------------------------------------------------
+
+
+class TestDetectPipeline:
+    """Tests for the _detect_pipeline helper."""
+
+    def test_sql_only(self):
+        assert _detect_pipeline({"tools_used": ["query_tool"]}) == "sql"
+
+    def test_graphql_only(self):
+        assert _detect_pipeline({"tools_used": ["atlas_graphql"]}) == "graphql"
+
+    def test_mixed(self):
+        assert (
+            _detect_pipeline({"tools_used": ["query_tool", "atlas_graphql"]}) == "mixed"
+        )
+
+    def test_docs_only(self):
+        assert _detect_pipeline({"tools_used": ["docs_tool"]}) == "docs"
+
+    def test_no_tools(self):
+        assert _detect_pipeline({"tools_used": []}) == "unknown"
+
+    def test_missing_tools_key(self):
+        assert _detect_pipeline({}) == "unknown"
+
+
+# ---------------------------------------------------------------------------
+# Tests: by_pipeline breakdown in report
+# ---------------------------------------------------------------------------
+
+
+class TestByPipelineBreakdown:
+    """Tests for by_pipeline breakdown in generate_report."""
+
+    def test_report_includes_by_pipeline(self):
+        """When run_results have tools_used, report should include by_pipeline."""
+        run_results = [
+            {
+                "question_id": "1",
+                "question_text": "SQL question?",
+                "category": "A",
+                "difficulty": "easy",
+                "status": "success",
+                "duration_s": 5.0,
+                "tools_used": ["query_tool"],
+            },
+            {
+                "question_id": "2",
+                "question_text": "GraphQL question?",
+                "category": "A",
+                "difficulty": "easy",
+                "status": "success",
+                "duration_s": 3.0,
+                "tools_used": ["atlas_graphql"],
+            },
+        ]
+        judge_results = {
+            "1": {"verdict": "pass", "weighted_score": 4.5},
+            "2": {"verdict": "partial", "weighted_score": 3.0},
+        }
+        report = generate_report(
+            run_results,
+            judge_results,
+            {
+                "1": {"category": "A", "difficulty": "easy"},
+                "2": {"category": "A", "difficulty": "easy"},
+            },
+        )
+
+        assert "by_pipeline" in report
+        assert "sql" in report["by_pipeline"]
+        assert "graphql" in report["by_pipeline"]
+        assert report["by_pipeline"]["sql"]["count"] == 1
+        assert report["by_pipeline"]["graphql"]["count"] == 1
+
+    def test_per_question_has_pipeline_used(self):
+        """Each per_question entry should include pipeline_used field."""
+        run_results = [
+            {
+                "question_id": "1",
+                "question_text": "Test?",
+                "category": "A",
+                "difficulty": "easy",
+                "status": "success",
+                "duration_s": 5.0,
+                "tools_used": ["query_tool"],
+            },
+        ]
+        report = generate_report(
+            run_results,
+            {"1": {"verdict": "pass", "weighted_score": 5.0}},
+            {"1": {"category": "A", "difficulty": "easy"}},
+        )
+
+        assert report["per_question"][0]["pipeline_used"] == "sql"
+
+    def test_markdown_includes_pipeline_section(self):
+        """report_to_markdown should include By Pipeline heading."""
+        run_results = [
+            {
+                "question_id": "1",
+                "question_text": "Test?",
+                "category": "A",
+                "difficulty": "easy",
+                "status": "success",
+                "duration_s": 5.0,
+                "tools_used": ["query_tool"],
+            },
+        ]
+        report = generate_report(
+            run_results,
+            {"1": {"verdict": "pass", "weighted_score": 5.0}},
+            {"1": {"category": "A", "difficulty": "easy"}},
+        )
+        md = report_to_markdown(report)
+
+        assert "## By Pipeline" in md
+        assert "| sql |" in md
+
+    def test_markdown_per_question_has_pipeline_column(self):
+        """Per-question table should include Pipeline column."""
+        run_results = [
+            {
+                "question_id": "1",
+                "question_text": "Test?",
+                "category": "A",
+                "difficulty": "easy",
+                "status": "success",
+                "duration_s": 5.0,
+                "tools_used": ["atlas_graphql"],
+            },
+        ]
+        report = generate_report(
+            run_results,
+            {},
+            {"1": {"category": "A", "difficulty": "easy"}},
+        )
+        md = report_to_markdown(report)
+
+        assert "| Pipeline |" in md
+        assert "| graphql |" in md
+
+
+# ---------------------------------------------------------------------------
+# Tests: backward compatibility with old result files
+# ---------------------------------------------------------------------------
+
+
+class TestBackwardCompatibility:
+    """Ensure new fields don't break loading of old result.json files."""
+
+    def test_html_report_with_old_results(self, tmp_path):
+        """Old result.json without new fields should not cause errors."""
+        run_dir = tmp_path / "old_run"
+        run_dir.mkdir()
+
+        # Minimal old-style result (no sql_history, pipeline_products, etc.)
+        old_result = {
+            "question_id": "1",
+            "question_text": "Old question?",
+            "category": "A",
+            "difficulty": "easy",
+            "status": "success",
+            "duration_s": 5.0,
+            "answer": "Some answer",
+            "sql": "SELECT 1",
+            "tools_used": ["query_tool"],
+        }
+        qdir = run_dir / "1"
+        qdir.mkdir()
+        (qdir / "result.json").write_text(json.dumps(old_result))
+
+        # Build report
+        report = generate_report(
+            [old_result],
+            {"1": {"verdict": "pass", "weighted_score": 4.5}},
+            {"1": {"category": "A", "difficulty": "easy"}},
+        )
+        (run_dir / "report.json").write_text(json.dumps(report, default=str))
+
+        # Should not raise
+        html_path = generate_html_report(run_dir)
+        html_content = html_path.read_text(encoding="utf-8")
+
+        # Extract and parse JSON
+        start = html_content.index("const REPORT = ") + len("const REPORT = ")
+        end = html_content.index(";\n", start)
+        data = json.loads(html_content[start:end])
+
+        q1 = data["per_question"][0]
+        # New fields should have safe defaults
+        assert q1.get("sql_history", []) == []
+        assert q1.get("pipeline_products") is None
+        assert q1.get("graphql_query") is None
+
+    def test_report_without_tools_used(self):
+        """Old results without tools_used should default to 'unknown' pipeline."""
+        run_results = [
+            {
+                "question_id": "1",
+                "question_text": "Old question?",
+                "category": "A",
+                "difficulty": "easy",
+                "status": "success",
+                "duration_s": 5.0,
+            },
+        ]
+        report = generate_report(
+            run_results,
+            {},
+            {"1": {"category": "A", "difficulty": "easy"}},
+        )
+
+        assert report["per_question"][0]["pipeline_used"] == "unknown"
 
 
 # ---------------------------------------------------------------------------

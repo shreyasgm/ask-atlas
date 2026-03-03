@@ -56,6 +56,22 @@ def add_step_timing(existing: list[dict] | None, new: list[dict] | None) -> list
     return (existing or []) + (new or [])
 
 
+def add_sql_history(existing: list[dict] | None, new: list[dict] | None) -> list[dict]:
+    """Reducer that accumulates SQL query history across pipeline stages.
+
+    Each entry records a SQL version with its stage (generated, validated,
+    execution_error) and any associated errors.
+
+    Args:
+        existing: Previously accumulated SQL history entries (may be None).
+        new: New SQL history entries to append (may be None).
+
+    Returns:
+        Combined list of all SQL history entries.
+    """
+    return (existing or []) + (new or [])
+
+
 class AtlasAgentState(TypedDict):
     """State carried through each node of the Atlas agent graph.
 
@@ -116,6 +132,8 @@ class AtlasAgentState(TypedDict):
     token_usage: Annotated[list[dict], add_token_usage]
     # Accumulated per-step timing records (wall clock, LLM, I/O per node)
     step_timing: Annotated[list[dict], add_step_timing]
+    # Accumulated SQL query history (every version with stage and errors)
+    pipeline_sql_history: Annotated[list[dict], add_sql_history]
     # Trade toggle overrides (None = auto-detect)
     override_schema: Optional[str]
     override_direction: Optional[str]
