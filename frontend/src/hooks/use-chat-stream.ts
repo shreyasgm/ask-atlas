@@ -203,6 +203,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
         // to React state at frame rate (~60fps) to prevent React 19's
         // automatic batching from merging all setState calls into one render.
         let contentAcc = '';
+        let doneReceived = false;
         let rafId: null | number = null;
         let streamThreadId: null | string = null;
 
@@ -262,6 +263,21 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
                 contentAcc += parsed.content ?? '';
                 break;
 
+              case 'error':
+                stopRaf();
+                setError(parsed.message ?? 'An unexpected error occurred.');
+                streamingRef.current = false;
+                setIsStreaming(false);
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsg.id
+                      ? { ...m, content: contentAcc, isStreaming: false }
+                      : m,
+                  ),
+                );
+                doneReceived = true; // Prevent the fallback from firing too
+                break;
+
               case 'atlas_links': {
                 const links: Array<AtlasLink> = parsed.atlas_links ?? [];
                 if (links.length > 0) {
@@ -277,6 +293,7 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
               }
 
               case 'done':
+                doneReceived = true;
                 stopRaf();
                 // Snapshot pipeline steps onto the assistant message before clearing
                 setPipelineSteps((currentSteps) => {
@@ -543,6 +560,20 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
 
           // Stream ended — either naturally or via reader.cancel() from abort signal
           stopRaf();
+
+          // Fallback: if the stream closed without a `done` event and wasn't
+          // aborted (e.g. backend hit recursion limit before our error handler
+          // existed, or an unexpected stream termination), transition out of
+          // streaming so the UI doesn't hang.
+          if (!controller.signal.aborted && !doneReceived) {
+            streamingRef.current = false;
+            setIsStreaming(false);
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMsg.id ? { ...m, content: contentAcc, isStreaming: false } : m,
+              ),
+            );
+          }
 
           // If the stream ended because we aborted, preserve partial content
           if (controller.signal.aborted) {

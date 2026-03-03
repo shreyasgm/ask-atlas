@@ -13,6 +13,7 @@ from typing import AsyncGenerator
 from typing import Literal
 
 from fastapi import APIRouter, FastAPI, Request, Response
+from langgraph.errors import GraphRecursionError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
@@ -696,6 +697,21 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                 event_count,
             )
             was_cancelled = True
+        except GraphRecursionError:
+            logger.warning(
+                "Recursion limit hit  thread=%s  after %d events",
+                thread_id,
+                event_count,
+            )
+            yield {
+                "event": "error",
+                "data": json.dumps(
+                    {
+                        "message": "This question required too many processing steps. "
+                        "Please try a simpler question or break it into parts."
+                    }
+                ),
+            }
         except Exception:
             logger.exception(
                 "SSE stream error  thread=%s  after %d events",
