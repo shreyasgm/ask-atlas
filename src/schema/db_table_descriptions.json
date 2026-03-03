@@ -286,15 +286,15 @@
         },
         {
             "table_name": "country_product_lookback_1",
-            "context_str": ""
+            "context_str": "Pre-computed growth metrics for country-product pairs over configurable lookback windows at the 1-digit HS 1992 product level. Key columns: lookback (window size in years), lookback_year (base year), export_value_cagr, export_value_growth, export_value_percent_change, global_market_share_change, global_market_share_growth, global_market_share_cagr. Use this table for questions about how a country's exports of a product changed over time (e.g., export CAGR, market share trends)."
         },
         {
             "table_name": "country_product_lookback_2",
-            "context_str": ""
+            "context_str": "Pre-computed growth metrics for country-product pairs over configurable lookback windows at the 2-digit HS 1992 product level. Key columns: lookback (window size in years), lookback_year (base year), export_value_cagr, export_value_growth, export_value_percent_change, global_market_share_change, global_market_share_growth, global_market_share_cagr. Use this table for questions about how a country's exports of a product changed over time (e.g., export CAGR, market share trends)."
         },
         {
             "table_name": "country_product_lookback_4",
-            "context_str": ""
+            "context_str": "Pre-computed growth metrics for country-product pairs over configurable lookback windows at the 4-digit HS 1992 product level. Key columns: lookback (window size in years), lookback_year (base year), export_value_cagr, export_value_growth, export_value_percent_change, global_market_share_change, global_market_share_growth, global_market_share_cagr. Use this table for questions about how a country's exports of a product changed over time (e.g., export CAGR, market share trends)."
         },
         {
             "table_name": "group_group_product_year_2",

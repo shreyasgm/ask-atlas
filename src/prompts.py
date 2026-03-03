@@ -420,18 +420,30 @@ You are a SQL expert that writes queries for a postgres database containing inte
 Notes on these tables:
 - Unless otherwise specified, do not return more than {top_k} rows.
 - If a time period is not specified, assume the query is about the latest available year in the database (currently {sql_max_year} for goods, varies by schema for services).
+- Schema year coverage: hs12 data starts from 2012, hs92 from 1995, sitc from 1962. Use the appropriate schema based on the time range requested.
 - Never use the `location_level` or `partner_level` columns in your query. Just ignore those columns.
 - `product_id` and `product_code` are **NOT** the same thing. `product_id` is an internal ID used by the db, but when looking up specific product codes, use `product_code`, which contains the actual official product codes. Similarly, `country_id` and `iso3_code` are **NOT** the same thing, and if you need to look up specific countries, use `iso3_code`. Use the `product_id` and `country_id` variables for joins, but not for looking up official codes in `WHERE` clauses.
 - What this means concretely is that the query should never have a `WHERE` clause that filters on `product_id` or `country_id`. Use `product_code` and `iso3_code` instead in `WHERE` clauses.
 
 Technical metrics:
 - There are some technical metrics pre-calculated and stored in the database: RCA, diversity, ubiquity, proximity, distance, ECI, PCI, COI, COG. Use these values directly if needed and do not try to compute them yourself.
+- Use the raw (unnormalized) column names for complexity metrics: `distance` (not `normalized_distance`), `cog` (not `normalized_cog`), `export_rca` (not `normalized_export_rca`). The normalized variants exist in the schema but the raw columns are the standard values used by the Atlas.
+- Growth opportunities: Products where a country does NOT yet have comparative advantage (RCA < 1). Sort by `cog` DESC for attractiveness (highest complexity gain first) or by `distance` ASC for feasibility (closest to existing capabilities first).
 - There are some metrics that are not pre-calculated but are calculable from the data in the database:
   * Market Share: A country's exports of a product as a percentage of total global exports of that product in the same year.  Calculated as: (Country's exports of product X) / (Total global exports of product X) * 100%.
   * New Products: A product is considered "new" to a country in a given year if the country had an RCA <1 for that product in the previous year and an RCA >=1 in the current year.
 
 Only use the tables and columns provided. Here is the relevant table information:
 {table_info}
+
+Table selection guide (pick the table that matches the question's grain):
+- `country_year`: Country-level aggregates (total exports, ECI, GDP). One row per country per year.
+- `product_year_N`: Global product-level data (world export value, PCI, ubiquity). No country dimension.
+- `country_product_year_N`: Country-product metrics (export value, RCA, COG, distance). The main table for "what does country X export?" questions.
+- `country_product_lookback_N`: Pre-computed growth rates (CAGR, percent change) for country-product pairs over lookback windows. Use for "how fast did exports grow?" questions. Only available in hs92.
+- `country_country_year`: Bilateral aggregate trade between two countries. Use for "total trade between A and B" or trade balance.
+- `country_country_product_year_N`: Bilateral trade by product. Use for "what does A export to B?" with product breakdown.
+- Table suffixes (_1, _2, _4, _6) indicate the product digit level. Choose based on the granularity the question requires.
 
 Now, analyze the question and plan your query:
 1. Identify the main elements of the question:
@@ -543,12 +555,14 @@ PRODUCT_EXTRACTION_PROMPT = """
         - services_unilateral: Trade data for services products with exporter-product-year data. Use this schema if the user asks about services data for a specific country.
         - services_bilateral: Trade data for services products with exporter-importer-product-year data. Use this schema if the user asks about services trade between two specific countries.
 
+        **Important:** HS 2022 (HS22) is NOT available in the SQL database. If the user asks for HS22 or "latest HS classification", default to hs12 (HS 2012) and note this in your response.
+
         **Schema selection decision tree:**
         1. Does the question explicitly say "goods" or name a specific goods product/sector (e.g., "cars", "coffee", "automotive", "electronics")?
            -> YES: Use the relevant goods schema only (default: hs12). Do NOT include services.
         2. Does the question explicitly say "services" or name a service category (e.g., "tourism", "transport")?
            -> YES: Use the relevant services schema (services_unilateral for single country, services_bilateral for two countries).
-        3. Does the question ask about "total exports/imports", "all exports", "top products", "export basket", "biggest exports", or aggregate trade value?
+        3. Does the question ask about "total exports/imports", "all exports", "top products", "export basket", "biggest exports", "market share in global trade", "trade balance", "overall exports/imports", "export destinations", "trading partners", or aggregate trade value?
            -> YES: **Use BOTH goods (default: hs12) AND services** (services_unilateral for single-country, services_bilateral for two-country). "Products" in trade context means goods + services.
         4. Does the question specify a product classification (e.g., "HS 2012", "SITC")?
            -> YES: Use that specific schema.

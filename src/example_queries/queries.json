@@ -26,5 +26,25 @@
     {
         "question": "What are the best products for Kenya in terms of COG?",
         "file": "cog_kenya.sql"
+    },
+    {
+        "question": "What is Brazil's RCA in coffee?",
+        "file": "rca_brazil_coffee.sql"
+    },
+    {
+        "question": "What are Japan's total exports and ECI using SITC classification?",
+        "file": "total_exports_japan_sitc.sql"
+    },
+    {
+        "question": "What is Germany's market share in automotive exports?",
+        "file": "market_share_germany_automotive.sql"
+    },
+    {
+        "question": "What is the export growth rate (CAGR) of coffee across top exporting countries?",
+        "file": "cagr_coffee_global.sql"
+    },
+    {
+        "question": "What is the trade balance between Germany and the USA?",
+        "file": "trade_balance_germany_usa.sql"
     }
 ]
