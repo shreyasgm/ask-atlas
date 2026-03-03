@@ -408,3 +408,195 @@ async def test_api_chat_stream_emits_ordered_pipeline_events():
     assert (
         done_data.get("total_time_ms", 0) > 0
     ), "done event must include total_time_ms"
+
+
+# ---------------------------------------------------------------------------
+# Test Group 5: Recursion limit configuration
+# ---------------------------------------------------------------------------
+
+
+class TestRecursionLimit:
+    """recursion_limit must be set in the config passed to agent.astream()."""
+
+    async def test_aanswer_question_sets_recursion_limit(self):
+        """aanswer_question() sets recursion_limit=150 in the config."""
+        responses = [
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("atlas_graphql", "test", "rc1")],
+            ),
+            AIMessage(content="Done."),
+        ]
+        instance = _build_graphql_stub_instance(responses)
+
+        # Spy on agent.astream to capture the config argument
+        import unittest.mock as mock
+
+        original_astream = instance.agent.astream
+        captured_configs: list[dict] = []
+
+        async def spy_astream(*args, **kwargs):
+            config = kwargs.get("config") or (args[2] if len(args) > 2 else None)
+            if config:
+                captured_configs.append(config)
+            async for item in original_astream(*args, **kwargs):
+                yield item
+
+        with mock.patch.object(instance.agent, "astream", side_effect=spy_astream):
+            await instance.aanswer_question("test question")
+
+        assert captured_configs, "astream should have been called"
+        assert captured_configs[0].get("recursion_limit") == 150
+
+    async def test_astream_agent_response_sets_recursion_limit(self):
+        """astream_agent_response() sets recursion_limit=150 in the config."""
+        import uuid
+
+        responses = [
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("atlas_graphql", "test", "rc2")],
+            ),
+            AIMessage(content="Done."),
+        ]
+        instance = _build_graphql_stub_instance(responses)
+
+        import unittest.mock as mock
+
+        original_astream = instance.agent.astream
+        captured_configs: list[dict] = []
+
+        async def spy_astream(*args, **kwargs):
+            config = kwargs.get("config") or (args[2] if len(args) > 2 else None)
+            if config:
+                captured_configs.append(config)
+            async for item in original_astream(*args, **kwargs):
+                yield item
+
+        config = {"configurable": {"thread_id": str(uuid.uuid4())}}
+        with mock.patch.object(instance.agent, "astream", side_effect=spy_astream):
+            async for _ in instance.astream_agent_response("test", config):
+                pass
+
+        assert captured_configs, "astream should have been called"
+        assert captured_configs[0].get("recursion_limit") == 150
+
+    async def test_recursion_limit_does_not_override_explicit(self):
+        """If recursion_limit is already set, setdefault() preserves it."""
+        import uuid
+
+        responses = [
+            AIMessage(
+                content="",
+                tool_calls=[_tool_call("atlas_graphql", "test", "rc3")],
+            ),
+            AIMessage(content="Done."),
+        ]
+        instance = _build_graphql_stub_instance(responses)
+
+        import unittest.mock as mock
+
+        original_astream = instance.agent.astream
+        captured_configs: list[dict] = []
+
+        async def spy_astream(*args, **kwargs):
+            config = kwargs.get("config") or (args[2] if len(args) > 2 else None)
+            if config:
+                captured_configs.append(config)
+            async for item in original_astream(*args, **kwargs):
+                yield item
+
+        config = {
+            "configurable": {"thread_id": str(uuid.uuid4())},
+            "recursion_limit": 50,
+        }
+        with mock.patch.object(instance.agent, "astream", side_effect=spy_astream):
+            async for _ in instance.astream_agent_response("test", config):
+                pass
+
+        assert captured_configs[0].get("recursion_limit") == 50
+
+
+# ---------------------------------------------------------------------------
+# Test Group 6: GraphRecursionError handling in SSE endpoint
+# ---------------------------------------------------------------------------
+
+
+class TestGraphRecursionErrorSSE:
+    """When GraphRecursionError is raised, the SSE endpoint must emit an error event."""
+
+    async def test_graph_recursion_error_yields_error_event(self):
+        """GraphRecursionError should produce an error SSE event, not a crash."""
+        import httpx
+        from httpx import ASGITransport
+        from unittest.mock import AsyncMock
+
+        from langgraph.errors import GraphRecursionError
+
+        from src.api import _state, app
+        from src.conversations import InMemoryConversationStore
+
+        def _parse_sse(raw: str) -> list[dict]:
+            events = []
+            current: dict = {}
+            for line in raw.splitlines():
+                if line.startswith("event:"):
+                    current["event"] = line[len("event:") :].strip()
+                elif line.startswith("data:"):
+                    current["data"] = line[len("data:") :].strip()
+                elif line == "" and current:
+                    events.append(current)
+                    current = {}
+            if current:
+                events.append(current)
+            return events
+
+        # Build a stub AtlasTextToSQL whose aanswer_question_stream raises
+        from src.streaming import StreamData
+
+        async def _failing_stream(*args, **kwargs):
+            # Yield a real StreamData so the loop body can process it
+            yield StreamData(
+                source="agent",
+                content="partial",
+                message_type="agent_talk",
+            )
+            raise GraphRecursionError("Recursion limit of 25 reached")
+
+        stub = AtlasTextToSQL.__new__(AtlasTextToSQL)
+        stub.aanswer_question_stream = _failing_stream
+        # Provide a stub agent with aget_state/aupdate_state for post-stream cleanup
+        mock_state = AsyncMock()
+        mock_state.values = {"messages": [], "token_usage": [], "step_timing": []}
+        stub.agent = AsyncMock()
+        stub.agent.aget_state = AsyncMock(return_value=mock_state)
+        stub.agent.aupdate_state = AsyncMock()
+
+        _state.atlas_sql = stub
+        _state.conversation_store = InMemoryConversationStore()
+        try:
+            async with httpx.AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as client:
+                response = await client.post(
+                    "/api/chat/stream",
+                    json={"question": "complex multi-tool question"},
+                    headers={"X-Session-Id": "test-session"},
+                    timeout=10.0,
+                )
+        finally:
+            _state.atlas_sql = None
+            _state.conversation_store = None
+
+        assert response.status_code == 200
+
+        events = _parse_sse(response.text)
+        event_types = [e.get("event") for e in events]
+
+        assert "thread_id" in event_types, "Should still emit thread_id"
+        assert "error" in event_types, "Should emit an error event"
+
+        error_event = next(e for e in events if e.get("event") == "error")
+        error_data = json.loads(error_event["data"])
+        assert "message" in error_data
+        assert "too many" in error_data["message"].lower()

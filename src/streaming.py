@@ -641,6 +641,7 @@ class AtlasTextToSQL:
             AnswerResult with the answer text and pipeline data.
         """
         config = {"configurable": {"thread_id": thread_id or str(uuid.uuid4())}}
+        config.setdefault("recursion_limit", 150)
         turn_input = self._turn_input(
             question,
             override_schema=override_schema,
@@ -845,6 +846,8 @@ class AtlasTextToSQL:
             except ValueError:
                 pass
             return None
+
+        config.setdefault("recursion_limit", 150)
 
         turn_input = self._turn_input(
             question,

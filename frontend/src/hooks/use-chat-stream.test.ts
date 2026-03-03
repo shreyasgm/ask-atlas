@@ -1370,3 +1370,73 @@ describe('stopStreaming', () => {
     expect(assistant?.interrupted).toBe(false);
   });
 });
+
+describe('stream termination without done event', () => {
+  it('transitions out of streaming when stream closes without done', async () => {
+    // Stream that sends thread_id + agent_talk but closes WITHOUT a done event
+    const events = [
+      { data: JSON.stringify({ thread_id: THREAD_ID }), event: 'thread_id' },
+      {
+        data: JSON.stringify({
+          content: 'Partial response',
+          message_type: 'agent_talk',
+          source: 'agent',
+        }),
+        event: 'agent_talk',
+      },
+      // No done event — stream just closes
+    ];
+    globalThis.fetch = mockFetchWithEvents(events);
+
+    const { result } = renderHook(() => useChatStream());
+
+    act(() => {
+      result.current.sendMessage('hello');
+    });
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    const assistant = result.current.messages.find((m) => m.role === 'assistant');
+    expect(assistant).toBeDefined();
+    expect(assistant?.content).toBe('Partial response');
+    expect(assistant?.isStreaming).toBe(false);
+  });
+
+  it('handles error SSE event by setting error and stopping streaming', async () => {
+    const events = [
+      { data: JSON.stringify({ thread_id: THREAD_ID }), event: 'thread_id' },
+      {
+        data: JSON.stringify({
+          content: 'Started...',
+          message_type: 'agent_talk',
+          source: 'agent',
+        }),
+        event: 'agent_talk',
+      },
+      {
+        data: JSON.stringify({
+          message: 'This question required too many processing steps.',
+        }),
+        event: 'error',
+      },
+    ];
+    globalThis.fetch = mockFetchWithEvents(events);
+
+    const { result } = renderHook(() => useChatStream());
+
+    act(() => {
+      result.current.sendMessage('complex question');
+    });
+
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(false);
+    });
+
+    expect(result.current.error).toBe('This question required too many processing steps.');
+    const assistant = result.current.messages.find((m) => m.role === 'assistant');
+    expect(assistant?.isStreaming).toBe(false);
+    expect(assistant?.content).toBe('Started...');
+  });
+});
