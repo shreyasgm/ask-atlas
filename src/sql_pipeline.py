@@ -472,6 +472,7 @@ async def generate_sql_node(
     )
     return {
         "pipeline_sql": sql,
+        "pipeline_sql_history": [{"sql": sql, "stage": "generated", "errors": None}],
         "token_usage": [usage_record],
         "step_timing": [t.record],
     }
@@ -525,10 +526,20 @@ async def validate_sql_node(
             "pipeline_sql": sql,
             "pipeline_result": "",
             "last_error": error_msg,
+            "pipeline_sql_history": [
+                {"sql": sql, "stage": "validated", "errors": list(result.errors)}
+            ],
             "step_timing": [t.record],
         }
 
-    return {"pipeline_sql": result.sql, "last_error": "", "step_timing": [t.record]}
+    return {
+        "pipeline_sql": result.sql,
+        "last_error": "",
+        "pipeline_sql_history": [
+            {"sql": result.sql, "stage": "validated", "errors": None}
+        ],
+        "step_timing": [t.record],
+    }
 
 
 async def execute_sql_node(
@@ -577,6 +588,9 @@ async def execute_sql_node(
                     "pipeline_result": "",
                     "last_error": str(e),
                     **_empty_structured,
+                    "pipeline_sql_history": [
+                        {"sql": sql, "stage": "execution_error", "errors": [str(e)]}
+                    ],
                     "step_timing": [t.record],
                 }
             except Exception as e:
@@ -585,6 +599,9 @@ async def execute_sql_node(
                     "pipeline_result": "",
                     "last_error": str(e),
                     **_empty_structured,
+                    "pipeline_sql_history": [
+                        {"sql": sql, "stage": "execution_error", "errors": [str(e)]}
+                    ],
                     "step_timing": [t.record],
                 }
         else:
@@ -617,6 +634,9 @@ async def execute_sql_node(
                     "pipeline_result": "",
                     "last_error": str(e),
                     **_empty_structured,
+                    "pipeline_sql_history": [
+                        {"sql": sql, "stage": "execution_error", "errors": [str(e)]}
+                    ],
                     "step_timing": [t.record],
                 }
             except Exception as e:
@@ -625,6 +645,9 @@ async def execute_sql_node(
                     "pipeline_result": "",
                     "last_error": str(e),
                     **_empty_structured,
+                    "pipeline_sql_history": [
+                        {"sql": sql, "stage": "execution_error", "errors": [str(e)]}
+                    ],
                     "step_timing": [t.record],
                 }
 

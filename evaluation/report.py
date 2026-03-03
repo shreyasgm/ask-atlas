@@ -329,6 +329,32 @@ def _check_budget_violations(run_results: list[dict[str, Any]]) -> dict[str, Any
     }
 
 
+def _detect_pipeline(run: dict[str, Any]) -> str:
+    """Detect which pipeline a question used based on tools_used.
+
+    Args:
+        run: Per-question run result dict.
+
+    Returns:
+        One of: "sql", "graphql", "mixed", "docs", "unknown".
+    """
+    tools = run.get("tools_used", [])
+    if not tools:
+        return "unknown"
+    has_sql = "query_tool" in tools
+    has_graphql = "atlas_graphql" in tools
+    has_docs = "docs_tool" in tools
+    if has_sql and has_graphql:
+        return "mixed"
+    if has_graphql:
+        return "graphql"
+    if has_sql:
+        return "sql"
+    if has_docs:
+        return "docs"
+    return "unknown"
+
+
 def generate_report(
     run_results: list[dict[str, Any]],
     judge_results: dict[str, dict],
@@ -351,6 +377,7 @@ def generate_report(
     per_question = []
     by_category: dict[str, list[dict]] = defaultdict(list)
     by_difficulty: dict[str, list[dict]] = defaultdict(list)
+    by_pipeline: dict[str, list[dict]] = defaultdict(list)
     all_verdicts: list[dict] = []
 
     for run in run_results:
@@ -358,6 +385,7 @@ def generate_report(
         verdict = judge_results.get(qid, {})
         meta = questions_meta.get(qid, {})
 
+        pipeline_used = _detect_pipeline(run)
         run_cost = run.get("cost", {})
         entry = {
             "question_id": qid,
@@ -375,6 +403,7 @@ def generate_report(
             ),
             "judge_details": verdict,
             "cost_usd": run_cost.get("total_cost_usd") if run_cost else None,
+            "pipeline_used": pipeline_used,
         }
         per_question.append(entry)
 
@@ -382,6 +411,7 @@ def generate_report(
             all_verdicts.append(verdict)
             by_category[entry["category"]].append(verdict)
             by_difficulty[entry["difficulty"]].append(verdict)
+            by_pipeline[pipeline_used].append(verdict)
 
     cost_analysis = _aggregate_costs(run_results)
 
@@ -397,6 +427,9 @@ def generate_report(
         },
         "by_difficulty": {
             diff: _aggregate_scores(vds) for diff, vds in sorted(by_difficulty.items())
+        },
+        "by_pipeline": {
+            pipe: _aggregate_scores(vds) for pipe, vds in sorted(by_pipeline.items())
         },
         "failed_questions": [
             {
@@ -494,6 +527,17 @@ def report_to_markdown(report: dict[str, Any]) -> str:
         for diff, stats in by_diff.items():
             lines.append(
                 f"| {diff} | {stats['count']} | {stats['avg_weighted_score']} | {stats['pass_rate']}% |"
+            )
+
+    # By pipeline
+    by_pipe = report.get("by_pipeline", {})
+    if by_pipe:
+        lines.append("\n## By Pipeline\n")
+        lines.append("| Pipeline | Count | Avg Score | Pass Rate |")
+        lines.append("|----------|-------|-----------|-----------|")
+        for pipe, stats in by_pipe.items():
+            lines.append(
+                f"| {pipe} | {stats['count']} | {stats['avg_weighted_score']} | {stats['pass_rate']}% |"
             )
 
     # Cost analysis
@@ -630,24 +674,25 @@ def report_to_markdown(report: dict[str, Any]) -> str:
         has_cost = report.get("cost_analysis")
         if has_cost:
             lines.append(
-                "| ID | Difficulty | Category | Verdict | Score | Judge Mode | Duration | Cost |"
+                "| ID | Difficulty | Category | Pipeline | Verdict | Score | Judge Mode | Duration | Cost |"
             )
             lines.append(
-                "|----|------------|----------|---------|-------|------------|----------|------|"
+                "|----|------------|----------|----------|---------|-------|------------|----------|------|"
             )
         else:
             lines.append(
-                "| ID | Difficulty | Category | Verdict | Score | Judge Mode | Duration |"
+                "| ID | Difficulty | Category | Pipeline | Verdict | Score | Judge Mode | Duration |"
             )
             lines.append(
-                "|----|------------|----------|---------|-------|------------|----------|"
+                "|----|------------|----------|----------|---------|-------|------------|----------|"
             )
         for q in per_q:
             dur = f"{q['duration_s']}s" if q["duration_s"] is not None else "n/a"
             mode = q.get("judge_mode", "n/a")
+            pipeline = q.get("pipeline_used", "unknown")
             row = (
                 f"| {q['question_id']} | {q['difficulty']} | {q['category']} "
-                f"| {q['verdict']} | {q['weighted_score']} | {mode} | {dur}"
+                f"| {pipeline} | {q['verdict']} | {q['weighted_score']} | {mode} | {dur}"
             )
             if has_cost:
                 cost_val = q.get("cost_usd")
