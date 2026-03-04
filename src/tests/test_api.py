@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 
 from src.api import _state, app
 from src.conversations import InMemoryConversationStore
+from src.feedback import InMemoryFeedbackStore
 from src.text_to_sql import AnswerResult, AtlasTextToSQL, StreamData
 
 # ---------------------------------------------------------------------------
@@ -1521,3 +1522,200 @@ class TestChatStreamDisconnect:
         assert "thread_id" in event_types
         assert "done" in event_types
         assert events_yielded == 10
+
+
+# ---------------------------------------------------------------------------
+# Feedback endpoints
+# ---------------------------------------------------------------------------
+
+
+class TestFeedbackEndpoints:
+    """Tests for POST/GET/PUT /api/feedback and GET /api/feedback/export."""
+
+    @pytest.fixture(autouse=True)
+    def _inject_feedback_store(self):
+        """Inject an InMemoryFeedbackStore for each test."""
+        _state.feedback_store = InMemoryFeedbackStore()
+        yield
+        _state.feedback_store = None
+
+    def test_post_requires_session_id(self, client: TestClient) -> None:
+        resp = client.post(
+            "/api/feedback",
+            json={"thread_id": "t1", "turn_index": 0, "rating": "up"},
+        )
+        assert resp.status_code == 400
+
+    def test_post_thumbs_up(self, client: TestClient) -> None:
+        resp = client.post(
+            "/api/feedback",
+            json={"thread_id": "t1", "turn_index": 0, "rating": "up"},
+            headers={"X-Session-Id": "s1"},
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["rating"] == "up"
+        assert data["thread_id"] == "t1"
+        assert data["turn_index"] == 0
+        assert "id" in data
+        assert "created_at" in data
+        assert "updated_at" in data
+
+    def test_post_thumbs_down_with_comment(self, client: TestClient) -> None:
+        resp = client.post(
+            "/api/feedback",
+            json={
+                "thread_id": "t1",
+                "turn_index": 0,
+                "rating": "down",
+                "comment": "Wrong data",
+            },
+            headers={"X-Session-Id": "s1"},
+        )
+        assert resp.status_code == 201
+        assert resp.json()["rating"] == "down"
+        assert resp.json()["comment"] == "Wrong data"
+
+    def test_post_upserts_same_turn(self, client: TestClient) -> None:
+        headers = {"X-Session-Id": "s1"}
+        body = {"thread_id": "t1", "turn_index": 0, "rating": "up"}
+        r1 = client.post("/api/feedback", json=body, headers=headers)
+        body["rating"] = "down"
+        r2 = client.post("/api/feedback", json=body, headers=headers)
+        assert r1.json()["id"] == r2.json()["id"]
+        assert r2.json()["rating"] == "down"
+
+    def test_put_changes_vote(self, client: TestClient) -> None:
+        headers = {"X-Session-Id": "s1"}
+        r1 = client.post(
+            "/api/feedback",
+            json={"thread_id": "t1", "turn_index": 0, "rating": "up"},
+            headers=headers,
+        )
+        fid = r1.json()["id"]
+        r2 = client.put(
+            f"/api/feedback/{fid}",
+            json={"rating": "down", "comment": "changed mind"},
+            headers=headers,
+        )
+        assert r2.status_code == 200
+        assert r2.json()["rating"] == "down"
+        assert r2.json()["comment"] == "changed mind"
+
+    def test_put_wrong_session(self, client: TestClient) -> None:
+        r1 = client.post(
+            "/api/feedback",
+            json={"thread_id": "t1", "turn_index": 0, "rating": "up"},
+            headers={"X-Session-Id": "s1"},
+        )
+        fid = r1.json()["id"]
+        r2 = client.put(
+            f"/api/feedback/{fid}",
+            json={"rating": "down"},
+            headers={"X-Session-Id": "wrong"},
+        )
+        assert r2.status_code == 403
+
+    def test_put_not_found(self, client: TestClient) -> None:
+        resp = client.put(
+            "/api/feedback/999",
+            json={"rating": "down"},
+            headers={"X-Session-Id": "s1"},
+        )
+        assert resp.status_code == 404
+
+    def test_get_by_thread(self, client: TestClient) -> None:
+        headers = {"X-Session-Id": "s1"}
+        client.post(
+            "/api/feedback",
+            json={"thread_id": "t1", "turn_index": 0, "rating": "up"},
+            headers=headers,
+        )
+        client.post(
+            "/api/feedback",
+            json={"thread_id": "t1", "turn_index": 1, "rating": "down"},
+            headers=headers,
+        )
+        resp = client.get("/api/feedback", params={"thread_id": "t1"}, headers=headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 2
+
+    def test_get_requires_session(self, client: TestClient) -> None:
+        resp = client.get("/api/feedback", params={"thread_id": "t1"})
+        assert resp.status_code == 400
+
+    def test_export_returns_all(self, client: TestClient) -> None:
+        headers = {"X-Session-Id": "s1"}
+        client.post(
+            "/api/feedback",
+            json={"thread_id": "t1", "turn_index": 0, "rating": "up"},
+            headers=headers,
+        )
+        client.post(
+            "/api/feedback",
+            json={"thread_id": "t2", "turn_index": 0, "rating": "down"},
+            headers={"X-Session-Id": "s2"},
+        )
+        resp = client.get("/api/feedback/export")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 2
+        # Export entries include session_id and context
+        assert "session_id" in data[0]
+        assert "context" in data[0]
+
+    def test_export_filters_by_rating(self, client: TestClient) -> None:
+        headers = {"X-Session-Id": "s1"}
+        client.post(
+            "/api/feedback",
+            json={"thread_id": "t1", "turn_index": 0, "rating": "up"},
+            headers=headers,
+        )
+        client.post(
+            "/api/feedback",
+            json={"thread_id": "t2", "turn_index": 0, "rating": "down"},
+            headers=headers,
+        )
+        resp = client.get("/api/feedback/export", params={"rating": "down"})
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["rating"] == "down"
+
+    def test_post_snapshot_includes_pipeline(self, client: TestClient) -> None:
+        """Feedback snapshot should include pipeline data from turn_summaries."""
+        from langchain_core.messages import AIMessage, HumanMessage
+
+        pipeline_data = {
+            "entities": {"countries": ["BRA"], "products": [], "schemas": ["hs92"]},
+            "queries": [{"sql": "SELECT 1", "row_count": 5}],
+            "total_rows": 5,
+            "total_execution_time_ms": 120,
+            "atlas_links": [],
+        }
+        mock_state = MagicMock()
+        mock_state.values = {
+            "messages": [
+                HumanMessage(content="Brazil exports?"),
+                AIMessage(content="Brazil exported $200B."),
+            ],
+            "turn_summaries": [pipeline_data],
+        }
+        mock_agent = MagicMock()
+        mock_agent.aget_state = AsyncMock(return_value=mock_state)
+        _state.atlas_sql.agent = mock_agent
+
+        resp = client.post(
+            "/api/feedback",
+            json={"thread_id": "t1", "turn_index": 0, "rating": "down"},
+            headers={"X-Session-Id": "s1"},
+        )
+        assert resp.status_code == 201
+
+        # Verify the stored context includes pipeline
+        export = client.get("/api/feedback/export").json()
+        assert len(export) == 1
+        ctx = export[0]["context"]
+        assert ctx is not None
+        assert ctx["pipeline"] == pipeline_data
+        assert ctx["flagged_turn"]["user_question"] == "Brazil exports?"

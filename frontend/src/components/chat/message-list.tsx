@@ -1,7 +1,9 @@
 import { AlertCircle } from 'lucide-react';
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import type { ChatMessage, EntitiesData, PipelineStep, QueryAggregateStats } from '@/types/chat';
+import { useFeedback } from '@/hooks/use-feedback';
 import AssistantMessage from './assistant-message';
+import FeedbackButtons from './feedback-buttons';
 import PipelineStepper from './pipeline-stepper';
 import QueryContextCard from './query-context-card';
 import UserMessage from './user-message';
@@ -15,6 +17,7 @@ interface MessageListProps {
   messages: Array<ChatMessage>;
   pipelineSteps: Array<PipelineStep>;
   queryStats?: QueryAggregateStats | null;
+  threadId?: null | string;
 }
 
 export default memo(function MessageList({
@@ -25,8 +28,22 @@ export default memo(function MessageList({
   messages,
   pipelineSteps,
   queryStats,
+  threadId,
 }: MessageListProps) {
   const lastAssistantIndex = messages.findLastIndex((m) => m.role === 'assistant');
+  const { feedbackMap, submitFeedback, updateFeedback } = useFeedback(threadId ?? null);
+
+  const turnIndexMap = useMemo(() => {
+    const map = new Map<string, number>();
+    let idx = 0;
+    for (const msg of messages) {
+      if (msg.role === 'assistant') {
+        map.set(msg.id, idx);
+        idx++;
+      }
+    }
+    return map;
+  }, [messages]);
 
   return (
     <div aria-live="polite" className="flex-1 overflow-y-auto px-4 py-4 sm:py-6" role="log">
@@ -53,6 +70,17 @@ export default memo(function MessageList({
                   isStreaming && index === lastAssistantIndex && pipelineSteps.length > 0
                 }
               />
+              {!msg.isStreaming && !msg.interrupted && turnIndexMap.has(msg.id) && (
+                <FeedbackButtons
+                  feedback={feedbackMap.get(turnIndexMap.get(msg.id)!)}
+                  onSubmit={(rating, comment) =>
+                    submitFeedback(turnIndexMap.get(msg.id)!, rating, comment)
+                  }
+                  onUpdate={(id, rating, comment) =>
+                    updateFeedback(id, turnIndexMap.get(msg.id)!, rating, comment)
+                  }
+                />
+              )}
             </div>
           );
         })}

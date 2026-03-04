@@ -136,6 +136,7 @@ export default function ChatWorkspace({
         overrides={overrides}
         pipelineSteps={pipelineSteps}
         queryStats={queryStats}
+        threadId={activeThreadId}
       />
     </div>
   );
