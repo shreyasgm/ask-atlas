@@ -80,10 +80,13 @@ def _load_enriched_data(run_dir: Path) -> dict[str, Any]:
             try:
                 gt = load_json_file(gt_path)
                 entry["ground_truth"] = gt.get("results", {}).get("data", [])
+                entry["ground_truth_atlas_url"] = gt.get("atlas_url", "")
             except Exception:
                 entry["ground_truth"] = None
+                entry["ground_truth_atlas_url"] = ""
         else:
             entry["ground_truth"] = None
+            entry["ground_truth_atlas_url"] = ""
 
         # Add expected_behavior for refusal questions
         if qid in expected_behaviors:
@@ -369,6 +372,12 @@ function renderDashboard() {
   // Add dimension averages
   for (const [dim, score] of Object.entries(dims)) {
     stats.push({ label: dim.replace(/_/g, ' '), value: score.toFixed(2), sub: '/5.0' });
+  }
+
+  // Link judge aggregate
+  const lja = REPORT.link_judge_aggregate || {};
+  if (lja.count) {
+    stats.push({ label: 'Link Judge', value: (lja.avg_weighted_score || 0).toFixed(2), sub: lja.count + ' links · ' + (lja.pass_rate || 0) + '% pass' });
   }
 
   const el = document.getElementById('dashboard');
@@ -783,6 +792,62 @@ function buildVerdictSummary(q) {
   return html;
 }
 
+function buildLinkJudgeSection(q) {
+  const lj = q.link_judge;
+  if (!lj) return '';
+
+  const verdictClass = lj.verdict === 'pass' ? 'verdict-pass' : lj.verdict === 'partial' ? 'verdict-partial' : 'verdict-fail';
+  let html = '<div class="detail-section"><h4>Link Judge <span class="badge ' + verdictClass + '" style="vertical-align:middle;">' + esc(lj.verdict) + '</span> <span style="font-size:11px;color:#94a3b8;text-transform:none;letter-spacing:0;font-weight:400;">(' + (lj.weighted_score || 0).toFixed(2) + '/5)</span></h4><div class="content">';
+
+  // Dimension score bars
+  const linkDims = ['link_presence', 'content_relevance', 'entity_correctness', 'parameter_accuracy'];
+  const dimEntries = linkDims.filter(d => lj[d] && lj[d].score != null);
+  if (dimEntries.length > 0) {
+    html += '<div class="dim-bars">';
+    for (const d of dimEntries) {
+      const v = lj[d];
+      const score = v.score;
+      const pct = score / 5 * 100;
+      const cls = score >= 4 ? 'high' : score >= 3 ? 'mid' : 'low';
+      const label = d.replace(/_/g, ' ');
+      html += '<div class="dim-bar"><span class="dim-label">' + esc(label) + '</span><div class="bar-bg"><div class="bar-fill ' + cls + '" style="width:' + pct + '%"></div></div><span class="dim-score">' + score + '/5</span></div>';
+    }
+    html += '</div>';
+    // Dimension reasoning
+    for (const d of dimEntries) {
+      const v = lj[d];
+      if (v.reasoning) {
+        html += '<p style="font-size:12px;color:#64748b;margin-top:6px;"><strong>' + esc(d.replace(/_/g, ' ')) + ':</strong> ' + esc(v.reasoning) + '</p>';
+      }
+    }
+  }
+
+  // Overall comment
+  if (lj.overall_comment) {
+    html += '<p style="font-size:13px;margin-top:8px;">' + esc(lj.overall_comment) + '</p>';
+  }
+
+  // Show generated links and ground truth URL
+  html += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid #e2e8f0;">';
+  const links = q.graphql_atlas_links || [];
+  if (links.length > 0) {
+    html += '<p style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:4px;">Generated Links</p>';
+    html += links.map(function(l) {
+      const url = l.url || l.link || '';
+      const label = l.label || l.title || url;
+      return '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:underline;font-size:12px;">' + esc(label) + '</a>';
+    }).join('<br>');
+  }
+  if (q.ground_truth_atlas_url) {
+    html += '<p style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:4px;margin-top:8px;">Ground Truth URL</p>';
+    html += '<a href="' + esc(q.ground_truth_atlas_url) + '" target="_blank" rel="noopener" style="color:#059669;text-decoration:underline;font-size:12px;">' + esc(q.ground_truth_atlas_url) + '</a>';
+  }
+  html += '</div>';
+
+  html += '</div></div>';
+  return html;
+}
+
 function buildToolCallLog(q) {
   const toolCalls = q.tool_call_details || [];
   if (toolCalls.length === 0) {
@@ -1103,6 +1168,9 @@ function buildDetailHTML(q) {
 
   // Judge Verdict (merged: dimension scores + commentary + refusal)
   primary += buildVerdictSummary(q);
+
+  // Link Judge Verdict
+  primary += buildLinkJudgeSection(q);
 
   // --- Debug tier (collapsed by default) ---
   let debug = '';
