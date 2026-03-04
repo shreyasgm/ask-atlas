@@ -131,6 +131,7 @@ _RESPONSE_FORMAT_BLOCK = """\
 - Your responses are rendered as markdown with MathJax support. Use `$...$` for inline math \
 and `$$...$$` for display math. Do NOT use `\\(...\\)` or `\\[...\\]`. Escape literal \
 dollar signs as `\\$`.
+- Use **bold** sparingly — only for key figures or terms the reader must not miss.
 - Be concise and precise. Don't say more than needed.
 - Never expose implementation details to the user. Do not mention GraphQL, SQL, database \
 names, API endpoints, tool names, or pipeline internals. If a tool returns an error, \
