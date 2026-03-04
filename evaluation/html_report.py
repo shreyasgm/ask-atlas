@@ -1250,14 +1250,40 @@ _REVIEW_CSS = """\
 .badge.review-link_generation_issue { background: #fce7f3; color: #9d174d; }
 .badge.review-reviewed_ok { background: #dcfce7; color: #166534; }
 
+/* Review toggle (mirrors debug-toggle styling) */
+.review-toggle {
+  display: flex; align-items: center; gap: 6px; cursor: pointer;
+  font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: .5px;
+  margin-top: 6px; padding: 6px 0; user-select: none; border: none; background: none;
+  width: fit-content;
+}
+.review-toggle::before {
+  content: ''; display: inline-block; width: 0; height: 0;
+  border-left: 5px solid #94a3b8; border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent; transition: transform .15s;
+}
+.review-toggle.open::before { transform: rotate(90deg); }
+.review-drawer { display: none; }
+.review-drawer.open { display: block; }
+
 /* Review panel */
 .review-panel {
-  margin-top: 14px; padding: 14px 16px; background: #f0f4ff;
+  margin-top: 8px; padding: 14px 16px; background: #f0f4ff;
   border-radius: 8px; border: 1px solid #c7d2fe;
 }
 .review-panel h4 {
   font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
   color: #4338ca; margin-bottom: 10px;
+}
+
+/* GT editor sections */
+.gt-editor-section {
+  margin-top: 12px; padding: 12px 14px; background: #f8fafc;
+  border-radius: 6px; border: 1px solid #e2e8f0;
+}
+.gt-editor-section h5 {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .5px;
+  color: #64748b; margin-bottom: 8px; font-weight: 600;
 }
 .review-panel label { font-size: 13px; color: #475569; display: block; margin-bottom: 4px; }
 .review-panel select, .review-panel input[type="text"], .review-panel textarea {
@@ -1413,14 +1439,19 @@ buildDetailHTML = function(q) {
   return html;
 };
 
+let _reviewIdCounter = 0;
+
 function buildReviewPanel(q) {
   const qid = q.question_id;
   const review = q.review || {};
   const currentClass = review.classification || '';
   const currentNote = review.note || '';
+  const rid = 'review-' + (_reviewIdCounter++);
 
-  let html = '<div class="review-panel" id="review-panel-' + esc(qid) + '">';
-  html += '<h4>Review Actions</h4>';
+  // Collapsible toggle (like debug details)
+  let html = '<button class="review-toggle" onclick="toggleReview(\\'' + rid + '\\',this)">Review actions</button>';
+  html += '<div class="review-drawer" id="' + rid + '">';
+  html += '<div class="review-panel" id="review-panel-' + esc(qid) + '">';
 
   // Classification dropdown
   html += '<div style="margin-bottom: 12px;">';
@@ -1442,8 +1473,10 @@ function buildReviewPanel(q) {
   }
   html += '</div>';
 
-  // GT Data Editor (toggle)
+  // GT Data Editor (in its own section)
   if (q.ground_truth && q.ground_truth.length > 0) {
+    html += '<div class="gt-editor-section">';
+    html += '<h5>Ground Truth Data</h5>';
     html += '<button class="editor-toggle" onclick="toggleEditor(\\'' + esc(qid) + '-gt\\', this)">Edit Ground Truth Data</button>';
     html += '<div class="editor-body" id="editor-' + esc(qid) + '-gt">';
     html += '<textarea id="gt-editor-' + esc(qid) + '" oninput="previewGT(\\'' + esc(qid) + '\\')">' + esc(JSON.stringify(q.ground_truth, null, 2)) + '</textarea>';
@@ -1455,10 +1488,13 @@ function buildReviewPanel(q) {
     html += '<span id="gt-status-' + esc(qid) + '"></span>';
     html += '</div>';
     html += '</div>';
+    html += '</div>';
   }
 
-  // GT URL Editor (toggle)
+  // GT URL Editor (in its own section)
   if (q.ground_truth_atlas_url) {
+    html += '<div class="gt-editor-section">';
+    html += '<h5>Ground Truth URL</h5>';
     html += '<button class="editor-toggle" onclick="toggleEditor(\\'' + esc(qid) + '-url\\', this)">Edit Ground Truth URL</button>';
     html += '<div class="editor-body" id="editor-' + esc(qid) + '-url">';
     html += '<label>Atlas URL</label>';
@@ -1470,6 +1506,7 @@ function buildReviewPanel(q) {
     html += '<span id="gt-url-status-' + esc(qid) + '"></span>';
     html += '</div>';
     html += '</div>';
+    html += '</div>';
   }
 
   // Re-judge button
@@ -1478,8 +1515,16 @@ function buildReviewPanel(q) {
   html += ' <span id="rejudge-status-' + esc(qid) + '"></span>';
   html += '</div>';
 
-  html += '</div>';
+  html += '</div>'; // close review-panel
+  html += '</div>'; // close review-drawer
   return html;
+}
+
+function toggleReview(id, btn) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+  btn.classList.toggle('open');
+  btn.textContent = el.classList.contains('open') ? 'Hide review actions' : 'Review actions';
 }
 
 function toggleEditor(id, btn) {
