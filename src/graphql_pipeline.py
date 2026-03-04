@@ -1481,6 +1481,34 @@ async def format_graphql_results(
                                 f"Report the actual coverage to the user."
                             )
 
+                # Null values in key time-series fields
+                _TS_NULL_FIELDS = (
+                    "eci",
+                    "eciFixed",
+                    "exportValue",
+                    "importValue",
+                    "gdppc",
+                )
+                if isinstance(items, list) and items:
+                    null_fields: dict[str, list[int]] = {}
+                    for item in items:
+                        yr = item.get("year")
+                        if yr is None:
+                            continue
+                        for key in _TS_NULL_FIELDS:
+                            if key in item and item[key] is None:
+                                null_fields.setdefault(key, []).append(yr)
+                    if null_fields:
+                        field_summary = "; ".join(
+                            f"{k} is null for years {sorted(v)}"
+                            for k, v in null_fields.items()
+                        )
+                        warnings.append(
+                            f"WARNING: Some fields contain null values: {field_summary}. "
+                            "Report ONLY the years/fields with actual data. "
+                            "Do NOT fill gaps with estimates or your own knowledge."
+                        )
+
             # Import direction note
             if trade_direction == "imports":
                 warnings.append(
@@ -1550,10 +1578,25 @@ async def format_graphql_results(
                 )
             )
 
+    # Build per-call snapshot for graphql_call_history accumulator
+    from src.state import cap_snapshot_result
+
+    call_snapshot = {
+        "question": state.get("graphql_question", ""),
+        "classification": state.get("graphql_classification"),
+        "entity_extraction": state.get("graphql_entity_extraction"),
+        "resolved_params": state.get("graphql_resolved_params"),
+        "query": state.get("graphql_query"),
+        "api_target": state.get("graphql_api_target"),
+        "atlas_links": atlas_links,
+        "result_content": cap_snapshot_result(content),
+    }
+
     return {
         "messages": messages,
         "queries_executed": state.get("queries_executed", 0) + 1,
         "graphql_atlas_links": atlas_links,
+        "graphql_call_history": [call_snapshot],
         "step_timing": [_fmt_t.record],
     }
 

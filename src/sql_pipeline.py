@@ -31,7 +31,7 @@ from src.product_and_schema_lookup import (
 from src.prompts import build_sql_generation_prefix
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 from src.sql_validation import extract_table_names_from_ddl, validate_sql
-from src.state import AtlasAgentState
+from src.state import AtlasAgentState, cap_snapshot_result
 from src.token_usage import make_usage_record_from_callback, node_timer
 
 logger = logging.getLogger(__name__)
@@ -704,9 +704,30 @@ async def format_results_node(state: AtlasAgentState) -> dict:
                 )
             )
 
+    # Build per-call snapshot for sql_call_history accumulator
+    products = state.get("pipeline_products")
+    call_snapshot = {
+        "question": state.get("pipeline_question", ""),
+        "products": (
+            [
+                {"name": p.name, "codes": p.codes, "schema": p.classification_schema}
+                for p in (products.products or [])
+            ]
+            if products
+            else []
+        ),
+        "codes": state.get("pipeline_codes", ""),
+        "final_sql": state.get("pipeline_sql", ""),
+        "result_content": cap_snapshot_result(content),
+        "result_row_count": len(state.get("pipeline_result_rows", []) or []),
+        "result_columns": state.get("pipeline_result_columns", []) or [],
+        "execution_time_ms": state.get("pipeline_execution_time_ms", 0),
+    }
+
     return {
         "messages": messages,
         "queries_executed": state.get("queries_executed", 0) + 1,
+        "sql_call_history": [call_snapshot],
         "step_timing": [t.record],
     }
 
