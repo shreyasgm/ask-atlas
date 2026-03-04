@@ -12,6 +12,21 @@ from typing_extensions import TypedDict
 
 from src.product_and_schema_lookup import SchemasAndProductsFound
 
+# Cap for result_content stored in call history snapshots.
+# Both SQL and GraphQL pipelines already truncate ToolMessage content at ~15K;
+# this further caps what we persist per-call to keep snapshots bounded.
+MAX_SNAPSHOT_RESULT_CHARS: int = 10_000
+
+
+def cap_snapshot_result(content: str) -> str:
+    """Truncate content to MAX_SNAPSHOT_RESULT_CHARS with notice."""
+    if len(content) <= MAX_SNAPSHOT_RESULT_CHARS:
+        return content
+    notice = (
+        f"\n\n[truncated from {len(content):,} to {MAX_SNAPSHOT_RESULT_CHARS:,} chars]"
+    )
+    return content[: MAX_SNAPSHOT_RESULT_CHARS - len(notice)] + notice
+
 
 def add_turn_summaries(
     existing: list[dict] | None, new: list[dict] | None
@@ -72,6 +87,43 @@ def add_sql_history(existing: list[dict] | None, new: list[dict] | None) -> list
     return (existing or []) + (new or [])
 
 
+def add_sql_call_history(
+    existing: list[dict] | None, new: list[dict] | None
+) -> list[dict]:
+    """Reducer that accumulates per-call SQL pipeline snapshots.
+
+    Each entry captures the question, products, codes, final SQL, result
+    content (capped), row count, columns, and execution time for a single
+    SQL tool invocation.
+
+    Args:
+        existing: Previously accumulated snapshots (may be None).
+        new: New snapshots to append (may be None).
+
+    Returns:
+        Combined list of all SQL call snapshots.
+    """
+    return (existing or []) + (new or [])
+
+
+def add_graphql_call_history(
+    existing: list[dict] | None, new: list[dict] | None
+) -> list[dict]:
+    """Reducer that accumulates per-call GraphQL pipeline snapshots.
+
+    Each entry captures the classification, entity extraction, resolved params,
+    query, atlas links, and API target for a single GraphQL tool invocation.
+
+    Args:
+        existing: Previously accumulated snapshots (may be None).
+        new: New snapshots to append (may be None).
+
+    Returns:
+        Combined list of all GraphQL call snapshots.
+    """
+    return (existing or []) + (new or [])
+
+
 class AtlasAgentState(TypedDict):
     """State carried through each node of the Atlas agent graph.
 
@@ -105,6 +157,7 @@ class AtlasAgentState(TypedDict):
         graphql_raw_response: Raw response data from the GraphQL API.
         graphql_execution_time_ms: GraphQL query execution time in milliseconds.
         graphql_atlas_links: Atlas visualization links generated from resolved params.
+        graphql_call_history: Accumulated per-call GraphQL pipeline snapshots for debugging.
         docs_question: Question extracted from the docs_tool tool_call args.
         docs_context: Broader user context for the docs question.
         docs_selected_files: Filenames of documentation files selected by the LLM.
@@ -151,6 +204,10 @@ class AtlasAgentState(TypedDict):
     graphql_raw_response: Optional[dict]
     graphql_execution_time_ms: int
     graphql_atlas_links: list[dict]
+    # Accumulated per-call SQL pipeline snapshots (persisted across calls)
+    sql_call_history: Annotated[list[dict], add_sql_call_history]
+    # Accumulated per-call GraphQL pipeline snapshots (persisted across calls)
+    graphql_call_history: Annotated[list[dict], add_graphql_call_history]
     # === Docs pipeline state (reset by extract_docs_question at cycle start) ===
     docs_question: str
     docs_context: str
