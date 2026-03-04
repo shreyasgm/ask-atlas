@@ -834,9 +834,14 @@ function buildLinkJudgeSection(q) {
     html += '<p style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:4px;">Generated Links</p>';
     html += links.map(function(l) {
       const url = l.url || l.link || '';
-      const label = l.label || l.title || url;
-      return '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:underline;font-size:12px;">' + esc(label) + '</a>';
-    }).join('<br>');
+      const label = l.label || l.title || '';
+      let linkHtml = '';
+      if (label && label !== url) {
+        linkHtml += '<span style="font-size:12px;color:#475569;font-weight:500;">' + esc(label) + '</span><br>';
+      }
+      linkHtml += '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:underline;font-size:12px;">' + esc(url) + '</a>';
+      return linkHtml;
+    }).join('<div style="margin-top:6px;"></div>');
   }
   if (q.ground_truth_atlas_url) {
     html += '<p style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:4px;margin-top:8px;">Ground Truth URL</p>';
