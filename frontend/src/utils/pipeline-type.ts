@@ -2,10 +2,9 @@ import type { PipelineType } from '@/types/chat';
 
 const GRAPHQL_NODES = new Set([
   'build_and_execute_graphql',
-  'classify_query',
-  'extract_entities',
   'extract_graphql_question',
   'format_graphql_results',
+  'plan_query',
   'resolve_ids',
 ]);
 
