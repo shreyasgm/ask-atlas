@@ -1488,6 +1488,49 @@ async def format_graphql_results(
                     "(not exportValue) when reporting results to the user."
                 )
 
+            # Field-interpretation guides — moved from agent prompt so
+            # the agent sees them only when relevant results arrive.
+            if query_type == "country_profile":
+                warnings.append(
+                    "NOTE: Field interpretation guide — use these to describe results accurately:\n"
+                    "- structuralTransformationStep: NotStarted = 'has not yet started structural transformation', "
+                    "TextilesOnly = 'textiles/apparel stage', ElectronicsOnly = 'electronics stage', "
+                    "MachineryOnly = 'machinery stage', Completed = 'has completed structural transformation'\n"
+                    "- structuralTransformationDirection: risen/fallen/stagnated (sector market share trend)\n"
+                    "- marketShareMainSectorPositiveGrowth: true = gaining global market share in main sector; "
+                    "false = main sector is growing globally (country riding tailwind, not gaining competitive share)\n"
+                    "- growthProjection: moderate → 'moderately', slow → 'slowly', rapid → 'rapidly'\n"
+                    "- growthProjectionRelativeToIncome: More/ModeratelyMore/Same/ModeratelyLess/Less "
+                    "(how growth projection compares to others in same income group)\n"
+                    "- PCI is null for services and some natural resources in default responses\n"
+                    "- exportValueConstGrowthCagr: constant-dollar CAGR — use directly, do not recompute from nominal values\n"
+                    "- Classification labels (diversificationGrade, complexityIncome, etc.): report as-is\n"
+                    "- When question asks about total exports under a specific classification, "
+                    "sum product-level values from countryProductYear rather than using countryYear.exportValue"
+                )
+            elif query_type == "country_lookback":
+                warnings.append(
+                    "NOTE: Field interpretation guide — use these to describe results accurately:\n"
+                    "- eciRankChange: POSITIVE = worsened (higher rank number = less complex), "
+                    "NEGATIVE = improved (lower rank number = more complex). "
+                    "Example: eciRankChange = +5 means 'dropped 5 places'\n"
+                    "- exportValueConstGrowthCagr: constant-dollar CAGR — use directly, do not recompute\n"
+                    "- Labels (promising/troubling/mixed/static): from constant-price dynamics, report as-is\n"
+                    "- gdpPcConstantCagrRegionalDifference: Above/InLine/Below (vs regional average)"
+                )
+            elif query_type in (
+                "feasibility",
+                "feasibility_table",
+                "growth_opportunities",
+            ):
+                warnings.append(
+                    "NOTE: The Atlas does not display growth opportunity products for countries "
+                    "classified under the 'Technological Frontier' strategic approach "
+                    "(highest-complexity economies). If results are empty, tell the user this "
+                    "data is unavailable for frontier economies and suggest exploring existing "
+                    "export strengths instead."
+                )
+
             if warnings:
                 content = "\n".join(warnings) + "\n\n" + content
 

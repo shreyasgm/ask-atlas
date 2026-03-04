@@ -60,7 +60,7 @@ to the question.
   countries), tailor your response to that use case rather than giving a generic overview.
 - If the documentation doesn't fully answer the question, clearly state what it does cover
   and note what's missing.
-- Reference which document each piece of information comes from (e.g., "per the metrics glossary...").
+- Reference document titles when available (e.g., "per the metrics glossary...").
 
 **Question:** {question}
 {context_block}

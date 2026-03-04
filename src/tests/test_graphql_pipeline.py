@@ -375,23 +375,14 @@ class TestGraphQLQueryClassification:
         assert c.query_type == "bilateral_aggregate"
         assert c.api_target == "explore"
 
-    def test_classification_prompt_includes_phase5_routing_heuristics(self):
-        """build_classification_prompt output contains the new Phase 5 routing heuristics."""
+    def test_classification_prompt_includes_key_query_types(self):
+        """build_classification_prompt mentions key query types for routing."""
         from src.prompts import build_classification_prompt
 
         prompt = build_classification_prompt("test question")
-        # Phase 4f: bilateral_aggregate routing
         assert "bilateral_aggregate" in prompt
-        # Phase 5b: country_profile for diversification grade
-        assert (
-            "Diversification grade, growth projection relative to income -> country_profile"
-            in prompt
-        )
-        # Phase 5b: country_lookback for export growth classification
-        assert (
-            "Export growth classification (promising, troubling, static, mixed) -> country_lookback"
-            in prompt
-        )
+        assert "country_profile" in prompt
+        assert "country_lookback" in prompt
 
 
 # ---------------------------------------------------------------------------

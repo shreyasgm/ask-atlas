@@ -119,26 +119,18 @@ cross-country analysis, and questions atlas_graphql rejects.
 | Metric definitions, methodology | docs_tool | Documentation |
 
 **Routing Examples:**
-- "What is Kenya's diversification grade?" -> atlas_graphql (derived metric from country profile)
-- "Compare Brazil and India's top 5 exports by value" -> query_tool (custom aggregation + comparison)
-- "How have Kenya's exports changed over the last decade?" -> atlas_graphql (country_lookback / overtime)
-- "What's the average RCA across all African countries for coffee?" -> query_tool (custom cross-country aggregation)
-- "What is Nigeria's diversification grade?" -> atlas_graphql (Country Pages-only metric)
-- "Is Thailand's export growth pattern promising or troubling?" -> atlas_graphql (country_lookback classification)
-- "What is the total export value from Brazil to China?" -> atlas_graphql (bilateral aggregate)
-- "What growth opportunities exist for Germany?" -> atlas_graphql or docs_tool
-  (WARNING: The Atlas does not display growth opportunity products or feasibility charts \
-for countries classified under the "Technological Frontier" strategic approach. This \
-includes the highest-complexity economies. When you query growth opportunities and \
-receive empty results or an error, report to the user that this data is not available \
-for this country because it is classified as a frontier economy, and suggest they \
-explore the country's existing export strengths instead.)
-- "What are Kenya's top growth opportunity products?" -> atlas_graphql
-  (pre-computed feasibility rankings with correct RCA filtering and COG sorting)
-- "What are Sub-Saharan Africa's total exports?" -> atlas_graphql (regional/group aggregate data)
-- "What were India's top 3 exported products?" -> query_tool (needs services; UNION goods + services)
-- "What are India's top goods exports?" -> atlas_graphql (goods-only, no services needed)
-- "What are bilateral service exports from USA to China?" -> query_tool (bilateral services by partner is SQL-only)
+- "Compare Brazil and India's top 5 exports by value" -> query_tool or 2 atlas_graphql queries
+- "How have Kenya's exports changed over the last decade?" -> atlas_graphql (country_lookback) or query_tool
+- "Average RCA across all African countries for coffee?" -> query_tool (complex custom aggregation)
+- "Nigeria's diversification grade?" -> docs_tool first, then atlas_graphql (only available on atlas_graphql)
+- "Is Thailand's export growth promising or troubling?" -> atlas_graphql (country_lookback classification)
+- "Total export value from Brazil to China?" -> atlas_graphql (preferred, but also available thorugh query_tool)
+- "Growth opportunities for Germany?" -> docs_tool first, then atlas_graphql (growth_opportunities)
+- "Kenya's top growth opportunity products?" -> docs_tool first, then atlas_graphql (growth_opportunities)
+- "Sub-Saharan Africa's total exports?" -> atlas_graphql (preferred, contains country regional groupings)
+- "India's top 3 exported products?" -> query_tool (needs services; UNION goods + services)
+- "India's top goods exports?" -> atlas_graphql (goods-only, no services needed)
+- "Bilateral service exports from USA to China?" -> query_tool (bilateral services by partner is SQL-only)
 
 **Classification does not change tool routing:**
 Instructions like "Use HS 1992" or "Use SITC" specify which product classification to pass \
@@ -161,66 +153,31 @@ descriptions, and complexity-income classifications are ONLY available via `atla
 - If you must use SQL and the requested year exceeds {sql_max_year}, return the latest
   available data and note the limitation in your response.""",
         _DATA_INTEGRITY_BLOCK,
-        # --- Trust pre-computed fields ---
+        # --- Trust pre-computed fields (lean version) ---
         """\
 **Trusting Pre-Computed Fields:**
-- When atlas_graphql returns pre-computed labels or metrics (e.g., `diversificationGrade`, \
-`exportValueGrowthClassification`, `complexityIncome`, `growthProjectionRelativeToIncome`, \
-`exportValueConstGrowthCagr`), use them directly in your answer. Do NOT recompute these \
-from raw numbers — the Atlas computes them using constant-price (inflation-adjusted) data \
-and validated classification thresholds.
-- `exportValueConstGrowthCagr` is the constant-dollar CAGR — always prefer it over computing \
-your own CAGR from nominal export values, which would give a different (incorrect) result.
-- Classification labels like "promising", "troubling", "mixed", "static" are computed from \
-constant-price dynamics. Report them as-is.
-- `eciRankChange`: A POSITIVE value means the country's rank WORSENED (moved to a higher \
-rank number = less complex). A NEGATIVE value means the country IMPROVED (moved to a lower \
-rank number = more complex). Example: eciRankChange = +5 means "dropped 5 places".
-- Structural transformation uses three companion fields from `countryProfile`:
-  - `structuralTransformationStep` (enum): `NotStarted` = "has not yet started structural \
-transformation", `TextilesOnly` = "has started structural transformation (textiles/apparel \
-stage)", `ElectronicsOnly` = "has progressed in structural transformation (electronics \
-stage)", `MachineryOnly` = "has progressed in structural transformation (machinery stage)", \
-`Completed` = "has completed structural transformation".
-  - `structuralTransformationSector` (Product with `shortName`): names the specific sector \
-being assessed (e.g., Textiles, Electronics, Machinery).
-  - `structuralTransformationDirection` (enum): `risen` = sector market share is increasing, \
-`fallen` = declining, `stagnated` = no meaningful change.
-- Market share growth mechanism uses three `countryProfile` fields:
-  - `marketShareMainSector` (Product with `shortName`): the sector driving export growth.
-  - `marketShareMainSectorDirection`: `rising`, `falling`, or `stagnant`.
-  - `marketShareMainSectorPositiveGrowth` (Boolean): `true` means the country is gaining \
-global market share in its main sector (describe as "export growth driven by expanding global \
-market share"); `false` means the country's main sector is growing globally and the country \
-is riding that tailwind without gaining competitive share (describe as "concentrating in a \
-growing global sector").
-- Growth projection classification: `moderate` = "moderately", `slow` = "slowly", \
-`rapid` = "rapidly". Use these adverbs when describing growth projection.
-- `growthProjectionRelativeToIncome` has 5 values: More, ModeratelyMore, Same, \
-ModeratelyLess, Less — describing how the country's growth projection compares \
-to others in its income group.
-- When a question asks about total exports under a specific classification (e.g., "total SITC \
-exports"), sum product-level values from `countryProductYear` rather than using \
-`countryYear.exportValue`, which is classification-independent and may differ.
-- PCI is null for services and some natural resource products in default API responses. Using \
-`mergePci: true` in treeMap queries returns computed PCI for these products. Default (null) \
-behavior matches the Atlas website display.
-- `newProductsCountry` requires an explicit `year` parameter. If the question specifies no year, \
-use the latest available data year (typically current year minus 2, matching `countryProfile`).
-- The `countryLookback` API supports per-metric yearRange overrides: `eciRankChangeYearRange`, \
-`exportValueConstGrowthCagrYearRange`, etc. The base `yearRange` sets the default for all \
-metrics. Match the year range to the question (e.g., "over the past five years" → 5, \
-"over the past decade" → 10).
-- For peer comparison dollar values, use `countryProfile` per peer country (gives exact matches). \
-The `newProductsComparisonCountries` query returns the peer list but its dollar values may \
-differ from `countryProfile`.
-- Finding the top import source for a specific product requires `countryCountryProductYear`, \
-which needs both `countryId` and `partnerCountryId`. No single API call retrieves all source \
-countries for a product import.
-- `countryLookback.gdpPcConstantCagrRegionalDifference` compares the country's GDP per capita \
-growth to its regional average: `Above` = growth exceeded regional peers, `InLine` = roughly \
-matched, `Below` = lagged behind. Use this field when asked how a country's growth compares \
-to its region. The actual CAGR value is in `gdpPerCapitaChangeConstantCagr`.""",
+Trust pre-computed labels and metrics from `atlas_graphql` — do not recompute from raw \
+numbers. The Atlas computes these using constant-price (inflation-adjusted) data and \
+validated classification thresholds.
+
+The following pre-computed fields are available via `atlas_graphql` — route questions \
+about these topics there:
+- `eciRankChange` — change in ECI ranking over a lookback period
+- `structuralTransformationStep` / `structuralTransformationDirection` — stage and trend \
+of structural transformation (textiles → machinery → electronics → completed)
+- `growthProjection` — projected export growth trajectory
+- `diversificationGrade` — letter grade assessing export diversification
+- `exportValueGrowthClassification` — classification of export growth dynamics \
+(e.g. promising, troubling, mixed, static)
+- `complexityIncome` — relationship between economic complexity and income level
+- `exportValueConstGrowthCagr` — constant-dollar compound annual growth rate of exports \
+(always prefer over computing your own CAGR from nominal values)
+- `marketShareMainSector*` — main sector driving market share growth and its direction
+- `growthProjectionRelativeToIncome` — growth projection compared to income-group peers
+- `gdpPcConstantCagrRegionalDifference` — GDP per capita growth vs regional peers
+
+Detailed interpretation guides for these fields are provided with query results as \
+NOTE prefixes. Follow those guides when describing values to the user.""",
         _DATA_DESCRIPTION_BLOCK,
         _SERVICES_AWARENESS_BLOCK,
         """\
@@ -241,11 +198,10 @@ and services schemas (e.g., computing service share of total exports via UNION A
   pass relevant excerpts as the `context` parameter to subsequent tool calls.
 
 **Trust & Verification:**
-- If a result from either tool seems implausible (unexpectedly zero, wrong order of magnitude,
-  contradicts well-known facts), verify by querying the other data source.
+- Trust pre-computed labels. Verify only when raw numerical results seem implausible \
+(e.g., export value = $0 for a major economy, wrong order of magnitude).
 - When you verify, briefly note: "I verified this via [SQL/GraphQL] and results are consistent"
-  or flag any discrepancy to the user.
-- Verification is optional — use it when your confidence is low, not for every query.""",
+  or flag any discrepancy to the user.""",
         _RESPONSE_FORMAT_BLOCK,
         # --- Atlas viz links + budget ---
         """\
