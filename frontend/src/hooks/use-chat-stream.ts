@@ -763,9 +763,10 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
             if (ts.docs_consulted && ts.docs_consulted.length > 0) {
               assistantMessages[i].docsConsulted = ts.docs_consulted;
             }
-            // Hydrate graphql summaries from turn summary
+            // Hydrate graphql summaries from turn summary, enriched with call details
             if (ts.graphql_summaries && ts.graphql_summaries.length > 0) {
-              assistantMessages[i].graphqlSummaries = ts.graphql_summaries.map((gs) => ({
+              const callDetails = ts.graphql_call_details ?? [];
+              assistantMessages[i].graphqlSummaries = ts.graphql_summaries.map((gs, gi) => ({
                 apiTarget: gs.api_target,
                 classification: {
                   apiTarget: gs.api_target,
@@ -776,6 +777,20 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
                 entities: gs.entities,
                 executionTimeMs: gs.execution_time_ms,
                 links: gs.links,
+                query: callDetails[gi]?.query ?? null,
+                resolvedParams: callDetails[gi]?.resolved_params ?? null,
+              }));
+            }
+            // Hydrate pipeline steps from persisted turn summary (page refresh)
+            if (ts.pipeline_steps && ts.pipeline_steps.length > 0) {
+              assistantMessages[i].pipelineSteps = ts.pipeline_steps.map((ps) => ({
+                detail: ps.detail,
+                label: ps.label,
+                node: ps.node,
+                pipelineType: classifyPipelineNode(ps.node),
+                queryIndex: ps.query_index,
+                startedAt: Date.now(),
+                status: 'completed' as const,
               }));
             }
           }

@@ -69,6 +69,38 @@ export default function GraphqlSummaryBlock({ summary }: GraphqlSummaryBlockProp
                 </div>
               </div>
             )}
+            {summary.resolvedParams && Object.keys(summary.resolvedParams).length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                  Resolved params:
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.entries(summary.resolvedParams)
+                    .filter(([, v]) => v != null && v !== '')
+                    .map(([key, val]) => (
+                      <span
+                        className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[11px] font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                        key={key}
+                      >
+                        {key}: {String(val)}
+                      </span>
+                    ))}
+                </div>
+              </div>
+            )}
+            {summary.query && (
+              <Collapsible>
+                <CollapsibleTrigger className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground">
+                  <ChevronRight className="h-3 w-3" />
+                  <span>GraphQL query</span>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <pre className="mt-1 max-h-48 overflow-auto rounded border border-slate-200 bg-slate-50 p-2 font-mono text-[10px] text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                    {summary.query}
+                  </pre>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
             {summary.executionTimeMs > 0 && (
               <div className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
                 <Timer className="h-3 w-3" />

@@ -29,6 +29,8 @@ export interface GraphqlSummary {
   entities: Record<string, unknown>;
   executionTimeMs: number;
   links: Array<AtlasLink>;
+  query?: string | null;
+  resolvedParams?: Record<string, unknown> | null;
 }
 
 export interface ChatMessage {
@@ -110,6 +112,36 @@ export interface ChatApiResponse {
   totalRows: number | null;
 }
 
+export interface TurnSummaryPipelineStep {
+  detail?: Record<string, unknown>;
+  label: string;
+  node: string;
+  pipeline_type: string;
+  query_index: number;
+}
+
+export interface TurnSummaryGraphqlCallDetail {
+  api_target?: string;
+  atlas_links?: Array<AtlasLink>;
+  classification?: Record<string, unknown>;
+  entity_extraction?: Record<string, unknown>;
+  query?: string;
+  question?: string;
+  resolved_params?: Record<string, unknown>;
+  result_content?: string;
+}
+
+export interface TurnSummarySqlCallDetail {
+  codes?: string;
+  execution_time_ms?: number;
+  final_sql?: string;
+  products?: Array<{ codes: Array<string>; name: string; schema: string }>;
+  question?: string;
+  result_columns?: Array<string>;
+  result_content?: string;
+  result_row_count?: number;
+}
+
 export interface TurnSummaryGraphqlSummary {
   api_target: string;
   classification: {
@@ -130,7 +162,9 @@ export interface TurnSummary {
     products: Array<ResolvedProduct>;
     schemas: Array<string>;
   } | null;
+  graphql_call_details?: Array<TurnSummaryGraphqlCallDetail>;
   graphql_summaries?: Array<TurnSummaryGraphqlSummary>;
+  pipeline_steps?: Array<TurnSummaryPipelineStep>;
   queries: Array<{
     columns: Array<string>;
     execution_time_ms: number;
@@ -140,6 +174,7 @@ export interface TurnSummary {
     sql: string;
     tables: Array<string>;
   }>;
+  sql_call_details?: Array<TurnSummarySqlCallDetail>;
   total_execution_time_ms: number;
   total_graphql_time_ms?: number;
   total_rows: number;
