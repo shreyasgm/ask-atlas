@@ -1415,6 +1415,57 @@ class TestToolCallDetailsInHtml:
 
         assert "Tool Call Log" in html_content
 
+    def test_html_contains_debug_drawer(self, tmp_path):
+        """HTML should have debug drawer CSS and user-facing toggle button."""
+        run_dir = self._make_fixture_run_dir(tmp_path)
+        html_path = generate_html_report(run_dir)
+        html_content = html_path.read_text(encoding="utf-8")
+
+        # CSS rules needed for the drawer to render
+        assert ".debug-drawer" in html_content
+        assert ".debug-toggle" in html_content
+        # User-facing label
+        assert "Show debug details" in html_content
+
+    def test_html_contains_judge_verdict_section(self, tmp_path):
+        """Judge Verdict heading should exist; old standalone headings should not."""
+        run_dir = self._make_fixture_run_dir(tmp_path)
+        html_path = generate_html_report(run_dir)
+        html_content = html_path.read_text(encoding="utf-8")
+
+        assert "Judge Verdict" in html_content
+        # These were standalone <h4> sections before the merge
+        assert ">Dimension Scores</h4>" not in html_content
+        assert ">Judge Commentary</h4>" not in html_content
+
+    def test_html_no_docs_files_section(self, tmp_path):
+        """Docs Files Used section should be removed (redundant with Tool Call Log)."""
+        run_dir = self._make_fixture_run_dir(tmp_path)
+        html_path = generate_html_report(run_dir)
+        html_content = html_path.read_text(encoding="utf-8")
+
+        assert "Docs Files Used" not in html_content
+
+    def test_html_no_standalone_duration_section(self, tmp_path):
+        """Standalone Duration section should be removed (folded into verdict)."""
+        run_dir = self._make_fixture_run_dir(tmp_path)
+        html_path = generate_html_report(run_dir)
+        html_content = html_path.read_text(encoding="utf-8")
+
+        # Should NOT have a standalone Duration section header
+        # (duration info is now inline in Judge Verdict header)
+        assert ">Duration</h4>" not in html_content
+
+    def test_html_has_query_planning_section(self, tmp_path):
+        """GraphQL Classification and Atlas Links should be merged into Query Planning."""
+        run_dir = self._make_fixture_run_dir(tmp_path)
+        html_path = generate_html_report(run_dir)
+        html_content = html_path.read_text(encoding="utf-8")
+
+        assert "Query Planning" in html_content
+        # Old standalone headings should be gone
+        assert ">GraphQL Classification</h4>" not in html_content
+
     def test_graphql_result_visible_in_html(self, tmp_path):
         """GraphQL response content should be in the embedded JSON data."""
         run_dir = self._make_fixture_run_dir(tmp_path)
@@ -1467,3 +1518,106 @@ class TestToolCallDetailsInHtml:
 
         q = data["per_question"][0]
         assert q.get("tool_call_details", []) == []
+
+    def test_pipeline_metadata_loaded_into_report(self, tmp_path):
+        """tool_call_details with pipeline_metadata should survive into embedded JSON."""
+        run_dir = tmp_path / "20260304T120000Z"
+        run_dir.mkdir()
+
+        result = {
+            "question_id": "20",
+            "question_text": "What does Chile export?",
+            "category": "Trade Values",
+            "difficulty": "easy",
+            "status": "success",
+            "duration_s": 10.0,
+            "answer": "Chile exports copper.",
+            "tools_used": ["atlas_graphql"],
+            "graphql_call_history": [
+                {
+                    "question": "Chile exports",
+                    "classification": {"query_type": "treemap_products"},
+                    "entity_extraction": {"country": "Chile"},
+                    "resolved_params": {"country_id": 42},
+                    "query": "query { countryProductYear { ... } }",
+                    "api_target": "explore",
+                    "atlas_links": [
+                        {
+                            "url": "https://atlas.cid.harvard.edu/explore?country=42",
+                            "label": "Chile treemap",
+                        }
+                    ],
+                }
+            ],
+            "tool_call_details": [
+                {
+                    "index": 1,
+                    "tool_name": "atlas_graphql",
+                    "arguments": {"question": "Chile exports"},
+                    "result_content": '{"data": [{"product": "Copper"}]}',
+                    "pipeline_metadata": {
+                        "question": "Chile exports",
+                        "classification": {"query_type": "treemap_products"},
+                        "entity_extraction": {"country": "Chile"},
+                        "resolved_params": {"country_id": 42},
+                        "query": "query { countryProductYear { ... } }",
+                        "api_target": "explore",
+                        "atlas_links": [
+                            {
+                                "url": "https://atlas.cid.harvard.edu/explore?country=42",
+                                "label": "Chile treemap",
+                            }
+                        ],
+                    },
+                },
+            ],
+        }
+
+        qdir = run_dir / "20"
+        qdir.mkdir()
+        (qdir / "result.json").write_text(json.dumps(result))
+
+        report = generate_report(
+            [result],
+            {"20": {"verdict": "pass", "weighted_score": 4.5}},
+            {"20": {"category": "Trade Values", "difficulty": "easy"}},
+        )
+        (run_dir / "report.json").write_text(json.dumps(report, default=str))
+
+        html_path = generate_html_report(run_dir)
+        html_content = html_path.read_text(encoding="utf-8")
+
+        start = html_content.index("const REPORT = ") + len("const REPORT = ")
+        end = html_content.index(";\n", start)
+        data = json.loads(html_content[start:end])
+
+        q = data["per_question"][0]
+        assert (
+            q["tool_call_details"][0]["pipeline_metadata"]["classification"][
+                "query_type"
+            ]
+            == "treemap_products"
+        )
+        assert q["graphql_call_history"][0]["entity_extraction"]["country"] == "Chile"
+
+    def test_html_has_pipeline_metadata_renderer(self, tmp_path):
+        """HTML should contain the buildPipelineMetadataHTML function for per-call data."""
+        run_dir = self._make_fixture_run_dir(tmp_path)
+        html_path = generate_html_report(run_dir)
+        html_content = html_path.read_text(encoding="utf-8")
+
+        assert "buildPipelineMetadataHTML" in html_content
+        # It should render classification, entity extraction, resolved params inline
+        assert "Classification" in html_content
+        assert "Entity Extraction" in html_content
+        assert "Resolved Parameters" in html_content
+
+    def test_question_text_not_truncated_in_tool_call_header(self, tmp_path):
+        """Question text in tool call cards should wrap, not be truncated with ellipsis."""
+        run_dir = self._make_fixture_run_dir(tmp_path)
+        html_path = generate_html_report(run_dir)
+        html_content = html_path.read_text(encoding="utf-8")
+
+        # Should NOT have text-overflow:ellipsis + white-space:nowrap on question spans
+        # in the tool call header (we changed to allow wrapping)
+        assert "text-overflow:ellipsis;white-space:nowrap" not in html_content
