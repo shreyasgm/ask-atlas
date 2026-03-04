@@ -154,10 +154,14 @@ describe('ChatPage integration (real hook + real components)', () => {
     await user.type(input2, 'second question');
     await user.click(screen.getByRole('button', { name: /send/i }));
 
-    // Verify second fetch includes thread_id
-    const secondCallBody = JSON.parse(
-      (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[1][1].body as string,
+    // Verify second chat stream fetch includes thread_id
+    const chatCalls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.filter(
+      (call: Array<unknown>) =>
+        typeof call[1] === 'object' &&
+        call[1] !== null &&
+        'body' in (call[1] as Record<string, unknown>),
     );
+    const secondCallBody = JSON.parse((chatCalls[1] as [string, { body: string }])[1].body);
     expect(secondCallBody.thread_id).toBe(THREAD_ID);
 
     stream2.pushEvent(makeAgentTalkEvent('second answer'));

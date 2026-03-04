@@ -8,6 +8,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import AsyncGenerator
 
 from typing import Literal
@@ -25,6 +26,13 @@ from src.conversations import (
     InMemoryConversationStore,
     PostgresConversationStore,
     derive_title,
+)
+from src.feedback import (
+    FeedbackStore,
+    InMemoryFeedbackStore,
+    PostgresFeedbackStore,
+    rating_from_str,
+    rating_to_str,
 )
 from src.streaming import AtlasTextToSQL, _build_turn_summary
 from src.graphql_pipeline import GRAPHQL_PIPELINE_NODES
@@ -146,6 +154,48 @@ class ThreadMessagesResponse(BaseModel):
     turn_summaries: list[TurnSummaryResponse] = []
 
 
+class FeedbackRequest(BaseModel):
+    """Body for POST /feedback."""
+
+    thread_id: str
+    turn_index: int
+    rating: Literal["up", "down"]
+    comment: str | None = None
+
+
+class FeedbackUpdateRequest(BaseModel):
+    """Body for PUT /feedback/{id}."""
+
+    rating: Literal["up", "down"]
+    comment: str | None = None
+
+
+class FeedbackResponse(BaseModel):
+    """Response shape for a single feedback entry."""
+
+    id: int
+    thread_id: str
+    turn_index: int
+    rating: str  # "up" or "down"
+    comment: str | None
+    created_at: str
+    updated_at: str
+
+
+class FeedbackExportEntry(BaseModel):
+    """Extended feedback entry for the export endpoint."""
+
+    id: int
+    thread_id: str
+    turn_index: int
+    rating: str
+    comment: str | None
+    session_id: str
+    context: dict | None
+    created_at: str
+    updated_at: str
+
+
 # ---------------------------------------------------------------------------
 # Application state
 # ---------------------------------------------------------------------------
@@ -157,6 +207,7 @@ class _AppState:
 
     atlas_sql: AtlasTextToSQL | None = None
     conversation_store: ConversationStore | None = None
+    feedback_store: FeedbackStore | None = None
 
 
 _state = _AppState()
@@ -188,6 +239,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         _state.conversation_store = InMemoryConversationStore()
         logger.info("Using InMemoryConversationStore")
 
+    # Feedback store — share the Postgres pool if available, else in-memory
+    manager = getattr(_state.atlas_sql, "_async_checkpointer_manager", None)
+    pool = manager.pool if manager else None
+    if pool is not None:
+        _state.feedback_store = PostgresFeedbackStore(pool)
+        logger.info("Using PostgresFeedbackStore")
+    else:
+        _state.feedback_store = InMemoryFeedbackStore()
+        logger.info("Using InMemoryFeedbackStore")
+
     logger.info("=" * 60)
     yield
     logger.info("Shutting down Ask-Atlas API  (pid=%d)", pid)
@@ -195,6 +256,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         await _state.atlas_sql.aclose()
         _state.atlas_sql = None
     _state.conversation_store = None
+    _state.feedback_store = None
 
 
 app = FastAPI(title="Ask-Atlas API", version="0.1.0", lifespan=lifespan)
@@ -473,6 +535,198 @@ async def delete_thread(thread_id: str) -> Response:
             )
 
     return Response(status_code=204)
+
+
+# ---------------------------------------------------------------------------
+# Feedback endpoints
+# ---------------------------------------------------------------------------
+
+
+async def _snapshot_context(thread_id: str, turn_index: int) -> dict | None:
+    """Capture conversation turns up to and including the flagged turn."""
+    try:
+        atlas_sql = _get_atlas_sql()
+        config = {"configurable": {"thread_id": thread_id}}
+        state = await atlas_sql.agent.aget_state(config)
+        values = state.values or {}
+        raw_messages = values.get("messages", [])
+
+        # Filter to human/AI messages only (skip tool messages)
+        turns: list[dict] = []
+        for msg in raw_messages:
+            if isinstance(msg, HumanMessage):
+                turns.append({"role": "human", "content": msg.content})
+            elif isinstance(msg, AIMessage) and msg.content:
+                turns.append({"role": "ai", "content": msg.content})
+
+        # Slice up to and including the flagged assistant turn
+        assistant_count = 0
+        cutoff = len(turns)
+        for i, t in enumerate(turns):
+            if t["role"] == "ai":
+                if assistant_count == turn_index:
+                    cutoff = i + 1
+                    break
+                assistant_count += 1
+
+        context_turns = turns[:cutoff]
+
+        # Extract the flagged turn pair
+        flagged_turn = None
+        ai_idx = 0
+        for i, t in enumerate(context_turns):
+            if t["role"] == "ai":
+                if ai_idx == turn_index:
+                    user_q = (
+                        context_turns[i - 1]["content"]
+                        if i > 0 and context_turns[i - 1]["role"] == "human"
+                        else None
+                    )
+                    flagged_turn = {
+                        "turn_index": turn_index,
+                        "user_question": user_q,
+                        "assistant_response": t["content"],
+                    }
+                    break
+                ai_idx += 1
+
+        turn_summaries = values.get("turn_summaries", [])
+        pipeline = (
+            turn_summaries[turn_index] if turn_index < len(turn_summaries) else None
+        )
+
+        return {
+            "turns": context_turns,
+            "flagged_turn": flagged_turn,
+            "pipeline": pipeline,
+            "snapshot_at": datetime.now(timezone.utc).isoformat(),
+        }
+    except Exception:
+        logger.warning(
+            "Failed to snapshot context for thread %s", thread_id, exc_info=True
+        )
+        return None
+
+
+def _feedback_row_to_response(row) -> FeedbackResponse:
+    """Convert a FeedbackRow to a FeedbackResponse."""
+    return FeedbackResponse(
+        id=row.id,
+        thread_id=row.thread_id,
+        turn_index=row.turn_index,
+        rating=rating_to_str(row.rating),
+        comment=row.comment,
+        created_at=row.created_at.isoformat(),
+        updated_at=row.updated_at.isoformat(),
+    )
+
+
+def _feedback_row_to_export(row) -> FeedbackExportEntry:
+    """Convert a FeedbackRow to a FeedbackExportEntry."""
+    return FeedbackExportEntry(
+        id=row.id,
+        thread_id=row.thread_id,
+        turn_index=row.turn_index,
+        rating=rating_to_str(row.rating),
+        comment=row.comment,
+        session_id=row.session_id,
+        context=row.context,
+        created_at=row.created_at.isoformat(),
+        updated_at=row.updated_at.isoformat(),
+    )
+
+
+@router.post("/feedback", status_code=201)
+async def create_feedback(body: FeedbackRequest, request: Request) -> FeedbackResponse:
+    """Create or upsert feedback for a specific assistant turn."""
+    session_id = request.headers.get("x-session-id")
+    if not session_id:
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "X-Session-Id header is required."},
+        )
+    store = _state.feedback_store
+    if store is None:
+        return JSONResponse(
+            status_code=503, content={"detail": "Feedback service not ready."}
+        )
+
+    context = await _snapshot_context(body.thread_id, body.turn_index)
+    row = await store.create(
+        thread_id=body.thread_id,
+        turn_index=body.turn_index,
+        rating=rating_from_str(body.rating),
+        session_id=session_id,
+        comment=body.comment,
+        context=context,
+    )
+    return _feedback_row_to_response(row)
+
+
+@router.get("/feedback")
+async def get_feedback(thread_id: str, request: Request) -> list[FeedbackResponse]:
+    """Get all feedback for a thread by session."""
+    session_id = request.headers.get("x-session-id")
+    if not session_id:
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "X-Session-Id header is required."},
+        )
+    store = _state.feedback_store
+    if store is None:
+        return []
+    rows = await store.get_by_thread(thread_id, session_id)
+    return [_feedback_row_to_response(r) for r in rows]
+
+
+@router.get("/feedback/export")
+async def export_feedback(
+    rating: Literal["up", "down"] | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[FeedbackExportEntry]:
+    """Export feedback entries (admin-level, no session filter)."""
+    store = _state.feedback_store
+    if store is None:
+        return []
+    rating_int = rating_from_str(rating) if rating else None
+    rows = await store.list_all(rating=rating_int, limit=limit, offset=offset)
+    return [_feedback_row_to_export(r) for r in rows]
+
+
+@router.put("/feedback/{feedback_id}")
+async def update_feedback(
+    feedback_id: int, body: FeedbackUpdateRequest, request: Request
+) -> FeedbackResponse:
+    """Update an existing feedback entry (re-snapshots context)."""
+    session_id = request.headers.get("x-session-id")
+    if not session_id:
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "X-Session-Id header is required."},
+        )
+    store = _state.feedback_store
+    if store is None:
+        return JSONResponse(
+            status_code=503, content={"detail": "Feedback service not ready."}
+        )
+
+    # Check existence first to distinguish 404 vs 403
+    existing = await store.get_by_id(feedback_id)
+    if existing is None:
+        return JSONResponse(status_code=404, content={"detail": "Feedback not found."})
+    if existing.session_id != session_id:
+        return JSONResponse(status_code=403, content={"detail": "Not your feedback."})
+
+    context = await _snapshot_context(existing.thread_id, existing.turn_index)
+    row = await store.update(
+        feedback_id=feedback_id,
+        rating=rating_from_str(body.rating),
+        session_id=session_id,
+        comment=body.comment,
+        context=context,
+    )
+    return _feedback_row_to_response(row)
 
 
 @router.post("/chat", response_model=ChatResponse)

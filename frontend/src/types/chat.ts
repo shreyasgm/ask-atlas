@@ -186,3 +186,9 @@ export interface ConversationSummary {
   title: string | null;
   updatedAt: string;
 }
+
+export interface FeedbackState {
+  comment?: string;
+  id: number;
+  rating: 'down' | 'up';
+}

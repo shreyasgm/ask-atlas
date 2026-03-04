@@ -27,6 +27,23 @@ CREATE TABLE IF NOT EXISTS conversations (
 
 CREATE INDEX IF NOT EXISTS idx_conversations_session ON conversations(session_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_updated ON conversations(updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS message_feedback (
+    id SERIAL PRIMARY KEY,
+    thread_id VARCHAR NOT NULL,
+    turn_index INTEGER NOT NULL,
+    rating SMALLINT NOT NULL CHECK (rating IN (1, -1)),
+    comment TEXT,
+    context JSONB,
+    session_id VARCHAR NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_feedback_thread_turn_session
+    ON message_feedback(thread_id, turn_index, session_id);
+CREATE INDEX IF NOT EXISTS idx_feedback_thread ON message_feedback(thread_id);
+CREATE INDEX IF NOT EXISTS idx_feedback_rating ON message_feedback(rating);
 """
 
 
@@ -131,6 +148,11 @@ class AsyncCheckpointerManager:
     def db_url(self) -> str | None:
         """The configured database URL, if any."""
         return self._db_url
+
+    @property
+    def pool(self):
+        """The underlying connection pool, if Postgres is active."""
+        return getattr(self, "_pool", None)
 
     async def get_checkpointer(self) -> BaseCheckpointSaver:
         """Lazily create and return the async checkpointer instance."""

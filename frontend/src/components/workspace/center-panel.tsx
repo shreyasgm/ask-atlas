@@ -31,6 +31,7 @@ interface CenterPanelProps {
   overrides: TradeOverrides;
   pipelineSteps: Array<PipelineStep>;
   queryStats: QueryAggregateStats | null;
+  threadId?: null | string;
 }
 
 export default memo(function CenterPanel({
@@ -49,6 +50,7 @@ export default memo(function CenterPanel({
   overrides,
   pipelineSteps,
   queryStats,
+  threadId,
 }: CenterPanelProps) {
   const chatTitle = useMemo(() => {
     const firstUserMessage = messages.find((m) => m.role === 'user');
@@ -73,6 +75,7 @@ export default memo(function CenterPanel({
           messages={messages}
           pipelineSteps={pipelineSteps}
           queryStats={queryStats}
+          threadId={threadId}
         />
       </ErrorBoundary>
       <div className="border-t border-border">
