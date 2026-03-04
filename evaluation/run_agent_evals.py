@@ -231,6 +231,14 @@ async def run_single_question(
                     "graphql_raw_response"
                 )
 
+                # GraphQL per-call history (accumulated across all calls)
+                result["graphql_call_history"] = state.values.get(
+                    "graphql_call_history", []
+                )
+
+                # SQL per-call history (accumulated across all calls)
+                result["sql_call_history"] = state.values.get("sql_call_history", [])
+
                 # Docs pipeline
                 result["docs_selected_files"] = state.values.get(
                     "docs_selected_files", []
@@ -238,6 +246,27 @@ async def run_single_question(
 
                 # Tool call log — captures ALL tool invocations with results
                 result["tool_call_details"] = _extract_tool_call_details(messages)
+
+                # Enrich tool_call_details with per-call pipeline metadata
+                gql_history = result.get("graphql_call_history", [])
+                if gql_history and result.get("tool_call_details"):
+                    gql_idx = 0
+                    for tc in result["tool_call_details"]:
+                        if tc["tool_name"] == "atlas_graphql" and gql_idx < len(
+                            gql_history
+                        ):
+                            tc["pipeline_metadata"] = gql_history[gql_idx]
+                            gql_idx += 1
+
+                sql_history = result.get("sql_call_history", [])
+                if sql_history and result.get("tool_call_details"):
+                    sql_idx = 0
+                    for tc in result["tool_call_details"]:
+                        if tc["tool_name"] == "query_tool" and sql_idx < len(
+                            sql_history
+                        ):
+                            tc["pipeline_metadata"] = sql_history[sql_idx]
+                            sql_idx += 1
             except Exception:
                 result["sql"] = ""
                 result["tools_used"] = []

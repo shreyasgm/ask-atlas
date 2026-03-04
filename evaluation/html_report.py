@@ -61,6 +61,7 @@ def _load_enriched_data(run_dir: Path) -> dict[str, Any]:
             entry["graphql_resolved_params"] = result.get("graphql_resolved_params")
             entry["graphql_atlas_links"] = result.get("graphql_atlas_links", [])
             entry["graphql_api_target"] = result.get("graphql_api_target")
+            entry["graphql_call_history"] = result.get("graphql_call_history", [])
             entry["docs_selected_files"] = result.get("docs_selected_files", [])
             entry["tool_call_details"] = result.get("tool_call_details", [])
         else:
@@ -246,6 +247,21 @@ body {
 .no-results {
   text-align: center; padding: 40px; color: #94a3b8; font-size: 16px;
 }
+
+/* ---------- Debug drawer ---------- */
+.debug-toggle {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: .5px;
+  margin-top: 16px; padding: 6px 0; user-select: none; border: none; background: none;
+}
+.debug-toggle::before {
+  content: ''; display: inline-block; width: 0; height: 0;
+  border-left: 5px solid #94a3b8; border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent; transition: transform .15s;
+}
+.debug-toggle.open::before { transform: rotate(90deg); }
+.debug-drawer { display: none; }
+.debug-drawer.open { display: block; }
 
 /* ---------- Tools badges ---------- */
 .tools-list { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
@@ -449,14 +465,7 @@ function renderBreakdown(tab) {
     // Build from per_question
     data = buildBreakdown(q => q.judge_mode || 'n/a');
   } else if (tab === 'pipeline') {
-    data = buildBreakdown(q => {
-      const tools = q.tools_used || [];
-      if (tools.length === 0) return 'unknown';
-      if (tools.includes('atlas_graphql') && tools.includes('query_tool')) return 'mixed';
-      if (tools.includes('atlas_graphql')) return 'graphql';
-      if (tools.includes('query_tool')) return 'sql';
-      return tools.join('+');
-    });
+    data = buildBreakdown(q => q.pipeline_used || 'unknown');
   } else if (tab === 'pipelineLatency') {
     const la = REPORT.latency_analysis || {};
     const avgByPipeline = la.avg_by_pipeline || {};
@@ -586,16 +595,458 @@ function toggleDetail(idx) {
   detail.classList.add('open');
 }
 
+// ---------- Hash-based tool color palette ----------
+const TOOL_PALETTE = ['#6366f1','#059669','#d97706','#0891b2','#7c3aed',
+                      '#dc2626','#2563eb','#ca8a04','#0d9488','#c026d3'];
+function toolColor(name) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash) + name.charCodeAt(i) | 0;
+  return TOOL_PALETTE[Math.abs(hash) % TOOL_PALETTE.length];
+}
+
+// ---------- Per-call pipeline metadata (inline in tool call cards) ----------
+
+function buildPipelineMetadataHTML(meta) {
+  if (!meta) return '';
+  const sectionStyle = 'padding:6px 12px;border-top:1px solid #e2e8f0;';
+  const labelStyle = 'font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:4px;';
+  let html = '';
+
+  // Classification
+  const cls = meta.classification;
+  if (cls) {
+    html += '<div style="' + sectionStyle + '">';
+    html += '<p style="' + labelStyle + '">Classification</p>';
+    html += '<table style="font-size:12px;"><tbody>';
+    for (const [k, v] of Object.entries(cls)) {
+      html += '<tr><td style="font-weight:600;min-width:120px;padding:2px 8px 2px 0;">' + esc(k) + '</td><td style="padding:2px 0;">' + esc(String(v)) + '</td></tr>';
+    }
+    html += '</tbody></table></div>';
+  }
+
+  // Entity extraction
+  const ee = meta.entity_extraction;
+  if (ee) {
+    html += '<div style="' + sectionStyle + '">';
+    html += '<p style="' + labelStyle + '">Entity Extraction</p>';
+    html += '<pre style="font-size:12px;max-height:200px;overflow-y:auto;">' + esc(JSON.stringify(ee, null, 2)) + '</pre>';
+    html += '</div>';
+  }
+
+  // Resolved params
+  const rp = meta.resolved_params;
+  if (rp) {
+    html += '<div style="' + sectionStyle + '">';
+    html += '<p style="' + labelStyle + '">Resolved Parameters</p>';
+    html += '<pre style="font-size:12px;max-height:200px;overflow-y:auto;">' + esc(JSON.stringify(rp, null, 2)) + '</pre>';
+    html += '</div>';
+  }
+
+  // GraphQL query
+  if (meta.query) {
+    html += '<div style="' + sectionStyle + '">';
+    html += '<p style="' + labelStyle + '">GraphQL Query</p>';
+    html += '<pre style="font-size:12px;max-height:300px;overflow-y:auto;">' + esc(meta.query) + '</pre>';
+    html += '</div>';
+  }
+
+  // Atlas links
+  const links = meta.atlas_links || [];
+  if (links.length > 0) {
+    html += '<div style="' + sectionStyle + '">';
+    html += '<p style="' + labelStyle + '">Atlas Links</p>';
+    html += links.map(function(l) {
+      const url = l.url || l.link || '';
+      const label = l.label || l.title || url;
+      return '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:underline;font-size:12px;">' + esc(label) + '</a>';
+    }).join('<br>');
+    html += '</div>';
+  }
+
+  // SQL pipeline: products
+  const products = meta.products || [];
+  if (products.length > 0) {
+    html += '<div style="' + sectionStyle + '">';
+    html += '<p style="' + labelStyle + '">Products</p>';
+    html += '<pre style="font-size:12px;max-height:200px;overflow-y:auto;">' + esc(JSON.stringify(products, null, 2)) + '</pre>';
+    html += '</div>';
+  }
+
+  // SQL pipeline: final SQL
+  if (meta.final_sql) {
+    html += '<div style="' + sectionStyle + '">';
+    html += '<p style="' + labelStyle + '">Final SQL</p>';
+    html += '<pre style="font-size:12px;max-height:300px;overflow-y:auto;">' + esc(meta.final_sql) + '</pre>';
+    html += '</div>';
+  }
+
+  // SQL pipeline: result summary
+  if (meta.result_row_count !== undefined) {
+    html += '<div style="' + sectionStyle + '">';
+    html += '<p style="' + labelStyle + '">Result Summary</p>';
+    html += '<table style="font-size:12px;"><tbody>';
+    html += '<tr><td style="font-weight:600;min-width:120px;padding:2px 8px 2px 0;">Rows</td><td>' + meta.result_row_count + '</td></tr>';
+    if (meta.result_columns) html += '<tr><td style="font-weight:600;min-width:120px;padding:2px 8px 2px 0;">Columns</td><td>' + esc(meta.result_columns.join(', ')) + '</td></tr>';
+    if (meta.execution_time_ms) html += '<tr><td style="font-weight:600;min-width:120px;padding:2px 8px 2px 0;">Time</td><td>' + meta.execution_time_ms + 'ms</td></tr>';
+    html += '</tbody></table></div>';
+  }
+
+  return html;
+}
+
+// ---------- Detail section helpers ----------
+
+function buildVerdictSummary(q) {
+  const jd = q.judge_details || {};
+  let html = '';
+
+  // Duration badge inline in header
+  const durationBadge = q.duration_s != null
+    ? ' <span style="font-size:11px;color:#94a3b8;text-transform:none;letter-spacing:0;font-weight:400;">(' + formatDuration(q.duration_s) + ')</span>'
+    : '';
+
+  // Data-driven dimension discovery
+  const dimEntries = Object.entries(jd).filter(
+    ([k, v]) => v && typeof v === 'object' && v.score != null && v.reasoning != null
+  );
+
+  const hasRefusal = jd.judge_mode === 'refusal';
+  const hasContent = dimEntries.length > 0 || q.judge_comment || hasRefusal;
+  if (!hasContent) return '';
+
+  html += '<div class="detail-section"><h4>Judge Verdict' + durationBadge + '</h4><div class="content">';
+
+  // Dimension score bars
+  if (dimEntries.length > 0) {
+    html += '<div class="dim-bars">';
+    for (const [d, v] of dimEntries) {
+      const score = v.score;
+      const pct = score / 5 * 100;
+      const cls = score >= 4 ? 'high' : score >= 3 ? 'mid' : 'low';
+      const label = d.replace(/_/g, ' ');
+      html += `<div class="dim-bar">
+        <span class="dim-label">${esc(label)}</span>
+        <div class="bar-bg"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
+        <span class="dim-score">${score}/5</span>
+      </div>`;
+    }
+    html += '</div>';
+    // Dimension reasoning
+    for (const [d, v] of dimEntries) {
+      if (v.reasoning) {
+        html += '<p style="font-size:12px;color:#64748b;margin-top:6px;"><strong>' + esc(d.replace(/_/g, ' ')) + ':</strong> ' + esc(v.reasoning) + '</p>';
+      }
+    }
+  }
+
+  // Judge commentary
+  if (q.judge_comment) {
+    html += '<p style="font-size:13px;margin-top:8px;">' + esc(q.judge_comment) + '</p>';
+  }
+
+  // Refusal evaluation
+  if (hasRefusal) {
+    html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e2e8f0;">';
+    html += '<p style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:4px;">Refusal Evaluation</p>';
+    html += '<p>Appropriate refusal: <strong>' + (jd.appropriate_refusal ? 'Yes' : 'No') + '</strong></p>';
+    html += '<p>Graceful: <strong>' + (jd.graceful ? 'Yes' : 'No') + '</strong></p>';
+    if (jd.reasoning) html += '<p>' + esc(jd.reasoning) + '</p>';
+    html += '</div>';
+  }
+
+  html += '</div></div>';
+  return html;
+}
+
+function buildToolCallLog(q) {
+  const toolCalls = q.tool_call_details || [];
+  if (toolCalls.length === 0) {
+    return buildLegacyPipelineLog(q);
+  }
+
+  // Compute per-tool round counters: { "query_tool": 3, "atlas_graphql": 1 }
+  const toolTotals = {};
+  for (const tc of toolCalls) {
+    toolTotals[tc.tool_name] = (toolTotals[tc.tool_name] || 0) + 1;
+  }
+  const toolSeen = {};
+
+  let logHTML = '';
+  for (const tc of toolCalls) {
+    toolSeen[tc.tool_name] = (toolSeen[tc.tool_name] || 0) + 1;
+    const round = toolSeen[tc.tool_name];
+    const total = toolTotals[tc.tool_name];
+    const color = toolColor(tc.tool_name);
+
+    logHTML += '<div style="margin-bottom:16px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">';
+    logHTML += '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;">';
+    logHTML += '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;color:#fff;background:' + color + ';">' + esc(tc.tool_name) + '</span>';
+    // Show per-tool round when called more than once; always show global index
+    if (total > 1) {
+      logHTML += '<span style="font-size:12px;color:#475569;font-weight:600;">Round ' + round + '/' + total + '</span>';
+    }
+    logHTML += '<span style="font-size:11px;color:#94a3b8;">Call #' + tc.index + '</span>';
+    if (tc.arguments && tc.arguments.question) {
+      logHTML += '<span style="font-size:13px;color:#475569;width:100%;">' + esc(tc.arguments.question) + '</span>';
+    }
+    logHTML += '</div>';
+    // Per-call pipeline metadata (entity extraction, classification, query planning, atlas links)
+    if (tc.pipeline_metadata) {
+      logHTML += buildPipelineMetadataHTML(tc.pipeline_metadata);
+    }
+    if (tc.result_content) {
+      const content = tc.result_content;
+      let formattedContent;
+      const trimmed = content.trim();
+      if ((trimmed.startsWith('{') || trimmed.startsWith('[')) && (trimmed.endsWith('}') || trimmed.endsWith(']'))) {
+        try {
+          const jsonStart = content.indexOf(trimmed.startsWith('[') ? '[' : '{');
+          JSON.parse(content.substring(jsonStart));
+          formattedContent = '<pre>' + esc(content) + '</pre>';
+        } catch(e) {
+          formattedContent = '<pre>' + esc(content) + '</pre>';
+        }
+      } else if (content.includes('\\n') || content.length > 200) {
+        formattedContent = '<pre style="max-height:400px;overflow-y:auto;">' + esc(content) + '</pre>';
+      } else {
+        formattedContent = '<pre>' + esc(content) + '</pre>';
+      }
+      logHTML += '<div style="padding:8px 12px;">' + formattedContent + '</div>';
+    } else {
+      logHTML += '<div style="padding:8px 12px;color:#94a3b8;font-size:13px;font-style:italic;">No response captured</div>';
+    }
+    logHTML += '</div>';
+  }
+  return `<div class="detail-section">
+    <h4>Tool Call Log <span style="font-size:11px;color:#94a3b8;text-transform:none;letter-spacing:0;">(${toolCalls.length} call${toolCalls.length !== 1 ? 's' : ''})</span></h4>
+    <div class="content">${logHTML}</div>
+  </div>`;
+}
+
+// Legacy fallback: synthesize a unified pipeline log from separate fields
+// (sql_history, graphql_query, pipeline_result_columns/rows) for old runs
+// that didn't capture per-call tool_call_details.
+function buildLegacyPipelineLog(q) {
+  const sqlHistory = q.sql_history || [];
+  const graphqlQuery = q.graphql_query;
+  const resCols = q.pipeline_result_columns || [];
+  const resRows = q.pipeline_result_rows || [];
+  const tools = q.tools_used || [];
+
+  const hasSQL = sqlHistory.length > 0 || q.sql;
+  const hasGraphQL = !!graphqlQuery;
+  const hasResults = resCols.length > 0;
+  if (!hasSQL && !hasGraphQL && !hasResults) return '';
+
+  const callCounts = {};
+  for (const t of tools) callCounts[t] = (callCounts[t] || 0) + 1;
+
+  let logHTML = '';
+
+  // --- GraphQL query (only the last query is captured in legacy data) ---
+  if (hasGraphQL) {
+    const gqlTotal = callCounts['atlas_graphql'] || 1;
+    const color = toolColor('atlas_graphql');
+    logHTML += '<div style="margin-bottom:16px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">';
+    logHTML += '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;">';
+    logHTML += '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;color:#fff;background:' + color + ';">atlas_graphql</span>';
+    if (gqlTotal > 1) {
+      logHTML += '<span style="font-size:11px;color:#94a3b8;">last of ' + gqlTotal + ' calls — only final query captured</span>';
+    }
+    logHTML += '</div>';
+    logHTML += '<div style="padding:8px 12px;"><pre>' + esc(graphqlQuery) + '</pre></div>';
+    logHTML += '</div>';
+  }
+
+  // --- SQL history with round grouping ---
+  if (sqlHistory.length > 0) {
+    const stageColors = { generated: '#6366f1', validated: '#22c55e', execution_error: '#ef4444' };
+    const color = toolColor('query_tool');
+    let round = 0;
+    for (let i = 0; i < sqlHistory.length; i++) {
+      const h = sqlHistory[i];
+      const isNewRound = i === 0 || h.stage === 'generated';
+      if (isNewRound) {
+        if (round > 0) logHTML += '</div></div>'; // close content + card
+        round++;
+        const sqlTotal = callCounts['query_tool'] || round;
+        logHTML += '<div style="margin-bottom:16px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">';
+        logHTML += '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;">';
+        logHTML += '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;color:#fff;background:' + color + ';">query_tool</span>';
+        if (sqlTotal > 1) {
+          logHTML += '<span style="font-size:12px;color:#475569;font-weight:600;">Round ' + round + '/' + sqlTotal + '</span>';
+        }
+        logHTML += '</div>';
+        logHTML += '<div style="padding:8px 12px;">';
+      }
+      const sColor = stageColors[h.stage] || '#94a3b8';
+      const hasErrors = h.errors && h.errors.length > 0;
+      logHTML += '<div style="margin-top:' + (isNewRound ? '0' : '8') + 'px;">';
+      logHTML += '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;color:#fff;background:' + sColor + ';">' + esc(h.stage) + '</span>';
+      if (hasErrors) {
+        logHTML += '<span style="margin-left:8px;color:#ef4444;font-size:12px;">' + h.errors.map(e => esc(e)).join('; ') + '</span>';
+      }
+      logHTML += '<pre style="margin-top:4px;">' + esc(h.sql || '') + '</pre>';
+      logHTML += '</div>';
+    }
+    if (round > 0) logHTML += '</div></div>'; // close content + card
+  } else if (q.sql) {
+    const color = toolColor('query_tool');
+    logHTML += '<div style="margin-bottom:16px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">';
+    logHTML += '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;">';
+    logHTML += '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;color:#fff;background:' + color + ';">query_tool</span>';
+    logHTML += '</div>';
+    logHTML += '<div style="padding:8px 12px;"><pre>' + esc(q.sql) + '</pre></div>';
+    logHTML += '</div>';
+  }
+
+  // --- Pipeline results table ---
+  if (hasResults) {
+    // Attribute results when possible
+    let resultsLabel = 'Pipeline Results';
+    if (tools.length === 1) resultsLabel = esc(tools[0]) + ' Results';
+    else if (tools.length > 1) resultsLabel = 'Pipeline Results (' + tools.map(t => esc(t)).join(' + ') + ')';
+    logHTML += '<div style="margin-bottom:16px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">';
+    logHTML += '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;">';
+    logHTML += '<span style="font-size:12px;font-weight:600;color:#475569;">' + resultsLabel + '</span>';
+    logHTML += '<span class="badge score">' + resRows.length + ' row' + (resRows.length !== 1 ? 's' : '') + '</span>';
+    logHTML += '</div>';
+    logHTML += '<div style="padding:8px 12px;max-height:400px;overflow-y:auto;">';
+    logHTML += '<table><thead><tr>' + resCols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>';
+    for (const row of resRows) {
+      logHTML += '<tr>' + row.map(v => '<td>' + esc(String(v ?? '')) + '</td>').join('') + '</tr>';
+    }
+    logHTML += '</tbody></table></div></div>';
+  }
+
+  return `<div class="detail-section">
+    <h4>Pipeline Call Log <span style="font-size:11px;color:#94a3b8;text-transform:none;letter-spacing:0;">(legacy — per-call results not captured)</span></h4>
+    <div class="content">${logHTML}</div>
+  </div>`;
+}
+
+function buildEntityExtraction(q) {
+  const pp = q.pipeline_products;
+  // Skip top-level GraphQL entity display when per-call history is available
+  // (entity extraction is already shown inline in each tool call card)
+  const hasPerCallHistory = (q.graphql_call_history || []).length > 0;
+  const gee = hasPerCallHistory ? null : q.graphql_entity_extraction;
+  if (!pp && !gee) return '';
+
+  let entityHTML = '';
+  if (pp) {
+    entityHTML += '<p style="font-size:12px;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">SQL Pipeline Entities</p>';
+    if (pp.classification_schemas && pp.classification_schemas.length) {
+      entityHTML += '<p style="font-size:12px;color:#64748b;margin-bottom:6px;">Schemas: <strong>' + pp.classification_schemas.map(s => esc(s)).join(', ') + '</strong></p>';
+    }
+    if (pp.products && pp.products.length) {
+      entityHTML += '<table><thead><tr><th>Product</th><th>Schema</th><th>Codes</th></tr></thead><tbody>';
+      for (const p of pp.products) {
+        entityHTML += '<tr><td>' + esc(p.name || '') + '</td><td>' + esc(p.schema || '') + '</td><td>' + esc((p.codes || []).join(', ')) + '</td></tr>';
+      }
+      entityHTML += '</tbody></table>';
+    }
+    if (pp.countries && pp.countries.length) {
+      entityHTML += '<table style="margin-top:8px"><thead><tr><th>Country</th><th>ISO3</th></tr></thead><tbody>';
+      for (const c of pp.countries) {
+        entityHTML += '<tr><td>' + esc(c.name || '') + '</td><td>' + esc(c.iso3_code || '') + '</td></tr>';
+      }
+      entityHTML += '</tbody></table>';
+    }
+  }
+  if (gee) {
+    entityHTML += '<p style="font-size:12px;color:#64748b;margin-top:8px;">GraphQL entities (last call only):</p><pre>' + esc(JSON.stringify(gee, null, 2)) + '</pre>';
+  }
+  if (!entityHTML) return '';
+  return '<div class="detail-section"><h4>Entity Extraction</h4><div class="content">' + entityHTML + '</div></div>';
+}
+
+function buildQueryPlanning(q) {
+  // Skip top-level GraphQL query planning when per-call history is available
+  // (classification, resolved params, atlas links are shown inline in each tool call card)
+  const hasPerCallHistory = (q.graphql_call_history || []).length > 0;
+  if (hasPerCallHistory) return '';
+
+  let html = '';
+  // GraphQL Classification (legacy: last call only)
+  const gc = q.graphql_classification;
+  if (gc) {
+    let gcHTML = '<table><tbody>';
+    for (const [k, v] of Object.entries(gc)) {
+      gcHTML += '<tr><td style="font-weight:600;min-width:120px;">' + esc(k) + '</td><td>' + esc(String(v)) + '</td></tr>';
+    }
+    gcHTML += '</tbody></table>';
+    html += gcHTML;
+  }
+  // Atlas Links (legacy: last call only)
+  const links = q.graphql_atlas_links || [];
+  if (links.length > 0) {
+    if (gc) html += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid #e2e8f0;">';
+    html += '<p style="font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:4px;">Atlas Links</p>';
+    html += links.map(l => {
+      const url = l.url || l.link || '';
+      const label = l.label || l.title || url;
+      return '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:underline;">' + esc(label) + '</a>';
+    }).join('<br>');
+    if (gc) html += '</div>';
+  }
+  if (!html) return '';
+  return '<div class="detail-section"><h4>Query Planning</h4><div class="content">' + html + '</div></div>';
+}
+
+function buildTimingSection(q) {
+  const steps = q.step_timing || [];
+  if (steps.length === 0) return '';
+
+  const maxMs = Math.max(...steps.map(s => s.wall_time_ms || 0), 1);
+  const rows = steps.map(s => {
+    const wall = s.wall_time_ms || 0;
+    const llm = s.llm_time_ms || 0;
+    const io = s.io_time_ms || 0;
+    const overhead = Math.max(0, wall - llm - io);
+    const barPct = (wall / maxMs * 100).toFixed(1);
+    const llmPct = wall ? (llm / wall * 100).toFixed(1) : '0';
+    const ioPct = wall ? (io / wall * 100).toFixed(1) : '0';
+    const overheadPct = wall ? (overhead / wall * 100).toFixed(1) : '0';
+    const label = s.node + (s.tool_pipeline && s.tool_pipeline !== s.node ? ' (' + s.tool_pipeline + ')' : '');
+    return `<div class="waterfall-row">
+      <span class="waterfall-label" title="${esc(label)}">${esc(label)}</span>
+      <div class="waterfall-bar-bg">
+        <div class="waterfall-bar" style="width:${barPct}%">
+          <span class="wf-llm" style="width:${llmPct}%"></span>
+          <span class="wf-io" style="width:${ioPct}%"></span>
+          <span class="wf-overhead" style="width:${overheadPct}%"></span>
+        </div>
+      </div>
+      <span class="waterfall-time">${(wall/1000).toFixed(1)}s</span>
+    </div>`;
+  }).join('');
+  return `<div class="detail-section">
+    <h4>Step Timing</h4>
+    <div class="content">
+      <div class="waterfall">${rows}</div>
+      <div class="waterfall-legend">
+        <span class="leg-llm">LLM</span>
+        <span class="leg-io">I/O</span>
+        <span class="leg-overhead">Overhead</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ---------- Main detail builder: two-tier layout ----------
+let _debugIdCounter = 0;
+
 function buildDetailHTML(q) {
-  let sections = '';
+  // --- Primary tier (always visible) ---
+  let primary = '';
 
   // Agent answer (rendered markdown)
   if (q.agent_answer) {
     let rendered;
     try { rendered = marked.parse(q.agent_answer); }
     catch(e) { rendered = '<pre>' + esc(q.agent_answer) + '</pre>'; }
-    sections += `
-    <div class="detail-section">
+    primary += `<div class="detail-section">
       <h4>Agent Answer</h4>
       <div class="content md-rendered">${rendered}</div>
     </div>`;
@@ -603,8 +1054,7 @@ function buildDetailHTML(q) {
 
   // Expected behavior (for refusal questions)
   if (q.expected_behavior) {
-    sections += `
-    <div class="detail-section">
+    primary += `<div class="detail-section">
       <h4>Expected Behavior</h4>
       <div class="content">${esc(q.expected_behavior)}</div>
     </div>`;
@@ -613,8 +1063,7 @@ function buildDetailHTML(q) {
   // Ground truth table
   if (q.ground_truth && q.ground_truth.length > 0) {
     const cols = Object.keys(q.ground_truth[0]);
-    sections += `
-    <div class="detail-section">
+    primary += `<div class="detail-section">
       <h4>Ground Truth Data</h4>
       <div class="content">
         <table>
@@ -627,295 +1076,40 @@ function buildDetailHTML(q) {
     </div>`;
   }
 
-  // Entity Extraction (products/countries)
-  const pp = q.pipeline_products;
-  const gee = q.graphql_entity_extraction;
-  if (pp || gee) {
-    let entityHTML = '';
-    if (pp) {
-      if (pp.classification_schemas && pp.classification_schemas.length) {
-        entityHTML += '<p style="font-size:12px;color:#64748b;margin-bottom:6px;">Schemas: <strong>' + pp.classification_schemas.map(s => esc(s)).join(', ') + '</strong></p>';
-      }
-      if (pp.products && pp.products.length) {
-        entityHTML += '<table><thead><tr><th>Product</th><th>Schema</th><th>Codes</th></tr></thead><tbody>';
-        for (const p of pp.products) {
-          entityHTML += '<tr><td>' + esc(p.name || '') + '</td><td>' + esc(p.schema || '') + '</td><td>' + esc((p.codes || []).join(', ')) + '</td></tr>';
-        }
-        entityHTML += '</tbody></table>';
-      }
-      if (pp.countries && pp.countries.length) {
-        entityHTML += '<table style="margin-top:8px"><thead><tr><th>Country</th><th>ISO3</th></tr></thead><tbody>';
-        for (const c of pp.countries) {
-          entityHTML += '<tr><td>' + esc(c.name || '') + '</td><td>' + esc(c.iso3_code || '') + '</td></tr>';
-        }
-        entityHTML += '</tbody></table>';
-      }
-    }
-    if (gee) {
-      entityHTML += '<p style="font-size:12px;color:#64748b;margin-top:8px;">GraphQL entities:</p><pre>' + esc(JSON.stringify(gee, null, 2)) + '</pre>';
-    }
-    if (entityHTML) {
-      sections += `
-      <div class="detail-section">
-        <h4>Entity Extraction</h4>
-        <div class="content">${entityHTML}</div>
-      </div>`;
-    }
-  }
+  // Judge Verdict (merged: dimension scores + commentary + refusal)
+  primary += buildVerdictSummary(q);
 
-  // SQL History (replaces single SQL section when available)
-  const sqlHistory = q.sql_history || [];
-  if (sqlHistory.length > 0) {
-    const stageColors = { generated: '#6366f1', validated: '#22c55e', execution_error: '#ef4444' };
-    let historyHTML = '';
-    for (let i = 0; i < sqlHistory.length; i++) {
-      const h = sqlHistory[i];
-      const color = stageColors[h.stage] || '#94a3b8';
-      const hasErrors = h.errors && h.errors.length > 0;
-      historyHTML += '<div style="margin-bottom:10px;">';
-      historyHTML += '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;color:#fff;background:' + color + ';">' + esc(h.stage) + '</span>';
-      if (hasErrors) {
-        historyHTML += '<span style="margin-left:8px;color:#ef4444;font-size:12px;">' + h.errors.map(e => esc(e)).join('; ') + '</span>';
-      }
-      historyHTML += '<pre style="margin-top:4px;">' + esc(h.sql || '') + '</pre>';
-      historyHTML += '</div>';
-    }
-    sections += `
-    <div class="detail-section">
-      <h4>SQL History <span style="font-size:11px;color:#94a3b8;text-transform:none;letter-spacing:0;">(${sqlHistory.length} version${sqlHistory.length > 1 ? 's' : ''})</span></h4>
-      <div class="content">${historyHTML}</div>
-    </div>`;
-  } else if (q.sql) {
-    // Fallback: single SQL query (backward compat with old result files)
-    sections += `
-    <div class="detail-section">
-      <h4>SQL Query</h4>
-      <pre>${esc(q.sql)}</pre>
-    </div>`;
-  }
+  // --- Debug tier (collapsed by default) ---
+  let debug = '';
+  debug += buildToolCallLog(q);
+  debug += buildEntityExtraction(q);
+  debug += buildQueryPlanning(q);
 
-  // GraphQL Classification
-  const gc = q.graphql_classification;
-  if (gc) {
-    let gcHTML = '<table><tbody>';
-    for (const [k, v] of Object.entries(gc)) {
-      gcHTML += '<tr><td style="font-weight:600;min-width:120px;">' + esc(k) + '</td><td>' + esc(String(v)) + '</td></tr>';
-    }
-    gcHTML += '</tbody></table>';
-    sections += `
-    <div class="detail-section">
-      <h4>GraphQL Classification</h4>
-      <div class="content">${gcHTML}</div>
-    </div>`;
-  }
-
-  // Atlas Links
-  const links = q.graphql_atlas_links || [];
-  if (links.length > 0) {
-    const linksHTML = links.map(l => {
-      const url = l.url || l.link || '';
-      const label = l.label || l.title || url;
-      return '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="color:#3b82f6;text-decoration:underline;">' + esc(label) + '</a>';
-    }).join('<br>');
-    sections += `
-    <div class="detail-section">
-      <h4>Atlas Links</h4>
-      <div class="content">${linksHTML}</div>
-    </div>`;
-  }
-
-  // Tool Call Log — shows ALL tool invocations with args and results
-  const toolCalls = q.tool_call_details || [];
-  if (toolCalls.length > 0) {
-    let logHTML = '';
-    for (const tc of toolCalls) {
-      const toolColor = tc.tool_name === 'atlas_graphql' ? '#6366f1'
-                       : tc.tool_name === 'query_tool' ? '#059669'
-                       : tc.tool_name === 'docs_tool' ? '#d97706' : '#64748b';
-      logHTML += '<div style="margin-bottom:16px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">';
-      logHTML += '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;">';
-      logHTML += '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;color:#fff;background:' + toolColor + ';">' + esc(tc.tool_name) + '</span>';
-      logHTML += '<span style="font-size:12px;color:#94a3b8;">Call #' + tc.index + '</span>';
-      if (tc.arguments && tc.arguments.question) {
-        logHTML += '<span style="font-size:13px;color:#475569;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(tc.arguments.question) + '">' + esc(tc.arguments.question) + '</span>';
-      }
-      logHTML += '</div>';
-      if (tc.result_content) {
-        const content = tc.result_content;
-        // Try to detect JSON and pretty-format it
-        let formattedContent;
-        const trimmed = content.trim();
-        if ((trimmed.startsWith('{') || trimmed.startsWith('[')) && (trimmed.endsWith('}') || trimmed.endsWith(']'))) {
-          // Find the JSON part (skip any warning text before the JSON)
-          try {
-            const jsonStart = content.indexOf(trimmed.startsWith('[') ? '[' : '{');
-            JSON.parse(content.substring(jsonStart));
-            formattedContent = '<pre>' + esc(content) + '</pre>';
-          } catch(e) {
-            formattedContent = '<pre>' + esc(content) + '</pre>';
-          }
-        } else if (content.includes('\\n') || content.length > 200) {
-          formattedContent = '<pre style="max-height:400px;overflow-y:auto;">' + esc(content) + '</pre>';
-        } else {
-          formattedContent = '<pre>' + esc(content) + '</pre>';
-        }
-        logHTML += '<div style="padding:8px 12px;">' + formattedContent + '</div>';
-      } else {
-        logHTML += '<div style="padding:8px 12px;color:#94a3b8;font-size:13px;font-style:italic;">No response captured</div>';
-      }
-      logHTML += '</div>';
-    }
-    sections += `
-    <div class="detail-section">
-      <h4>Tool Call Log <span style="font-size:11px;color:#94a3b8;text-transform:none;letter-spacing:0;">(${toolCalls.length} call${toolCalls.length !== 1 ? 's' : ''})</span></h4>
-      <div class="content">${logHTML}</div>
-    </div>`;
-  } else {
-    // Fallback: show legacy single query results for old result files
-    if (q.graphql_query) {
-      sections += `
-      <div class="detail-section">
-        <h4>GraphQL Query</h4>
-        <pre>${esc(q.graphql_query)}</pre>
-      </div>`;
-    }
-
-    const resCols = q.pipeline_result_columns || [];
-    const resRows = q.pipeline_result_rows || [];
-    if (resCols.length > 0) {
-      let resHTML = '<span class="badge score">' + resRows.length + ' row' + (resRows.length !== 1 ? 's' : '') + '</span>';
-      resHTML += '<div style="max-height:400px;overflow-y:auto;margin-top:8px;">';
-      resHTML += '<table><thead><tr>' + resCols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>';
-      for (const row of resRows) {
-        resHTML += '<tr>' + row.map(v => '<td>' + esc(String(v ?? '')) + '</td>').join('') + '</tr>';
-      }
-      resHTML += '</tbody></table></div>';
-      sections += `
-      <div class="detail-section">
-        <h4>Query Results</h4>
-        <div class="content">${resHTML}</div>
-      </div>`;
-    }
-  }
-
-  // Docs selected files
-  const docFiles = q.docs_selected_files || [];
-  if (docFiles.length > 0) {
-    sections += `
-    <div class="detail-section">
-      <h4>Docs Files Used</h4>
-      <div class="tools-list">${docFiles.map(f => '<span class="tool-badge">' + esc(f) + '</span>').join('')}</div>
-    </div>`;
-  }
-
-  // Tools used
+  // Tools used badges
   if (q.tools_used && q.tools_used.length > 0) {
-    sections += `
-    <div class="detail-section">
+    debug += `<div class="detail-section">
       <h4>Tools Used</h4>
       <div class="tools-list">${q.tools_used.map(t => `<span class="tool-badge">${esc(t)}</span>`).join('')}</div>
     </div>`;
   }
 
-  // Judge commentary
-  if (q.judge_comment) {
-    sections += `
-    <div class="detail-section">
-      <h4>Judge Commentary</h4>
-      <div class="content">${esc(q.judge_comment)}</div>
-    </div>`;
+  debug += buildTimingSection(q);
+
+  // Wrap debug tier in collapsible drawer
+  if (debug) {
+    const did = 'debug-' + (_debugIdCounter++);
+    primary += `<button class="debug-toggle" onclick="toggleDebug('${did}',this)">Show debug details</button>`;
+    primary += `<div class="debug-drawer" id="${did}">${debug}</div>`;
   }
 
-  // Dimension scores (for ground_truth judge mode)
-  const jd = q.judge_details || {};
-  const dims = ['factual_correctness', 'data_accuracy', 'completeness', 'reasoning_quality'];
-  const hasDims = dims.some(d => jd[d] && typeof jd[d] === 'object' && jd[d].score != null);
-  if (hasDims) {
-    sections += `
-    <div class="detail-section">
-      <h4>Dimension Scores</h4>
-      <div class="content">
-        <div class="dim-bars">${dims.filter(d => jd[d] && jd[d].score != null).map(d => {
-          const score = jd[d].score;
-          const pct = score / 5 * 100;
-          const cls = score >= 4 ? 'high' : score >= 3 ? 'mid' : 'low';
-          const label = d.replace(/_/g, ' ');
-          return `<div class="dim-bar">
-            <span class="dim-label">${esc(label)}</span>
-            <div class="bar-bg"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
-            <span class="dim-score">${score}/5</span>
-          </div>`;
-        }).join('')}</div>
-        ${dims.filter(d => jd[d] && jd[d].reasoning).map(d =>
-          `<p style="font-size:12px;color:#64748b;margin-top:6px;"><strong>${esc(d.replace(/_/g,' '))}:</strong> ${esc(jd[d].reasoning)}</p>`
-        ).join('')}
-      </div>
-    </div>`;
-  }
+  return primary;
+}
 
-  // Refusal-specific details
-  if (jd.judge_mode === 'refusal') {
-    sections += `
-    <div class="detail-section">
-      <h4>Refusal Evaluation</h4>
-      <div class="content">
-        <p>Appropriate refusal: <strong>${jd.appropriate_refusal ? 'Yes' : 'No'}</strong></p>
-        <p>Graceful: <strong>${jd.graceful ? 'Yes' : 'No'}</strong></p>
-        ${jd.reasoning ? '<p>' + esc(jd.reasoning) + '</p>' : ''}
-      </div>
-    </div>`;
-  }
-
-  // Duration
-  if (q.duration_s != null) {
-    sections += `
-    <div class="detail-section">
-      <h4>Duration</h4>
-      <div class="content">${formatDuration(q.duration_s)}</div>
-    </div>`;
-  }
-
-  // Step timing waterfall
-  const steps = q.step_timing || [];
-  if (steps.length > 0) {
-    const maxMs = Math.max(...steps.map(s => s.wall_time_ms || 0), 1);
-    const rows = steps.map(s => {
-      const wall = s.wall_time_ms || 0;
-      const llm = s.llm_time_ms || 0;
-      const io = s.io_time_ms || 0;
-      const overhead = Math.max(0, wall - llm - io);
-      const barPct = (wall / maxMs * 100).toFixed(1);
-      const llmPct = wall ? (llm / wall * 100).toFixed(1) : '0';
-      const ioPct = wall ? (io / wall * 100).toFixed(1) : '0';
-      const overheadPct = wall ? (overhead / wall * 100).toFixed(1) : '0';
-      const label = s.node + (s.tool_pipeline && s.tool_pipeline !== s.node ? ' (' + s.tool_pipeline + ')' : '');
-      return `<div class="waterfall-row">
-        <span class="waterfall-label" title="${esc(label)}">${esc(label)}</span>
-        <div class="waterfall-bar-bg">
-          <div class="waterfall-bar" style="width:${barPct}%">
-            <span class="wf-llm" style="width:${llmPct}%"></span>
-            <span class="wf-io" style="width:${ioPct}%"></span>
-            <span class="wf-overhead" style="width:${overheadPct}%"></span>
-          </div>
-        </div>
-        <span class="waterfall-time">${(wall/1000).toFixed(1)}s</span>
-      </div>`;
-    }).join('');
-    sections += `
-    <div class="detail-section">
-      <h4>Step Timing</h4>
-      <div class="content">
-        <div class="waterfall">${rows}</div>
-        <div class="waterfall-legend">
-          <span class="leg-llm">LLM</span>
-          <span class="leg-io">I/O</span>
-          <span class="leg-overhead">Overhead</span>
-        </div>
-      </div>
-    </div>`;
-  }
-
-  return sections;
+function toggleDebug(id, btn) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+  btn.classList.toggle('open');
+  btn.textContent = el.classList.contains('open') ? 'Hide debug details' : 'Show debug details';
 }
 
 // ---------- Helpers ----------
