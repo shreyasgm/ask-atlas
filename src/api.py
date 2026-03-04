@@ -27,6 +27,18 @@ from src.conversations import (
     derive_title,
 )
 from src.streaming import AtlasTextToSQL, _build_turn_summary
+from src.graphql_pipeline import GRAPHQL_PIPELINE_NODES
+from src.docs_pipeline import DOCS_PIPELINE_NODES
+
+
+def _classify_pipeline_node(node: str) -> str:
+    """Classify a pipeline node as 'graphql', 'docs', or 'sql'."""
+    if node in GRAPHQL_PIPELINE_NODES:
+        return "graphql"
+    if node in DOCS_PIPELINE_NODES:
+        return "docs"
+    return "sql"
+
 
 # ---------------------------------------------------------------------------
 # Logging setup — always show timestamps, level, and logger name
@@ -121,6 +133,9 @@ class TurnSummaryResponse(BaseModel):
     docs_consulted: list[str] = []
     graphql_summaries: list[dict] = []
     total_graphql_time_ms: int = 0
+    pipeline_steps: list[dict] = []
+    graphql_call_details: list[dict] = []
+    sql_call_details: list[dict] = []
 
 
 class ThreadMessagesResponse(BaseModel):
@@ -536,6 +551,7 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
         stream_atlas_links: list[dict] = []
         stream_docs_consulted: list[str] = []
         stream_graphql_summaries: list[dict] = []
+        stream_pipeline_steps: list[dict] = []
 
         # First event: thread_id
         event_count += 1
@@ -583,6 +599,35 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                         "event": stream_data.message_type,
                         "data": json.dumps(stream_data.payload or {}),
                     }
+
+                    # Accumulate pipeline steps for turn summary
+                    if stream_data.message_type == "node_start" and stream_data.payload:
+                        node_name = stream_data.payload.get("node", "")
+                        stream_pipeline_steps.append(
+                            {
+                                "node": node_name,
+                                "label": stream_data.payload.get("label", ""),
+                                "pipeline_type": _classify_pipeline_node(node_name),
+                                "query_index": stream_data.payload.get(
+                                    "query_index", 0
+                                ),
+                            }
+                        )
+                    elif (
+                        stream_data.message_type == "pipeline_state"
+                        and stream_data.payload
+                    ):
+                        # Attach detail to last matching step (exclude result rows)
+                        step_stage = stream_data.payload.get("stage", "")
+                        for step in reversed(stream_pipeline_steps):
+                            if step["node"] == step_stage:
+                                detail = {
+                                    k: v
+                                    for k, v in stream_data.payload.items()
+                                    if k != "rows"
+                                }
+                                step["detail"] = detail
+                                break
 
                     # Track aggregates and turn summary data from pipeline_state
                     if (
@@ -728,6 +773,24 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
         async def _post_stream_cleanup() -> None:
             """Turn summary + checkpoint repair, shielded from cancel."""
             try:
+                # Read call histories from checkpoint state
+                graphql_call_details: list[dict] = []
+                sql_call_details: list[dict] = []
+                try:
+                    ckpt_state = await atlas_sql.agent.aget_state(config)
+                    all_gql = ckpt_state.values.get("graphql_call_history", [])
+                    if total_graphql_queries > 0 and all_gql:
+                        graphql_call_details = all_gql[-total_graphql_queries:]
+                    all_sql = ckpt_state.values.get("sql_call_history", [])
+                    if stream_queries and all_sql:
+                        sql_call_details = all_sql[-len(stream_queries) :]
+                except Exception:
+                    logger.debug(
+                        "Could not read call histories for thread %s",
+                        thread_id,
+                        exc_info=True,
+                    )
+
                 summary = _build_turn_summary(
                     stream_queries,
                     stream_entities,
@@ -735,6 +798,9 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                     docs_consulted=stream_docs_consulted or None,
                     graphql_summaries=stream_graphql_summaries or None,
                     total_graphql_time_ms=total_graphql_time_ms,
+                    pipeline_steps=stream_pipeline_steps or None,
+                    graphql_call_details=graphql_call_details or None,
+                    sql_call_details=sql_call_details or None,
                 )
                 await atlas_sql.agent.aupdate_state(
                     config, {"turn_summaries": [summary]}

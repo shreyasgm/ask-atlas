@@ -324,6 +324,10 @@ def _build_turn_summary(
     docs_consulted: list[str] | None = None,
     graphql_summaries: list[dict] | None = None,
     total_graphql_time_ms: int = 0,
+    *,
+    pipeline_steps: list[dict] | None = None,
+    graphql_call_details: list[dict] | None = None,
+    sql_call_details: list[dict] | None = None,
 ) -> dict:
     """Build a turn summary dict from pipeline results.
 
@@ -334,11 +338,15 @@ def _build_turn_summary(
         docs_consulted: Optional list of documentation files consulted.
         graphql_summaries: Optional list of GraphQL query summaries.
         total_graphql_time_ms: Total execution time for GraphQL queries.
+        pipeline_steps: Optional per-node step progression with detail.
+        graphql_call_details: Optional per-call GraphQL pipeline snapshots.
+        sql_call_details: Optional per-call SQL pipeline snapshots.
 
     Returns:
         A summary dict with entities, queries, total_rows, total_execution_time_ms,
         and optionally atlas_links, docs_consulted, graphql_summaries,
-        total_graphql_time_ms.
+        total_graphql_time_ms, pipeline_steps, graphql_call_details,
+        sql_call_details.
     """
     summary = {
         "entities": resolved_products,
@@ -354,6 +362,12 @@ def _build_turn_summary(
         summary["graphql_summaries"] = graphql_summaries
     if total_graphql_time_ms > 0:
         summary["total_graphql_time_ms"] = total_graphql_time_ms
+    if pipeline_steps:
+        summary["pipeline_steps"] = pipeline_steps
+    if graphql_call_details:
+        summary["graphql_call_details"] = graphql_call_details
+    if sql_call_details:
+        summary["sql_call_details"] = sql_call_details
     return summary
 
 
@@ -705,8 +719,38 @@ class AtlasTextToSQL:
                 ],
             }
 
+        # Build pipeline_steps from step_timing
+        def _classify_node(node: str) -> str:
+            if node in GRAPHQL_PIPELINE_NODES:
+                return "graphql"
+            if node in DOCS_PIPELINE_NODES:
+                return "docs"
+            return "sql"
+
+        pipeline_steps: list[dict] = []
+        for st in last_state.get("step_timing", []):
+            node = st.get("node", "")
+            pipeline_steps.append(
+                {
+                    "node": node,
+                    "label": st.get("node", ""),
+                    "pipeline_type": _classify_node(node),
+                    "query_index": 0,
+                }
+            )
+
+        # Read call histories from accumulators
+        graphql_call_details = last_state.get("graphql_call_history", [])
+        sql_call_details = last_state.get("sql_call_history", [])
+
         # Persist turn summary to checkpoint for history restoration
-        summary = _build_turn_summary(queries, resolved_products)
+        summary = _build_turn_summary(
+            queries,
+            resolved_products,
+            pipeline_steps=pipeline_steps or None,
+            graphql_call_details=graphql_call_details or None,
+            sql_call_details=sql_call_details or None,
+        )
         await self.agent.aupdate_state(config, {"turn_summaries": [summary]})
 
         # Collect token usage and timing from final state
