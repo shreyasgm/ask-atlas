@@ -62,6 +62,7 @@ def _load_enriched_data(run_dir: Path) -> dict[str, Any]:
             entry["graphql_atlas_links"] = result.get("graphql_atlas_links", [])
             entry["graphql_api_target"] = result.get("graphql_api_target")
             entry["graphql_call_history"] = result.get("graphql_call_history", [])
+            entry["sql_call_history"] = result.get("sql_call_history", [])
             entry["docs_selected_files"] = result.get("docs_selected_files", [])
             entry["tool_call_details"] = result.get("tool_call_details", [])
         else:
@@ -612,6 +613,22 @@ function buildPipelineMetadataHTML(meta) {
   const labelStyle = 'font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:4px;';
   let html = '';
 
+  // Question (extracted by pipeline)
+  if (meta.question) {
+    html += '<div style="' + sectionStyle + '">';
+    html += '<p style="' + labelStyle + '">Extracted Question</p>';
+    html += '<p style="font-size:12px;font-style:italic;margin:0;">' + esc(meta.question) + '</p>';
+    html += '</div>';
+  }
+
+  // API target (GraphQL)
+  if (meta.api_target) {
+    html += '<div style="' + sectionStyle + '">';
+    html += '<p style="' + labelStyle + '">API Target</p>';
+    html += '<p style="font-size:12px;margin:0;"><code style="background:#f1f5f9;padding:2px 6px;border-radius:3px;">' + esc(meta.api_target) + '</code></p>';
+    html += '</div>';
+  }
+
   // Classification
   const cls = meta.classification;
   if (cls) {
@@ -669,6 +686,14 @@ function buildPipelineMetadataHTML(meta) {
     html += '<div style="' + sectionStyle + '">';
     html += '<p style="' + labelStyle + '">Products</p>';
     html += '<pre style="font-size:12px;max-height:200px;overflow-y:auto;">' + esc(JSON.stringify(products, null, 2)) + '</pre>';
+    html += '</div>';
+  }
+
+  // SQL pipeline: lookup codes
+  if (meta.codes) {
+    html += '<div style="' + sectionStyle + '">';
+    html += '<p style="' + labelStyle + '">Lookup Codes</p>';
+    html += '<p style="font-size:12px;margin:0;"><code style="background:#f1f5f9;padding:2px 6px;border-radius:3px;">' + esc(meta.codes) + '</code></p>';
     html += '</div>';
   }
 
