@@ -287,6 +287,7 @@ class AtlasGraphQLClient:
     """Async HTTP client for the Atlas GraphQL API.
 
     Features:
+        - Persistent connection pool (single httpx.AsyncClient reused across calls)
         - Automatic retries on transient errors (5xx, 429, timeouts, network)
         - Error classification: transient vs. permanent
         - Optional budget tracker integration (consume-on-success)
@@ -307,6 +308,8 @@ class AtlasGraphQLClient:
     backoff_base: float = 1.0
     budget_tracker: GraphQLBudgetTracker | None = None
     circuit_breaker: CircuitBreaker | None = None
+
+    _http_client: httpx.AsyncClient | None = field(default=None, init=False, repr=False)
 
     async def execute(
         self,
@@ -384,6 +387,22 @@ class AtlasGraphQLClient:
         # All retries exhausted
         raise last_error  # type: ignore[misc]
 
+    def _get_http_client(self) -> httpx.AsyncClient:
+        """Return the persistent HTTP client, creating it on first use."""
+        if self._http_client is None:
+            self._http_client = httpx.AsyncClient(timeout=httpx.Timeout(self.timeout))
+        return self._http_client
+
+    async def aclose(self) -> None:
+        """Close the underlying HTTP client and release connections.
+
+        Safe to call multiple times. After closing, subsequent ``execute()``
+        calls will lazily create a new client.
+        """
+        if self._http_client is not None:
+            await self._http_client.aclose()
+            self._http_client = None
+
     async def _send_request(self, payload: dict) -> dict:
         """Send a single HTTP request and parse the response.
 
@@ -392,14 +411,12 @@ class AtlasGraphQLClient:
             GraphQLError: For permanent errors (4xx, GraphQL errors).
         """
         try:
-            async with httpx.AsyncClient(
-                timeout=httpx.Timeout(self.timeout)
-            ) as http_client:
-                response = await http_client.post(
-                    self.base_url,
-                    json=payload,
-                    headers={"Content-Type": "application/json"},
-                )
+            http_client = self._get_http_client()
+            response = await http_client.post(
+                self.base_url,
+                json=payload,
+                headers={"Content-Type": "application/json"},
+            )
         except httpx.TimeoutException as exc:
             raise TransientGraphQLError(f"Request timed out: {exc}") from exc
         except httpx.ConnectError as exc:
