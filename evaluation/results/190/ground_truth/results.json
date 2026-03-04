@@ -7,13 +7,24 @@
   "results": {
     "data": [
       {
+        "metric": "5-year total export growth (nominal USD)",
+        "product": "Cars (8703 HS92)",
+        "global_size": "$873B",
+        "growth_5yr": "3.4%",
+        "growth_direction": "positive",
+        "year": "2024",
+        "note": "Nominal USD growth. Browser feasibility table shows 3.4% total 5-year growth. Annualized CAGR ≈ 0.67%. Default is nominal USD unless the user explicitly requests constant USD."
+      }
+    ],
+    "data_archived": [
+      {
         "metric": "5-year total export growth (constant USD)",
         "product": "Cars (8703 HS92)",
         "global_size": "$873B",
         "growth_5yr": "-3.4%",
         "growth_direction": "negative",
         "year": "2024",
-        "note": "This is the total 5-year change (exportValueConstGrowth5), not the annualized CAGR. CAGR = -0.69% (exportValueConstCagr5)."
+        "note": "ARCHIVED — Original GT used constant USD from API (exportValueConstGrowth5). Replaced with nominal USD to match default behavior. Constant USD CAGR was -0.69%."
       }
     ]
   }

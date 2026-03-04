@@ -47,6 +47,7 @@ Table selection guide:
 - `country_country_year`: Bilateral aggregate trade. For "total trade between A and B" or trade balance.
 - `country_country_product_year_N`: Bilateral trade by product. For "what does A export to B?" with product breakdown.
 - Table suffixes (_1, _2, _4, _6) indicate product digit level.
+- Services product levels: _1 has only the aggregate row (product_code='services'). _2, _4, and _6 all contain the same 5 service categories — no finer granularity at higher digits. Always use _2 for disaggregated service queries.
 
 Query planning:
 1. Identify the main elements of the question:
@@ -59,9 +60,10 @@ Query planning:
     - Question about services or names a service category → services tables only.
     - "Total exports/imports", "top products", "export basket", or aggregate trade without specifying goods → query BOTH via UNION ALL (not JOIN). Services tables use different schemas than goods tables.
     - Explicitly says "goods" → goods tables only.
-3. Determine the required product classifications and the digit-level(s) of the product codes (digit level only applicable to goods tables):
-    - Look for specific HS codes mentioned and determine the digit level accordingly (e.g., 1201 is a 4-digit code, 120110 is a 6-digit code)
+3. Determine the required product classifications and the digit-level(s) of the product codes:
+    - Look for specific product codes mentioned and determine the digit level accordingly (e.g., 1201 is a 4-digit code, 120110 is a 6-digit code)
     - If multiple levels are mentioned, plan to use multiple subqueries or UNION ALL to combine results from different tables.
+    - For services: _1 is aggregate only; _2/_4/_6 are identical. Prefer _2 for disaggregated service categories.
 
 4. Plan tables, joins, columns, aggregations, and filters.
 5. Verify: no WHERE on `product_id`/`country_id`; correct goods/services selection; pre-calculated metrics used directly.

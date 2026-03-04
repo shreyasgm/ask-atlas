@@ -4,11 +4,13 @@
   "source": "atlas_country_page",
   "atlas_url": "https://atlas.hks.harvard.edu/countries/792/market-share",
   "results": {
-    "data": [
+    "data": [],
+    "data_archived": [
       {
         "metric": "Largest market share sector",
         "sector": "Services",
-        "sector_code": "services"
+        "sector_code": "services",
+        "note": "ARCHIVED — Original GT interpreted 'sector' as the binary goods-vs-services comparison from the Atlas Country Page. The question asks for the sector with the largest market share, which should be answered at the sub-sector level (e.g., Textiles, Travel & tourism). Cleared to use plausibility judging instead."
       }
     ]
   }

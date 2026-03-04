@@ -9,11 +9,27 @@
         "metric": "Export CAGR",
         "country": "Vietnam",
         "period": "2010-2020",
+        "start_value": "$76 billion",
+        "end_value": "$308 billion",
+        "cagr": "15.0%",
+        "raw_cagr": 0.15020092472805469,
+        "classification": "HS92",
+        "includes_services": true,
+        "note": "HS 1992 classification used because HS 2012 does not have data for 2010 (HS12 starts 2012). If 2010 data were available in HS12, HS 2012 would be preferred. Values include goods + services (total exports)."
+      }
+    ],
+    "data_archived": [
+      {
+        "metric": "Export CAGR",
+        "country": "Vietnam",
+        "period": "2010-2020",
         "start_value": "$74.42 billion",
         "end_value": "$269.63 billion",
         "cagr": "13.7%",
         "raw_cagr": 0.13738584048021774,
-        "note": "Used SITC classification for 2010-2020 range (HS12 starts 2012)"
+        "classification": "SITC",
+        "includes_services": false,
+        "note": "ARCHIVED — Original GT used SITC goods-only. Replaced with HS92 goods+services to match what 'total exports' should include."
       }
     ]
   }
