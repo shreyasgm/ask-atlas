@@ -31,6 +31,45 @@ from utils import (
 from src.text_to_sql import AtlasTextToSQL
 
 
+def _extract_tool_call_details(messages: list) -> list[dict[str, Any]]:
+    """Extract ordered tool call details from LangGraph message history.
+
+    Pairs each AIMessage tool_call with its corresponding ToolMessage
+    response to build a complete log of all tool invocations and results.
+
+    Args:
+        messages: LangGraph message list (HumanMessage, AIMessage, ToolMessage).
+
+    Returns:
+        List of dicts, each with: index, tool_name, arguments, result_content.
+    """
+    # Build map: tool_call_id → result content
+    tool_results: dict[str, str] = {}
+    for m in messages:
+        if hasattr(m, "tool_call_id") and m.tool_call_id:
+            content = m.content if isinstance(m.content, str) else str(m.content)
+            tool_results[m.tool_call_id] = content
+
+    # Walk messages in order, extracting tool calls from AIMessages
+    details: list[dict[str, Any]] = []
+    call_index = 0
+    for m in messages:
+        if hasattr(m, "tool_calls") and m.tool_calls:
+            for tc in m.tool_calls:
+                call_index += 1
+                tc_id = tc.get("id", "")
+                details.append(
+                    {
+                        "index": call_index,
+                        "tool_name": tc.get("name", ""),
+                        "arguments": tc.get("args", {}),
+                        "result_content": tool_results.get(tc_id, ""),
+                    }
+                )
+
+    return details
+
+
 def _load_questions_index() -> dict[str, dict]:
     """Load question metadata from eval_questions.json, keyed by string ID.
 
@@ -187,10 +226,18 @@ async def run_single_question(
                 )
                 result["graphql_api_target"] = state.values.get("graphql_api_target")
 
+                # GraphQL raw response (for debugging)
+                result["graphql_raw_response"] = state.values.get(
+                    "graphql_raw_response"
+                )
+
                 # Docs pipeline
                 result["docs_selected_files"] = state.values.get(
                     "docs_selected_files", []
                 )
+
+                # Tool call log — captures ALL tool invocations with results
+                result["tool_call_details"] = _extract_tool_call_details(messages)
             except Exception:
                 result["sql"] = ""
                 result["tools_used"] = []

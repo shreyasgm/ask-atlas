@@ -683,7 +683,7 @@ class TestBudgetViolations:
                 "category": "A",
                 "difficulty": "easy",
                 "status": "success",
-                "duration_s": 45.0,
+                "duration_s": 75.0,
             },
         ]
         report = generate_report(
@@ -698,7 +698,7 @@ class TestBudgetViolations:
         assert "budget_violations" in report
         bv = report["budget_violations"]
         assert bv["duration_violations"] == 1
-        # Question 2 exceeds the 30s threshold
+        # Question 2 exceeds the 60s threshold
         assert any(v["question_id"] == "2" for v in bv["violations"])
 
     def test_cost_threshold_violation(self):
@@ -1191,3 +1191,279 @@ class TestPipelineLatency:
         # Markdown should not include Pipeline Latency section
         md = report_to_markdown(report2)
         assert "### Pipeline Latency" not in md
+
+
+# ---------------------------------------------------------------------------
+# Tests: _extract_tool_call_details
+# ---------------------------------------------------------------------------
+
+
+from run_agent_evals import _extract_tool_call_details  # noqa: E402
+
+
+class TestExtractToolCallDetails:
+    """Tests for _extract_tool_call_details helper."""
+
+    def _make_messages(self):
+        """Build a realistic message history with multiple tool calls."""
+        from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+
+        return [
+            HumanMessage(content="What are Kenya's top exports?"),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tc_1",
+                        "name": "atlas_graphql",
+                        "args": {
+                            "question": "What are Kenya's top exports?",
+                            "context": "User asked about Kenya",
+                        },
+                    }
+                ],
+            ),
+            ToolMessage(
+                content='{"data": [{"product": "Tea", "value": 1200}]}',
+                name="atlas_graphql",
+                tool_call_id="tc_1",
+            ),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tc_2",
+                        "name": "query_tool",
+                        "args": {
+                            "question": "Kenya export totals by year",
+                            "context": "Follow-up for yearly breakdown",
+                        },
+                    }
+                ],
+            ),
+            ToolMessage(
+                content="{'year': 2020, 'value': 6000}\n{'year': 2021, 'value': 6500}",
+                name="query_tool",
+                tool_call_id="tc_2",
+            ),
+            AIMessage(content="Kenya's top exports include tea..."),
+        ]
+
+    def test_extracts_all_calls(self):
+        messages = self._make_messages()
+        details = _extract_tool_call_details(messages)
+        assert len(details) == 2
+
+    def test_preserves_order(self):
+        messages = self._make_messages()
+        details = _extract_tool_call_details(messages)
+        assert details[0]["tool_name"] == "atlas_graphql"
+        assert details[1]["tool_name"] == "query_tool"
+
+    def test_includes_arguments(self):
+        messages = self._make_messages()
+        details = _extract_tool_call_details(messages)
+        assert details[0]["arguments"]["question"] == "What are Kenya's top exports?"
+        assert details[1]["arguments"]["question"] == "Kenya export totals by year"
+
+    def test_includes_result_content(self):
+        messages = self._make_messages()
+        details = _extract_tool_call_details(messages)
+        assert '"Tea"' in details[0]["result_content"]
+        assert "2020" in details[1]["result_content"]
+
+    def test_sequential_index(self):
+        messages = self._make_messages()
+        details = _extract_tool_call_details(messages)
+        assert details[0]["index"] == 1
+        assert details[1]["index"] == 2
+
+    def test_empty_messages(self):
+        assert _extract_tool_call_details([]) == []
+
+    def test_no_tool_calls(self):
+        from langchain_core.messages import AIMessage, HumanMessage
+
+        messages = [
+            HumanMessage(content="Hello"),
+            AIMessage(content="Hi there!"),
+        ]
+        assert _extract_tool_call_details(messages) == []
+
+    def test_missing_tool_response(self):
+        """If a ToolMessage is missing, result_content should be empty."""
+        from langchain_core.messages import AIMessage
+
+        messages = [
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "id": "tc_orphan",
+                        "name": "query_tool",
+                        "args": {"question": "Q"},
+                    },
+                ],
+            ),
+        ]
+        details = _extract_tool_call_details(messages)
+        assert len(details) == 1
+        assert details[0]["result_content"] == ""
+
+    def test_multiple_calls_in_single_ai_message(self):
+        """Agent can issue multiple tool calls in one AIMessage."""
+        from langchain_core.messages import AIMessage, ToolMessage
+
+        messages = [
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {"id": "tc_a", "name": "query_tool", "args": {"question": "Q1"}},
+                    {"id": "tc_b", "name": "atlas_graphql", "args": {"question": "Q2"}},
+                ],
+            ),
+            ToolMessage(content="SQL result", name="query_tool", tool_call_id="tc_a"),
+            ToolMessage(
+                content="GQL result", name="atlas_graphql", tool_call_id="tc_b"
+            ),
+        ]
+        details = _extract_tool_call_details(messages)
+        assert len(details) == 2
+        assert details[0]["tool_name"] == "query_tool"
+        assert details[0]["result_content"] == "SQL result"
+        assert details[1]["tool_name"] == "atlas_graphql"
+        assert details[1]["result_content"] == "GQL result"
+
+
+# ---------------------------------------------------------------------------
+# Tests: tool_call_details in HTML report
+# ---------------------------------------------------------------------------
+
+
+class TestToolCallDetailsInHtml:
+    """Tests that tool_call_details from result.json appear in the HTML report."""
+
+    def _make_fixture_run_dir(self, tmp_path: Path) -> Path:
+        """Create a run dir with result.json containing tool_call_details."""
+        run_dir = tmp_path / "20260301T120000Z"
+        run_dir.mkdir()
+
+        result_with_tool_calls = {
+            "question_id": "10",
+            "question_text": "What are Kenya's top exports?",
+            "category": "Trade Values",
+            "difficulty": "medium",
+            "status": "success",
+            "duration_s": 12.0,
+            "answer": "Kenya exports tea, coffee, and flowers.",
+            "tools_used": ["atlas_graphql", "query_tool"],
+            "graphql_query": "query { countryYear { ... } }",
+            "graphql_classification": {"query_type": "country_year"},
+            "tool_call_details": [
+                {
+                    "index": 1,
+                    "tool_name": "atlas_graphql",
+                    "arguments": {
+                        "question": "Kenya top exports",
+                        "context": "User asking about Kenya",
+                    },
+                    "result_content": '{"data": [{"product": "Tea", "value": 1200}]}',
+                },
+                {
+                    "index": 2,
+                    "tool_name": "query_tool",
+                    "arguments": {
+                        "question": "Kenya yearly export totals",
+                        "context": "Follow-up",
+                    },
+                    "result_content": "{'year': 2020, 'value': 6000}\n{'year': 2021, 'value': 6500}",
+                },
+            ],
+        }
+
+        qdir = run_dir / "10"
+        qdir.mkdir()
+        (qdir / "result.json").write_text(json.dumps(result_with_tool_calls))
+
+        report = generate_report(
+            [result_with_tool_calls],
+            {"10": {"verdict": "pass", "weighted_score": 4.5}},
+            {"10": {"category": "Trade Values", "difficulty": "medium"}},
+        )
+        (run_dir / "report.json").write_text(json.dumps(report, default=str))
+
+        return run_dir
+
+    def test_tool_call_details_loaded_into_report(self, tmp_path):
+        run_dir = self._make_fixture_run_dir(tmp_path)
+        html_path = generate_html_report(run_dir)
+        html_content = html_path.read_text(encoding="utf-8")
+
+        start = html_content.index("const REPORT = ") + len("const REPORT = ")
+        end = html_content.index(";\n", start)
+        data = json.loads(html_content[start:end])
+
+        q = data["per_question"][0]
+        assert "tool_call_details" in q
+        assert len(q["tool_call_details"]) == 2
+
+    def test_html_contains_tool_call_log_heading(self, tmp_path):
+        """The HTML JS should have a Tool Call Log section builder."""
+        run_dir = self._make_fixture_run_dir(tmp_path)
+        html_path = generate_html_report(run_dir)
+        html_content = html_path.read_text(encoding="utf-8")
+
+        assert "Tool Call Log" in html_content
+
+    def test_graphql_result_visible_in_html(self, tmp_path):
+        """GraphQL response content should be in the embedded JSON data."""
+        run_dir = self._make_fixture_run_dir(tmp_path)
+        html_path = generate_html_report(run_dir)
+        html_content = html_path.read_text(encoding="utf-8")
+
+        # The result_content from the GraphQL call should be in the embedded data
+        start = html_content.index("const REPORT = ") + len("const REPORT = ")
+        end = html_content.index(";\n", start)
+        data = json.loads(html_content[start:end])
+
+        q = data["per_question"][0]
+        gql_call = q["tool_call_details"][0]
+        assert gql_call["tool_name"] == "atlas_graphql"
+        assert "Tea" in gql_call["result_content"]
+
+    def test_backward_compat_no_tool_call_details(self, tmp_path):
+        """Old result.json without tool_call_details should default to empty list."""
+        run_dir = tmp_path / "old_run"
+        run_dir.mkdir()
+
+        old_result = {
+            "question_id": "1",
+            "question_text": "Old question?",
+            "category": "A",
+            "difficulty": "easy",
+            "status": "success",
+            "duration_s": 5.0,
+            "answer": "Answer",
+            "sql": "SELECT 1",
+            "tools_used": ["query_tool"],
+        }
+        qdir = run_dir / "1"
+        qdir.mkdir()
+        (qdir / "result.json").write_text(json.dumps(old_result))
+
+        report = generate_report(
+            [old_result],
+            {},
+            {"1": {"category": "A", "difficulty": "easy"}},
+        )
+        (run_dir / "report.json").write_text(json.dumps(report, default=str))
+
+        html_path = generate_html_report(run_dir)
+        html_content = html_path.read_text(encoding="utf-8")
+
+        start = html_content.index("const REPORT = ") + len("const REPORT = ")
+        end = html_content.index(";\n", start)
+        data = json.loads(html_content[start:end])
+
+        q = data["per_question"][0]
+        assert q.get("tool_call_details", []) == []

@@ -62,6 +62,7 @@ def _load_enriched_data(run_dir: Path) -> dict[str, Any]:
             entry["graphql_atlas_links"] = result.get("graphql_atlas_links", [])
             entry["graphql_api_target"] = result.get("graphql_api_target")
             entry["docs_selected_files"] = result.get("docs_selected_files", [])
+            entry["tool_call_details"] = result.get("tool_call_details", [])
         else:
             entry.setdefault("agent_answer", "")
             entry.setdefault("sql", "")
@@ -708,15 +709,6 @@ function buildDetailHTML(q) {
     </div>`;
   }
 
-  // GraphQL Query
-  if (q.graphql_query) {
-    sections += `
-    <div class="detail-section">
-      <h4>GraphQL Query</h4>
-      <pre>${esc(q.graphql_query)}</pre>
-    </div>`;
-  }
-
   // Atlas Links
   const links = q.graphql_atlas_links || [];
   if (links.length > 0) {
@@ -732,22 +724,78 @@ function buildDetailHTML(q) {
     </div>`;
   }
 
-  // Query Results
-  const resCols = q.pipeline_result_columns || [];
-  const resRows = q.pipeline_result_rows || [];
-  if (resCols.length > 0) {
-    let resHTML = '<span class="badge score">' + resRows.length + ' row' + (resRows.length !== 1 ? 's' : '') + '</span>';
-    resHTML += '<div style="max-height:400px;overflow-y:auto;margin-top:8px;">';
-    resHTML += '<table><thead><tr>' + resCols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>';
-    for (const row of resRows) {
-      resHTML += '<tr>' + row.map(v => '<td>' + esc(String(v ?? '')) + '</td>').join('') + '</tr>';
+  // Tool Call Log — shows ALL tool invocations with args and results
+  const toolCalls = q.tool_call_details || [];
+  if (toolCalls.length > 0) {
+    let logHTML = '';
+    for (const tc of toolCalls) {
+      const toolColor = tc.tool_name === 'atlas_graphql' ? '#6366f1'
+                       : tc.tool_name === 'query_tool' ? '#059669'
+                       : tc.tool_name === 'docs_tool' ? '#d97706' : '#64748b';
+      logHTML += '<div style="margin-bottom:16px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">';
+      logHTML += '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;">';
+      logHTML += '<span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;color:#fff;background:' + toolColor + ';">' + esc(tc.tool_name) + '</span>';
+      logHTML += '<span style="font-size:12px;color:#94a3b8;">Call #' + tc.index + '</span>';
+      if (tc.arguments && tc.arguments.question) {
+        logHTML += '<span style="font-size:13px;color:#475569;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(tc.arguments.question) + '">' + esc(tc.arguments.question) + '</span>';
+      }
+      logHTML += '</div>';
+      if (tc.result_content) {
+        const content = tc.result_content;
+        // Try to detect JSON and pretty-format it
+        let formattedContent;
+        const trimmed = content.trim();
+        if ((trimmed.startsWith('{') || trimmed.startsWith('[')) && (trimmed.endsWith('}') || trimmed.endsWith(']'))) {
+          // Find the JSON part (skip any warning text before the JSON)
+          try {
+            const jsonStart = content.indexOf(trimmed.startsWith('[') ? '[' : '{');
+            JSON.parse(content.substring(jsonStart));
+            formattedContent = '<pre>' + esc(content) + '</pre>';
+          } catch(e) {
+            formattedContent = '<pre>' + esc(content) + '</pre>';
+          }
+        } else if (content.includes('\\n') || content.length > 200) {
+          formattedContent = '<pre style="max-height:400px;overflow-y:auto;">' + esc(content) + '</pre>';
+        } else {
+          formattedContent = '<pre>' + esc(content) + '</pre>';
+        }
+        logHTML += '<div style="padding:8px 12px;">' + formattedContent + '</div>';
+      } else {
+        logHTML += '<div style="padding:8px 12px;color:#94a3b8;font-size:13px;font-style:italic;">No response captured</div>';
+      }
+      logHTML += '</div>';
     }
-    resHTML += '</tbody></table></div>';
     sections += `
     <div class="detail-section">
-      <h4>Query Results</h4>
-      <div class="content">${resHTML}</div>
+      <h4>Tool Call Log <span style="font-size:11px;color:#94a3b8;text-transform:none;letter-spacing:0;">(${toolCalls.length} call${toolCalls.length !== 1 ? 's' : ''})</span></h4>
+      <div class="content">${logHTML}</div>
     </div>`;
+  } else {
+    // Fallback: show legacy single query results for old result files
+    if (q.graphql_query) {
+      sections += `
+      <div class="detail-section">
+        <h4>GraphQL Query</h4>
+        <pre>${esc(q.graphql_query)}</pre>
+      </div>`;
+    }
+
+    const resCols = q.pipeline_result_columns || [];
+    const resRows = q.pipeline_result_rows || [];
+    if (resCols.length > 0) {
+      let resHTML = '<span class="badge score">' + resRows.length + ' row' + (resRows.length !== 1 ? 's' : '') + '</span>';
+      resHTML += '<div style="max-height:400px;overflow-y:auto;margin-top:8px;">';
+      resHTML += '<table><thead><tr>' + resCols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>';
+      for (const row of resRows) {
+        resHTML += '<tr>' + row.map(v => '<td>' + esc(String(v ?? '')) + '</td>').join('') + '</tr>';
+      }
+      resHTML += '</tbody></table></div>';
+      sections += `
+      <div class="detail-section">
+        <h4>Query Results</h4>
+        <div class="content">${resHTML}</div>
+      </div>`;
+    }
   }
 
   // Docs selected files
