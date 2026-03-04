@@ -17,7 +17,7 @@ from typing import Any
 from utils import get_timestamp, logging
 
 # Budget thresholds — flag questions exceeding these limits
-BUDGET_THRESHOLD_DURATION_S = 30.0
+BUDGET_THRESHOLD_DURATION_S = 60.0
 BUDGET_THRESHOLD_COST_USD = 0.05
 
 
@@ -60,6 +60,52 @@ def _dimension_averages(verdicts: list[dict]) -> dict[str, float]:
         ]
         avgs[dim] = round(sum(scores) / len(scores), 2) if scores else 0
     return avgs
+
+
+def _aggregate_link_scores(link_verdicts: list[dict]) -> dict[str, Any]:
+    """Compute aggregate statistics for link judge verdicts."""
+    if not link_verdicts:
+        return {
+            "count": 0,
+            "avg_weighted_score": 0,
+            "pass_rate": 0,
+            "pass_count": 0,
+            "partial_count": 0,
+            "fail_count": 0,
+            "dimension_averages": {},
+        }
+
+    scores = [v["weighted_score"] for v in link_verdicts if "weighted_score" in v]
+    pass_count = sum(1 for v in link_verdicts if v.get("verdict") == "pass")
+    partial_count = sum(1 for v in link_verdicts if v.get("verdict") == "partial")
+    fail_count = sum(1 for v in link_verdicts if v.get("verdict") == "fail")
+
+    dims = [
+        "link_presence",
+        "content_relevance",
+        "entity_correctness",
+        "parameter_accuracy",
+    ]
+    dim_avgs = {}
+    for dim in dims:
+        dim_scores = [
+            v[dim]["score"]
+            for v in link_verdicts
+            if isinstance(v.get(dim), dict) and "score" in v[dim]
+        ]
+        dim_avgs[dim] = round(sum(dim_scores) / len(dim_scores), 2) if dim_scores else 0
+
+    return {
+        "count": len(link_verdicts),
+        "avg_weighted_score": round(sum(scores) / len(scores), 3) if scores else 0,
+        "pass_count": pass_count,
+        "partial_count": partial_count,
+        "fail_count": fail_count,
+        "pass_rate": (
+            round(pass_count / len(link_verdicts) * 100, 1) if link_verdicts else 0
+        ),
+        "dimension_averages": dim_avgs,
+    }
 
 
 def _compute_run_stats(run_results: list[dict[str, Any]]) -> dict[str, Any]:
@@ -379,10 +425,18 @@ def generate_report(
     by_difficulty: dict[str, list[dict]] = defaultdict(list)
     by_pipeline: dict[str, list[dict]] = defaultdict(list)
     all_verdicts: list[dict] = []
+    all_link_verdicts: list[dict] = []
 
     for run in run_results:
         qid = str(run["question_id"])
-        verdict = judge_results.get(qid, {})
+        judge_entry = judge_results.get(qid, {})
+        # Support both new format {"answer": ..., "link": ...} and legacy flat dict
+        if "answer" in judge_entry:
+            verdict = judge_entry["answer"]
+            link_verdict = judge_entry.get("link")
+        else:
+            verdict = judge_entry
+            link_verdict = None
         meta = questions_meta.get(qid, {})
 
         pipeline_used = _detect_pipeline(run)
@@ -405,6 +459,9 @@ def generate_report(
             "cost_usd": run_cost.get("total_cost_usd") if run_cost else None,
             "pipeline_used": pipeline_used,
         }
+        if link_verdict:
+            entry["link_judge"] = link_verdict
+            all_link_verdicts.append(link_verdict)
         per_question.append(entry)
 
         if verdict:
@@ -442,6 +499,10 @@ def generate_report(
         ],
         "per_question": per_question,
     }
+
+    # Link judge aggregate (only when link verdicts exist)
+    if all_link_verdicts:
+        report["link_judge_aggregate"] = _aggregate_link_scores(all_link_verdicts)
 
     if cost_analysis:
         report["cost_analysis"] = cost_analysis
@@ -506,6 +567,26 @@ def report_to_markdown(report: dict[str, Any]) -> str:
         lines.append("|-----------|-----------|")
         for dim, score in dims.items():
             lines.append(f"| {dim.replace('_', ' ').title()} | {score} / 5.0 |")
+
+    # Link Judge Summary
+    lj = report.get("link_judge_aggregate", {})
+    if lj and lj.get("count"):
+        lines.append("\n## Link Judge Summary\n")
+        lines.append("| Metric | Value |")
+        lines.append("|--------|-------|")
+        lines.append(f"| Links evaluated | {lj['count']} |")
+        lines.append(f"| Avg weighted score | {lj['avg_weighted_score']} / 5.0 |")
+        lines.append(f"| Pass rate | {lj['pass_rate']}% |")
+        lines.append(
+            f"| Pass / Partial / Fail | {lj['pass_count']} / {lj['partial_count']} / {lj['fail_count']} |"
+        )
+        lj_dims = lj.get("dimension_averages", {})
+        if lj_dims:
+            lines.append("\n### Link Dimension Averages\n")
+            lines.append("| Dimension | Avg Score |")
+            lines.append("|-----------|-----------|")
+            for dim, score in lj_dims.items():
+                lines.append(f"| {dim.replace('_', ' ').title()} | {score} / 5.0 |")
 
     # By category
     by_cat = report.get("by_category", {})

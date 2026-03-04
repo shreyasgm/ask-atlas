@@ -26,6 +26,7 @@ from utils import (
 )
 from run_agent_evals import run_agent_evals
 from judge import judge_answer
+from link_judge import judge_links
 from report import generate_report, save_report
 from html_report import generate_html_report
 
@@ -63,6 +64,21 @@ def _load_ground_truth(question_id: str) -> list[dict] | None:
         gt = load_json_file(gt_path)
         data = gt.get("results", {}).get("data", [])
         return data if data else None
+    except Exception:
+        return None
+
+
+def _load_ground_truth_atlas_url(question_id: str) -> str | None:
+    """Load the ground truth atlas_url for a question, or None if unavailable."""
+    gt_path = (
+        EVALUATION_BASE_DIR / "results" / question_id / "ground_truth" / "results.json"
+    )
+    if not gt_path.exists():
+        return None
+    try:
+        gt = load_json_file(gt_path)
+        url = gt.get("atlas_url")
+        return url if url else None
     except Exception:
         return None
 
@@ -165,8 +181,9 @@ async def _judge_all(
                 )
                 logging.info(f"Question {qid}: judging ({mode})...")
                 tools_used = result.get("tools_used")
+                question_text = meta.get("text", result.get("question_text", ""))
                 verdict = await judge_answer(
-                    question=meta.get("text", result.get("question_text", "")),
+                    question=question_text,
                     agent_answer=result["answer"],
                     ground_truth_data=ground_truth,
                     expected_behavior=expected_behavior,
@@ -175,12 +192,37 @@ async def _judge_all(
                     tools_used=tools_used,
                     classification_note=classification_note,
                 )
-                judge_results[qid] = verdict
+                judge_entry: dict[str, Any] = {"answer": verdict}
                 logging.info(
                     f"Question {qid}: verdict={verdict.get('verdict', 'n/a')} "
                     f"score={verdict.get('weighted_score', 'n/a')} "
                     f"mode={verdict.get('judge_mode', mode)}"
                 )
+
+                # Link judge: only when agent used GraphQL
+                used_graphql = tools_used and "atlas_graphql" in tools_used
+                atlas_url = _load_ground_truth_atlas_url(qid)
+                agent_links = result.get("graphql_atlas_links", [])
+
+                if used_graphql and atlas_url:
+                    try:
+                        link_verdict = await judge_links(
+                            question=question_text,
+                            agent_links=agent_links,
+                            ground_truth_url=atlas_url,
+                            model=judge_model,
+                            provider=judge_provider,
+                        )
+                        judge_entry["link"] = link_verdict
+                        logging.info(
+                            f"Question {qid}: link verdict="
+                            f"{link_verdict.get('verdict', 'n/a')} "
+                            f"score={link_verdict.get('weighted_score', 'n/a')}"
+                        )
+                    except Exception as e:
+                        logging.error(f"Question {qid}: link judge error — {e}")
+
+                judge_results[qid] = judge_entry
             except Exception as e:
                 logging.error(f"Question {qid}: judge error — {e}")
 
