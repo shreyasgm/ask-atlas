@@ -1230,6 +1230,448 @@ function formatDuration(s) {
 """
 
 
+# ---------------------------------------------------------------------------
+# Review-mode HTML template additions
+# ---------------------------------------------------------------------------
+
+_REVIEW_CSS = """\
+/* ---------- Review mode ---------- */
+.review-banner {
+  background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%);
+  color: #fff; padding: 14px 20px; border-radius: 10px; margin-bottom: 20px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+}
+.review-banner .title { font-weight: 700; font-size: 15px; }
+.review-banner .meta { font-size: 13px; opacity: .85; }
+.badge.review-classified { background: #dbeafe; color: #1e40af; }
+.badge.review-agent_error { background: #fee2e2; color: #991b1b; }
+.badge.review-gt_data_needs_correction { background: #fef3c7; color: #92400e; }
+.badge.review-gt_url_needs_correction { background: #fef3c7; color: #92400e; }
+.badge.review-link_generation_issue { background: #fce7f3; color: #9d174d; }
+.badge.review-reviewed_ok { background: #dcfce7; color: #166534; }
+
+/* Review panel */
+.review-panel {
+  margin-top: 14px; padding: 14px 16px; background: #f0f4ff;
+  border-radius: 8px; border: 1px solid #c7d2fe;
+}
+.review-panel h4 {
+  font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
+  color: #4338ca; margin-bottom: 10px;
+}
+.review-panel label { font-size: 13px; color: #475569; display: block; margin-bottom: 4px; }
+.review-panel select, .review-panel input[type="text"], .review-panel textarea {
+  width: 100%; padding: 8px 10px; border: 1px solid #c7d2fe; border-radius: 6px;
+  font-size: 13px; font-family: inherit; background: #fff; color: #1e293b;
+}
+.review-panel textarea { min-height: 200px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; resize: vertical; }
+.review-panel .btn-row { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+.review-panel .btn {
+  padding: 7px 16px; border-radius: 6px; border: none; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .15s;
+}
+.review-panel .btn-primary { background: #4338ca; color: #fff; }
+.review-panel .btn-primary:hover { background: #3730a3; }
+.review-panel .btn-secondary { background: #e0e7ff; color: #4338ca; }
+.review-panel .btn-secondary:hover { background: #c7d2fe; }
+.review-panel .btn-success { background: #059669; color: #fff; }
+.review-panel .btn-success:hover { background: #047857; }
+.review-panel .btn:disabled { opacity: .5; cursor: not-allowed; }
+.review-panel .status-msg { font-size: 12px; color: #059669; }
+.review-panel .error-msg { font-size: 12px; color: #dc2626; }
+
+/* GT preview table */
+.gt-preview-table {
+  margin-top: 8px; max-height: 300px; overflow: auto;
+  border: 1px solid #e2e8f0; border-radius: 6px; background: #fff;
+}
+.gt-preview-table table { border-collapse: collapse; width: 100%; font-size: 12px; }
+.gt-preview-table th {
+  text-align: left; padding: 6px 8px; border-bottom: 2px solid #e2e8f0;
+  font-size: 11px; color: #64748b; background: #f8fafc; position: sticky; top: 0;
+}
+.gt-preview-table td { padding: 4px 8px; border-bottom: 1px solid #f1f5f9; }
+
+/* Collapsible editor sections */
+.editor-toggle {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  font-size: 12px; color: #4338ca; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .5px; margin-top: 10px; padding: 6px 0; border: none; background: none;
+}
+.editor-toggle::before {
+  content: ''; display: inline-block; width: 0; height: 0;
+  border-left: 5px solid #6366f1; border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent; transition: transform .15s;
+}
+.editor-toggle.open::before { transform: rotate(90deg); }
+.editor-body { display: none; margin-top: 8px; }
+.editor-body.open { display: block; }
+
+/* Spinner */
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #c7d2fe;
+  border-top-color: #4338ca; border-radius: 50%; animation: spin .6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Toast notifications */
+.toast-container {
+  position: fixed; top: 20px; right: 20px; z-index: 9999;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.toast {
+  padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0,0,0,.15); animation: slideIn .3s ease;
+  max-width: 400px;
+}
+.toast.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.toast.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+"""
+
+_REVIEW_JS = """\
+// ========== Review Mode JavaScript ==========
+let REVIEWER = null;
+
+function showToast(message, type) {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(() => toast.remove(), 300); }, 4000);
+}
+
+async function apiCall(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(path, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || 'Request failed');
+  }
+  return res.json();
+}
+
+async function loadReviewer() {
+  if (REVIEWER) return REVIEWER;
+  try {
+    REVIEWER = await apiCall('GET', '/api/reviewer');
+  } catch(e) {
+    REVIEWER = { name: '', email: '', display: 'anonymous' };
+  }
+  return REVIEWER;
+}
+
+function getReviewedCount() {
+  return (REPORT.per_question || []).filter(q => q.review && q.review.classification).length;
+}
+
+function updateReviewBanner() {
+  const banner = document.getElementById('review-banner-meta');
+  if (banner) {
+    const count = getReviewedCount();
+    const total = (REPORT.per_question || []).length;
+    banner.textContent = count + ' of ' + total + ' questions classified';
+  }
+}
+
+function classificationBadgeHTML(review) {
+  if (!review || !review.classification) return '';
+  const cls = review.classification;
+  return '<span class="badge review-' + esc(cls) + '">' + esc(cls.replace(/_/g, ' ')) + '</span>';
+}
+
+// Override renderQuestions to add classification badges
+const _origRenderQuestions = renderQuestions;
+renderQuestions = function(questions) {
+  _origRenderQuestions(questions);
+  // Inject classification badges into card headers
+  questions = questions || REPORT.per_question || [];
+  questions.forEach((q, i) => {
+    if (q.review && q.review.classification) {
+      const card = document.getElementById('qcard-' + i);
+      if (card) {
+        const badges = card.querySelector('.badges');
+        if (badges && !badges.querySelector('.review-classified, .review-agent_error, .review-gt_data_needs_correction, .review-gt_url_needs_correction, .review-link_generation_issue, .review-reviewed_ok')) {
+          badges.insertAdjacentHTML('beforeend', ' ' + classificationBadgeHTML(q.review));
+        }
+      }
+    }
+  });
+};
+
+// Override buildDetailHTML to add review panels
+const _origBuildDetailHTML = buildDetailHTML;
+buildDetailHTML = function(q) {
+  let html = _origBuildDetailHTML(q);
+  html += buildReviewPanel(q);
+  return html;
+};
+
+function buildReviewPanel(q) {
+  const qid = q.question_id;
+  const review = q.review || {};
+  const currentClass = review.classification || '';
+  const currentNote = review.note || '';
+
+  let html = '<div class="review-panel" id="review-panel-' + esc(qid) + '">';
+  html += '<h4>Review Actions</h4>';
+
+  // Classification dropdown
+  html += '<div style="margin-bottom: 12px;">';
+  html += '<label>Classification</label>';
+  html += '<div style="display:flex;gap:8px;align-items:center;">';
+  html += '<select id="classify-select-' + esc(qid) + '" style="flex:1;">';
+  html += '<option value="">-- Select --</option>';
+  const options = ['agent_error', 'gt_data_needs_correction', 'gt_url_needs_correction', 'link_generation_issue', 'reviewed_ok'];
+  for (const opt of options) {
+    const sel = opt === currentClass ? ' selected' : '';
+    html += '<option value="' + opt + '"' + sel + '>' + opt.replace(/_/g, ' ') + '</option>';
+  }
+  html += '</select>';
+  html += '<input type="text" id="classify-note-' + esc(qid) + '" placeholder="Note (optional)" value="' + esc(currentNote) + '" style="flex:1;">';
+  html += '<button class="btn btn-primary" onclick="saveClassification(\\'' + esc(qid) + '\\')">Save</button>';
+  html += '</div>';
+  if (review.reviewed_by) {
+    html += '<p style="font-size:11px;color:#94a3b8;margin-top:4px;">Last reviewed by ' + esc(review.reviewed_by) + ' at ' + esc(review.reviewed_at || '') + '</p>';
+  }
+  html += '</div>';
+
+  // GT Data Editor (toggle)
+  if (q.ground_truth && q.ground_truth.length > 0) {
+    html += '<button class="editor-toggle" onclick="toggleEditor(\\'' + esc(qid) + '-gt\\', this)">Edit Ground Truth Data</button>';
+    html += '<div class="editor-body" id="editor-' + esc(qid) + '-gt">';
+    html += '<textarea id="gt-editor-' + esc(qid) + '" oninput="previewGT(\\'' + esc(qid) + '\\')">' + esc(JSON.stringify(q.ground_truth, null, 2)) + '</textarea>';
+    html += '<div class="gt-preview-table" id="gt-preview-' + esc(qid) + '"></div>';
+    html += '<label style="margin-top:8px;">Correction note (required)</label>';
+    html += '<input type="text" id="gt-note-' + esc(qid) + '" placeholder="Describe what changed and why">';
+    html += '<div class="btn-row">';
+    html += '<button class="btn btn-primary" onclick="saveGTCorrection(\\'' + esc(qid) + '\\')">Save GT Correction</button>';
+    html += '<span id="gt-status-' + esc(qid) + '"></span>';
+    html += '</div>';
+    html += '</div>';
+  }
+
+  // GT URL Editor (toggle)
+  if (q.ground_truth_atlas_url) {
+    html += '<button class="editor-toggle" onclick="toggleEditor(\\'' + esc(qid) + '-url\\', this)">Edit Ground Truth URL</button>';
+    html += '<div class="editor-body" id="editor-' + esc(qid) + '-url">';
+    html += '<label>Atlas URL</label>';
+    html += '<input type="text" id="gt-url-editor-' + esc(qid) + '" value="' + esc(q.ground_truth_atlas_url) + '">';
+    html += '<label style="margin-top:8px;">Correction note (required)</label>';
+    html += '<input type="text" id="gt-url-note-' + esc(qid) + '" placeholder="Describe what changed and why">';
+    html += '<div class="btn-row">';
+    html += '<button class="btn btn-primary" onclick="saveGTUrlCorrection(\\'' + esc(qid) + '\\')">Save URL Correction</button>';
+    html += '<span id="gt-url-status-' + esc(qid) + '"></span>';
+    html += '</div>';
+    html += '</div>';
+  }
+
+  // Re-judge button
+  html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #c7d2fe;">';
+  html += '<button class="btn btn-success" id="rejudge-btn-' + esc(qid) + '" onclick="rejudge(\\'' + esc(qid) + '\\')">Re-judge with current GT</button>';
+  html += ' <span id="rejudge-status-' + esc(qid) + '"></span>';
+  html += '</div>';
+
+  html += '</div>';
+  return html;
+}
+
+function toggleEditor(id, btn) {
+  const el = document.getElementById('editor-' + id);
+  el.classList.toggle('open');
+  btn.classList.toggle('open');
+}
+
+function previewGT(qid) {
+  const textarea = document.getElementById('gt-editor-' + qid);
+  const preview = document.getElementById('gt-preview-' + qid);
+  try {
+    const data = JSON.parse(textarea.value);
+    if (!Array.isArray(data) || data.length === 0) {
+      preview.innerHTML = '<p style="padding:8px;color:#94a3b8;font-size:12px;">Empty or invalid array</p>';
+      return;
+    }
+    const cols = Object.keys(data[0]);
+    let tableHTML = '<table><thead><tr>' + cols.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>';
+    for (const row of data) {
+      tableHTML += '<tr>' + cols.map(c => '<td>' + esc(String(row[c] ?? '')) + '</td>').join('') + '</tr>';
+    }
+    tableHTML += '</tbody></table>';
+    preview.innerHTML = tableHTML;
+    textarea.style.borderColor = '#c7d2fe';
+  } catch(e) {
+    preview.innerHTML = '<p style="padding:8px;color:#dc2626;font-size:12px;">Invalid JSON: ' + esc(e.message) + '</p>';
+    textarea.style.borderColor = '#fca5a5';
+  }
+}
+
+async function saveClassification(qid) {
+  const select = document.getElementById('classify-select-' + qid);
+  const noteInput = document.getElementById('classify-note-' + qid);
+  const classification = select.value;
+  if (!classification) { showToast('Please select a classification', 'error'); return; }
+  try {
+    const result = await apiCall('POST', '/api/classify/' + qid, { classification, note: noteInput.value || null });
+    // Update local REPORT data
+    const q = (REPORT.per_question || []).find(q => String(q.question_id) === String(qid));
+    if (q) q.review = result.review;
+    updateReviewBanner();
+    showToast('Q' + qid + ' classified as ' + classification.replace(/_/g, ' '), 'success');
+    // Force re-render of questions to update badges
+    renderQuestions(getFilteredQuestions());
+  } catch(e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function saveGTCorrection(qid) {
+  const textarea = document.getElementById('gt-editor-' + qid);
+  const noteInput = document.getElementById('gt-note-' + qid);
+  const statusEl = document.getElementById('gt-status-' + qid);
+  if (!noteInput.value.trim()) { showToast('A correction note is required', 'error'); return; }
+  let data;
+  try { data = JSON.parse(textarea.value); }
+  catch(e) { showToast('Invalid JSON: ' + e.message, 'error'); return; }
+  if (!Array.isArray(data)) { showToast('Data must be a JSON array', 'error'); return; }
+
+  statusEl.innerHTML = '<span class="spinner"></span>';
+  try {
+    const result = await apiCall('POST', '/api/correct-gt/' + qid, { data, note: noteInput.value });
+    // Update local data
+    const q = (REPORT.per_question || []).find(q => String(q.question_id) === String(qid));
+    if (q) q.ground_truth = data;
+    statusEl.innerHTML = '<span class="status-msg">Saved (' + result.archived_count + ' rows archived, ' + result.new_count + ' new)</span>';
+    showToast('Q' + qid + ' ground truth data corrected', 'success');
+  } catch(e) {
+    statusEl.innerHTML = '<span class="error-msg">' + esc(e.message) + '</span>';
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function saveGTUrlCorrection(qid) {
+  const urlInput = document.getElementById('gt-url-editor-' + qid);
+  const noteInput = document.getElementById('gt-url-note-' + qid);
+  const statusEl = document.getElementById('gt-url-status-' + qid);
+  if (!noteInput.value.trim()) { showToast('A correction note is required', 'error'); return; }
+  if (!urlInput.value.trim()) { showToast('URL cannot be empty', 'error'); return; }
+
+  statusEl.innerHTML = '<span class="spinner"></span>';
+  try {
+    const result = await apiCall('POST', '/api/correct-gt-url/' + qid, { atlas_url: urlInput.value, note: noteInput.value });
+    // Update local data
+    const q = (REPORT.per_question || []).find(q => String(q.question_id) === String(qid));
+    if (q) q.ground_truth_atlas_url = urlInput.value;
+    statusEl.innerHTML = '<span class="status-msg">Saved</span>';
+    showToast('Q' + qid + ' ground truth URL corrected', 'success');
+  } catch(e) {
+    statusEl.innerHTML = '<span class="error-msg">' + esc(e.message) + '</span>';
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
+async function rejudge(qid) {
+  const btn = document.getElementById('rejudge-btn-' + qid);
+  const statusEl = document.getElementById('rejudge-status-' + qid);
+  btn.disabled = true;
+  statusEl.innerHTML = '<span class="spinner"></span> Re-judging...';
+  try {
+    const result = await apiCall('POST', '/api/rejudge/' + qid);
+    // Update local REPORT data
+    const q = (REPORT.per_question || []).find(q => String(q.question_id) === String(qid));
+    if (q) {
+      q.verdict = result.verdict;
+      q.weighted_score = result.weighted_score;
+      q.judge_details = result.judge_details;
+      q.judge_comment = result.judge_details.overall_comment || '';
+      q.judge_mode = result.judge_details.judge_mode || q.judge_mode;
+      if (result.link_verdict) q.link_judge = result.link_verdict;
+    }
+    statusEl.innerHTML = '<span class="status-msg">New verdict: <strong>' + esc(result.verdict) + '</strong> (' + (result.weighted_score || 0).toFixed(2) + '/5)</span>';
+    showToast('Q' + qid + ' re-judged: ' + result.verdict, 'success');
+    // Force detail re-render on next toggle
+    const questions = getFilteredQuestions();
+    const idx = questions.findIndex(q => String(q.question_id) === String(qid));
+    if (idx >= 0) {
+      const detail = document.getElementById('detail-' + idx);
+      if (detail) { detail.dataset.rendered = ''; detail.innerHTML = ''; }
+    }
+    renderQuestions(getFilteredQuestions());
+  } catch(e) {
+    statusEl.innerHTML = '<span class="error-msg">' + esc(e.message) + '</span>';
+    showToast('Re-judge error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Initialize review banner on load
+document.addEventListener('DOMContentLoaded', async () => {
+  const reviewer = await loadReviewer();
+  const banner = document.getElementById('review-banner');
+  if (banner) {
+    const nameEl = document.getElementById('review-banner-reviewer');
+    if (nameEl) nameEl.textContent = 'Reviewer: ' + reviewer.display;
+  }
+  updateReviewBanner();
+  // Trigger initial GT preview for any open editors
+});
+"""
+
+
+def generate_review_html(run_dir: Path) -> str:
+    """Generate a review-mode HTML report as a string (served by review_server).
+
+    Extends the static report with classification, GT editing, and re-judge UI.
+
+    Args:
+        run_dir: Path to the timestamped run directory containing report.json.
+
+    Returns:
+        Complete HTML string.
+    """
+    report_json = run_dir / "report.json"
+    if not report_json.exists():
+        raise FileNotFoundError(f"No report.json found in {run_dir}")
+
+    enriched = _load_enriched_data(run_dir)
+    json_blob = json.dumps(enriched, indent=None, default=str)
+
+    # Build the review HTML by injecting review CSS and JS into the static template
+    html = _HTML_TEMPLATE.replace("__REPORT_JSON__", json_blob)
+
+    # Inject review CSS before </style>
+    html = html.replace("</style>", _REVIEW_CSS + "\n</style>", 1)
+
+    # Inject review banner after <body>
+    review_banner = (
+        '\n<div class="review-banner" id="review-banner">'
+        '<span class="title">Review Mode</span>'
+        '<span class="meta" id="review-banner-meta">Loading...</span>'
+        '<span class="meta" id="review-banner-reviewer"></span>'
+        "</div>\n"
+    )
+    html = html.replace(
+        '<h1 style="margin-bottom: 6px;">Ask Atlas',
+        review_banner + '<h1 style="margin-bottom: 6px;">Ask Atlas',
+        1,
+    )
+
+    # Inject review JS before the final </script> (not the marked.min.js one)
+    # Find the last </script> which closes the main inline script block
+    last_script_close = html.rfind("</script>")
+    html = (
+        html[:last_script_close] + "\n" + _REVIEW_JS + "\n" + html[last_script_close:]
+    )
+
+    return html
+
+
 def generate_html_report(run_dir: Path) -> Path:
     """Generate a self-contained HTML report from a completed eval run.
 
