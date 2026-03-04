@@ -1,5 +1,5 @@
-import { ThumbsDown, ThumbsUp } from 'lucide-react';
-import { memo, useCallback, useState } from 'react';
+import { Check, ThumbsDown, ThumbsUp } from 'lucide-react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import type { FeedbackState } from '@/types/chat';
 
 interface FeedbackButtonsProps {
@@ -14,7 +14,16 @@ export default memo(function FeedbackButtons({
   onUpdate,
 }: FeedbackButtonsProps) {
   const [showCommentInput, setShowCommentInput] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [comment, setComment] = useState('');
+
+  useEffect(() => {
+    if (!showConfirmation) {
+      return;
+    }
+    const timer = setTimeout(() => setShowConfirmation(false), 2000);
+    return () => clearTimeout(timer);
+  }, [showConfirmation]);
 
   const handleThumbsUp = useCallback(() => {
     if (feedback) {
@@ -30,34 +39,33 @@ export default memo(function FeedbackButtons({
   }, [feedback, onSubmit, onUpdate]);
 
   const handleThumbsDown = useCallback(() => {
-    if (feedback?.rating === 'down' && !showCommentInput) {
-      // Already downvoted, toggle comment input to let them add/edit comment
-      setShowCommentInput(true);
+    if (feedback?.rating === 'down') {
+      // Already downvoted — toggle comment input to add/edit comment
+      setShowCommentInput((prev) => !prev);
       setComment(feedback.comment ?? '');
       return;
     }
-    if (!showCommentInput) {
-      setShowCommentInput(true);
-      return;
-    }
-    // Submit the downvote with comment
+    // Submit downvote immediately (no comment yet)
     if (feedback) {
-      onUpdate(feedback.id, 'down', comment || undefined);
+      onUpdate(feedback.id, 'down');
     } else {
-      onSubmit('down', comment || undefined);
+      onSubmit('down');
     }
-    setShowCommentInput(false);
+    // Show comment input for optional note
+    setShowCommentInput(true);
     setComment('');
-  }, [comment, feedback, onSubmit, onUpdate, showCommentInput]);
+  }, [feedback, onSubmit, onUpdate]);
 
   const handleCommentSubmit = useCallback(() => {
-    if (feedback) {
+    if (feedback && feedback.id > 0) {
       onUpdate(feedback.id, 'down', comment || undefined);
     } else {
+      // Feedback not yet persisted (id === -1) or missing — use upsert
       onSubmit('down', comment || undefined);
     }
     setShowCommentInput(false);
     setComment('');
+    setShowConfirmation(true);
   }, [comment, feedback, onSubmit, onUpdate]);
 
   const handleKeyDown = useCallback(
@@ -126,6 +134,12 @@ export default memo(function FeedbackButtons({
           >
             Send
           </button>
+        </div>
+      )}
+      {showConfirmation && !showCommentInput && (
+        <div className="flex items-center gap-1 text-xs text-green-600">
+          <Check className="h-3 w-3" />
+          <span>Feedback sent</span>
         </div>
       )}
     </div>
