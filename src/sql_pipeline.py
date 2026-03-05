@@ -30,11 +30,7 @@ from src.product_and_schema_lookup import (
 )
 from src.prompts import SQL_RETRY_BLOCK, build_sql_generation_prefix
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
-from src.sql_validation import (
-    build_schema_from_ddl,
-    extract_table_names_from_ddl,
-    validate_sql,
-)
+from src.sql_validation import validate_sql
 from src.state import AtlasAgentState, cap_snapshot_result
 from src.token_usage import make_usage_record_from_callback, node_timer
 
@@ -525,64 +521,20 @@ async def generate_sql_node(
     }
 
 
-async def validate_sql_node(
-    state: AtlasAgentState,
-    *,
-    table_descriptions: Dict,
-) -> dict:
+async def validate_sql_node(state: AtlasAgentState) -> dict:
     """Validate generated SQL before execution.
 
-    Extracts valid table names from the DDL in ``pipeline_table_info`` and
-    from ``table_descriptions`` + ``pipeline_products.classification_schemas``,
-    then runs structural validation checks (syntax, table existence, etc.).
+    Runs structural validation checks (syntax, write-blocking).  Table/column
+    existence is intentionally left to the database — it produces clearer
+    error messages and avoids false positives from fragile DDL parsing.
 
     On validation failure, short-circuits by setting ``last_error`` so that
     the graph routes to ``format_results`` instead of ``execute_sql``.
     """
     sql = state.get("pipeline_sql", "")
-    table_info = state.get("pipeline_table_info", "")
-
-    # Build the set of valid table names from two sources:
-    # 1. DDL in pipeline_table_info
-    valid_tables = extract_table_names_from_ddl(table_info)
-
-    # 2. table_descriptions + classification_schemas from pipeline_products
-    products = state.get("pipeline_products")
-    if products and hasattr(products, "classification_schemas"):
-        for schema in products.classification_schemas:
-            if schema in table_descriptions:
-                for table in table_descriptions[schema]:
-                    valid_tables.add(f"{schema}.{table['table_name']}")
-
-    # 3. Add the specific classification lookup tables needed for JOINs
-    schemas = (
-        products.classification_schemas
-        if (products and hasattr(products, "classification_schemas"))
-        else []
-    )
-    requires_group = (
-        getattr(products, "requires_group_tables", False) if products else False
-    )
-    for ct in _classification_tables_for_schemas(
-        schemas, table_descriptions, requires_group
-    ):
-        valid_tables.add(ct["table_name"])
-
-    # Build expected schemas from product extraction for schema-mismatch detection
-    expected_schemas: set[str] | None = None
-    if products and hasattr(products, "classification_schemas"):
-        expected_schemas = set(products.classification_schemas)
-
-    # Build column schema from DDL for scope-aware column validation
-    column_schema = build_schema_from_ddl(table_info) if table_info else None
 
     async with node_timer("validate_sql", "query_tool") as t:
-        result = validate_sql(
-            sql,
-            valid_tables,
-            expected_schemas=expected_schemas,
-            column_schema=column_schema,
-        )
+        result = validate_sql(sql)
 
     if not result.is_valid:
         error_msg = "SQL validation failed: " + "; ".join(result.errors)
