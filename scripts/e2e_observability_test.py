@@ -49,6 +49,8 @@ RESET = "\033[0m"
 
 @dataclass
 class TestCase:
+    __test__ = False  # Not a pytest test class
+
     name: str
     question: str
     agent_mode: str | None  # None = use default (auto)
@@ -120,6 +122,8 @@ class NodeTrace:
 
 @dataclass
 class TestResult:
+    __test__ = False  # Not a pytest test class
+
     test_case: TestCase
     tool_calls: list[str] = field(default_factory=list)
     node_traces: list[NodeTrace] = field(default_factory=list)
