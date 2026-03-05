@@ -179,8 +179,21 @@ def build_atlas_graph(
 
     def route_after_validation(
         state: AtlasAgentState,
-    ) -> Literal["format_results", "execute_sql"]:
-        return "format_results" if state.get("last_error") else "execute_sql"
+    ) -> Literal["format_results", "execute_sql", "generate_sql"]:
+        if state.get("last_error"):
+            if state.get("retry_count", 0) <= 1:
+                return "generate_sql"
+            return "format_results"
+        return "execute_sql"
+
+    def route_after_execution(
+        state: AtlasAgentState,
+    ) -> Literal["format_results", "generate_sql"]:
+        if state.get("last_error"):
+            if state.get("retry_count", 0) <= 1:
+                return "generate_sql"
+            return "format_results"
+        return "format_results"
 
     # --- Build graph ---
     builder = StateGraph(AtlasAgentState)
@@ -220,7 +233,7 @@ def build_atlas_graph(
     )
     builder.add_node(
         "validate_sql",
-        partial(validate_sql_node, table_descriptions=table_descriptions),
+        validate_sql_node,
     )
     builder.add_node(
         "execute_sql",
@@ -343,9 +356,17 @@ def build_atlas_graph(
         {
             "execute_sql": "execute_sql",
             "format_results": "format_results",
+            "generate_sql": "generate_sql",
         },
     )
-    builder.add_edge("execute_sql", "format_results")
+    builder.add_conditional_edges(
+        "execute_sql",
+        route_after_execution,
+        {
+            "format_results": "format_results",
+            "generate_sql": "generate_sql",
+        },
+    )
     builder.add_edge("format_results", "agent")
     builder.add_edge("max_queries_exceeded", "agent")
 

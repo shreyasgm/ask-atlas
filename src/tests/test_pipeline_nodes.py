@@ -480,6 +480,7 @@ class TestGetTableInfoNode:
             db=mock_db,
             table_descriptions=mock_table_desc,
             classification_schemas=["hs92"],
+            requires_group_tables=False,
         )
 
     async def test_no_products_passes_empty_schemas(self):
@@ -500,6 +501,7 @@ class TestGetTableInfoNode:
             db=mock_db,
             table_descriptions=mock_table_desc,
             classification_schemas=[],
+            requires_group_tables=False,
         )
 
     async def test_multiple_schemas(self):
@@ -523,6 +525,7 @@ class TestGetTableInfoNode:
             db=mock_db,
             table_descriptions=mock_table_desc,
             classification_schemas=["hs92", "services_bilateral"],
+            requires_group_tables=False,
         )
         assert result["pipeline_table_info"] == "table info for both schemas"
 
@@ -565,6 +568,8 @@ class TestGenerateSqlNode:
             direction_constraint=None,
             mode_constraint=None,
             context="",
+            group_tables=False,
+            retry_context="",
         )
 
     async def test_passes_codes_when_present(self):
@@ -597,6 +602,8 @@ class TestGenerateSqlNode:
             direction_constraint=None,
             mode_constraint=None,
             context="",
+            group_tables=False,
+            retry_context="",
         )
         assert "pipeline_sql" in result
 
@@ -628,6 +635,8 @@ class TestGenerateSqlNode:
             direction_constraint=None,
             mode_constraint=None,
             context="",
+            group_tables=False,
+            retry_context="",
         )
 
     async def test_example_queries_forwarded(self):
@@ -670,6 +679,56 @@ class TestGenerateSqlNode:
 
         _, kwargs = mock_create.call_args
         assert kwargs["context"] == context_text
+
+    async def test_retry_context_built_from_error(self):
+        """When last_error is set, retry_context should contain the failed SQL and error."""
+        mock_llm = MagicMock()
+        failed_sql = "SELECT bad_col FROM hs92.country_year"
+        error_msg = "Unknown column 'bad_col'"
+
+        with patch("src.sql_pipeline.create_query_generation_chain") as mock_create:
+            mock_chain = MagicMock()
+            mock_chain.ainvoke = AsyncMock(return_value="SELECT 1")
+            mock_create.return_value = mock_chain
+
+            state = _base_state(
+                pipeline_question="Brazil exports?",
+                pipeline_codes="",
+                pipeline_sql=failed_sql,
+                last_error=error_msg,
+                retry_count=1,
+            )
+            result = await generate_sql_node(
+                state, llm=mock_llm, example_queries=[], max_results=15
+            )
+
+        _, kwargs = mock_create.call_args
+        # retry_context should contain both the failed SQL and the error
+        assert failed_sql in kwargs["retry_context"]
+        assert error_msg in kwargs["retry_context"]
+        # last_error should be cleared for the next attempt
+        assert result["last_error"] == ""
+
+    async def test_no_retry_context_when_no_error(self):
+        """When last_error is empty, retry_context should be empty."""
+        mock_llm = MagicMock()
+
+        with patch("src.sql_pipeline.create_query_generation_chain") as mock_create:
+            mock_chain = MagicMock()
+            mock_chain.ainvoke = AsyncMock(return_value="SELECT 1")
+            mock_create.return_value = mock_chain
+
+            state = _base_state(
+                pipeline_question="Brazil exports?",
+                pipeline_codes="",
+                last_error="",
+            )
+            await generate_sql_node(
+                state, llm=mock_llm, example_queries=[], max_results=15
+            )
+
+        _, kwargs = mock_create.call_args
+        assert kwargs["retry_context"] == ""
 
 
 # ---------------------------------------------------------------------------
@@ -786,6 +845,33 @@ class TestExecuteSqlNode:
         # The formatting is str(dict(zip(columns, row)))
         assert "'iso3_code': 'BRA'" in result["pipeline_result"]
         assert "'export_value': 500" in result["pipeline_result"]
+
+    async def test_execution_error_increments_retry_count(self):
+        """QueryExecutionError should increment retry_count."""
+        mock_engine = MagicMock()
+        state = _base_state(pipeline_sql="SELECT bad syntax", retry_count=0)
+
+        with patch(
+            "src.sql_pipeline.execute_with_retry",
+            side_effect=QueryExecutionError("column does not exist"),
+        ):
+            result = await execute_sql_node(state, async_engine=mock_engine)
+
+        assert result["retry_count"] == 1
+        assert "column does not exist" in result["last_error"]
+
+    async def test_execution_error_preserves_retry_count(self):
+        """retry_count should increment from existing value."""
+        mock_engine = MagicMock()
+        state = _base_state(pipeline_sql="SELECT 1", retry_count=1)
+
+        with patch(
+            "src.sql_pipeline.execute_with_retry",
+            side_effect=RuntimeError("timeout"),
+        ):
+            result = await execute_sql_node(state, async_engine=mock_engine)
+
+        assert result["retry_count"] == 2
 
 
 # ---------------------------------------------------------------------------
@@ -1102,53 +1188,18 @@ class TestMaxQueriesExceededNode:
 
 
 class TestValidateSqlNode:
-    """Tests for validate_sql_node node."""
+    """Tests for validate_sql_node node.
 
-    TABLE_DESCRIPTIONS = {
-        "hs92": [
-            {"table_name": "country_year", "context_str": "Year-level data"},
-            {
-                "table_name": "country_product_year_4",
-                "context_str": "4-digit product data",
-            },
-        ],
-        "classification": [
-            {
-                "table_name": "location_country",
-                "context_str": "Country-level data with names, ISO codes, and hierarchical information.",
-            },
-            {
-                "table_name": "product_hs92",
-                "context_str": "HS92 product classification data.",
-            },
-            {
-                "table_name": "product_hs12",
-                "context_str": "HS12 product classification data.",
-            },
-        ],
-    }
-
-    TABLE_INFO_DDL = (
-        "Table: hs92.country_year\nDescription: Year-level data\n"
-        "CREATE TABLE hs92.country_year (\n  country_id integer\n);\n\n"
-        "Table: hs92.country_product_year_4\nDescription: 4-digit product data\n"
-        "CREATE TABLE hs92.country_product_year_4 (\n  product_id integer\n);\n"
-    )
+    Validation now only checks syntax and write-blocking.  Table/column
+    existence is left to the database.
+    """
 
     async def test_valid_sql_passes_through(self):
         state = _base_state(
             pipeline_sql="SELECT country_id FROM hs92.country_year",
-            pipeline_table_info=self.TABLE_INFO_DDL,
-            pipeline_products=SchemasAndProductsFound(
-                classification_schemas=["hs92"],
-                products=[],
-                requires_product_lookup=False,
-            ),
         )
 
-        result = await validate_sql_node(
-            state, table_descriptions=self.TABLE_DESCRIPTIONS
-        )
+        result = await validate_sql_node(state)
 
         assert result["last_error"] == ""
         assert result["pipeline_sql"] == "SELECT country_id FROM hs92.country_year"
@@ -1156,119 +1207,57 @@ class TestValidateSqlNode:
     async def test_syntax_error_sets_last_error(self):
         state = _base_state(
             pipeline_sql="SELEC country FORM table",
-            pipeline_table_info=self.TABLE_INFO_DDL,
-            pipeline_products=SchemasAndProductsFound(
-                classification_schemas=["hs92"],
-                products=[],
-                requires_product_lookup=False,
-            ),
         )
 
-        result = await validate_sql_node(
-            state, table_descriptions=self.TABLE_DESCRIPTIONS
-        )
+        result = await validate_sql_node(state)
 
         assert result["last_error"] != ""
         assert "SQL validation failed" in result["last_error"]
-
-    async def test_unknown_table_sets_last_error(self):
-        state = _base_state(
-            pipeline_sql="SELECT * FROM nonexistent.bad_table",
-            pipeline_table_info=self.TABLE_INFO_DDL,
-            pipeline_products=SchemasAndProductsFound(
-                classification_schemas=["hs92"],
-                products=[],
-                requires_product_lookup=False,
-            ),
-        )
-
-        result = await validate_sql_node(
-            state, table_descriptions=self.TABLE_DESCRIPTIONS
-        )
-
-        assert result["last_error"] != ""
-        assert "nonexistent.bad_table" in result["last_error"].lower()
 
     async def test_warnings_dont_block(self):
         """SELECT * produces a warning but should still pass validation."""
         state = _base_state(
             pipeline_sql="SELECT * FROM hs92.country_year",
-            pipeline_table_info=self.TABLE_INFO_DDL,
-            pipeline_products=SchemasAndProductsFound(
-                classification_schemas=["hs92"],
-                products=[],
-                requires_product_lookup=False,
-            ),
         )
 
-        result = await validate_sql_node(
-            state, table_descriptions=self.TABLE_DESCRIPTIONS
-        )
+        result = await validate_sql_node(state)
 
         assert result["last_error"] == ""
 
-    async def test_no_pipeline_products_still_uses_ddl_tables(self):
-        """When pipeline_products is None, valid tables from DDL should still work."""
+    async def test_validation_failure_increments_retry_count(self):
+        """When validation fails, retry_count should be incremented by 1."""
         state = _base_state(
-            pipeline_sql="SELECT country_id FROM hs92.country_year",
-            pipeline_table_info=self.TABLE_INFO_DDL,
-            pipeline_products=None,
+            pipeline_sql="SELEC bad syntax",
+            retry_count=0,
         )
 
-        result = await validate_sql_node(
-            state, table_descriptions=self.TABLE_DESCRIPTIONS
-        )
+        result = await validate_sql_node(state)
 
-        assert result["last_error"] == ""
+        assert result["last_error"] != ""
+        assert result["retry_count"] == 1
 
-    async def test_classification_join_tables_are_valid(self):
-        """SQL using classification.location_country and classification.product_hs92 JOINs must pass."""
-        sql = (
-            "SELECT cy.country_id, lc.name_en, ph.name_short_en "
-            "FROM hs92.country_product_year_4 cy "
-            "JOIN classification.location_country lc ON cy.country_id = lc.country_id "
-            "JOIN classification.product_hs92 ph ON cy.product_id = ph.product_id"
-        )
+    async def test_validation_failure_preserves_existing_retry_count(self):
+        """retry_count should increment from current value, not reset to 1."""
         state = _base_state(
-            pipeline_sql=sql,
-            pipeline_table_info=self.TABLE_INFO_DDL,
-            pipeline_products=SchemasAndProductsFound(
-                classification_schemas=["hs92"],
-                products=[],
-                requires_product_lookup=False,
-            ),
+            pipeline_sql="SELEC bad syntax",
+            retry_count=1,
         )
 
-        result = await validate_sql_node(
-            state, table_descriptions=self.TABLE_DESCRIPTIONS
-        )
+        result = await validate_sql_node(state)
 
-        assert (
-            result["last_error"] == ""
-        ), f"Expected no error, got: {result['last_error']}"
+        assert result["last_error"] != ""
+        assert result["retry_count"] == 2
 
-    async def test_classification_location_country_always_valid(self):
-        """classification.location_country should be valid even without product tables."""
-        sql = (
-            "SELECT cy.country_id, lc.name_en "
-            "FROM hs92.country_year cy "
-            "JOIN classification.location_country lc ON cy.country_id = lc.country_id"
-        )
+    async def test_write_operation_blocked(self):
+        """Write operations should be blocked by validation."""
         state = _base_state(
-            pipeline_sql=sql,
-            pipeline_table_info=self.TABLE_INFO_DDL,
-            pipeline_products=SchemasAndProductsFound(
-                classification_schemas=["hs92"],
-                products=[],
-                requires_product_lookup=False,
-            ),
+            pipeline_sql="INSERT INTO hs92.country_year (country_id) VALUES (1)",
         )
 
-        result = await validate_sql_node(
-            state, table_descriptions=self.TABLE_DESCRIPTIONS
-        )
+        result = await validate_sql_node(state)
 
-        assert result["last_error"] == ""
+        assert result["last_error"] != ""
+        assert "write" in result["last_error"].lower()
 
 
 # ---------------------------------------------------------------------------
