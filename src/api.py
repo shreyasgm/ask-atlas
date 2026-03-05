@@ -228,20 +228,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     _state.atlas_sql = await AtlasTextToSQL.create_async()
     logger.info("AtlasTextToSQL ready — accepting requests  (pid=%d)", pid)
 
-    # Conversation store — Postgres if available, else in-memory
-    checkpoint_db_url = getattr(_state.atlas_sql, "_async_checkpointer_manager", None)
-    if checkpoint_db_url is not None:
-        checkpoint_db_url = checkpoint_db_url.db_url
-    if checkpoint_db_url:
-        _state.conversation_store = PostgresConversationStore(checkpoint_db_url)
+    # Conversation store — share the Postgres pool if available, else in-memory
+    manager = getattr(_state.atlas_sql, "_async_checkpointer_manager", None)
+    pool = manager.pool if manager else None
+    if pool is not None:
+        _state.conversation_store = PostgresConversationStore(pool)
         logger.info("Using PostgresConversationStore")
     else:
         _state.conversation_store = InMemoryConversationStore()
         logger.info("Using InMemoryConversationStore")
 
-    # Feedback store — share the Postgres pool if available, else in-memory
-    manager = getattr(_state.atlas_sql, "_async_checkpointer_manager", None)
-    pool = manager.pool if manager else None
+    # Feedback store — share the same Postgres pool, else in-memory
     if pool is not None:
         _state.feedback_store = PostgresFeedbackStore(pool)
         logger.info("Using PostgresFeedbackStore")
@@ -371,17 +368,23 @@ async def _service_unavailable_handler(request: Request, exc: _ServiceUnavailabl
 
 
 async def _track_conversation(request: Request, thread_id: str, question: str) -> None:
-    """Create or update a conversation row if X-Session-Id is present."""
+    """Create or update a conversation row if X-Session-Id is present.
+
+    Runs as a fire-and-forget background task so it doesn't block streaming.
+    """
     session_id = request.headers.get("x-session-id")
     store = _state.conversation_store
     if not session_id or store is None:
         return
-    existing = await store.get(thread_id)
-    if existing is None:
-        title = derive_title(question)
-        await store.create(thread_id, session_id, title)
-    else:
-        await store.update_timestamp(thread_id)
+    try:
+        existing = await store.get(thread_id)
+        if existing is None:
+            title = derive_title(question)
+            await store.create(thread_id, session_id, title)
+        else:
+            await store.update_timestamp(thread_id)
+    except Exception:
+        logger.warning("Failed to track conversation %s", thread_id, exc_info=True)
 
 
 # ---------------------------------------------------------------------------
@@ -815,8 +818,8 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
             "data": json.dumps({"thread_id": thread_id}),
         }
 
-        # Lazy conversation tracking
-        await _track_conversation(request, thread_id, body.question)
+        # Fire-and-forget conversation tracking — don't block the stream
+        asyncio.create_task(_track_conversation(request, thread_id, body.question))
 
         try:
             async for stream_data in atlas_sql.aanswer_question_stream(
