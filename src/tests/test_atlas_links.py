@@ -196,18 +196,12 @@ class TestExploreFeasibilityURL:
         )
 
     def test_feasibility_table(self):
-        url = explore_feasibility_table_url(year=2024, country_id=404, product_level=4)
+        url = explore_feasibility_table_url(year=2024, country_id=404)
         assert "productLevel=4" in url
         assert url.startswith(f"{ATLAS_BASE_URL}/explore/feasibility/table?")
 
-    def test_feasibility_table_different_levels(self):
-        for level in (2, 4, 6):
-            url = explore_feasibility_table_url(
-                year=2024, country_id=404, product_level=level
-            )
-            assert f"productLevel={level}" in url
-
-    def test_feasibility_table_default_level(self):
+    def test_feasibility_table_always_uses_level_4(self):
+        """The Atlas feasibility table only supports productLevel=4."""
         url = explore_feasibility_table_url(year=2024, country_id=404)
         assert f"productLevel={DEFAULT_PRODUCT_LEVEL}" in url
 
@@ -519,6 +513,15 @@ class TestGenerateLinksFeasibilityTable:
     def test_produces_feasibility_table_link(self):
         links = generate_atlas_links(
             "feasibility_table",
+            {"country_id": 404, "country_name": "Kenya", "year": 2024},
+        )
+        assert len(links) == 1
+        assert "productLevel=4" in links[0].url
+
+    def test_ignores_product_level_param(self):
+        """Feasibility table only supports productLevel=4; param is ignored."""
+        links = generate_atlas_links(
+            "feasibility_table",
             {
                 "country_id": 404,
                 "country_name": "Kenya",
@@ -526,15 +529,8 @@ class TestGenerateLinksFeasibilityTable:
                 "product_level": 6,
             },
         )
-        assert len(links) == 1
-        assert "productLevel=6" in links[0].url
-
-    def test_default_product_level(self):
-        links = generate_atlas_links(
-            "feasibility_table",
-            {"country_id": 404, "country_name": "Kenya", "year": 2024},
-        )
-        assert f"productLevel={DEFAULT_PRODUCT_LEVEL}" in links[0].url
+        assert "productLevel=4" in links[0].url
+        assert "productLevel=6" not in links[0].url
 
 
 # ---------------------------------------------------------------------------
@@ -581,7 +577,8 @@ class TestFrontierFallback:
         assert "/explore/feasibility/table?" in links[0].url
         assert "exporter=country-276" in links[0].url
 
-    def test_product_table_frontier_fallback_uses_product_level(self):
+    def test_product_table_frontier_fallback_hardcodes_product_level_4(self):
+        """Feasibility table only supports productLevel=4; LLM param is ignored."""
         links = generate_atlas_links(
             "product_table",
             {
@@ -591,7 +588,8 @@ class TestFrontierFallback:
                 "product_level": 6,
             },
         )
-        assert "productLevel=6" in links[0].url
+        assert "productLevel=4" in links[0].url
+        assert "productLevel=6" not in links[0].url
 
 
 # ---------------------------------------------------------------------------
@@ -967,3 +965,70 @@ class TestAllQueryTypesDispatch:
             assert link.url.startswith(ATLAS_BASE_URL), f"Bad URL prefix: {link.url}"
             assert link.label, f"Empty label for {query_type}"
             assert link.link_type in ("country_page", "explore_page")
+
+
+# ---------------------------------------------------------------------------
+# Regression: prefixed IDs must not double-prefix in URLs
+# ---------------------------------------------------------------------------
+
+
+class TestPrefixedIdRegression:
+    """Verify that IDs already carrying prefixes (as returned by the GraphQL
+    catalog cache) produce correct URLs — no double-prefixing."""
+
+    def test_country_page_with_prefixed_country_id(self):
+        """country_page_url expects a bare int; a prefixed string must be
+        stripped before calling it."""
+        # Simulate what graphql_pipeline does after stripping
+        from src.graphql_pipeline import _strip_id_prefix
+
+        stripped = _strip_id_prefix("country-826")
+        url = country_page_url(stripped, "export-basket")
+        assert "/countries/826/export-basket" in url
+        assert "country-country" not in url
+
+    def test_explore_treemap_with_prefixed_ids(self):
+        from src.graphql_pipeline import _strip_id_prefix
+
+        country = _strip_id_prefix("country-826")
+        partner = _strip_id_prefix("country-840")
+        product = _strip_id_prefix("product-HS92-726")
+        url = explore_treemap_url(
+            year=2024,
+            country_id=country,
+            partner_id=partner,
+            product_classification="HS92",
+            product_id=product,
+        )
+        assert "exporter=country-826" in url
+        assert "importer=country-840" in url
+        assert "product=product-HS92-726" in url
+        # No double-prefixing
+        assert "country-country" not in url
+        assert "HS92-product" not in url
+
+    def test_explore_treemap_with_prefixed_group_id(self):
+        from src.graphql_pipeline import _strip_id_prefix
+
+        group = _strip_id_prefix("group-5")
+        url = explore_treemap_url(year=2024, group_id=group)
+        assert "exporter=group-5" in url
+        assert "group-group" not in url
+
+    def test_generate_links_with_prefixed_ids(self):
+        """End-to-end: generate_atlas_links with bare ints (as it will
+        receive after pipeline stripping) must produce clean URLs."""
+        links = generate_atlas_links(
+            "treemap_bilateral",
+            {
+                "country_id": 826,
+                "country_name": "UK",
+                "partner_id": 840,
+                "partner_name": "USA",
+                "year": 2024,
+            },
+        )
+        url = links[0].url
+        assert "exporter=country-826" in url
+        assert "importer=country-840" in url
+        assert "country-country" not in url

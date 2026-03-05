@@ -263,14 +263,16 @@ def explore_feasibility_url(*, year: int, country_id: int) -> str:
     )
 
 
-def explore_feasibility_table_url(
-    *, year: int, country_id: int, product_level: int = DEFAULT_PRODUCT_LEVEL
-) -> str:
-    """Build an explore feasibility table URL."""
+def explore_feasibility_table_url(*, year: int, country_id: int) -> str:
+    """Build an explore feasibility table URL.
+
+    The Atlas feasibility table only supports productLevel=4 (HS 4-digit),
+    so this is hardcoded rather than parameterised.
+    """
     return (
         f"{ATLAS_BASE_URL}/explore/feasibility/table?"
         f"year={year}&exporter={_exporter_param(country_id)}"
-        f"&productLevel={product_level}"
+        f"&productLevel={DEFAULT_PRODUCT_LEVEL}"
     )
 
 
@@ -633,13 +635,10 @@ def _handle_feasibility_table(params: dict) -> list[AtlasLink]:
     cid = params["country_id"]
     name = params.get("country_name", str(cid))
     year = _get_year(params)
-    level = params.get("product_level", DEFAULT_PRODUCT_LEVEL)
     notes = _get_notes(params)
     return [
         AtlasLink(
-            url=explore_feasibility_table_url(
-                year=year, country_id=cid, product_level=level
-            ),
+            url=explore_feasibility_table_url(year=year, country_id=cid),
             label=f"{name} \u2014 Growth Opportunities Table ({year})",
             link_type="explore_page",
             resolution_notes=notes,
@@ -681,15 +680,12 @@ def _handle_product_table(params: dict) -> list[AtlasLink]:
     cid = params["country_id"]
     name = params.get("country_name", str(cid))
     year = _get_year(params)
-    level = params.get("product_level", DEFAULT_PRODUCT_LEVEL)
     notes = _get_notes(params)
 
     if is_frontier_country(cid):
         return [
             AtlasLink(
-                url=explore_feasibility_table_url(
-                    year=year, country_id=cid, product_level=level
-                ),
+                url=explore_feasibility_table_url(year=year, country_id=cid),
                 label=f"{name} \u2014 Growth Opportunities Table ({year})",
                 link_type="explore_page",
                 resolution_notes=notes,
@@ -816,7 +812,7 @@ def generate_atlas_links(
             - ``year`` (int): Display year
             - ``year_min`` (int): Time series start year
             - ``year_max`` (int): Time series end year
-            - ``product_level`` (int): Product detail level (2, 4, or 6)
+            - ``product_level`` (ignored; feasibility table hardcodes level 4)
             - ``group_id`` (int): Group exporter ID
             - ``resolution_notes`` (list[str]): Entity resolution notes
 
