@@ -288,7 +288,7 @@ async def judge_links(
     """
     llm = create_llm(model, provider, temperature=0)
     chain = _LINK_JUDGE_PROMPT | llm.with_structured_output(
-        LinkVerdict, method="function_calling"
+        LinkVerdict, method="json_schema"
     )
 
     gt_url_str = (

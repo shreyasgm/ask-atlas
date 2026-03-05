@@ -416,9 +416,9 @@ class TestClassifyQuery:
             result["graphql_classification"]["reasoning"] == "Country profile question"
         )
         assert result["graphql_api_target"] == "country_pages"
-        # Verify with_structured_output was called with function_calling method
+        # Verify with_structured_output was called with json_schema method
         mock_llm.with_structured_output.assert_called_once_with(
-            GraphQLQueryClassification, method="function_calling"
+            GraphQLQueryClassification, method="json_schema"
         )
 
     async def test_llm_error_propagates_for_retry(self):
@@ -523,9 +523,9 @@ class TestExtractEntities:
         assert ext["country_code_guess"] == "KEN"
         assert ext["product_code_guess"] == "0901"
         assert ext["year"] == 2024
-        # Verify function_calling method is used (avoids ParsedChatCompletion warnings)
+        # Verify json_schema method is used
         mock_llm.with_structured_output.assert_called_once_with(
-            GraphQLEntityExtraction, method="function_calling"
+            GraphQLEntityExtraction, method="json_schema"
         )
 
     async def test_skips_when_rejected(self):
@@ -3522,15 +3522,15 @@ class TestGraphQLQueryPlan:
         assert plan.country_name == "Kenya"
         assert plan.year == 2024
 
-    def test_schema_truncates_reasoning(self):
-        """GraphQLQueryPlan truncates reasoning to 300 chars like its parents."""
+    def test_schema_accepts_long_reasoning(self):
+        """Reasoning cap is advisory (in description), not enforced by validator."""
         long_reasoning = "x" * 500
         plan = GraphQLQueryPlan(
             reasoning=long_reasoning,
             query_type="reject",
             rejection_reason="test",
         )
-        assert len(plan.reasoning) <= 300
+        assert plan.reasoning == long_reasoning
 
 
 class TestPlanQuery:

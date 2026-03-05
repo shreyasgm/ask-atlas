@@ -517,22 +517,22 @@ class TestMakeDocsSelectionModel:
     def test_default_max_docs_is_2(self):
         assert DEFAULT_MAX_DOCS == 2
 
-    def test_creates_model_with_max_length(self):
+    def test_creates_model_accepts_indices(self):
         model_cls = _make_docs_selection_model(3)
-        # Should accept up to 3 indices
         instance = model_cls(
             reasoning="test",
             selected_indices=[0, 1, 2],
         )
         assert len(instance.selected_indices) == 3
 
-    def test_rejects_too_many_indices(self):
+    def test_accepts_any_number_of_indices(self):
+        """max_length removed for json_schema compatibility; constraint is in description."""
         model_cls = _make_docs_selection_model(2)
-        with pytest.raises(Exception):  # Pydantic validation error
-            model_cls(
-                reasoning="test",
-                selected_indices=[0, 1, 2],
-            )
+        instance = model_cls(
+            reasoning="test",
+            selected_indices=[0, 1, 2],
+        )
+        assert len(instance.selected_indices) == 3
 
     def test_description_includes_max_docs(self):
         model_cls = _make_docs_selection_model(4)

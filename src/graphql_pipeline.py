@@ -20,7 +20,7 @@ import time
 from typing import Any, Callable, Literal, Optional
 
 from langchain_core.messages import ToolMessage
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from src.atlas_links import generate_atlas_links
 from src.cache import CatalogCache
@@ -301,14 +301,6 @@ class GraphQLQueryClassification(BaseModel):
         description=API_TARGET_DESCRIPTION,
     )
 
-    @field_validator("reasoning", mode="before")
-    @classmethod
-    def truncate_reasoning(cls, v: str) -> str:
-        """Truncate reasoning to 300 chars to avoid LLM over-generation failures."""
-        if isinstance(v, str) and len(v) > 300:
-            return v[:297] + "..."
-        return v
-
 
 class GraphQLEntityExtraction(BaseModel):
     """Entities extracted from a user question for GraphQL query construction."""
@@ -393,14 +385,6 @@ class GraphQLEntityExtraction(BaseModel):
             "Leave null when direction is ambiguous or not mentioned (defaults to exports)."
         ),
     )
-
-    @field_validator("reasoning", mode="before")
-    @classmethod
-    def truncate_reasoning(cls, v: str) -> str:
-        """Truncate reasoning to 300 chars to avoid LLM over-generation failures."""
-        if isinstance(v, str) and len(v) > 300:
-            return v[:297] + "..."
-        return v
 
 
 class GraphQLQueryPlan(BaseModel):
@@ -537,14 +521,6 @@ class GraphQLQueryPlan(BaseModel):
         ),
     )
 
-    @field_validator("reasoning", mode="before")
-    @classmethod
-    def truncate_reasoning(cls, v: str) -> str:
-        """Truncate reasoning to 300 chars to avoid LLM over-generation failures."""
-        if isinstance(v, str) and len(v) > 300:
-            return v[:297] + "..."
-        return v
-
     # Fields that belong to the classification dict (not entity extraction)
     _CLASSIFICATION_FIELDS: frozenset[str] = frozenset(
         {"reasoning", "query_type", "rejection_reason", "api_target"}
@@ -617,7 +593,7 @@ async def classify_query(state: AtlasAgentState, *, lightweight_model: Any) -> d
         context = state.get("graphql_context", "")
 
         chain = lightweight_model.with_structured_output(
-            GraphQLQueryClassification, method="function_calling"
+            GraphQLQueryClassification, method="json_schema"
         )
         prompt = build_classification_prompt(question, context)
         usage_handler = UsageMetadataCallbackHandler()
@@ -685,7 +661,7 @@ async def extract_entities(state: AtlasAgentState, *, lightweight_model: Any) ->
         query_type = classification.get("query_type", "") if classification else ""
 
         chain = lightweight_model.with_structured_output(
-            GraphQLEntityExtraction, method="function_calling"
+            GraphQLEntityExtraction, method="json_schema"
         )
         prompt = build_extraction_prompt(question, query_type, context)
         usage_handler = UsageMetadataCallbackHandler()
@@ -732,7 +708,7 @@ async def plan_query(state: AtlasAgentState, *, lightweight_model: Any) -> dict:
         context = state.get("graphql_context", "")
 
         chain = lightweight_model.with_structured_output(
-            GraphQLQueryPlan, method="function_calling"
+            GraphQLQueryPlan, method="json_schema"
         )
         prompt = build_query_plan_prompt(question, context)
         usage_handler = UsageMetadataCallbackHandler()
