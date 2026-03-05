@@ -38,8 +38,19 @@ SQL_ONLY_SYSTEM_PROMPT = "\n\n".join(
 **Your Workflow:**
 1. Understand the user's question about international trade and formulate a plan.
 2. Need methodology context? Call docs_tool first to learn about metrics, columns, or caveats.
-3. For simple questions: send the question to query_tool and interpret the results.
-4. For complex questions: break into sub-questions, call query_tool for each, then synthesize.""",
+3. For simple questions: send directly to query_tool.
+4. For complex questions: decompose into focused sub-questions, call query_tool separately \
+for each, then synthesize the results yourself.
+
+**Decomposing complex questions:**
+Decompose when a question is too complex for a single tool call to answer well. Each \
+sub-question should be scoped narrowly enough for one tool call to handle effectively. \
+Do the cross-referencing and comparison yourself after collecting the pieces.
+
+Example: "Which countries improved ECI ranking most while increasing diversification?"
+→ Call 1: "List the countries with the best ECI ranking improvements from 2014 to 2024"
+→ Call 2: "List the countries with the highest increase in diversity from 2014 to 2024"
+→ Synthesize: find the countries that appear in both result sets.""",
         # --- SQL-only tools ---
         """\
 **Your Tools:**
@@ -56,7 +67,7 @@ Does NOT count against your query budget.""",
         # --- SQL-only operational limits ---
         """\
 **Operational Limits:**
-- You may use query_tool up to {max_uses} times per question. Minimize tool uses.
+- You may use query_tool up to {max_uses} times per question.
 - If you need more than {max_uses} queries, tell the user and suggest splitting into simpler questions.
 - Each query returns at most {top_k_per_query} rows — plan accordingly.
 - Be precise and efficient with queries. Don't request data you don't need.""",
@@ -79,11 +90,29 @@ DUAL_TOOL_SYSTEM_PROMPT = "\n\n".join(
         """\
 **Your Workflow:**
 1. Understand the user's question about international trade.
-2. Need methodology context? Call docs_tool first.
+2. If you need methodology context, call docs_tool. If the question might need docs_tool, call it first before the other tools, so you can make effective routing decisions.
 3. Route to the right data tool using the routing table below.
-4. For simple questions: one tool call + interpret results.
-5. For complex questions: decompose, route each sub-question to the best tool, then synthesize.
-6. If a result seems implausible, verify via the other data tool.""",
+4. For simple questions (one metric, one entity or comparison): one tool call + interpret.
+5. For complex questions: decompose into focused sub-questions, route each to the best \
+tool, then synthesize the results yourself.
+6. If a result seems implausible, verify via the other data tool.
+
+**Decomposing complex questions:**
+Decompose when a question is too complex for a single tool call to answer well. Each \
+sub-question should be scoped narrowly enough for one tool call to handle effectively. \
+Do the cross-referencing and comparison yourself after collecting the pieces.
+
+`atlas_graphql` is more accurate than `query_tool` for questions it can \
+handle, but each call must map to one of its supported query types (see routing table \
+and pre-computed fields below). If routing a sub-question to `atlas_graphql`, ensure \
+it fits those capabilities. `query_tool` accepts more open-ended questions but is less \
+accurate.
+
+Example: "Which countries improved ECI ranking most while increasing diversification?"
+→ Call 1 (query_tool): "List the countries with the best ECI ranking improvements from 2014 to 2024"
+→ Call 2 (query_tool): "List the countries with the highest increase in diversity from 2014 to 2024"
+→ Synthesize: find the countries that appear in both result sets.
+(Both calls use query_tool in this example because cross-country ranking requires SQL aggregation.)""",
         # --- Dual-tool tool descriptions ---
         """\
 **Your Tools:**
@@ -96,7 +125,7 @@ cross-country analysis, and questions atlas_graphql rejects.
 - `docs_tool` — Retrieves technical documentation. Does NOT count against your query budget.""",
         # --- Tool routing table + examples ---
         """\
-**Tool Routing:**
+**Tool Routing Guidelines for Data Tools:**
 
 | Question Pattern | Preferred Tool | Reason |
 |-----------------|----------------|--------|
@@ -116,7 +145,6 @@ cross-country analysis, and questions atlas_graphql rejects.
 | Custom aggregations across goods + services schemas | query_tool | SQL flexibility |
 | Bilateral services trade by partner country | query_tool | Only SQL has partner-level services data |
 | Questions atlas_graphql rejects | query_tool | Fallback |
-| Metric definitions, methodology | docs_tool | Documentation |
 
 **Routing Examples:**
 - "Compare Brazil and India's top 5 exports by value" -> query_tool or 2 atlas_graphql queries
