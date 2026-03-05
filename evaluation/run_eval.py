@@ -29,6 +29,13 @@ from judge import judge_answer
 from link_judge import judge_links
 from report import generate_report, save_report
 from html_report import generate_html_report
+from generate_web_ground_truth import (
+    _DEFAULT_MODELS as _WEB_RESEARCH_MODELS,
+    _has_expected_behavior,
+    _has_sql_ground_truth,
+    _get_web_research_path,
+    _research_one,
+)
 
 # Curated smoke-test subset: 1 easy, 2 medium, 2 hard across different categories.
 # These are chosen for fast signal across diverse question types.
@@ -84,6 +91,51 @@ def _load_web_research(question_id: str) -> str | None:
         return data.get("research_answer")
     except Exception:
         return None
+
+
+async def _start_web_research(
+    question_ids: list[str] | None,
+    questions_meta: dict[str, dict],
+    provider: str,
+    model: str | None,
+    concurrency: int,
+) -> list[dict | None]:
+    """Identify questions needing web research and run generation concurrently.
+
+    Returns list of results (dict or None for failures).
+    """
+    model = model or _WEB_RESEARCH_MODELS[provider]
+
+    # Load full question objects to check expected_behavior
+    eval_data = load_json_file(EVALUATION_BASE_DIR / "eval_questions.json")
+    all_questions = {str(q["id"]): q for q in eval_data["questions"]}
+
+    # Filter to questions in this eval run that need web research
+    candidates = []
+    target_ids = question_ids or list(questions_meta.keys())
+    for qid in target_ids:
+        q = all_questions.get(qid)
+        if q is None:
+            continue
+        if _has_sql_ground_truth(qid):
+            continue
+        if _has_expected_behavior(q):
+            continue
+        if _get_web_research_path(qid).exists():
+            continue
+        candidates.append(q)
+
+    if not candidates:
+        logging.info("Web research: no questions need generation")
+        return []
+
+    logging.info(
+        f"Web research: generating for {len(candidates)} questions "
+        f"(provider={provider}, model={model})"
+    )
+    semaphore = asyncio.Semaphore(concurrency)
+    tasks = [_research_one(q, provider, model, semaphore) for q in candidates]
+    return await asyncio.gather(*tasks)
 
 
 def _load_ground_truth_atlas_url(question_id: str) -> str | None:
@@ -353,6 +405,27 @@ def _parse_args() -> argparse.Namespace:
         default=None,
         help="Agent mode override for all questions (default: use configured mode)",
     )
+    parser.add_argument(
+        "--generate-web-research",
+        action="store_true",
+        help=(
+            "Auto-generate web research ground truth for questions that lack SQL "
+            "ground truth. Runs concurrently with agent evals."
+        ),
+    )
+    parser.add_argument(
+        "--web-research-provider",
+        type=str,
+        choices=["openai", "anthropic"],
+        default="openai",
+        help="Provider for web research generation (default: openai)",
+    )
+    parser.add_argument(
+        "--web-research-model",
+        type=str,
+        default=None,
+        help="Model for web research generation (default: provider-specific default)",
+    )
     return parser.parse_args()
 
 
@@ -384,12 +457,36 @@ async def main() -> None:
             f"across {len({questions_meta[q]['category'] for q in question_ids})} categories"
         )
 
-    # Step 2: Run agent
-    run_dir, run_results = await run_agent_evals(
-        question_ids=question_ids,
-        concurrency=args.concurrency,
-        agent_mode=args.mode,
-    )
+    # Step 2: Run agent (and optionally web research concurrently)
+    web_research_task = None
+    if args.generate_web_research:
+        web_research_task = _start_web_research(
+            question_ids=question_ids,
+            questions_meta=questions_meta,
+            provider=args.web_research_provider,
+            model=args.web_research_model,
+            concurrency=args.concurrency,
+        )
+
+    if web_research_task is not None:
+        # Run agent evals and web research concurrently
+        (run_dir, run_results), web_research_results = await asyncio.gather(
+            run_agent_evals(
+                question_ids=question_ids,
+                concurrency=args.concurrency,
+                agent_mode=args.mode,
+            ),
+            web_research_task,
+        )
+        wr_ok = sum(1 for r in web_research_results if r is not None)
+        wr_fail = len(web_research_results) - wr_ok
+        logging.info(f"Web research complete: {wr_ok} succeeded, {wr_fail} failed")
+    else:
+        run_dir, run_results = await run_agent_evals(
+            question_ids=question_ids,
+            concurrency=args.concurrency,
+            agent_mode=args.mode,
+        )
 
     if not run_results:
         logging.error("No agent results produced. Aborting.")

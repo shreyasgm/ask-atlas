@@ -185,28 +185,39 @@ class PlausibilityVerdict(BaseModel):
 
 
 class WebResearchVerdict(BaseModel):
-    """Verdict for questions scored against web-research reference answers.
+    """Verdict for questions scored against web-research context.
 
-    The reference answer was produced by an independent LLM with web search —
-    research-grade, but not verified ground truth from the Atlas database.
+    The web research provides directional context (not exact reference data)
+    for evaluating a database-query agent's answer.
     """
 
     factual_correctness: DimensionScore = Field(
         ...,
-        description="Are specific countries, products, trends correct relative to the reference?",
+        description=(
+            "Are the general trends directionally correct given web research context? "
+            "Different specific items are fine if the agent's systematic approach is valid."
+        ),
     )
     data_accuracy: DimensionScore = Field(
         ...,
         description=(
-            "Do reported numbers roughly match the reference? "
-            "Be lenient on exact values — focus on order of magnitude and direction."
+            "Are the agent's numbers internally consistent and plausible in magnitude? "
+            "Do NOT match against web research figures — different sources and years are expected."
         ),
     )
     completeness: DimensionScore = Field(
-        ..., description="Does the answer address all parts of the question?"
+        ...,
+        description=(
+            "Does the answer address all parts of the question? "
+            "Structured data tables are a valid and complete response format."
+        ),
     )
     reasoning_quality: DimensionScore = Field(
-        ..., description="Is the interpretation and analysis sound?"
+        ...,
+        description=(
+            "Does the agent explain its methodology, time window, and data limitations? "
+            "Clear data presentation counts as good reasoning."
+        ),
     )
     overall_comment: str = Field(
         ..., description="One-sentence summary of the evaluation"
@@ -392,33 +403,60 @@ _WEB_RESEARCH_PROMPT = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            "You are an expert evaluator for a trade-data Q&A system. "
-            "The following reference answer was produced by an independent LLM with "
-            "web search capabilities. It is research-grade — more reliable than pure "
-            "guessing, but NOT verified ground truth from the Atlas database.\n\n"
-            "Use the reference answer to evaluate the agent's response.\n\n"
+            "You are an expert evaluator for a trade-data Q&A system.\n\n"
+            "IMPORTANT CONTEXT: The agent being evaluated is a **database query system** "
+            "that answers questions by querying the Atlas of Economic Complexity trade "
+            "database and returning specific data. It is NOT a research analyst.\n\n"
+            "You have been given a **web research summary** compiled by an independent LLM "
+            "with web search. This research provides DIRECTIONAL CONTEXT — use it to check "
+            "whether the agent's answer is in the right ballpark, NOT as a strict reference "
+            "to match against.\n\n"
+            "The agent and the web research will legitimately differ in:\n"
+            "- **Data sources**: Agent uses Atlas DB (trade data through 2022); web research "
+            "uses news articles, government reports, and mixed sources (potentially newer).\n"
+            "- **Product granularity**: Agent uses HS codes (e.g., 'HS 6702 Artificial "
+            "flowers'); web research uses common names (e.g., 'gallium', 'solar panels'). "
+            "These often don't map 1:1.\n"
+            "- **Metrics**: Agent measures export value share from trade data; web research "
+            "may mix production share, refining capacity, or other metrics.\n"
+            "- **Country/product lists**: Agent does systematic computation across all data; "
+            "web research cherry-picks prominent examples from news. Both can be correct.\n"
+            "- **Format**: Agent returns structured data tables; web research returns "
+            "narrative prose. Tables with numbers are the EXPECTED agent output format.\n\n"
+            "These differences are EXPECTED and must NOT be penalised.\n\n"
             "Scoring rubric (1-5 each):\n"
-            "- **Factual Correctness** (weight 0.35): Are specific countries, products, "
-            "trends, and rankings consistent with the reference?\n"
-            "- **Data Accuracy** (weight 0.30): Do reported numbers roughly match the "
-            "reference? Be lenient on exact values — the agent uses the Atlas database "
-            "which may differ from web sources. Focus on whether the agent got the right "
-            "order of magnitude, direction of trends, and relative rankings.\n"
-            "- **Completeness** (weight 0.20): Does the answer address all parts of "
-            "the question?\n"
-            "- **Reasoning Quality** (weight 0.15): Is the interpretation, analysis, "
-            "and contextual explanation sound?\n\n"
-            "Be lenient on exact numbers (different sources and years may explain "
-            "discrepancies). Focus on whether the agent identified the right countries, "
-            "products, trends, and order of magnitude. Penalise fabricated data, "
-            "wrong countries/products, or contradictory trends.",
+            "- **Factual Correctness** (weight 0.35): Are the general trends directionally "
+            "correct? Given what web research tells us about this topic, did the agent "
+            "identify the right *direction* of change? Different specific countries or "
+            "products are acceptable if the agent's systematic approach reveals valid "
+            "alternatives. Only penalise for clearly wrong directions (e.g., saying China "
+            "gained US electronics import share when it lost share).\n"
+            "- **Data Accuracy** (weight 0.30): Are the agent's specific numbers internally "
+            "consistent and in the right order of magnitude? Do NOT try to match exact "
+            "figures against the web research — different sources, time periods, and "
+            "methodologies make that comparison invalid. Score based on plausibility and "
+            "internal consistency.\n"
+            "- **Completeness** (weight 0.20): Does the answer address all parts of the "
+            "question? Structured data tables with clear columns are a GOOD, complete "
+            "response format. Do not penalise for lack of narrative context, citations, "
+            "or geopolitical analysis — that is not the agent's role.\n"
+            "- **Reasoning Quality** (weight 0.15): Did the agent explain its methodology, "
+            "time window, classification system, and data limitations? Clear data "
+            "presentation with stated parameters counts as strong reasoning. Do not "
+            "require research-style citations.\n\n"
+            "Be GENEROUS. The web research is context for an informed plausibility check, "
+            "not ground truth. The agent's job is to query trade data accurately, not to "
+            "write research reports. A data-table answer that captures the right trends "
+            "from the Atlas database is a good answer.",
         ),
         (
             "human",
             "**Question**: {question}\n\n"
-            "**Reference answer** (from independent web research):\n{web_research_answer}\n\n"
+            "**Web research context** (for directional reference only — NOT ground truth):"
+            "\n{web_research_answer}\n\n"
             "**Agent answer**:\n{agent_answer}\n\n"
-            "Evaluate the agent's answer against the reference.",
+            "Evaluate the agent's answer. Remember: the agent is a database query system. "
+            "Use the web research as context, not as a strict reference to match against.",
         ),
     ]
 )
