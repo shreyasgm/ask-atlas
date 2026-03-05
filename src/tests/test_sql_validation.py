@@ -3,7 +3,13 @@
 No LLM, no DB, no async needed.
 """
 
-from src.sql_validation import extract_table_names_from_ddl, validate_sql
+from unittest.mock import patch
+
+from src.sql_validation import (
+    build_schema_from_ddl,
+    extract_table_names_from_ddl,
+    validate_sql,
+)
 
 # ---------------------------------------------------------------------------
 # extract_table_names_from_ddl
@@ -209,6 +215,55 @@ class TestValidateSql:
         assert result.is_valid is True
         assert result.errors == []
 
+    # --- Schema-mismatch detection ---
+
+    def test_schema_mismatch_detected(self):
+        """SQL using hs12 tables when expected schema is hs92 should error."""
+        valid = {"hs12.country_product_year_4", "classification.location_country"}
+        sql = "SELECT * FROM hs12.country_product_year_4"
+        result = validate_sql(sql, valid, expected_schemas={"hs92"})
+        assert result.is_valid is False
+        assert any("schema mismatch" in e.lower() for e in result.errors)
+        assert any("hs12" in e for e in result.errors)
+
+    def test_classification_always_allowed(self):
+        """classification.* tables should never trigger schema-mismatch errors."""
+        valid = {
+            "hs92.country_year",
+            "classification.location_country",
+            "classification.product_hs92",
+        }
+        sql = (
+            "SELECT * FROM hs92.country_year cy "
+            "JOIN classification.location_country lc ON cy.country_id = lc.country_id"
+        )
+        result = validate_sql(sql, valid, expected_schemas={"hs92"})
+        assert result.is_valid is True
+        assert not any("schema mismatch" in e.lower() for e in result.errors)
+
+    def test_multi_schema_union_all_passes(self):
+        """When expected_schemas contains both schemas, UNION ALL across them should pass."""
+        valid = {
+            "hs92.country_product_year_4",
+            "services_unilateral.country_product_year_4",
+        }
+        sql = (
+            "SELECT * FROM hs92.country_product_year_4 "
+            "UNION ALL "
+            "SELECT * FROM services_unilateral.country_product_year_4"
+        )
+        result = validate_sql(
+            sql, valid, expected_schemas={"hs92", "services_unilateral"}
+        )
+        assert result.is_valid is True
+
+    def test_schema_check_skipped_when_none(self):
+        """When expected_schemas is None, no schema-mismatch check runs."""
+        valid = {"hs12.country_product_year_4"}
+        sql = "SELECT * FROM hs12.country_product_year_4"
+        result = validate_sql(sql, valid, expected_schemas=None)
+        assert result.is_valid is True
+
     def test_classification_product_table_in_join(self):
         """Joining classification.product_hs92 should pass when it's in valid_tables."""
         valid = {
@@ -223,3 +278,194 @@ class TestValidateSql:
         result = validate_sql(sql, valid)
         assert result.is_valid is True
         assert result.errors == []
+
+
+# ---------------------------------------------------------------------------
+# build_schema_from_ddl
+# ---------------------------------------------------------------------------
+
+
+class TestBuildSchemaFromDDL:
+    """Tests for DDL → nested schema dict extraction."""
+
+    def test_basic_schema_extraction(self):
+        ddl = (
+            "CREATE TABLE hs92.country_year (\n"
+            "  country_id INTEGER,\n"
+            "  year INTEGER,\n"
+            "  export_value FLOAT\n);\n"
+        )
+        result = build_schema_from_ddl(ddl)
+        assert "hs92" in result
+        assert "country_year" in result["hs92"]
+        assert result["hs92"]["country_year"] == {
+            "country_id": "INTEGER",
+            "year": "INTEGER",
+            "export_value": "FLOAT",
+        }
+
+    def test_multiple_schemas(self):
+        ddl = (
+            "CREATE TABLE hs92.country_year (\n"
+            "  country_id INTEGER,\n"
+            "  year INTEGER\n);\n\n"
+            "CREATE TABLE classification.location_country (\n"
+            "  country_id INTEGER,\n"
+            "  name_en TEXT,\n"
+            "  iso3_code CHAR(3)\n);\n"
+        )
+        result = build_schema_from_ddl(ddl)
+        assert "hs92" in result
+        assert "classification" in result
+        assert "country_id" in result["classification"]["location_country"]
+        assert "iso3_code" in result["classification"]["location_country"]
+
+    def test_empty_ddl(self):
+        assert build_schema_from_ddl("") == {}
+
+    def test_constraint_keywords_excluded(self):
+        ddl = (
+            "CREATE TABLE hs92.t (\n" "  col_a INTEGER,\n" "  PRIMARY KEY (col_a)\n);\n"
+        )
+        result = build_schema_from_ddl(ddl)
+        cols = result["hs92"]["t"]
+        assert "col_a" in cols
+        assert "primary" not in cols
+
+    def test_columns_after_char_type_not_truncated(self):
+        """Regression: CHAR(3) paren must not truncate remaining columns."""
+        ddl = (
+            "CREATE TABLE classification.location_country (\n"
+            "\tcountry_id SERIAL NOT NULL,\n"
+            "\tiso3_code CHAR(3) NOT NULL,\n"
+            "\tname_en TEXT NOT NULL,\n"
+            "\tname_short_en TEXT NOT NULL,\n"
+            "\tCONSTRAINT location_country_pkey PRIMARY KEY (country_id)\n"
+            ");\n"
+        )
+        result = build_schema_from_ddl(ddl)
+        cols = result["classification"]["location_country"]
+        assert "iso3_code" in cols
+        assert "name_en" in cols, "name_en missing — CHAR(3) paren truncated the block"
+        assert "name_short_en" in cols
+
+
+# ---------------------------------------------------------------------------
+# Qualify-based column validation
+# ---------------------------------------------------------------------------
+
+
+class TestQualifyColumnValidation:
+    """Tests for scope-aware column validation via sqlglot qualify()."""
+
+    VALID_TABLES = {"hs92.country_year", "classification.location_country"}
+
+    SCHEMA = {
+        "hs92": {
+            "country_year": {
+                "country_id": "INT",
+                "year": "INT",
+                "export_value": "FLOAT",
+            },
+            "country_product_year_4": {
+                "country_id": "INT",
+                "product_id": "INT",
+                "year": "INT",
+                "export_value": "FLOAT",
+                "export_rca": "FLOAT",
+            },
+        },
+        "classification": {
+            "location_country": {
+                "country_id": "INT",
+                "name_en": "TEXT",
+                "name_short_en": "TEXT",
+                "iso3_code": "TEXT",
+            },
+            "product_hs92": {
+                "product_id": "INT",
+                "name_en": "TEXT",
+                "name_short_en": "TEXT",
+                "code": "TEXT",
+            },
+        },
+    }
+
+    def test_valid_columns_pass(self):
+        sql = "SELECT country_id, year FROM hs92.country_year"
+        result = validate_sql(sql, self.VALID_TABLES, column_schema=self.SCHEMA)
+        assert result.is_valid is True
+        assert result.errors == []
+
+    def test_unknown_column_flagged(self):
+        sql = "SELECT nonexistent_col FROM hs92.country_year"
+        result = validate_sql(sql, self.VALID_TABLES, column_schema=self.SCHEMA)
+        assert result.is_valid is False
+        assert any("nonexistent_col" in e.lower() for e in result.errors)
+
+    def test_cte_alias_not_flagged(self):
+        sql = (
+            "WITH latest_year AS ("
+            "  SELECT MAX(year) AS max_year FROM hs92.country_year"
+            ") SELECT max_year FROM latest_year"
+        )
+        result = validate_sql(sql, self.VALID_TABLES, column_schema=self.SCHEMA)
+        assert result.is_valid is True
+        assert not any("max_year" in e.lower() for e in result.errors)
+
+    def test_aggregation_alias_in_order_by(self):
+        sql = (
+            "SELECT SUM(export_value) AS total_exports "
+            "FROM hs92.country_year "
+            "ORDER BY total_exports"
+        )
+        result = validate_sql(sql, self.VALID_TABLES, column_schema=self.SCHEMA)
+        assert result.is_valid is True
+        assert not any("total_exports" in e.lower() for e in result.errors)
+
+    def test_subquery_derived_column(self):
+        sql = (
+            "SELECT sub.total "
+            "FROM (SELECT SUM(export_value) AS total FROM hs92.country_year) sub"
+        )
+        result = validate_sql(sql, self.VALID_TABLES, column_schema=self.SCHEMA)
+        assert result.is_valid is True
+
+    def test_cross_schema_join(self):
+        valid = {
+            "hs92.country_year",
+            "classification.location_country",
+        }
+        sql = (
+            "SELECT cy.country_id, lc.name_en "
+            "FROM hs92.country_year cy "
+            "JOIN classification.location_country lc ON cy.country_id = lc.country_id"
+        )
+        result = validate_sql(sql, valid, column_schema=self.SCHEMA)
+        assert result.is_valid is True
+        assert result.errors == []
+
+    def test_window_function_columns(self):
+        sql = (
+            "SELECT country_id, "
+            "ROW_NUMBER() OVER (PARTITION BY year ORDER BY export_value DESC) AS rn "
+            "FROM hs92.country_year"
+        )
+        result = validate_sql(sql, self.VALID_TABLES, column_schema=self.SCHEMA)
+        assert result.is_valid is True
+
+    def test_qualify_error_fails_open(self):
+        """Internal qualify error should log warning and return no errors."""
+        sql = "SELECT country_id FROM hs92.country_year"
+        with patch(
+            "src.sql_validation.qualify",
+            side_effect=RuntimeError("internal bug"),
+        ):
+            result = validate_sql(sql, self.VALID_TABLES, column_schema=self.SCHEMA)
+        assert result.is_valid is True
+        assert result.errors == []
+
+    def test_column_check_skipped_when_none(self):
+        sql = "SELECT any_column FROM hs92.country_year"
+        result = validate_sql(sql, self.VALID_TABLES, column_schema=None)
+        assert result.is_valid is True

@@ -368,7 +368,9 @@ async def judge_answer(
         prompt = ChatPromptTemplate.from_messages(
             [("system", system_text), ("human", _GROUND_TRUTH_HUMAN_TEXT)]
         )
-        chain = prompt | llm.with_structured_output(JudgeVerdict)
+        chain = prompt | llm.with_structured_output(
+            JudgeVerdict, method="function_calling"
+        )
         result: JudgeVerdict = await chain.ainvoke(
             {
                 "question": question,
@@ -385,7 +387,9 @@ async def judge_answer(
 
     if expected_behavior is not None:
         # Path 2: expected refusal / limitation acknowledgment
-        chain = _REFUSAL_PROMPT | llm.with_structured_output(RefusalVerdict)
+        chain = _REFUSAL_PROMPT | llm.with_structured_output(
+            RefusalVerdict, method="function_calling"
+        )
         result: RefusalVerdict = await chain.ainvoke(
             {
                 "question": question,
@@ -396,7 +400,9 @@ async def judge_answer(
         return result.to_dict()
 
     # Path 3: no ground truth, no expected behavior → plausibility check
-    chain = _PLAUSIBILITY_PROMPT | llm.with_structured_output(PlausibilityVerdict)
+    chain = _PLAUSIBILITY_PROMPT | llm.with_structured_output(
+        PlausibilityVerdict, method="function_calling"
+    )
     result: PlausibilityVerdict = await chain.ainvoke(
         {
             "question": question,

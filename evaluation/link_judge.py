@@ -287,7 +287,9 @@ async def judge_links(
         Dictionary with per-dimension scores, weighted score, verdict, and comment.
     """
     llm = create_llm(model, provider, temperature=0)
-    chain = _LINK_JUDGE_PROMPT | llm.with_structured_output(LinkVerdict)
+    chain = _LINK_JUDGE_PROMPT | llm.with_structured_output(
+        LinkVerdict, method="function_calling"
+    )
 
     gt_url_str = (
         ground_truth_url if ground_truth_url else "(no ground truth URL available)"
