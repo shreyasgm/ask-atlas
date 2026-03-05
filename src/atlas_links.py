@@ -219,30 +219,33 @@ def explore_treemap_url(
 
 def explore_overtime_url(
     *,
-    year: int,
     start_year: int,
     end_year: int,
     country_id: int,
+    year: int | None = None,
     view: str | None = None,
 ) -> str:
-    """Build an explore overtime (trade over time) URL."""
-    url = (
-        f"{ATLAS_BASE_URL}/explore/overtime?"
-        f"year={year}&startYear={start_year}&endYear={end_year}"
-        f"&exporter={_exporter_param(country_id)}"
-    )
+    """Build an explore overtime (trade over time) URL.
+
+    ``year`` is optional — when provided it highlights that year's snapshot
+    in the time-series visualisation.
+    """
+    params = []
+    if year is not None:
+        params.append(f"year={year}")
+    params.append(f"startYear={start_year}")
+    params.append(f"endYear={end_year}")
+    params.append(f"exporter={_exporter_param(country_id)}")
     if view:
-        url += f"&view={view}"
-    return url
+        params.append(f"view={view}")
+    return f"{ATLAS_BASE_URL}/explore/overtime?{'&'.join(params)}"
 
 
-def explore_marketshare_url(
-    *, year: int, start_year: int, end_year: int, country_id: int
-) -> str:
+def explore_marketshare_url(*, start_year: int, end_year: int, country_id: int) -> str:
     """Build an explore marketshare URL."""
     return (
         f"{ATLAS_BASE_URL}/explore/marketshare?"
-        f"year={year}&startYear={start_year}&endYear={end_year}"
+        f"startYear={start_year}&endYear={end_year}"
         f"&exporter={_exporter_param(country_id)}"
     )
 
@@ -370,7 +373,6 @@ def _handle_country_lookback(params: dict) -> list[AtlasLink]:
         ),
         AtlasLink(
             url=explore_overtime_url(
-                year=year,
                 start_year=start_year,
                 end_year=end_year,
                 country_id=cid,
@@ -526,7 +528,6 @@ def _handle_overtime_products(params: dict) -> list[AtlasLink]:
     return [
         AtlasLink(
             url=explore_overtime_url(
-                year=year,
                 start_year=start_year,
                 end_year=end_year,
                 country_id=cid,
@@ -552,7 +553,6 @@ def _handle_overtime_partners(params: dict) -> list[AtlasLink]:
     return [
         AtlasLink(
             url=explore_overtime_url(
-                year=year,
                 start_year=start_year,
                 end_year=end_year,
                 country_id=cid,
@@ -575,7 +575,6 @@ def _handle_marketshare(params: dict) -> list[AtlasLink]:
     return [
         AtlasLink(
             url=explore_marketshare_url(
-                year=year,
                 start_year=start_year,
                 end_year=end_year,
                 country_id=cid,

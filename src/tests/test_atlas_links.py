@@ -152,30 +152,37 @@ class TestExploreTreemapURL:
 
 
 class TestExploreOvertimeURL:
-    def test_basic_overtime(self):
-        url = explore_overtime_url(
-            year=2024, start_year=1995, end_year=2024, country_id=404
-        )
+    def test_basic_overtime_no_year(self):
+        url = explore_overtime_url(start_year=1995, end_year=2024, country_id=404)
         assert "startYear=1995" in url
         assert "endYear=2024" in url
         assert "exporter=country-404" in url
         assert url.startswith(f"{ATLAS_BASE_URL}/explore/overtime?")
+        # No bare year= when not provided
+        assert "year=" not in url.split("startYear")[0]
+
+    def test_overtime_with_year_highlight(self):
+        url = explore_overtime_url(
+            start_year=2000, end_year=2024, country_id=404, year=2020
+        )
+        assert "year=2020" in url
+        assert "startYear=2000" in url
+        assert "endYear=2024" in url
 
     def test_overtime_markets_view(self):
         url = explore_overtime_url(
-            year=2024, start_year=2000, end_year=2024, country_id=404, view="markets"
+            start_year=2000, end_year=2024, country_id=404, view="markets"
         )
         assert "view=markets" in url
 
 
 class TestExploreMarketshareURL:
     def test_basic_marketshare(self):
-        url = explore_marketshare_url(
-            year=2024, start_year=1995, end_year=2024, country_id=404
-        )
+        url = explore_marketshare_url(start_year=1995, end_year=2024, country_id=404)
         assert url.startswith(f"{ATLAS_BASE_URL}/explore/marketshare?")
         assert "exporter=country-404" in url
         assert "startYear=1995" in url
+        assert "year=" not in url
 
 
 class TestExploreProductspaceURL:
@@ -686,7 +693,7 @@ class TestDefaults:
         )
         assert "404" in links[0].label
 
-    def test_year_max_used_as_year_for_overtime(self):
+    def test_year_max_used_as_end_year_for_overtime(self):
         links = generate_atlas_links(
             "overtime_products",
             {
@@ -696,9 +703,12 @@ class TestDefaults:
                 "year_max": 2022,
             },
         )
-        assert "year=2022" in links[0].url
         assert "endYear=2022" in links[0].url
         assert "startYear=2000" in links[0].url
+        # overtime URLs should NOT have a bare year= param
+        url = links[0].url
+        assert "year=2022&" not in url
+        assert not url.endswith("year=2022")
 
 
 # ---------------------------------------------------------------------------
@@ -872,13 +882,12 @@ class TestCrossHandlerInvariants:
         )
         assert "year=2020" in links[0].url
 
-    def test_overtime_uses_year_when_year_max_absent(self):
+    def test_overtime_uses_year_as_end_year_when_year_max_absent(self):
         """_get_year_range falls back from year_max to year to DEFAULT_YEAR."""
         links = generate_atlas_links(
             "overtime_products",
             {"country_id": 404, "country_name": "Kenya", "year": 2020},
         )
-        assert "year=2020" in links[0].url
         assert "endYear=2020" in links[0].url
         assert f"startYear={DEFAULT_START_YEAR}" in links[0].url
 
