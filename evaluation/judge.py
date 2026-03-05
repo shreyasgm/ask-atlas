@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """LLM-as-judge: evaluate agent answers against ground truth data.
 
-Three evaluation paths:
+Four evaluation paths:
 
 1. **Ground truth** — agent's text answer is scored against verified data rows
    from executed SQL (4-dimension rubric, 1-5 each).
 2. **Refusal** — for out-of-scope / data-boundary questions with an
    ``expected_behavior`` field, checks whether the agent refused appropriately.
-3. **Plausibility** — for questions without ground truth SQL *and* without an
-   expected_behavior field, the judge uses its own knowledge to assess whether
-   the answer is roughly plausible (not fabricated nonsense).  These results
-   are flagged as ``"judge_mode": "plausibility"`` so they're clearly
-   distinguished from verified evaluations.
+3. **Web research** — for questions without SQL ground truth or expected_behavior,
+   but with a ``web_research.json`` reference answer produced by an independent
+   LLM with web search.  Scores the agent against this research-grade reference.
+4. **Plausibility** — for questions without any reference data, the judge uses
+   its own knowledge to assess whether the answer is roughly plausible
+   (not fabricated nonsense).  These results are flagged as
+   ``"judge_mode": "plausibility"``.
 """
 
 from __future__ import annotations
@@ -182,6 +184,82 @@ class PlausibilityVerdict(BaseModel):
         }
 
 
+class WebResearchVerdict(BaseModel):
+    """Verdict for questions scored against web-research reference answers.
+
+    The reference answer was produced by an independent LLM with web search —
+    research-grade, but not verified ground truth from the Atlas database.
+    """
+
+    factual_correctness: DimensionScore = Field(
+        ...,
+        description="Are specific countries, products, trends correct relative to the reference?",
+    )
+    data_accuracy: DimensionScore = Field(
+        ...,
+        description=(
+            "Do reported numbers roughly match the reference? "
+            "Be lenient on exact values — focus on order of magnitude and direction."
+        ),
+    )
+    completeness: DimensionScore = Field(
+        ..., description="Does the answer address all parts of the question?"
+    )
+    reasoning_quality: DimensionScore = Field(
+        ..., description="Is the interpretation and analysis sound?"
+    )
+    overall_comment: str = Field(
+        ..., description="One-sentence summary of the evaluation"
+    )
+
+    @property
+    def weighted_score(self) -> float:
+        scores = {
+            "factual_correctness": self.factual_correctness.score,
+            "data_accuracy": self.data_accuracy.score,
+            "completeness": self.completeness.score,
+            "reasoning_quality": self.reasoning_quality.score,
+        }
+        return sum(scores[k] * DIMENSION_WEIGHTS[k] for k in DIMENSION_WEIGHTS)
+
+    @property
+    def verdict(self) -> Literal["pass", "partial", "fail"]:
+        ws = self.weighted_score
+        if ws >= 3.5:
+            return "pass"
+        if ws >= 2.5:
+            return "partial"
+        return "fail"
+
+    def to_dict(self) -> dict:
+        return {
+            "judge_mode": "web_research",
+            "factual_correctness": {
+                "score": self.factual_correctness.score,
+                "reasoning": self.factual_correctness.reasoning,
+            },
+            "data_accuracy": {
+                "score": self.data_accuracy.score,
+                "reasoning": self.data_accuracy.reasoning,
+            },
+            "completeness": {
+                "score": self.completeness.score,
+                "reasoning": self.completeness.reasoning,
+            },
+            "reasoning_quality": {
+                "score": self.reasoning_quality.score,
+                "reasoning": self.reasoning_quality.reasoning,
+            },
+            "weighted_score": round(self.weighted_score, 3),
+            "verdict": self.verdict,
+            "overall_comment": self.overall_comment,
+            "note": (
+                "Scored against web-research reference (not verified SQL ground truth). "
+                "Data accuracy scoring is lenient on exact numbers."
+            ),
+        }
+
+
 # ---------------------------------------------------------------------------
 # Data-year coverage constants (mirror src/prompts.py values)
 # ---------------------------------------------------------------------------
@@ -310,6 +388,41 @@ _PLAUSIBILITY_PROMPT = ChatPromptTemplate.from_messages(
     ]
 )
 
+_WEB_RESEARCH_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "You are an expert evaluator for a trade-data Q&A system. "
+            "The following reference answer was produced by an independent LLM with "
+            "web search capabilities. It is research-grade — more reliable than pure "
+            "guessing, but NOT verified ground truth from the Atlas database.\n\n"
+            "Use the reference answer to evaluate the agent's response.\n\n"
+            "Scoring rubric (1-5 each):\n"
+            "- **Factual Correctness** (weight 0.35): Are specific countries, products, "
+            "trends, and rankings consistent with the reference?\n"
+            "- **Data Accuracy** (weight 0.30): Do reported numbers roughly match the "
+            "reference? Be lenient on exact values — the agent uses the Atlas database "
+            "which may differ from web sources. Focus on whether the agent got the right "
+            "order of magnitude, direction of trends, and relative rankings.\n"
+            "- **Completeness** (weight 0.20): Does the answer address all parts of "
+            "the question?\n"
+            "- **Reasoning Quality** (weight 0.15): Is the interpretation, analysis, "
+            "and contextual explanation sound?\n\n"
+            "Be lenient on exact numbers (different sources and years may explain "
+            "discrepancies). Focus on whether the agent identified the right countries, "
+            "products, trends, and order of magnitude. Penalise fabricated data, "
+            "wrong countries/products, or contradictory trends.",
+        ),
+        (
+            "human",
+            "**Question**: {question}\n\n"
+            "**Reference answer** (from independent web research):\n{web_research_answer}\n\n"
+            "**Agent answer**:\n{agent_answer}\n\n"
+            "Evaluate the agent's answer against the reference.",
+        ),
+    ]
+)
+
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -321,6 +434,7 @@ async def judge_answer(
     agent_answer: str,
     ground_truth_data: list[dict] | None,
     expected_behavior: str | None = None,
+    web_research_answer: str | None = None,
     model: str = "gpt-5-mini",
     provider: str = "openai",
     tools_used: list[str] | None = None,
@@ -328,16 +442,18 @@ async def judge_answer(
 ) -> dict:
     """Score an agent answer using an LLM judge.
 
-    Three paths:
+    Four paths (in priority order):
     1. **ground_truth_data provided** → full 4-dimension rubric against data.
     2. **expected_behavior provided** (no data) → refusal appropriateness check.
-    3. **neither** → plausibility check using the judge's own knowledge.
+    3. **web_research_answer provided** → 4-dimension rubric against web research.
+    4. **none of the above** → plausibility check using the judge's own knowledge.
 
     Args:
         question: The original user question.
         agent_answer: The agent's text response.
         ground_truth_data: Rows from verified SQL execution, or None.
         expected_behavior: For refusal/edge-case questions, the expected behaviour.
+        web_research_answer: Reference answer from independent web research, or None.
         model: Judge LLM model name.
         provider: Judge LLM provider.
         tools_used: List of tool names the agent invoked, or None.
@@ -397,7 +513,21 @@ async def judge_answer(
         )
         return result.to_dict()
 
-    # Path 3: no ground truth, no expected behavior → plausibility check
+    if web_research_answer is not None:
+        # Path 3: web research reference answer
+        chain = _WEB_RESEARCH_PROMPT | llm.with_structured_output(
+            WebResearchVerdict, method="json_schema"
+        )
+        result: WebResearchVerdict = await chain.ainvoke(
+            {
+                "question": question,
+                "web_research_answer": web_research_answer,
+                "agent_answer": agent_answer,
+            }
+        )
+        return result.to_dict()
+
+    # Path 4: no ground truth, no expected behavior, no web research → plausibility check
     chain = _PLAUSIBILITY_PROMPT | llm.with_structured_output(
         PlausibilityVerdict, method="json_schema"
     )

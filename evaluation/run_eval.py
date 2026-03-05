@@ -68,6 +68,24 @@ def _load_ground_truth(question_id: str) -> list[dict] | None:
         return None
 
 
+def _load_web_research(question_id: str) -> str | None:
+    """Load web research answer for a question, or None if unavailable."""
+    path = (
+        EVALUATION_BASE_DIR
+        / "results"
+        / question_id
+        / "ground_truth"
+        / "web_research.json"
+    )
+    if not path.exists():
+        return None
+    try:
+        data = load_json_file(path)
+        return data.get("research_answer")
+    except Exception:
+        return None
+
+
 def _load_ground_truth_atlas_url(question_id: str) -> str | None:
     """Load the ground truth atlas_url for a question, or None if unavailable."""
     gt_path = (
@@ -161,6 +179,11 @@ async def _judge_all(
         meta = questions_meta.get(qid, {})
         expected_behavior = meta.get("expected_behavior")
         ground_truth = _load_ground_truth(qid)
+        web_research = (
+            _load_web_research(qid)
+            if ground_truth is None and expected_behavior is None
+            else None
+        )
 
         # Build classification note for country page questions
         classification_note = None
@@ -177,7 +200,15 @@ async def _judge_all(
                 mode = (
                     "ground_truth"
                     if ground_truth is not None
-                    else "refusal" if expected_behavior is not None else "plausibility"
+                    else (
+                        "refusal"
+                        if expected_behavior is not None
+                        else (
+                            "web_research"
+                            if web_research is not None
+                            else "plausibility"
+                        )
+                    )
                 )
                 logging.info(f"Question {qid}: judging ({mode})...")
                 tools_used = result.get("tools_used")
@@ -187,6 +218,7 @@ async def _judge_all(
                     agent_answer=result["answer"],
                     ground_truth_data=ground_truth,
                     expected_behavior=expected_behavior,
+                    web_research_answer=web_research,
                     model=judge_model,
                     provider=judge_provider,
                     tools_used=tools_used,

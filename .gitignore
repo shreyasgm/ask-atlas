@@ -19,6 +19,8 @@ evaluation/questions/
 # Track ground truth data but ignore agent runs and other eval outputs
 evaluation/results/*/*
 !evaluation/results/*/ground_truth/
+# Web research contains scraped third-party content — do not commit
+evaluation/results/*/ground_truth/web_research.json
 evaluation/evaluations/
 evaluation/logs/
 evaluation/runs/
