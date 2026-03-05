@@ -6,7 +6,13 @@ interface AtlasLinksProps {
 }
 
 export default function AtlasLinks({ links }: AtlasLinksProps) {
-  if (links.length === 0) {
+  // Deduplicate by URL as a safety net — the backend should already dedupe,
+  // but the frontend may accumulate links from multiple SSE events.
+  const uniqueLinks = links.filter(
+    (link, i, arr) => arr.findIndex((l) => l.url === link.url) === i,
+  );
+
+  if (uniqueLinks.length === 0) {
     return null;
   }
 
@@ -16,7 +22,7 @@ export default function AtlasLinks({ links }: AtlasLinksProps) {
         Explore on Atlas
       </span>
       <div className="flex flex-wrap gap-1.5">
-        {links.map((link) => (
+        {uniqueLinks.map((link) => (
           <a
             className={
               link.link_type === 'country_page'

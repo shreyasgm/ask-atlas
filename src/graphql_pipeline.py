@@ -1337,6 +1337,18 @@ async def build_and_execute_graphql(
             }
 
 
+def _dedupe_links(links: list[dict]) -> list[dict]:
+    """Deduplicate atlas links by URL, preserving insertion order."""
+    seen: set[str] = set()
+    result: list[dict] = []
+    for link in links:
+        url = link.get("url", "")
+        if url not in seen:
+            seen.add(url)
+            result.append(link)
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Node 6: format_graphql_results
 # ---------------------------------------------------------------------------
@@ -1551,7 +1563,7 @@ async def format_graphql_results(
             if warnings:
                 content = "\n".join(warnings) + "\n\n" + content
 
-            atlas_links = state.get("graphql_atlas_links", [])
+            atlas_links = _dedupe_links(state.get("graphql_atlas_links", []))
 
         messages: list[ToolMessage] = [
             ToolMessage(
