@@ -3,7 +3,7 @@
 Tests behavioral contracts only — no third-party API exercising (MemorySaver put/get/list).
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -101,8 +101,14 @@ class TestAsyncCheckpointerManager:
 
     async def test_postgres_failure_falls_back_to_memory(self):
         """Bad Postgres URL -> catches exception, falls back to MemorySaver."""
-        with patch("src.persistence.get_settings") as mock_settings:
+        with (
+            patch("src.persistence.get_settings") as mock_settings,
+            patch("psycopg_pool.AsyncConnectionPool", autospec=True) as mock_pool_cls,
+        ):
             mock_settings.return_value = MagicMock(checkpoint_db_url=None)
+            mock_pool = MagicMock()
+            mock_pool.open = AsyncMock(side_effect=ConnectionError("mocked"))
+            mock_pool_cls.return_value = mock_pool
             manager = AsyncCheckpointerManager(db_url="postgresql://bad-host:5432/nope")
             cp = await manager.get_checkpointer()
             assert isinstance(cp, MemorySaver)
