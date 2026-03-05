@@ -746,7 +746,7 @@ class TestTimeoutMiddleware:
         import asyncio
 
         async def _slow_answer(question, thread_id=None, **kwargs):
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.1)
             return AnswerResult(
                 answer="late answer",
                 queries=[],
