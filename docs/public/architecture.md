@@ -50,6 +50,9 @@ ask-atlas/
 │   ├── cache.py                    # TTL caches, CatalogCache (country/product/services), registry
 │   ├── persistence.py              # Checkpointer + app table setup
 │   ├── conversations.py            # Conversation metadata store
+│   ├── feedback.py                 # Feedback store (thumbs up/down per turn)
+│   ├── token_usage.py              # Token usage tracking, cost estimation, per-step timing
+│   ├── db_pool_health.py           # Database connection pool health monitoring
 │   ├── error_handling.py           # Retry logic with exponential backoff
 │   ├── schema/                     # db_table_descriptions.json + db_table_structure.json
 │   ├── example_queries/            # Few-shot SQL examples for prompt
@@ -214,6 +217,7 @@ Application-owned PostgreSQL on Cloud SQL. Tables are auto-created by `src/persi
 | Table | Purpose | Owner |
 |-------|---------|-------|
 | `conversations` | Thread metadata (id, session_id, title, timestamps) | `src/conversations.py` |
+| `feedback` | Per-turn thumbs up/down ratings with optional comments | `src/feedback.py` |
 | `checkpoints` | LangGraph checkpoint records | `langgraph-checkpoint-postgres` |
 | `checkpoint_writes` | Checkpoint write operations | `langgraph-checkpoint-postgres` |
 | `checkpoint_blobs` | Large checkpoint data | `langgraph-checkpoint-postgres` |
@@ -257,16 +261,15 @@ SQL pipeline (8 nodes):
 | 7 | `execute_sql` | Executing query |
 | 8 | `format_results` | Formatting results |
 
-GraphQL pipeline (6 nodes):
+GraphQL pipeline (5 nodes):
 
 | Order | Node Name | UI Label |
 |-------|-----------|----------|
 | 1 | `extract_graphql_question` | Extracting question |
-| 2 | `classify_query` | Classifying query type |
-| 3 | `extract_entities` | Extracting entities |
-| 4 | `resolve_ids` | Resolving entity IDs |
-| 5 | `build_and_execute_graphql` | Executing GraphQL query |
-| 6 | `format_graphql_results` | Formatting results |
+| 2 | `plan_query` | Classifying and extracting entities |
+| 3 | `resolve_ids` | Resolving entity IDs |
+| 4 | `build_and_execute_graphql` | Querying Atlas API |
+| 5 | `format_graphql_results` | Formatting results |
 
 Docs pipeline (4 nodes):
 
@@ -286,11 +289,13 @@ Docs pipeline (4 nodes):
 - **`atlas_graphql`** — Routes to the GraphQL pipeline for Atlas visualization data and pre-computed metrics
 - **`docs_tool`** — Routes to the Docs pipeline for methodology/documentation questions (bypasses query budget)
 
-**Agent mode** (`AgentMode` enum) controls which tools are available:
+**Agent mode** (`AgentMode` enum in `src/config.py`) controls which tools are available:
 - `AUTO` — All three tools; agent chooses dynamically. Falls back to SQL_ONLY if GraphQL budget exhausted.
 - `GRAPHQL_SQL` — `query_tool` + `atlas_graphql` + `docs_tool`
 - `SQL_ONLY` — `query_tool` + `docs_tool` only
 - `GRAPHQL_ONLY` — `atlas_graphql` + `docs_tool` only
+
+Set via `model_config.py` (default: `"auto"`) and overridable per-request via `override_agent_mode` in the `/api/chat/stream` request body.
 
 **Graph topology:**
 
@@ -311,14 +316,15 @@ graph LR
     gti --> gs[generate_sql]
     gs --> vs[validate_sql]
     vs -->|valid| es[execute_sql]
-    vs -->|error| fr[format_results]
+    vs -->|"error, retry_count≤1"| gs
+    vs -->|"error, no retries left"| fr[format_results]
     es --> fr
+    es -->|"error, retry_count≤1"| gs
     fr --> agent
 
-    egq --> cq[classify_query]
-    cq -->|reject| fgr[format_graphql_results]
-    cq -->|ok| ee[extract_entities]
-    ee --> ri[resolve_ids]
+    egq --> pq[plan_query]
+    pq -->|reject| fgr[format_graphql_results]
+    pq -->|ok| ri[resolve_ids]
     ri --> beg[build_and_execute_graphql]
     beg --> fgr
     fgr --> agent
@@ -340,8 +346,7 @@ graph LR
     style es fill:#e3f2fd,stroke:#1976D2
     style fr fill:#e8f5e9,stroke:#388E3C
     style egq fill:#fff3e0,stroke:#F57C00
-    style cq fill:#fff3e0,stroke:#F57C00
-    style ee fill:#fff3e0,stroke:#F57C00
+    style pq fill:#fff3e0,stroke:#F57C00
     style ri fill:#fff3e0,stroke:#F57C00
     style beg fill:#fff3e0,stroke:#F57C00
     style fgr fill:#e8f5e9,stroke:#388E3C
@@ -355,11 +360,11 @@ graph LR
 
 **Key design decisions** (see `docs/public/backend_architecture.md` for full rationale):
 
-1. **Flat graph, no subgraphs.** Subgraphs would cleanly isolate pipeline state, but are incompatible with the dual-mode streaming architecture (`stream_mode=["messages", "updates"]`). At ~17 nodes, the graph is manageable with pipeline-prefixed state fields (`pipeline_*`, `graphql_*`, `docs_*`).
+1. **Flat graph, no subgraphs.** Subgraphs would cleanly isolate pipeline state, but are incompatible with the dual-mode streaming architecture (`stream_mode=["messages", "updates"]`). At ~16 nodes, the graph is manageable with pipeline-prefixed state fields (`pipeline_*`, `graphql_*`, `docs_*`).
 
 2. **Atlas link generation is combined with `resolve_ids`, not a separate node.** Link generation is deterministic and takes microseconds — running it in parallel with the ~100-500ms GraphQL API call saves no perceptible latency. Combining it with `resolve_ids` (which already has all the data) is simpler.
 
-3. **Classification and entity extraction are separate LLM calls.** The `classify_query` → `extract_entities` split keeps each call focused. Early rejection at classification saves an LLM call. Extraction prompts are tailored per classified `query_type`.
+3. **Classification and entity extraction are combined in `plan_query`.** The former `classify_query` → `extract_entities` split has been merged into a single `plan_query` LLM call, roughly halving latency for those two steps. Early rejection is still supported — if `query_type == "reject"`, the pipeline skips directly to `format_graphql_results`.
 
 4. **Dynamic tool binding in agent node.** The `agent_node` resolves the effective mode per-turn (checking budget tracker + circuit breaker for AUTO mode) and adjusts which tools and system prompt the LLM sees.
 
@@ -387,9 +392,9 @@ graph LR
 
 6. **`generate_sql`** — Builds a few-shot prompt with table metadata, product codes, direction/mode constraints, and example queries. Invokes the frontier LLM via `create_query_generation_chain()`.
 
-7. **`validate_sql`** — Runs `validate_sql()` from `src/sql_validation.py`. On failure, sets `last_error` to short-circuit past execution.
+7. **`validate_sql`** — Runs `validate_sql()` from `src/sql_validation.py`. On failure, sets `last_error`. If `retry_count ≤ 1`, routes back to `generate_sql` for a retry; otherwise short-circuits to `format_results`.
 
-8. **`execute_sql`** — Runs the query against the Atlas Data DB using the async engine. Wrapped in `async_execute_with_retry()` (3 attempts, exponential backoff). Returns columns, rows, row count, and execution time.
+8. **`execute_sql`** — Runs the query against the Atlas Data DB using the async engine. Wrapped in `async_execute_with_retry()` (3 attempts, exponential backoff). Returns columns, rows, row count, and execution time. On execution error with `retry_count ≤ 1`, routes back to `generate_sql` for a retry.
 
 9. **`format_results`** — Packages results into a `ToolMessage` for the agent to interpret. Increments `queries_executed`.
 
@@ -399,20 +404,18 @@ graph LR
 
 1. **`extract_graphql_question`** — Extracts question + context from tool args, resets GraphQL state fields.
 
-2. **`classify_query`** — Lightweight LLM classifies the query into one of ~20 types (e.g., `country_profile`, `treemap_products`, `feasibility`, `bilateral_aggregate`) or `reject`. Determines `api_target` (explore vs. country_pages) and `product_level`.
+2. **`plan_query`** — Lightweight LLM performs classification and entity extraction in a single call. Classifies the query into one of ~20 types (e.g., `country_profile`, `treemap_products`, `feasibility`, `explore_bilateral`) or `reject`. Also extracts structured entities: countries, products, years, groups. Determines `api_target` (explore vs. country_pages) and `product_level`.
 
-3. **`extract_entities`** — Lightweight LLM extracts structured entities: countries, products, years, groups.
-
-4. **`resolve_ids`** — Dual-source ID resolution (mirrors the SQL pipeline's product resolution pattern):
+3. **`resolve_ids`** — Dual-source ID resolution (mirrors the SQL pipeline's product resolution pattern):
    - **Step A**: Verify LLM-guessed standard codes (ISO alpha-3 for countries, HS/SITC for products) against cached catalogs.
    - **Step B**: Text-search entity names in catalogs for additional candidates.
    - **Step C**: Lightweight LLM selects best IDs from both sources based on question context.
    - **Step D**: Generate Atlas links inline via `generate_atlas_links()` (deterministic, microseconds).
    - Finally, format IDs for the target API (Explore uses integer IDs like `countryId: 404`; Country Pages uses prefixed strings like `"location-404"`).
 
-5. **`build_and_execute_graphql`** — Constructs the GraphQL query from resolved params, executes against the Explore or Country Pages API via `AtlasGraphQLClient`. Catches all errors and writes them to state (never raises). Consumes one budget token on success.
+4. **`build_and_execute_graphql`** — Constructs the GraphQL query from resolved params, executes against the Explore or Country Pages API via `AtlasGraphQLClient`. Catches all errors and writes them to state (never raises). Consumes one budget token on success.
 
-6. **`format_graphql_results`** — Formats API response as readable text, attaches Atlas visualization links to state, returns a `ToolMessage` with answer text + links. On rejection or API failure, returns an informative error message.
+5. **`format_graphql_results`** — Formats API response as readable text, attaches Atlas visualization links to state, returns a `ToolMessage` with answer text + links. On rejection or API failure, returns an informative error message.
 
 **Docs pipeline node details** (`src/docs_pipeline.py`):
 
@@ -445,6 +448,8 @@ graph LR
 | `retry_count` | `int` | Current retry attempts |
 | `turn_summaries` | `Annotated[list[dict], add_turn_summaries]` | Per-turn structured summaries (reducer: append) |
 | `token_usage` | `Annotated[list[dict], add_token_usage]` | Per-node LLM token usage records (reducer: append) |
+| `step_timing` | `Annotated[list[dict], add_step_timing]` | Per-step wall-clock/LLM/I/O timing records (reducer: append) |
+| `pipeline_sql_history` | `Annotated[list[dict], add_sql_history]` | Every SQL version with stage and errors (reducer: append) |
 | **Overrides** | | |
 | `override_schema` | `Optional[str]` | User-specified classification (hs92/hs12/sitc) |
 | `override_direction` | `Optional[str]` | User-specified trade direction (exports/imports) |
@@ -471,7 +476,9 @@ graph LR
 | `graphql_api_target` | `Literal["explore", "country_pages"] \| None` | Target API identifier |
 | `graphql_raw_response` | `Optional[dict]` | Raw response from GraphQL API |
 | `graphql_execution_time_ms` | `int` | GraphQL query execution time |
-| `graphql_atlas_links` | `list[dict]` | Generated Atlas visualization links |
+| `graphql_atlas_links` | `Annotated[list[dict], add_graphql_atlas_links]` | Generated Atlas visualization links (reducer: append) |
+| `sql_call_history` | `Annotated[list[dict], add_sql_call_history]` | Per-call SQL pipeline snapshots (reducer: append) |
+| `graphql_call_history` | `Annotated[list[dict], add_graphql_call_history]` | Per-call GraphQL pipeline snapshots (reducer: append) |
 | **Docs pipeline** | | Reset by `extract_docs_question` at cycle start |
 | `docs_question` | `str` | Extracted question from docs_tool call |
 | `docs_context` | `str` | Broader user context for the docs question |
@@ -649,7 +656,12 @@ SCHEMA_TO_PRODUCTS_TABLE_MAP = {
 | `DELETE` | `/api/threads/{thread_id}` | Delete conversation + checkpoints | `X-Session-Id` header |
 | `POST` | `/api/chat` | Non-streaming chat | None |
 | `POST` | `/api/chat/stream` | SSE streaming chat | `X-Session-Id` header |
+| `POST` | `/api/feedback` | Submit thumbs up/down feedback for a turn | `X-Session-Id` header |
+| `GET` | `/api/feedback` | List feedback for a session | `X-Session-Id` header |
+| `GET` | `/api/feedback/export` | Export all feedback with context | `X-Session-Id` header |
+| `PUT` | `/api/feedback/{id}` | Update existing feedback | `X-Session-Id` header |
 | `GET` | `/api/debug/caches` | Cache hit rate diagnostics | None |
+| `GET` | `/api/debug/pool` | Database connection pool health | None |
 
 ### SSE Event Protocol
 
@@ -663,7 +675,7 @@ The `/api/chat/stream` endpoint returns `text/event-stream`. Events are sent in 
 | `agent_talk` | Agent generates text | `{ "source": "agent", "content": "token...", "message_type": "agent_talk" }` |
 | `tool_call` | Agent calls tool | `{ "source": "agent", "content": "...", "name": "query_tool" }` |
 | `tool_output` | Tool returns result | `{ "source": "...", "content": "..." }` |
-| `done` | Stream complete | `{ "thread_id": "...", "total_queries": N, "total_rows": N, "total_execution_time_ms": N, "total_time_ms": N, "total_graphql_queries": N, "total_graphql_time_ms": N, "token_usage": {...}, "cost": {...}, "tool_call_counts": {...} }` |
+| `done` | Stream complete | `{ "thread_id": "...", "total_queries": N, "total_rows": N, "total_execution_time_ms": N, "total_time_ms": N, "total_graphql_queries": N, "total_graphql_time_ms": N, "token_usage": {...}, "cost": {...}, "tool_call_counts": {...}, "step_timing": {...} }` |
 
 **`pipeline_state` payloads vary by stage and pipeline:**
 
@@ -671,8 +683,7 @@ The `/api/chat/stream` endpoint returns `text/event-stream`. Events are sent in 
   - **`extract_products`**: `{ "stage": "extract_products", "schemas": [...], "products": [...] }`
   - **`execute_sql`**: `{ "stage": "execute_sql", "sql": "...", "columns": [...], "rows": [...], "row_count": N, "execution_time_ms": N, "tables": [...], "schema": "hs92" }`
 - **GraphQL pipeline:**
-  - **`classify_query`**: `{ "stage": "classify_query", "query_type": "...", "api_target": "...", "product_level": "..." }`
-  - **`extract_entities`**: `{ "stage": "extract_entities", "country": "...", "product": "...", "year": "..." }`
+  - **`plan_query`**: `{ "stage": "plan_query", "query_type": "...", "api_target": "...", "country": "...", "product": "...", "year": "..." }`
   - **`resolve_ids`**: `{ "stage": "resolve_ids", "resolved_params": {...} }`
   - **`format_graphql_results`**: `{ "stage": "format_graphql_results", "atlas_links": [...], "execution_time_ms": N }`
 - **Docs pipeline:**
@@ -697,7 +708,14 @@ Each request carries an `X-Session-Id` header (generated client-side via `crypto
     "entities": {"products": [...], "schemas": [...]},
     "queries": [{"sql": "...", "columns": [...], "rows": [...], "row_count": N, "execution_time_ms": N}],
     "total_rows": N,
-    "total_execution_time_ms": N
+    "total_execution_time_ms": N,
+    "atlas_links": [...],
+    "docs_consulted": [...],
+    "graphql_summaries": [...],
+    "total_graphql_time_ms": N,
+    "pipeline_steps": [...],
+    "graphql_call_details": [...],
+    "sql_call_details": [...]
   }]
 }
 ```
@@ -725,8 +743,9 @@ Three TTL caches with stampede prevention (`cachetools` + `cachetools-async`), m
 | Cache | Source | Purpose |
 |-------|--------|---------|
 | `country_cache` | GraphQL API | Country name → ID resolution for GraphQL pipeline |
-| `product_cache` | GraphQL API | Product name → ID/code resolution |
+| `product_caches` | GraphQL API | Dict of product caches keyed by classification (HS92, HS12, etc.) → ID/code resolution |
 | `services_cache` | GraphQL API | Services product name → ID/code resolution |
+| `group_cache` | GraphQL API | Country group name → ID resolution (regions, trade blocs, income groups) |
 
 Catalogs are lazy-loaded on first access and refreshed via TTL.
 
