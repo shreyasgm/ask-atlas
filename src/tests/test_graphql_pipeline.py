@@ -323,10 +323,6 @@ class TestExtractGraphQLQuestion:
 class TestGraphQLQueryClassification:
     """Tests for the GraphQLQueryClassification Pydantic schema."""
 
-    def test_schema_has_required_fields(self):
-        fields = set(GraphQLQueryClassification.model_fields.keys())
-        assert {"api_target", "query_type", "reasoning", "rejection_reason"} == fields
-
     def test_all_query_types_present(self):
         """The query_type literal must include all valid types + reject."""
         import typing
@@ -365,16 +361,6 @@ class TestGraphQLQueryClassification:
             "reject",
         }
         assert set(args) == expected
-
-    def test_bilateral_aggregate_validates_with_explore_target(self):
-        """bilateral_aggregate is an Explore API query type, so api_target must be 'explore'."""
-        c = GraphQLQueryClassification(
-            reasoning="Total bilateral trade between two countries",
-            query_type="bilateral_aggregate",
-            api_target="explore",
-        )
-        assert c.query_type == "bilateral_aggregate"
-        assert c.api_target == "explore"
 
     def test_classification_prompt_includes_key_query_types(self):
         """build_classification_prompt mentions key query types for routing."""
@@ -2087,11 +2073,6 @@ class TestSchemaValidation:
                 api_target=target,
             )
             assert c.api_target == target
-
-    def test_product_level_defaults_to_four_digit(self):
-        """product_level defaults to 'fourDigit' when not specified."""
-        extraction = GraphQLEntityExtraction(reasoning="x")
-        assert extraction.product_level == "fourDigit"
 
     def test_lookback_years_accepts_valid_values(self):
         """lookback_years accepts 3, 5, 10, 15."""

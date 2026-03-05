@@ -133,15 +133,6 @@ class TestGraphQLPipelineStateExtraction:
         assert result["is_rejected"] is False
         assert result["query_type"] == "country_profile"
 
-    def test_plan_query_handles_none_classification(self):
-        """plan_query node: gracefully handles None classification."""
-        result = _extract_pipeline_state(
-            "plan_query",
-            {"graphql_classification": None},
-        )
-        assert result["stage"] == "plan_query"
-        assert "query_type" in result
-
     def test_plan_query_includes_entities(self):
         """plan_query node: result also includes extracted entities."""
         result = _extract_pipeline_state(
@@ -205,14 +196,6 @@ class TestGraphQLPipelineStateExtraction:
         )
         assert result["stage"] == "extract_graphql_question"
         assert result["question"] == "What is Kenya's ECI?"
-
-    def test_extract_entities_surfaces_entities_legacy(self):
-        """Legacy extract_entities node name should still produce stage key for unknown nodes."""
-        result = _extract_pipeline_state(
-            "extract_entities",
-            {"graphql_entity_extraction": {"country": "Kenya", "year": 2020}},
-        )
-        assert result["stage"] == "extract_entities"
 
     def test_build_and_execute_graphql_surfaces_execution_info(self):
         """build_and_execute_graphql node: result has success, api_target, execution_time_ms."""

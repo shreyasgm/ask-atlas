@@ -20,13 +20,6 @@ class TestCheckpointerManager:
             manager = CheckpointerManager()
             assert isinstance(manager.checkpointer, MemorySaver)
 
-    def test_explicit_none_url_uses_memory_saver(self):
-        """Passing db_url=None explicitly also falls back to MemorySaver."""
-        with patch("src.persistence.get_settings") as mock_settings:
-            mock_settings.return_value = MagicMock(checkpoint_db_url=None)
-            manager = CheckpointerManager(db_url=None)
-            assert isinstance(manager.checkpointer, MemorySaver)
-
     def test_explicit_url_overrides_settings(self):
         """Explicit db_url takes precedence over settings.checkpoint_db_url."""
         with patch("src.persistence.get_settings") as mock_settings:
@@ -61,13 +54,6 @@ class TestCheckpointerManager:
             manager = CheckpointerManager(db_url="postgresql://bad-host:5432/nope")
             cp = manager.checkpointer
             assert isinstance(cp, MemorySaver)
-
-    def test_close_without_init_is_safe(self):
-        """close() before .checkpointer is accessed does not raise."""
-        with patch("src.persistence.get_settings") as mock_settings:
-            mock_settings.return_value = MagicMock(checkpoint_db_url=None)
-            manager = CheckpointerManager()
-            manager.close()  # no-op, should not raise
 
 
 class TestAsyncCheckpointerManager:

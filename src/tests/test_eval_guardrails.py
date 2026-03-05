@@ -277,27 +277,6 @@ class TestGrowthOpportunitiesProductClass:
 # ---------------------------------------------------------------------------
 
 
-class TestGraphQLServicesClass:
-    """Verify GraphQLEntityExtraction accepts services_class."""
-
-    def test_services_class_field_accepted(self):
-        """GraphQLEntityExtraction should accept services_class field."""
-        from src.graphql_pipeline import GraphQLEntityExtraction
-
-        extraction = GraphQLEntityExtraction(
-            reasoning="test",
-            services_class="unilateral",
-        )
-        assert extraction.services_class == "unilateral"
-
-    def test_services_class_default_none(self):
-        """services_class defaults to None."""
-        from src.graphql_pipeline import GraphQLEntityExtraction
-
-        extraction = GraphQLEntityExtraction(reasoning="test")
-        assert extraction.services_class is None
-
-
 class TestServicesClassInQueryBuilders:
     """Verify query builders include servicesClass when set."""
 

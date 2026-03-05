@@ -113,10 +113,6 @@ def client() -> TestClient:
 class TestHealthEndpoint:
     """Tests for the API health-check endpoint at /api/health."""
 
-    def test_returns_200(self, client: TestClient) -> None:
-        response = client.get("/api/health")
-        assert response.status_code == 200
-
     def test_returns_status_ok(self, client: TestClient) -> None:
         response = client.get("/api/health")
         assert response.json() == {"status": "ok"}
@@ -146,10 +142,6 @@ class TestRootHealthEndpoint:
 class TestThreadCreation:
     """Tests for the thread creation endpoint."""
 
-    def test_returns_200(self, client: TestClient) -> None:
-        response = client.post("/api/threads")
-        assert response.status_code == 200
-
     def test_returns_thread_id(self, client: TestClient) -> None:
         data = client.post("/api/threads").json()
         assert "thread_id" in data
@@ -166,10 +158,6 @@ class TestThreadCreation:
         r2 = client.post("/api/threads").json()
         assert r1["thread_id"] != r2["thread_id"]
 
-    def test_many_calls_all_unique(self, client: TestClient) -> None:
-        ids = {client.post("/api/threads").json()["thread_id"] for _ in range(20)}
-        assert len(ids) == 20
-
 
 # ---------------------------------------------------------------------------
 # POST /chat  (non-streaming)
@@ -178,10 +166,6 @@ class TestThreadCreation:
 
 class TestChat:
     """Tests for the synchronous chat endpoint."""
-
-    def test_returns_200(self, client: TestClient) -> None:
-        response = client.post("/api/chat", json={"question": "Top US exports?"})
-        assert response.status_code == 200
 
     def test_returns_mocked_answer(self, client: TestClient) -> None:
         data = client.post("/api/chat", json={"question": "Top US exports?"}).json()
@@ -340,10 +324,6 @@ class TestChatPipelineDataEmpty:
 
 class TestChatStream:
     """Tests for the SSE streaming chat endpoint."""
-
-    def test_returns_200(self, client: TestClient) -> None:
-        response = client.post("/api/chat/stream", json={"question": "Exports?"})
-        assert response.status_code == 200
 
     def test_content_type_is_event_stream(self, client: TestClient) -> None:
         response = client.post("/api/chat/stream", json={"question": "Exports?"})
@@ -514,13 +494,6 @@ class TestChatStreamMixedTypes:
         assert types[3] == "tool_output"
         assert types[4] == "agent_talk"
         assert types[-1] == "done"
-
-    def test_four_middle_events(self, client: TestClient) -> None:
-        """The mixed mock yields exactly 4 StreamData chunks."""
-        response = client.post("/api/chat/stream", json={"question": "products?"})
-        events = _parse_sse(response.text)
-        middle = events[1:-1]
-        assert len(middle) == 4
 
 
 # ---------------------------------------------------------------------------

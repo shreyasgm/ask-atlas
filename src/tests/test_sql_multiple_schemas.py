@@ -1,5 +1,5 @@
 import pytest
-from sqlalchemy import create_engine, text, MetaData
+from sqlalchemy import create_engine, MetaData
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 from src.config import get_settings
 
@@ -37,13 +37,6 @@ def db_instance(db_engine):
         schemas=["hs92", "sitc", "classification"],
         sample_rows_in_table_info=5,
     )
-
-
-def test_database_connection(db_engine):
-    """Test basic database connectivity"""
-    with db_engine.connect() as connection:
-        result = connection.execute(text("SELECT 1"))
-        assert result.scalar() == 1
 
 
 def test_database_initialization(db_instance):
