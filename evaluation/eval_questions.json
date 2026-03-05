@@ -144,6 +144,11 @@
       "id": "classification_diversity",
       "name": "Classification Diversity",
       "description": "Questions testing the agent's ability to handle explicit classification requests (HS92, HS12, HS22, SITC)"
+    },
+    {
+      "id": "complex_stress_test",
+      "name": "Complex Stress Test",
+      "description": "Complex, multi-layered questions from realistic user personas (journalists, economists, policymakers, investors, researchers). No ground truth -- judged on plausibility only."
     }
   ],
   "questions": [
@@ -2274,6 +2279,665 @@
       "category_id": "classification_diversity",
       "difficulty": "hard",
       "text": "How does Brazil's number of products with RCA > 1 differ between HS 1992 and HS 2012?"
+    },
+    {
+      "id": 253,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Which countries have most dramatically increased their share of US imports of electronics and electrical machinery since 2018, and which countries lost share over the same period?",
+      "notes": "Tests multi-country comparison with temporal shift. Expects Vietnam, Mexico, India gaining while China loses. Story is whether 'decoupling' actually happened or just rerouted through intermediaries.",
+      "tags": [
+        "trade-war",
+        "supply-chains",
+        "temporal-shift",
+        "US-China"
+      ],
+      "persona": "journalist"
+    },
+    {
+      "id": 254,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "What are the top 10 products where a single country controls more than 60% of global exports? For each, show me how concentrated that dominance has become over the past decade.",
+      "notes": "Requires scanning all products for concentration, then tracking trend. Gets at supply chain vulnerability. Rare earths, certain chemicals from China expected, but may surface surprises.",
+      "tags": [
+        "concentration-risk",
+        "supply-chains",
+        "global-scan"
+      ],
+      "persona": "journalist"
+    },
+    {
+      "id": 255,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Which countries have seen the largest decline in economic complexity ranking over the past 15 years despite growing GDP?",
+      "notes": "The 'resource curse in slow motion' story -- countries that got richer but whose export baskets became less sophisticated. Australia, Chile, Gulf states might appear.",
+      "tags": [
+        "resource-curse",
+        "complexity-income-divergence",
+        "counterintuitive"
+      ],
+      "persona": "journalist"
+    },
+    {
+      "id": 256,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Show me bilateral trade between Russia and India, Russia and China, and Russia and Turkey from 2015 to the latest available year, broken down by major product categories. How did the composition shift after 2022?",
+      "notes": "Sanctions and energy redirection story. Expects surge in Russian energy to India/China post-2022, plus shifts in what Russia imports as Western goods become unavailable.",
+      "tags": [
+        "sanctions",
+        "geopolitical",
+        "bilateral-trade",
+        "temporal-shift"
+      ],
+      "persona": "journalist"
+    },
+    {
+      "id": 257,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Which sub-Saharan African countries have gained revealed comparative advantage in any manufactured goods over the past decade? What specific products, and how large are these export flows in absolute terms?",
+      "notes": "The 'next manufacturing frontier' story. Ethiopia's garments, Kenya's processed goods -- but is any of this showing up at meaningful scale in trade data?",
+      "tags": [
+        "Africa",
+        "industrialization",
+        "manufacturing",
+        "RCA-dynamics"
+      ],
+      "persona": "journalist"
+    },
+    {
+      "id": 258,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "For the 20 countries with the fastest-growing exports over the past 5 years, what share of that growth came from just one or two product categories vs. broad-based diversification?",
+      "notes": "Separates commodity lottery winners from countries building diverse export capacity. Tests whether 'export boom' narratives are really just one commodity.",
+      "tags": [
+        "export-growth",
+        "diversification-vs-concentration",
+        "global-scan"
+      ],
+      "persona": "journalist"
+    },
+    {
+      "id": 259,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Identify countries whose export profile looks most similar to South Korea's export profile 20 years ago. Which current developing countries are on a complexity trajectory that most closely mirrors the path South Korea, Taiwan, or Ireland took during industrialization?",
+      "notes": "The 'who's next' question. Uses historical patterns to identify current countries positioned where successful industrializers were a generation ago.",
+      "tags": [
+        "historical-analogy",
+        "development-trajectory",
+        "complexity-path"
+      ],
+      "persona": "journalist"
+    },
+    {
+      "id": 260,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "For countries that escaped the middle-income trap between 1990 and 2020 -- say South Korea, Poland, and Chile -- what did their export basket diversification look like in the decade before they crossed the high-income threshold?",
+      "notes": "Looking for a diagnostic pattern: did successful graduates diversify first then upgrade complexity, or both simultaneously? Would anchor policy advice for current middle-income countries.",
+      "tags": [
+        "middle-income-trap",
+        "diversification",
+        "development-benchmarking"
+      ],
+      "persona": "world-bank-economist"
+    },
+    {
+      "id": 261,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "What are the top 20 products by product complexity index that no Sub-Saharan African country currently has revealed comparative advantage in, but that at least three South or Southeast Asian countries gained RCA in during the last decade?",
+      "notes": "Identifies 'next feasible' complex products for Africa by using Asian peers as proof of concept. Should name specific products and the Asian countries that broke into them.",
+      "tags": [
+        "south-south",
+        "industrial-policy",
+        "Africa",
+        "feasibility-filter"
+      ],
+      "persona": "world-bank-economist"
+    },
+    {
+      "id": 262,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Identify countries that had a similar economic complexity index to Rwanda's current level but managed to increase their ECI by at least 0.3 points within 10 years. What products drove that complexity upgrading?",
+      "notes": "Peer-learning exercise. Reveals whether successful upgraders jumped to distant products or moved incrementally through nearby product space.",
+      "tags": [
+        "complexity-upgrading",
+        "peer-comparison",
+        "product-space"
+      ],
+      "persona": "world-bank-economist"
+    },
+    {
+      "id": 263,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "What is the current state of South-South trade in capital goods and machinery? Which developing countries are now significant exporters of HS chapters 84-85 to other developing countries, and how has this changed since 2010?",
+      "notes": "China will dominate but the interesting story is second-tier exporters -- India, Turkey, Mexico, Thailand -- and whether their machinery exports to low-income countries are growing.",
+      "tags": [
+        "south-south-trade",
+        "technology-transfer",
+        "capital-goods"
+      ],
+      "persona": "world-bank-economist"
+    },
+    {
+      "id": 264,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Take Morocco and Tunisia -- two North African economies pursuing different industrialization strategies. Compare their revealed comparative advantage profiles in automotive parts, aerospace components, electronics, and pharmaceutical products over the past decade.",
+      "notes": "Morocco has aggressively courted FDI in automotive/aerospace. Tunisia has longer manufacturing tradition but political instability. Tests whether industrial policy bets show up in trade data.",
+      "tags": [
+        "industrial-policy",
+        "North-Africa",
+        "sector-comparison"
+      ],
+      "persona": "world-bank-economist"
+    },
+    {
+      "id": 265,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Looking at countries that were in a similar position to Kenya 15-20 years ago -- similar complexity level, similar export basket dominated by agricultural commodities -- which ones successfully diversified and what new products did they break into first?",
+      "notes": "Asks for peer trajectory comparison with specific product sequencing. Not just endpoints but the stepping-stone products that came first.",
+      "tags": [
+        "peer-comparison",
+        "diversification-trajectory",
+        "historical-sequence"
+      ],
+      "persona": "developing-country-advisor"
+    },
+    {
+      "id": 266,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Global demand for processed and packaged foods has been growing. Which specific processed food categories have seen the fastest import growth worldwide over the last 5 years, and which of those align with raw agricultural commodities that East African countries already produce?",
+      "notes": "Cross-references global import demand trends with East Africa's existing commodity base. Identifies value-addition opportunities like roasted coffee, fruit juices, spice blends.",
+      "tags": [
+        "value-addition",
+        "demand-growth",
+        "agro-processing"
+      ],
+      "persona": "developing-country-advisor"
+    },
+    {
+      "id": 267,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "If we're serious about moving into light manufacturing -- garments, leather goods, basic electronics assembly -- who are we actually competing against? For each sector, which countries currently dominate exports, how concentrated is the market, and has any African country gained meaningful market share in the last decade?",
+      "notes": "Market structure analysis from a policymaker perspective. Needs to assess competitive entry feasibility, not just describe current leaders.",
+      "tags": [
+        "competitive-landscape",
+        "light-manufacturing",
+        "market-entry-feasibility"
+      ],
+      "persona": "developing-country-advisor"
+    },
+    {
+      "id": 268,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Which products have the highest 'strategic value' for a country like Kenya -- meaning products connected to many other complex products in the product space, so that developing capability in them would open doors to a wide range of future diversification?",
+      "notes": "Asks for products ranked by centrality/connectedness in product space weighted by feasibility from Kenya's current position. 'Gateway' products that unlock future paths.",
+      "tags": [
+        "strategic-bets",
+        "product-space-centrality",
+        "capability-building"
+      ],
+      "persona": "developing-country-advisor"
+    },
+    {
+      "id": 269,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "For our top 5 export destination markets, what are the fastest-growing import categories in each market that Kenya could plausibly supply? I want to match where demand is heading with what we might produce.",
+      "notes": "Market-by-market demand analysis filtered for supply-side feasibility. The 'demand pull' complement to product space 'supply push' analysis.",
+      "tags": [
+        "market-targeting",
+        "demand-analysis",
+        "destination-specific"
+      ],
+      "persona": "developing-country-advisor"
+    },
+    {
+      "id": 270,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "For automotive parts (HS 8708), what is the supplier concentration risk for the US market? Which countries supply more than 10% of US imports, and how has that concentration changed since 2018?",
+      "notes": "Business-oriented supply chain risk assessment. Looking for HHI-style concentration measure with trend. Tests whether USMCA reshaped sourcing.",
+      "tags": [
+        "supply-chain-risk",
+        "automotive",
+        "market-concentration"
+      ],
+      "persona": "corporate-strategist"
+    },
+    {
+      "id": 271,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Identify countries that currently have low revealed comparative advantage in pharmaceutical intermediates but have been rapidly increasing exports in those categories over the past five years. Which look like emerging production hubs?",
+      "notes": "Early signal detection for capacity building before a country becomes a major player. Expects candidates like Indonesia, Saudi Arabia, or Eastern Europe.",
+      "tags": [
+        "emerging-hubs",
+        "pharmaceuticals",
+        "early-signals"
+      ],
+      "persona": "corporate-strategist"
+    },
+    {
+      "id": 272,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "What are the top 10 products by export value where China holds more than 40% of global exports and no single alternative supplier holds more than 15%?",
+      "notes": "Identifies highest supply chain risk categories. Should quantify China's share and name next-largest suppliers to assess diversification feasibility.",
+      "tags": [
+        "China-dependency",
+        "supply-chain-risk",
+        "diversification-options"
+      ],
+      "persona": "corporate-strategist"
+    },
+    {
+      "id": 273,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Which countries have the highest economic complexity index but are underperforming in pharmaceutical exports relative to what their complexity would predict? These could be untapped partners for manufacturing joint ventures.",
+      "notes": "Complexity-vs-actual-exports gap analysis. Countries with high ECI but low pharma RCA may have workforce/institutional capacity but lack sector-specific investment.",
+      "tags": [
+        "market-entry",
+        "pharmaceuticals",
+        "complexity-gap"
+      ],
+      "persona": "corporate-strategist"
+    },
+    {
+      "id": 274,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Looking at countries that export both agricultural commodities and have growing exports in food processing machinery, which countries appear to be moving up the agribusiness value chain? Show the ratio shift between raw commodity exports and processed food exports over the past decade.",
+      "notes": "Identifies countries transitioning from raw material to value-added processing. Relevant for sourcing processed ingredients and selling processing equipment.",
+      "tags": [
+        "value-chain-upgrading",
+        "agribusiness",
+        "ratio-analysis"
+      ],
+      "persona": "corporate-strategist"
+    },
+    {
+      "id": 275,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "For countries with ECI significantly above what their GDP per capita would predict, what was their subsequent GDP growth over the following decade? Compare this to countries with large negative residuals.",
+      "notes": "Tests the Hausmann-Hidalgo prediction that complexity is a leading indicator of growth. Should show growth differential and name specific countries in each group.",
+      "tags": [
+        "complexity-theory",
+        "growth-prediction",
+        "ECI-income-gap"
+      ],
+      "persona": "complexity-researcher"
+    },
+    {
+      "id": 276,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Identify products that have high Product Complexity Index but low ubiquity -- exported with RCA by fewer than 10 countries. Which countries hold RCA in these products, and has the set of exporters expanded or contracted since 2010?",
+      "notes": "The 'exclusive complex' products. Tests whether complexity moats are widening or catch-up is happening in the most sophisticated niches.",
+      "tags": [
+        "product-complexity",
+        "market-concentration",
+        "moats-vs-diffusion"
+      ],
+      "persona": "complexity-researcher"
+    },
+    {
+      "id": 277,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Compare the complexity trajectories of resource-rich countries (top 20 by share of minerals and fuels in exports) versus resource-poor countries at similar income levels. Have any resource-rich countries managed to increase ECI substantially?",
+      "notes": "The 'resource curse' in complexity terms. Should name rare success cases and identify products that enabled escape from resource dependence.",
+      "tags": [
+        "natural-resources",
+        "complexity-theory",
+        "resource-curse"
+      ],
+      "persona": "complexity-researcher"
+    },
+    {
+      "id": 278,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Has the global product space become more or less clustered over the past two decades? Are the dense communities of related products becoming more interconnected with peripheral clusters, or is the core-periphery structure hardening?",
+      "notes": "Tests the evolving topology of the product space itself. Matters for whether catch-up is getting easier or harder over time.",
+      "tags": [
+        "product-space-dynamics",
+        "network-topology",
+        "structural-change"
+      ],
+      "persona": "complexity-researcher"
+    },
+    {
+      "id": 279,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Which countries have 'defied gravity' in the product space -- meaning they developed revealed comparative advantage in products that had very low relatedness to their existing portfolio? What do these cases have in common?",
+      "notes": "Tests for anomalies that challenge path-dependence. East Asian tigers and Central European post-transition economies likely candidates. May require contextual knowledge beyond pure data.",
+      "tags": [
+        "path-dependence",
+        "industrial-policy",
+        "anomaly-detection"
+      ],
+      "persona": "complexity-researcher"
+    },
+    {
+      "id": 280,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Looking at countries that experienced significant political or economic shocks (sanctions on Iran/Russia, Arab Spring, Venezuela crisis), how did their complexity and export diversity metrics respond? Is there evidence of hysteresis -- did complexity recover after the shock ended?",
+      "notes": "Tests resilience vs fragility of productive capabilities. Interesting finding: whether capabilities once lost are hard to rebuild.",
+      "tags": [
+        "economic-shocks",
+        "complexity-resilience",
+        "capability-destruction"
+      ],
+      "persona": "complexity-researcher"
+    },
+    {
+      "id": 281,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Among countries where fossil fuels represent more than 50% of total goods exports, which ones have shown the most diversification into non-fossil product categories over the past 10 years? Are any developing revealed comparative advantage in green products?",
+      "notes": "Tests whether petrostates are actually diversifying or just talking about it. UAE and Saudi's diversification narratives could be validated or challenged.",
+      "tags": [
+        "fossil-fuel-dependency",
+        "green-transition",
+        "economic-diversification"
+      ],
+      "persona": "sustainability-analyst"
+    },
+    {
+      "id": 282,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "How have global trade flows in solar photovoltaic cells and modules evolved since 2015? Which countries have gained or lost market share as exporters, and has there been any meaningful shift in sourcing away from China?",
+      "notes": "Tests whether 'friendshoring' or tariff policies have actually redirected solar trade or just raised costs. Vietnam, Malaysia, Cambodia may appear as intermediaries.",
+      "tags": [
+        "solar-energy",
+        "supply-chain-diversification",
+        "trade-policy-impact"
+      ],
+      "persona": "sustainability-analyst"
+    },
+    {
+      "id": 283,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Which countries have simultaneously high complexity in both critical minerals processing AND renewable energy equipment manufacturing? Who controls both the upstream mineral inputs and the downstream green technology outputs?",
+      "notes": "Should highlight China's vertically integrated position. Tests whether any other country comes close to dual positioning across the green value chain.",
+      "tags": [
+        "critical-minerals",
+        "green-value-chain",
+        "vertical-integration"
+      ],
+      "persona": "sustainability-analyst"
+    },
+    {
+      "id": 284,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Among Sub-Saharan African countries, which have the strongest revealed comparative advantage in minerals critical to the energy transition -- lithium, cobalt, manganese, graphite, nickel? Are any showing signs of moving into processed mineral products rather than raw ore?",
+      "notes": "DRC (cobalt), Mozambique (graphite), Zimbabwe (lithium) expected. Key question: are these countries capturing processing value or locked into raw commodity exports?",
+      "tags": [
+        "critical-minerals",
+        "Africa",
+        "value-chain-upgrading"
+      ],
+      "persona": "sustainability-analyst"
+    },
+    {
+      "id": 285,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Looking at small island developing states and other climate-vulnerable countries, what do their export baskets look like? How dependent are they on a narrow set of commodities, and do any have emerging capabilities in green products?",
+      "notes": "Most SIDS will show extreme export concentration. Hopeful angle: whether any show nascent diversification into green or service-adjacent products.",
+      "tags": [
+        "climate-vulnerability",
+        "SIDS",
+        "economic-resilience"
+      ],
+      "persona": "sustainability-analyst"
+    },
+    {
+      "id": 286,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Identify countries where export concentration exceeds 60% in the top 3 products and those products are commodities with high price volatility. Rank by how much concentration has increased or decreased over the past 5 years.",
+      "notes": "Sovereign risk screen. Countries becoming more concentrated in volatile commodities are accumulating macro fragility.",
+      "tags": [
+        "macro-risk",
+        "export-concentration",
+        "commodity-dependence"
+      ],
+      "persona": "em-investor"
+    },
+    {
+      "id": 287,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Which countries have a persistent and widening trade deficit in capital goods while simultaneously showing rising complexity in their export basket? That combination suggests active investment in productive capacity.",
+      "notes": "Importing capital goods paired with rising complexity is bullish -- it means investing in upgrading. Could surface next wave of industrial success stories.",
+      "tags": [
+        "investment-thesis",
+        "capital-goods-imports",
+        "growth-predictor"
+      ],
+      "persona": "em-investor"
+    },
+    {
+      "id": 288,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "For Gulf Cooperation Council countries, what does the non-hydrocarbon export basket look like? Which GCC country has made the most progress building non-oil export capabilities, and in which specific product categories?",
+      "notes": "Hard evidence on GCC diversification. Expecting UAE to lead, but curious whether Saudi's Vision 2030 is showing up in export data yet.",
+      "tags": [
+        "GCC-diversification",
+        "commodity-dependence",
+        "industrial-policy"
+      ],
+      "persona": "em-investor"
+    },
+    {
+      "id": 289,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "For Indonesia, trace the evolution of nickel and nickel-product exports over the past 10 years -- specifically the shift from raw nickel ore to processed nickel products. Has Indonesia gained new comparative advantages in any nickel-adjacent manufactured products?",
+      "notes": "Indonesia's nickel export ban is the most aggressive industrial policy experiment in EM right now. Tests whether downstream processing mandate creates real capabilities.",
+      "tags": [
+        "industrial-policy",
+        "commodity-value-chain",
+        "Indonesia"
+      ],
+      "persona": "em-investor"
+    },
+    {
+      "id": 290,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "What is the intra-African trade share for manufactured goods over the last decade, and how does it compare to intra-ASEAN and intra-Mercosur shares?",
+      "notes": "Benchmarks African regional integration against other South-South blocs. Should show whether the share is rising and which product categories drive intra-regional exchange.",
+      "tags": [
+        "regional-integration",
+        "south-south-trade",
+        "manufacturing"
+      ],
+      "persona": "wto-negotiator"
+    },
+    {
+      "id": 291,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Which African countries have the most diversified export baskets when trading with other African countries versus when trading with the rest of the world?",
+      "notes": "Tests whether intra-African trade supports productive diversification. Countries where the diversification gap is largest are most dependent on regional markets for their diversification story.",
+      "tags": [
+        "AfCFTA",
+        "diversification",
+        "intra-vs-extra-regional"
+      ],
+      "persona": "wto-negotiator"
+    },
+    {
+      "id": 292,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "What are the top 20 products by trade value that Sub-Saharan African countries import from outside Africa but which at least three African countries already export competitively?",
+      "notes": "Classic AfCFTA trade creation analysis. Products where intra-African supply exists but buyers source externally, suggesting barriers are the bottleneck.",
+      "tags": [
+        "AfCFTA",
+        "trade-creation",
+        "import-substitution"
+      ],
+      "persona": "wto-negotiator"
+    },
+    {
+      "id": 293,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Compare the economic complexity trajectories of countries that joined major trade agreements in the last 15 years -- CPTPP, AfCFTA, RCEP -- against comparable non-member economies. Is there any visible divergence in complexity after accession?",
+      "notes": "High-level policy evaluation question. Descriptive ECI trends pre/post agreement for members vs non-members would be valuable for trade negotiation advocacy.",
+      "tags": [
+        "trade-agreements",
+        "complexity-impact",
+        "policy-evaluation"
+      ],
+      "persona": "wto-negotiator"
+    },
+    {
+      "id": 294,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Morocco has become a major automotive exporter in Africa. What are the top 10 automotive-related products Morocco exports, how have they grown since 2014, and which other African countries export complementary components that could feed into a regional value chain?",
+      "notes": "Tests for specific HS-level automotive product detail plus regional value chain mapping. Story is whether supplier countries can integrate into Morocco's ecosystem.",
+      "tags": [
+        "value-chains",
+        "automotive",
+        "North-Africa",
+        "regional-integration"
+      ],
+      "persona": "regional-dev-bank"
+    },
+    {
+      "id": 295,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Identify the top 5 products where Cote d'Ivoire has revealed comparative advantage in raw form but does NOT have comparative advantage in the processed version. For each, show which countries globally have successfully made that upgrade.",
+      "notes": "Classic agro-processing gap analysis. Cocoa obvious, but cashews, rubber, palm oil, cotton also relevant. Benchmark countries tell the investment story.",
+      "tags": [
+        "agro-processing",
+        "value-addition",
+        "raw-vs-processed"
+      ],
+      "persona": "regional-dev-bank"
+    },
+    {
+      "id": 296,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "For the Central American textile and apparel sector -- Honduras, Guatemala, El Salvador, Nicaragua -- show how their apparel exports evolved over the past decade. Are they losing ground to Asian competitors, or have any moved into higher-value segments?",
+      "notes": "Tests whether nearshoring trends and DR-CAFTA are visible in the data. HS chapter 61-62 breakdowns over time needed.",
+      "tags": [
+        "textiles",
+        "Central-America",
+        "nearshoring",
+        "value-chain-upgrading"
+      ],
+      "persona": "regional-dev-bank"
+    },
+    {
+      "id": 297,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "What does Brazil's export complexity profile look like compared to other large middle-income countries -- Mexico, Turkey, Thailand, Indonesia? Where does Brazil have complexity advantages it's underexploiting?",
+      "notes": "Strategic bets analysis using product space methodology. Brazil may have untapped potential in machinery, chemicals, or advanced agri-tech. Comparison provides achievability context.",
+      "tags": [
+        "economic-complexity",
+        "product-space",
+        "Brazil",
+        "peer-comparison"
+      ],
+      "persona": "regional-dev-bank"
+    },
+    {
+      "id": 298,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "For rare earth elements and critical minerals used in battery production, what share of global exports does China control at each stage of the value chain -- raw ore, processed materials, and finished battery components? How has this changed over the last decade?",
+      "notes": "Maps China's dominance deepening up the value chain -- may control 30% of raw materials but 70%+ of processing. Must distinguish mining from refining stages.",
+      "tags": [
+        "critical-minerals",
+        "supply-chain-chokepoints",
+        "China-dominance"
+      ],
+      "persona": "geopolitical-analyst"
+    },
+    {
+      "id": 299,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "Compare the trade integration of BRICS+ members with each other versus with G7 countries over the past decade. Are BRICS countries actually trading more with each other, or is the bloc more political than economic?",
+      "notes": "Expects intra-BRICS trade growing but still dwarfed by BRICS-to-G7 flows for most members. China-Russia bilateral will be the outlier. Must distinguish commodity from manufactured goods trade.",
+      "tags": [
+        "BRICS",
+        "economic-blocs",
+        "geopolitics"
+      ],
+      "persona": "geopolitical-analyst"
+    },
+    {
+      "id": 300,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "What does China's export profile in advanced technology products -- telecom equipment, electric vehicles, and solar panels -- look like in terms of destination markets? Are Chinese tech exports increasingly going to Global South countries while being shut out of Western markets?",
+      "notes": "Tests the hypothesis of a bifurcating tech world. Should show diverging trendlines by destination region -- China losing G7 share but gaining in SE Asia, Africa, LATAM.",
+      "tags": [
+        "tech-decoupling",
+        "China",
+        "Global-South",
+        "market-bifurcation"
+      ],
+      "persona": "geopolitical-analyst"
+    },
+    {
+      "id": 301,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "How has India's trade profile in refined petroleum products evolved since 2022? Has India increased imports of Russian crude while simultaneously increasing exports of refined products to Europe and the US?",
+      "notes": "The 'India laundromat' hypothesis for Russian oil. Should show timing correlation between surging Russian crude imports and rising Indian diesel/gasoline exports to Western markets.",
+      "tags": [
+        "sanctions-circumvention",
+        "energy-security",
+        "India",
+        "refining-intermediary"
+      ],
+      "persona": "geopolitical-analyst"
+    },
+    {
+      "id": 302,
+      "category_id": "complex_stress_test",
+      "difficulty": "hard",
+      "text": "How have EU imports of natural gas, LNG, and crude oil shifted by source country between 2019 and 2024? Which suppliers replaced Russian volumes, and has the EU actually reduced its overall dependency concentration or just shifted it to new single sources?",
+      "notes": "Tests whether Europe traded one dependency for another -- e.g., becoming heavily reliant on US LNG -- rather than genuinely diversifying its energy import base.",
+      "tags": [
+        "energy-security",
+        "European-strategic-autonomy",
+        "dependency-shift"
+      ],
+      "persona": "geopolitical-analyst"
     }
   ]
 }
