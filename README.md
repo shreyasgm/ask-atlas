@@ -15,6 +15,7 @@ Ask Atlas is an AI-powered assistant that answers natural language questions abo
 - **Atlas visualization links** — Results include clickable links to explore data on the [Atlas website](https://atlas.hks.harvard.edu/).
 - **Trade controls** — Toggle goods/services, classification schema (HS92, HS12, SITC), and export/import direction. Settings propagate through the entire pipeline.
 - **Conversation history** — Pick up where you left off; conversations persist across sessions.
+- **User feedback** — Rate answers with thumbs up/down to help improve the system over time.
 - **Built-in domain knowledge** — Ask about methodology (ECI, RCA, product space) and get sourced explanations drawn from Atlas documentation.
 
 ## Architecture
