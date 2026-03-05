@@ -72,7 +72,6 @@ _GRAPHQL_STATE_DEFAULTS: dict[str, Any] = {
     "graphql_api_target": None,
     "graphql_raw_response": None,
     "graphql_execution_time_ms": 0,
-    "graphql_atlas_links": [],
 }
 
 # ---------------------------------------------------------------------------

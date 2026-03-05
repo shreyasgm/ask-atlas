@@ -124,6 +124,21 @@ def add_graphql_call_history(
     return (existing or []) + (new or [])
 
 
+def add_graphql_atlas_links(
+    existing: list[dict] | None, new: list[dict] | None
+) -> list[dict]:
+    """Reducer that accumulates Atlas links across GraphQL calls.
+
+    Args:
+        existing: Previously accumulated Atlas links (may be None).
+        new: New Atlas links to append (may be None).
+
+    Returns:
+        Combined list of all Atlas links.
+    """
+    return (existing or []) + (new or [])
+
+
 class AtlasAgentState(TypedDict):
     """State carried through each node of the Atlas agent graph.
 
@@ -203,7 +218,7 @@ class AtlasAgentState(TypedDict):
     graphql_api_target: Literal["explore", "country_pages"] | None
     graphql_raw_response: Optional[dict]
     graphql_execution_time_ms: int
-    graphql_atlas_links: list[dict]
+    graphql_atlas_links: Annotated[list[dict], add_graphql_atlas_links]
     # Accumulated per-call SQL pipeline snapshots (persisted across calls)
     sql_call_history: Annotated[list[dict], add_sql_call_history]
     # Accumulated per-call GraphQL pipeline snapshots (persisted across calls)

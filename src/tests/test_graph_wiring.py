@@ -729,3 +729,69 @@ class TestRetryRouting:
     def test_execution_second_failure_routes_to_format(self):
         state = {"last_error": "relation does not exist", "retry_count": 2}
         assert self._route_after_execution(state) == "format_results"
+
+
+# ---------------------------------------------------------------------------
+# Reducer accumulation tests
+# ---------------------------------------------------------------------------
+
+
+class TestGraphqlAtlasLinksReducer:
+    """Verify graphql_atlas_links accumulates across multiple node returns."""
+
+    async def test_atlas_links_accumulate_across_calls(self):
+        """Two sequential GraphQL-like node returns should accumulate links, not overwrite.
+
+        Simulates the bug scenario: call 1 produces links, call 2 produces none.
+        With the reducer, the final state should contain call 1's links.
+        """
+        from langgraph.graph import START, StateGraph
+
+        from src.state import AtlasAgentState
+
+        async def call_1(state: AtlasAgentState) -> dict:
+            return {
+                "graphql_atlas_links": [
+                    {
+                        "url": "https://atlas.cid.harvard.edu/explore?a=1",
+                        "label": "Link A",
+                    },
+                    {
+                        "url": "https://atlas.cid.harvard.edu/explore?b=2",
+                        "label": "Link B",
+                    },
+                ],
+            }
+
+        async def call_2(state: AtlasAgentState) -> dict:
+            # Second call produces no links (e.g. a country profile with no viz links)
+            return {
+                "graphql_atlas_links": [],
+            }
+
+        async def call_3(state: AtlasAgentState) -> dict:
+            # Third call produces one more link
+            return {
+                "graphql_atlas_links": [
+                    {
+                        "url": "https://atlas.cid.harvard.edu/explore?c=3",
+                        "label": "Link C",
+                    },
+                ],
+            }
+
+        builder = StateGraph(AtlasAgentState)
+        builder.add_node("call_1", call_1)
+        builder.add_node("call_2", call_2)
+        builder.add_node("call_3", call_3)
+        builder.add_edge(START, "call_1")
+        builder.add_edge("call_1", "call_2")
+        builder.add_edge("call_2", "call_3")
+
+        graph = builder.compile()
+        result = await graph.ainvoke({"messages": []})
+
+        links = result.get("graphql_atlas_links", [])
+        assert len(links) == 3
+        labels = {link["label"] for link in links}
+        assert labels == {"Link A", "Link B", "Link C"}
