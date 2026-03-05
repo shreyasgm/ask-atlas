@@ -46,5 +46,9 @@
     {
         "question": "What is the trade balance between Germany and the USA?",
         "file": "trade_balance_germany_usa.sql"
+    },
+    {
+        "question": "How many products does Brazil export with a revealed comparative advantage (RCA > 1)?",
+        "file": "rca_count_brazil.sql"
     }
 ]
