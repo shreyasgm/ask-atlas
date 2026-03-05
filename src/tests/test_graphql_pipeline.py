@@ -300,7 +300,8 @@ class TestExtractGraphQLQuestion:
         assert result["graphql_api_target"] is None
         assert result["graphql_raw_response"] is None
         assert result["graphql_execution_time_ms"] == 0
-        assert result["graphql_atlas_links"] == []
+        # graphql_atlas_links uses a reducer and is NOT reset between calls
+        assert "graphql_atlas_links" not in result
 
     async def test_handles_parallel_tool_calls(self):
         """Uses first tool_call; logs warning for extras."""
