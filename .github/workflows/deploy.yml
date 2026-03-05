@@ -53,7 +53,7 @@ jobs:
             --subnet=ask-atlas-subnet \
             --vpc-egress=all-traffic \
             --set-secrets="ATLAS_DB_URL=atlas-db-url:latest,CHECKPOINT_DB_URL=checkpoint-db-url:latest,OPENAI_API_KEY=openai-api-key:latest,ANTHROPIC_API_KEY=anthropic-api-key:latest" \
-            --service-account=REDACTED_COMPUTE_SA \
+            --service-account=${{ secrets.GCP_COMPUTE_SA_EMAIL }} \
             --allow-unauthenticated \
             --project=${{ secrets.GCP_PROJECT_ID }}
 
@@ -85,14 +85,17 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
         env:
-          VITE_API_BASE_URL: REDACTED_CLOUD_RUN_URL
+          VITE_API_BASE_URL: ${{ secrets.CLOUD_RUN_URL }}
           VITE_PUBLIC_POSTHOG_KEY: ${{ secrets.POSTHOG_API_KEY }}
 
       - name: Deploy to Firebase Hosting
         run: npx firebase-tools deploy --only hosting:app --project=${{ secrets.GCP_PROJECT_ID }}
 
 # Required GitHub secrets (configure when ready to deploy):
-#   GCP_WIF_PROVIDER — Workload Identity Federation provider resource name
-#   GCP_SA_EMAIL     — Service account email (REDACTED_GH_ACTIONS_SA)
-#   GCP_PROJECT_ID   — cid-hks-1537286359734
-#   GCP_REGION       — us-east1
+#   GCP_WIF_PROVIDER    — Workload Identity Federation provider resource name
+#   GCP_SA_EMAIL        — GitHub Actions service account email
+#   GCP_PROJECT_ID      — GCP project ID
+#   GCP_REGION          — GCP region
+#   GCP_COMPUTE_SA_EMAIL — Cloud Run compute service account email
+#   CLOUD_RUN_URL       — Cloud Run service URL (used as VITE_API_BASE_URL)
+#   POSTHOG_API_KEY     — PostHog project API key
