@@ -61,9 +61,9 @@ def text_search_key(product_to_search: str, schema: str) -> tuple:
     return (product_to_search.strip().lower(), schema)
 
 
-def table_info_key(schemas: list[str]) -> frozenset:
-    """Normalize table info key — order-independent."""
-    return frozenset(schemas)
+def table_info_key(schemas: list[str], requires_group_tables: bool = False) -> tuple:
+    """Normalize table info key — order-independent, includes group flag."""
+    return (frozenset(schemas), requires_group_tables)
 
 
 # ---------------------------------------------------------------------------

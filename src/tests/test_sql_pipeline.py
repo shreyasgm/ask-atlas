@@ -250,6 +250,43 @@ class TestClassificationTablesForSchemas:
         assert "classification.location_country" in names
         assert len(result) == 1
 
+    def test_group_member_excluded_by_default(self):
+        """location_group_member should NOT be included when requires_group_tables is False."""
+        table_desc = {
+            **self.TABLE_DESCRIPTIONS,
+            "classification": [
+                *self.TABLE_DESCRIPTIONS["classification"],
+                {
+                    "table_name": "location_group_member",
+                    "context_str": "Group members.",
+                },
+            ],
+        }
+        result = _classification_tables_for_schemas(["hs92"], table_desc)
+        names = {t["table_name"] for t in result}
+        assert "classification.location_group_member" not in names
+
+    def test_group_member_included_when_flagged(self):
+        """location_group_member should be included when requires_group_tables is True."""
+        table_desc = {
+            **self.TABLE_DESCRIPTIONS,
+            "classification": [
+                *self.TABLE_DESCRIPTIONS["classification"],
+                {
+                    "table_name": "location_group_member",
+                    "context_str": "Group members.",
+                },
+            ],
+        }
+        result = _classification_tables_for_schemas(
+            ["hs92"], table_desc, requires_group_tables=True
+        )
+        names = {t["table_name"] for t in result}
+        assert "classification.location_group_member" in names
+        # Should still have location_country and product_hs92
+        assert "classification.location_country" in names
+        assert "classification.product_hs92" in names
+
 
 class TestGetTableInfoForSchemas:
     def test_get_table_info_for_schemas(self, mock_db, project_paths):

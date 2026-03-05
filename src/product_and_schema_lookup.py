@@ -89,6 +89,10 @@ class SchemasAndProductsFound(BaseModel):
         default_factory=list,
         description="List of countries mentioned in the user's question, with their ISO 3166-1 alpha-3 codes",
     )
+    requires_group_tables: bool = Field(
+        default=False,
+        description="Whether the question involves a regional or economic group aggregate (e.g. Sub-Saharan Africa, EU, OPEC) rather than a single country",
+    )
 
 
 class ProductAndSchemaLookup:
