@@ -4,7 +4,7 @@ WITH latest_year AS (
 )
 SELECT
     p.code as product_code,
-    p.name_en as product_name,
+    p.name_short_en as product_name,
     cpy.export_rca,
     cpy.export_value,
     cpy.global_market_share
