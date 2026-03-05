@@ -28,9 +28,13 @@ from src.product_and_schema_lookup import (
     SchemasAndProductsFound,
     format_product_codes_for_prompt,
 )
-from src.prompts import build_sql_generation_prefix
+from src.prompts import SQL_RETRY_BLOCK, build_sql_generation_prefix
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
-from src.sql_validation import extract_table_names_from_ddl, validate_sql
+from src.sql_validation import (
+    build_schema_from_ddl,
+    extract_table_names_from_ddl,
+    validate_sql,
+)
 from src.state import AtlasAgentState, cap_snapshot_result
 from src.token_usage import make_usage_record_from_callback, node_timer
 
@@ -105,6 +109,8 @@ def create_query_generation_chain(
     direction_constraint: str | None = None,
     mode_constraint: str | None = None,
     context: str = "",
+    group_tables: bool = False,
+    retry_context: str = "",
 ) -> Runnable:
     """
     Creates a chain that generates SQL queries based on the user's question.
@@ -118,6 +124,8 @@ def create_query_generation_chain(
         direction_constraint: Optional trade direction constraint (exports/imports)
         mode_constraint: Optional trade mode constraint (goods/services)
         context: Optional technical context (e.g., from docs_tool) to guide SQL generation.
+        group_tables: Whether to include group/regional aggregate guidance.
+        retry_context: Pre-formatted retry block (previous SQL + error), or empty string.
 
     Returns:
         A chain that generates SQL queries
@@ -129,6 +137,8 @@ def create_query_generation_chain(
         direction_constraint=direction_constraint,
         mode_constraint=mode_constraint,
         context=context,
+        group_tables=group_tables,
+        retry_context=retry_context,
     )
 
     example_prompt = PromptTemplate.from_template(
@@ -178,12 +188,14 @@ def _query_tool_schema(question: str, context: str = "") -> str:
 def _classification_tables_for_schemas(
     classification_schemas: List[str],
     table_descriptions: Dict,
+    requires_group_tables: bool = False,
 ) -> List[Dict]:
     """Return the specific classification lookup tables needed for the given data schemas.
 
     For each data schema (e.g. hs92), includes:
     - classification.location_country (always — needed for country lookups)
     - The matching product table (e.g. classification.product_hs92)
+    - classification.location_group_member (only when requires_group_tables is True)
     """
     tables: List[Dict] = []
     seen: set[str] = set()
@@ -216,6 +228,18 @@ def _classification_tables_for_schemas(
                     }
                 )
                 seen.add(product_table_full)
+
+    # Include group member table when the question involves regional aggregates
+    if requires_group_tables:
+        group_member_entry = classification_by_name.get("location_group_member")
+        if group_member_entry:
+            tables.append(
+                {
+                    "table_name": "classification.location_group_member",
+                    "context_str": group_member_entry["context_str"],
+                }
+            )
+            seen.add("classification.location_group_member")
 
     return tables
 
@@ -250,11 +274,12 @@ def get_table_info_for_schemas(
     db: SQLDatabaseWithSchemas,
     table_descriptions: Dict,
     classification_schemas: List[str],
+    requires_group_tables: bool = False,
 ) -> str:
     """Get table information for a list of schemas."""
     from src.cache import registry, table_info_cache, table_info_key
 
-    key = table_info_key(classification_schemas)
+    key = table_info_key(classification_schemas, requires_group_tables)
     cached = table_info_cache.get(key)
     if cached is not None:
         registry.record_hit("table_info")
@@ -272,12 +297,13 @@ def get_table_info_for_schemas(
 
     # Add the specific classification lookup tables needed for JOINs
     tables.extend(
-        _classification_tables_for_schemas(classification_schemas, table_descriptions)
+        _classification_tables_for_schemas(
+            classification_schemas, table_descriptions, requires_group_tables
+        )
     )
 
-    # Exclude large group data tables but keep classification lookup tables
-    # Table names are schema-qualified (e.g. "hs92.group_group_product_year_4"),
-    # so we check the part after the schema prefix.
+    # Exclude large group data tables (group_group_*) — we use aggregation
+    # via location_group_member instead.  Keep classification lookup tables.
     tables = [table for table in tables if "group_group_" not in table["table_name"]]
     table_info = ""
     for table in tables:
@@ -426,12 +452,16 @@ async def get_table_info_node(
     async with node_timer("get_table_info", "query_tool") as t:
         products = state.get("pipeline_products")
         schemas = products.classification_schemas if products else []
+        requires_group = (
+            getattr(products, "requires_group_tables", False) if products else False
+        )
         io_start = time.monotonic()
         info = await asyncio.to_thread(
             get_table_info_for_schemas,
             db=db,
             table_descriptions=table_descriptions,
             classification_schemas=schemas,
+            requires_group_tables=requires_group,
         )
         t.mark_io(io_start, time.monotonic())
     return {"pipeline_table_info": info, "step_timing": [t.record]}
@@ -449,6 +479,20 @@ async def generate_sql_node(
 
     async with node_timer("generate_sql", "query_tool") as t:
         codes = state.get("pipeline_codes") or None
+        products = state.get("pipeline_products")
+        requires_group = (
+            getattr(products, "requires_group_tables", False) if products else False
+        )
+
+        # Build retry context when retrying after a failed attempt
+        retry_context = ""
+        last_error = state.get("last_error", "")
+        if last_error:
+            previous_sql = state.get("pipeline_sql", "")
+            retry_context = SQL_RETRY_BLOCK.format(
+                previous_sql=previous_sql, error_message=last_error
+            )
+
         chain = create_query_generation_chain(
             llm=llm,
             codes=codes,
@@ -458,6 +502,8 @@ async def generate_sql_node(
             direction_constraint=state.get("override_direction"),
             mode_constraint=state.get("override_mode"),
             context=state.get("pipeline_context", ""),
+            group_tables=requires_group,
+            retry_context=retry_context,
         )
         usage_handler = UsageMetadataCallbackHandler()
         llm_start = time.monotonic()
@@ -473,6 +519,7 @@ async def generate_sql_node(
     return {
         "pipeline_sql": sql,
         "pipeline_sql_history": [{"sql": sql, "stage": "generated", "errors": None}],
+        "last_error": "",
         "token_usage": [usage_record],
         "step_timing": [t.record],
     }
@@ -513,11 +560,29 @@ async def validate_sql_node(
         if (products and hasattr(products, "classification_schemas"))
         else []
     )
-    for ct in _classification_tables_for_schemas(schemas, table_descriptions):
+    requires_group = (
+        getattr(products, "requires_group_tables", False) if products else False
+    )
+    for ct in _classification_tables_for_schemas(
+        schemas, table_descriptions, requires_group
+    ):
         valid_tables.add(ct["table_name"])
 
+    # Build expected schemas from product extraction for schema-mismatch detection
+    expected_schemas: set[str] | None = None
+    if products and hasattr(products, "classification_schemas"):
+        expected_schemas = set(products.classification_schemas)
+
+    # Build column schema from DDL for scope-aware column validation
+    column_schema = build_schema_from_ddl(table_info) if table_info else None
+
     async with node_timer("validate_sql", "query_tool") as t:
-        result = validate_sql(sql, valid_tables)
+        result = validate_sql(
+            sql,
+            valid_tables,
+            expected_schemas=expected_schemas,
+            column_schema=column_schema,
+        )
 
     if not result.is_valid:
         error_msg = "SQL validation failed: " + "; ".join(result.errors)
@@ -526,6 +591,7 @@ async def validate_sql_node(
             "pipeline_sql": sql,
             "pipeline_result": "",
             "last_error": error_msg,
+            "retry_count": state.get("retry_count", 0) + 1,
             "pipeline_sql_history": [
                 {"sql": sql, "stage": "validated", "errors": list(result.errors)}
             ],
@@ -587,6 +653,7 @@ async def execute_sql_node(
                 return {
                     "pipeline_result": "",
                     "last_error": str(e),
+                    "retry_count": state.get("retry_count", 0) + 1,
                     **_empty_structured,
                     "pipeline_sql_history": [
                         {"sql": sql, "stage": "execution_error", "errors": [str(e)]}
@@ -598,6 +665,7 @@ async def execute_sql_node(
                 return {
                     "pipeline_result": "",
                     "last_error": str(e),
+                    "retry_count": state.get("retry_count", 0) + 1,
                     **_empty_structured,
                     "pipeline_sql_history": [
                         {"sql": sql, "stage": "execution_error", "errors": [str(e)]}
@@ -633,6 +701,7 @@ async def execute_sql_node(
                 return {
                     "pipeline_result": "",
                     "last_error": str(e),
+                    "retry_count": state.get("retry_count", 0) + 1,
                     **_empty_structured,
                     "pipeline_sql_history": [
                         {"sql": sql, "stage": "execution_error", "errors": [str(e)]}
@@ -644,6 +713,7 @@ async def execute_sql_node(
                 return {
                     "pipeline_result": "",
                     "last_error": str(e),
+                    "retry_count": state.get("retry_count", 0) + 1,
                     **_empty_structured,
                     "pipeline_sql_history": [
                         {"sql": sql, "stage": "execution_error", "errors": [str(e)]}
