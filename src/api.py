@@ -948,27 +948,33 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                         elif stage == "format_graphql_results":
                             links = stream_data.payload.get("atlas_links") or []
                             if links:
-                                stream_atlas_links.extend(links)
+                                # Only emit links not already sent in prior events
+                                sent_urls = {lk["url"] for lk in stream_atlas_links}
+                                new_links = [
+                                    lk for lk in links if lk.get("url") not in sent_urls
+                                ]
+                                stream_atlas_links.extend(new_links)
                                 if stream_graphql_summaries:
-                                    stream_graphql_summaries[-1]["links"] = links
-                                # Emit a dedicated atlas_links SSE event
-                                event_count += 1
-                                logger.info(
-                                    "  SSE #%d  event=atlas_links  count=%d",
-                                    event_count,
-                                    len(links),
-                                )
-                                yield {
-                                    "event": "atlas_links",
-                                    "data": json.dumps(
-                                        {
-                                            "atlas_links": links,
-                                            "query_index": stream_data.payload.get(
-                                                "query_index", 0
-                                            ),
-                                        }
-                                    ),
-                                }
+                                    stream_graphql_summaries[-1]["links"] = new_links
+                                if new_links:
+                                    # Emit a dedicated atlas_links SSE event
+                                    event_count += 1
+                                    logger.info(
+                                        "  SSE #%d  event=atlas_links  count=%d",
+                                        event_count,
+                                        len(new_links),
+                                    )
+                                    yield {
+                                        "event": "atlas_links",
+                                        "data": json.dumps(
+                                            {
+                                                "atlas_links": new_links,
+                                                "query_index": stream_data.payload.get(
+                                                    "query_index", 0
+                                                ),
+                                            }
+                                        ),
+                                    }
                 else:
                     # Log content preview for non-pipeline events
                     preview = (stream_data.content or "")[:60]
