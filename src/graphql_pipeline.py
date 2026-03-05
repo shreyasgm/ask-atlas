@@ -1030,10 +1030,24 @@ async def _resolve_ids_inner(
         query_type = "group_bilateral"
         api_target = _QUERY_TYPE_TO_API["group_bilateral"]
 
-    # Generate atlas links BEFORE formatting IDs (links expect canonical form)
+    # Strip ID prefixes for link generation (links expect bare integers)
+    link_params = dict(resolved)
+    for key in (
+        "country_id",
+        "product_id",
+        "partner_id",
+        "group_id",
+        "partner_group_id",
+    ):
+        if key in link_params:
+            try:
+                link_params[key] = _strip_id_prefix(link_params[key])
+            except (ValueError, TypeError):
+                pass
+
     atlas_links: list[dict] = []
     try:
-        links = generate_atlas_links(query_type, resolved)
+        links = generate_atlas_links(query_type, link_params)
         atlas_links = [
             {
                 "label": link.label,
