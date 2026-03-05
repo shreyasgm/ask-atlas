@@ -1084,7 +1084,12 @@ class TestPipelineLatency:
         assert "agent" in la["avg_by_pipeline"]
 
     def test_pipeline_averages_computed_correctly(self):
-        """Verify arithmetic: agent appears in both, query_tool in Q1, atlas_graphql in Q2."""
+        """Verify arithmetic: averages are per-invocation, not per-question.
+
+        agent: 2 questions × 1 call each = 2 total calls, wall = (2000+3000)/2 = 2500
+        query_tool: 1 question × 2 calls = 2 total calls, wall = 7000/2 = 3500
+        atlas_graphql: 1 question × 1 call = 1 total call, wall = 1000/1 = 1000
+        """
         run_results = self._make_timing_results()
         report = generate_report(
             run_results,
@@ -1097,23 +1102,26 @@ class TestPipelineLatency:
 
         avg_by_pipeline = report["latency_analysis"]["avg_by_pipeline"]
 
-        # "agent" appears in both questions: avg wall = (2000+3000)/2 = 2500
+        # "agent" appears in both questions, 1 call each: avg wall = (2000+3000)/2 = 2500
         assert avg_by_pipeline["agent"]["avg_wall_time_ms"] == pytest.approx(
             2500.0, abs=1
         )
         assert avg_by_pipeline["agent"]["appearances"] == 2
+        assert avg_by_pipeline["agent"]["total_calls"] == 2
 
-        # "query_tool" only in Q1: avg wall = 7000/1 = 7000
+        # "query_tool" in Q1 with call_count=2: avg wall = 7000/2 = 3500
         assert avg_by_pipeline["query_tool"]["avg_wall_time_ms"] == pytest.approx(
-            7000.0, abs=1
+            3500.0, abs=1
         )
         assert avg_by_pipeline["query_tool"]["appearances"] == 1
+        assert avg_by_pipeline["query_tool"]["total_calls"] == 2
 
         # "atlas_graphql" only in Q2: avg wall = 1000/1 = 1000
         assert avg_by_pipeline["atlas_graphql"]["avg_wall_time_ms"] == pytest.approx(
             1000.0, abs=1
         )
         assert avg_by_pipeline["atlas_graphql"]["appearances"] == 1
+        assert avg_by_pipeline["atlas_graphql"]["total_calls"] == 1
 
         # Verify LLM time for agent: (1800+2500)/2 = 2150
         assert avg_by_pipeline["agent"]["avg_llm_time_ms"] == pytest.approx(
