@@ -70,6 +70,11 @@ packages = ["src"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+filterwarnings = [
+    # Pydantic serialization warnings from LangChain structured output — known
+    # upstream issue, not actionable on our end.
+    "ignore:Pydantic serializer warnings:UserWarning",
+]
 markers = [
     "integration: marks tests that require integration with external services (like LLM)",
     "db: marks tests that require a live database connection",
