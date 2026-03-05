@@ -35,6 +35,7 @@ Technical metrics:
 - Growth opportunities: Products where a country does NOT yet have comparative advantage (RCA < 1). Sort by `cog` DESC for attractiveness. `distance` indicates feasibility - before you sort by `cog`, filter for distance < 10th percentile of distance of products for that country.
   * Market Share: A country's exports of a product as a percentage of total global exports of that product in the same year.  Calculated as: (Country's exports of product X) / (Total global exports of product X) * 100%.
   * New Products: A product is considered "new" to a country in a given year if the country had an RCA <1 for that product in the previous year and an RCA >=1 in the current year.
+  * CAGR (Compound Annual Growth Rate): Compute from export values at two points in time. Default to a 5-year window if the user does not specify. Formula: (POWER(end_value / start_value, 1.0 / n_years) - 1) * 100. Do NOT use country_product_lookback tables (they are empty).
 
 Only use the tables and columns provided. Here is the relevant table information:
 {table_info}
@@ -43,7 +44,6 @@ Table selection guide:
 - `country_year`: Country-level aggregates (total exports, ECI, GDP). One row per country per year.
 - `product_year_N`: Global product-level data (world export value, PCI, ubiquity). No country dimension.
 - `country_product_year_N`: Country-product metrics (export value, RCA, COG, distance). Main table for "what does country X export?".
-- `country_product_lookback_N`: Pre-computed growth rates (CAGR, percent change) for country-product pairs over lookback windows. Use for "how fast did exports grow?" questions. Only available in hs92.
 - `country_country_year`: Bilateral aggregate trade. For "total trade between A and B" or trade balance.
 - `country_country_product_year_N`: Bilateral trade by product. For "what does A export to B?" with product breakdown.
 - Table suffixes (_1, _2, _4, _6) indicate product digit level.
@@ -168,7 +168,15 @@ Additional rules:
 **Country identification:**
 - Identify all countries with ISO 3166-1 alpha-3 codes.
 - If no countries mentioned, return an empty list.
-- Regions/continents are NOT countries — do not include them.
+- Regions/continents are NOT countries — do not include them in the countries list.
+
+**Group/region detection:**
+- Set requires_group_tables=true when the question refers to a geographic or economic aggregate:
+  continents (Asia, Africa, Europe), trade blocs (EU, ASEAN, Mercosur, NAFTA, OPEC),
+  income groups (Low Income, High Income), sub-regions (Sub-Saharan Africa, Southeast Asia,
+  Western Europe), world totals, or any multi-country group.
+- Single countries → requires_group_tables=false.
+- When in doubt, set requires_group_tables=false.
 
 Examples:
 
@@ -255,9 +263,30 @@ Response: {{
     "classification_schemas": ["hs12"],
     "products": [],
     "requires_product_lookup": false,
+    "requires_group_tables": false,
     "countries": [{{"name": "India", "iso3_code": "IND"}}]
 }}
 Reason: "Goods" explicitly mentioned → hs12 only.
+
+Question: "What are the top exports of Sub-Saharan Africa?"
+Response: {{
+    "classification_schemas": ["hs12", "services_unilateral"],
+    "products": [],
+    "requires_product_lookup": false,
+    "requires_group_tables": true,
+    "countries": []
+}}
+Reason: "Sub-Saharan Africa" is a regional group, not a single country. No countries listed. "Top exports" without "goods" → both schemas.
+
+Question: "How much coffee does the EU export?"
+Response: {{
+    "classification_schemas": ["hs12"],
+    "products": [{{"name": "coffee", "classification_schema": "hs12", "codes": ["0901"]}}],
+    "requires_product_lookup": true,
+    "requires_group_tables": true,
+    "countries": []
+}}
+Reason: "EU" is a political group, not a single country. Specific goods product → hs12 only.
 """
 
 # --- PRODUCT_CODE_SELECTION_PROMPT ---
@@ -279,6 +308,68 @@ If no candidates are relevant to the product mentioned, return an empty mapping 
 """
 
 
+# --- SQL_GROUP_TABLES_BLOCK ---
+# Appended when the question involves a regional/economic group aggregate.
+# No placeholders — the group name list is hardcoded from classification data.
+#
+# NOTE: The group names below are sourced from classification.location_group_member
+# in the Atlas DB.  If that table's contents change, update this list to match.
+
+# --- SQL_RETRY_BLOCK ---
+# Appended when retrying after a failed SQL attempt.
+# Placeholders: {previous_sql}, {error_message}
+
+SQL_RETRY_BLOCK = """
+
+**Retry — previous attempt failed:**
+The following SQL query failed validation or execution. Generate a corrected query.
+
+Failed SQL:
+```sql
+{previous_sql}
+```
+Error: {error_message}
+
+Fix the error and generate a corrected SQL query. Do not repeat the same mistake."""
+
+
+SQL_GROUP_TABLES_BLOCK = """
+
+**Group / regional aggregate query pattern:**
+The question involves a group or regional aggregate (not a single country).
+Use `classification.location_group_member` to find member countries, then aggregate
+from the standard country-level tables.
+
+`classification.location_group_member` columns: group_id, group_type, group_name, country_id.
+
+Available groups (use exact group_name and group_type values in WHERE clauses):
+- continent: Africa, Asia, Europe, North America, Oceania, South America
+- political: European Union, G7
+- region: Africa, Americas, Asia, Europe, Oceania
+- subregion: Australia and New Zealand, Caribbean, Central America, Central Asia, Eastern Africa, Eastern Asia, Eastern Europe, Melanesia, Micronesia, Middle Africa, Northern Africa, Northern America, Northern Europe, Polynesia, South America, South-eastern Asia, Southern Africa, Southern Asia, Southern Europe, Western Africa, Western Asia, Western Europe
+- trade: NAFTA, OPEC
+- wdi_income_level: high, low, lower middle, upper middle
+- wdi_region: East Asia & Pacific, Europe & Central Asia, Latin America & Caribbean, Middle East & North Africa, North America, South Asia, Sub-Saharan Africa
+- world: world
+
+Some group_name values appear under multiple group_type values (e.g. "Africa" is both
+a continent and a region with slightly different member countries). Always filter on
+BOTH group_name AND group_type to avoid double-counting.
+
+Example — total exports of Sub-Saharan Africa:
+```sql
+SELECT lgm.group_name, SUM(cpy.export_value) AS total_exports
+FROM hs12.country_product_year_4 cpy
+JOIN classification.location_group_member lgm ON cpy.country_id = lgm.country_id
+WHERE lgm.group_name = 'Sub-Saharan Africa'
+  AND lgm.group_type = 'wdi_region'
+  AND cpy.year = (SELECT MAX(year) FROM hs12.country_product_year_4)
+GROUP BY lgm.group_name;
+```
+
+Do NOT use the group_group_product_year tables."""
+
+
 # =========================================================================
 # Builder function
 # =========================================================================
@@ -292,11 +383,14 @@ def build_sql_generation_prefix(
     direction_constraint: str | None,
     mode_constraint: str | None,
     context: str,
+    group_tables: bool = False,
+    retry_context: str = "",
 ) -> str:
     """Assemble the full SQL generation prompt prefix.
 
     Starts with :data:`SQL_GENERATION_PROMPT` and conditionally appends
-    blocks for product codes, direction/mode overrides, and context.
+    blocks for product codes, direction/mode overrides, group tables,
+    retry context, and technical context.
 
     Args:
         codes: Formatted product-code reference string, or ``None``.
@@ -305,6 +399,8 @@ def build_sql_generation_prefix(
         direction_constraint: ``"exports"`` or ``"imports"``, or ``None``.
         mode_constraint: ``"goods"`` or ``"services"``, or ``None``.
         context: Technical context from docs_tool, or empty string.
+        group_tables: Whether to include group/regional aggregate guidance.
+        retry_context: Pre-formatted retry block (previous SQL + error), or empty string.
 
     Returns:
         Complete prefix string ready for the few-shot prompt template.
@@ -321,6 +417,12 @@ def build_sql_generation_prefix(
 
     if mode_constraint:
         prefix += SQL_MODE_BLOCK.format(mode=mode_constraint)
+
+    if group_tables:
+        prefix += SQL_GROUP_TABLES_BLOCK
+
+    if retry_context:
+        prefix += retry_context
 
     if context:
         prefix += SQL_CONTEXT_BLOCK.format(context=context)
