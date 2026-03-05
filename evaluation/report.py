@@ -230,13 +230,25 @@ def _aggregate_latency(run_results: list[dict[str, Any]]) -> dict[str, Any]:
     )
     n = len(results_with_timing)
 
-    # Aggregate per-node averages
+    # Aggregate per-node averages (count = total invocations, appearances = questions)
     node_totals: dict[str, dict[str, float]] = defaultdict(
-        lambda: {"wall_time_ms": 0.0, "llm_time_ms": 0.0, "io_time_ms": 0.0, "count": 0}
+        lambda: {
+            "wall_time_ms": 0.0,
+            "llm_time_ms": 0.0,
+            "io_time_ms": 0.0,
+            "count": 0,
+            "appearances": 0,
+        }
     )
-    # Aggregate per-pipeline averages
+    # Aggregate per-pipeline averages (count = total invocations, appearances = questions)
     pipeline_totals: dict[str, dict[str, float]] = defaultdict(
-        lambda: {"wall_time_ms": 0.0, "llm_time_ms": 0.0, "io_time_ms": 0.0, "count": 0}
+        lambda: {
+            "wall_time_ms": 0.0,
+            "llm_time_ms": 0.0,
+            "io_time_ms": 0.0,
+            "count": 0,
+            "appearances": 0,
+        }
     )
     grand_llm = 0.0
     grand_io = 0.0
@@ -249,7 +261,8 @@ def _aggregate_latency(run_results: list[dict[str, Any]]) -> dict[str, Any]:
             node_totals[node_name]["wall_time_ms"] += node_data.get("wall_time_ms", 0)
             node_totals[node_name]["llm_time_ms"] += node_data.get("llm_time_ms", 0)
             node_totals[node_name]["io_time_ms"] += node_data.get("io_time_ms", 0)
-            node_totals[node_name]["count"] += 1
+            node_totals[node_name]["count"] += node_data.get("call_count", 1)
+            node_totals[node_name]["appearances"] += 1
 
         for pipe_name, pipe_data in summary.get("by_pipeline", {}).items():
             pipeline_totals[pipe_name]["wall_time_ms"] += pipe_data.get(
@@ -257,7 +270,8 @@ def _aggregate_latency(run_results: list[dict[str, Any]]) -> dict[str, Any]:
             )
             pipeline_totals[pipe_name]["llm_time_ms"] += pipe_data.get("llm_time_ms", 0)
             pipeline_totals[pipe_name]["io_time_ms"] += pipe_data.get("io_time_ms", 0)
-            pipeline_totals[pipe_name]["count"] += 1
+            pipeline_totals[pipe_name]["count"] += pipe_data.get("call_count", 1)
+            pipeline_totals[pipe_name]["appearances"] += 1
 
         total = summary.get("total", {})
         grand_llm += total.get("llm_time_ms", 0)
@@ -265,12 +279,12 @@ def _aggregate_latency(run_results: list[dict[str, Any]]) -> dict[str, Any]:
         grand_overhead += total.get("overhead_ms", 0)
         grand_wall += total.get("wall_time_ms", 0)
 
-    # Compute averages per node
+    # Compute averages per node (per-invocation, not per-question)
     avg_by_node = {}
     for node_name, data in sorted(
         node_totals.items(), key=lambda x: -x[1]["wall_time_ms"]
     ):
-        cnt = data["count"]
+        cnt = data["count"]  # total invocations across all questions
         avg_by_node[node_name] = {
             "avg_wall_time_ms": round(data["wall_time_ms"] / cnt, 1),
             "avg_llm_time_ms": round(data["llm_time_ms"] / cnt, 1),
@@ -278,15 +292,16 @@ def _aggregate_latency(run_results: list[dict[str, Any]]) -> dict[str, Any]:
             "pct_of_total": (
                 round(data["wall_time_ms"] / grand_wall * 100, 1) if grand_wall else 0
             ),
-            "appearances": cnt,
+            "appearances": int(data["appearances"]),
+            "total_calls": cnt,
         }
 
-    # Compute averages per pipeline
+    # Compute averages per pipeline (per-invocation, not per-question)
     avg_by_pipeline = {}
     for pipe_name, data in sorted(
         pipeline_totals.items(), key=lambda x: -x[1]["wall_time_ms"]
     ):
-        cnt = data["count"]
+        cnt = data["count"]  # total invocations across all questions
         avg_by_pipeline[pipe_name] = {
             "avg_wall_time_ms": round(data["wall_time_ms"] / cnt, 1),
             "avg_llm_time_ms": round(data["llm_time_ms"] / cnt, 1),
@@ -294,7 +309,8 @@ def _aggregate_latency(run_results: list[dict[str, Any]]) -> dict[str, Any]:
             "pct_of_total": (
                 round(data["wall_time_ms"] / grand_wall * 100, 1) if grand_wall else 0
             ),
-            "appearances": cnt,
+            "appearances": int(data["appearances"]),
+            "total_calls": cnt,
         }
 
     # Time breakdown percentages
@@ -678,8 +694,8 @@ def report_to_markdown(report: dict[str, Any]) -> str:
         avg_by_node = latency.get("avg_by_node", {})
         if avg_by_node:
             lines.append("\n### Bottleneck Nodes\n")
-            lines.append("| Node | Avg Time | % of Total | LLM % | I/O % |")
-            lines.append("|------|----------|------------|-------|-------|")
+            lines.append("| Node | Avg Time | % of Total | LLM % | I/O % | Calls |")
+            lines.append("|------|----------|------------|-------|-------|-------|")
             for node_name, data in avg_by_node.items():
                 avg_wall = data["avg_wall_time_ms"]
                 llm_pct = (
@@ -690,20 +706,17 @@ def report_to_markdown(report: dict[str, Any]) -> str:
                 io_pct = (
                     round(data["avg_io_time_ms"] / avg_wall * 100, 1) if avg_wall else 0
                 )
+                total_calls = data.get("total_calls", data.get("appearances", "?"))
                 lines.append(
                     f"| {node_name} | {avg_wall:.0f}ms | {data['pct_of_total']:.1f}% "
-                    f"| {llm_pct:.1f}% | {io_pct:.1f}% |"
+                    f"| {llm_pct:.1f}% | {io_pct:.1f}% | {total_calls} |"
                 )
 
         avg_by_pipeline = latency.get("avg_by_pipeline", {})
         if avg_by_pipeline:
             lines.append("\n### Pipeline Latency\n")
-            lines.append(
-                "| Pipeline | Avg Time | % of Total | LLM % | I/O % | Appearances |"
-            )
-            lines.append(
-                "|----------|----------|------------|-------|-------|-------------|"
-            )
+            lines.append("| Pipeline | Avg Time | % of Total | LLM % | I/O % | Calls |")
+            lines.append("|----------|----------|------------|-------|-------|-------|")
             for pipe_name, data in avg_by_pipeline.items():
                 avg_wall = data["avg_wall_time_ms"]
                 llm_pct = (
@@ -714,9 +727,10 @@ def report_to_markdown(report: dict[str, Any]) -> str:
                 io_pct = (
                     round(data["avg_io_time_ms"] / avg_wall * 100, 1) if avg_wall else 0
                 )
+                total_calls = data.get("total_calls", data.get("appearances", "?"))
                 lines.append(
                     f"| {pipe_name} | {avg_wall:.0f}ms | {data['pct_of_total']:.1f}% "
-                    f"| {llm_pct:.1f}% | {io_pct:.1f}% | {data['appearances']} |"
+                    f"| {llm_pct:.1f}% | {io_pct:.1f}% | {total_calls} |"
                 )
 
     # Budget violations
