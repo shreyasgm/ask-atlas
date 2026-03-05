@@ -158,50 +158,43 @@ class InMemoryConversationStore(ConversationStore):
 
 
 class PostgresConversationStore(ConversationStore):
-    """Postgres-backed conversation store using raw psycopg async.
+    """Postgres-backed conversation store using a shared ``AsyncConnectionPool``.
 
     Args:
-        db_url: Postgres connection string.
+        pool: An open ``psycopg_pool.AsyncConnectionPool``.
     """
 
-    def __init__(self, db_url: str) -> None:
-        self._db_url = db_url
+    def __init__(self, pool) -> None:
+        self._pool = pool
+
+    def _row_to_conversation(self, row) -> ConversationRow:
+        return ConversationRow(
+            id=row["id"],
+            session_id=row["session_id"],
+            title=row["title"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
+        )
 
     async def create(
         self, thread_id: str, session_id: str, title: str | None
     ) -> ConversationRow:
-        import psycopg
-
-        async with await psycopg.AsyncConnection.connect(self._db_url) as conn:
-            await conn.execute(
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
                 """
                 INSERT INTO conversations (id, session_id, title)
                 VALUES (%s, %s, %s)
-                ON CONFLICT (id) DO NOTHING
+                ON CONFLICT (id) DO UPDATE SET updated_at = NOW()
+                RETURNING id, session_id, title, created_at, updated_at
                 """,
                 (thread_id, session_id, title),
             )
-            await conn.commit()
-
-            cur = await conn.execute(
-                "SELECT id, session_id, title, created_at, updated_at "
-                "FROM conversations WHERE id = %s",
-                (thread_id,),
-            )
             row = await cur.fetchone()
             assert row is not None
-            return ConversationRow(
-                id=row[0],
-                session_id=row[1],
-                title=row[2],
-                created_at=row[3],
-                updated_at=row[4],
-            )
+            return self._row_to_conversation(row)
 
     async def list_by_session(self, session_id: str) -> list[ConversationRow]:
-        import psycopg
-
-        async with await psycopg.AsyncConnection.connect(self._db_url) as conn:
+        async with self._pool.connection() as conn:
             cur = await conn.execute(
                 "SELECT id, session_id, title, created_at, updated_at "
                 "FROM conversations WHERE session_id = %s "
@@ -209,21 +202,10 @@ class PostgresConversationStore(ConversationStore):
                 (session_id,),
             )
             rows = await cur.fetchall()
-            return [
-                ConversationRow(
-                    id=r[0],
-                    session_id=r[1],
-                    title=r[2],
-                    created_at=r[3],
-                    updated_at=r[4],
-                )
-                for r in rows
-            ]
+            return [self._row_to_conversation(r) for r in rows]
 
     async def get(self, thread_id: str) -> ConversationRow | None:
-        import psycopg
-
-        async with await psycopg.AsyncConnection.connect(self._db_url) as conn:
+        async with self._pool.connection() as conn:
             cur = await conn.execute(
                 "SELECT id, session_id, title, created_at, updated_at "
                 "FROM conversations WHERE id = %s",
@@ -232,30 +214,18 @@ class PostgresConversationStore(ConversationStore):
             row = await cur.fetchone()
             if row is None:
                 return None
-            return ConversationRow(
-                id=row[0],
-                session_id=row[1],
-                title=row[2],
-                created_at=row[3],
-                updated_at=row[4],
-            )
+            return self._row_to_conversation(row)
 
     async def delete(self, thread_id: str) -> None:
-        import psycopg
-
-        async with await psycopg.AsyncConnection.connect(self._db_url) as conn:
+        async with self._pool.connection() as conn:
             await conn.execute(
                 "DELETE FROM conversations WHERE id = %s",
                 (thread_id,),
             )
-            await conn.commit()
 
     async def update_timestamp(self, thread_id: str) -> None:
-        import psycopg
-
-        async with await psycopg.AsyncConnection.connect(self._db_url) as conn:
+        async with self._pool.connection() as conn:
             await conn.execute(
                 "UPDATE conversations SET updated_at = NOW() WHERE id = %s",
                 (thread_id,),
             )
-            await conn.commit()

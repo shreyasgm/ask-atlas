@@ -550,6 +550,10 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
                 // — messages for this thread are being streamed live.
                 historyLoaded.current = id;
                 navigate(`/chat/${id}`, { replace: true });
+                // Refresh the sidebar so the new conversation appears early
+                // (the backend creates the row via a background task that
+                // completes well before this network round-trip finishes).
+                onConversationChangeRef.current?.();
                 break;
               }
 
