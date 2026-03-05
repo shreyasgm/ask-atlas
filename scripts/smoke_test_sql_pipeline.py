@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""Stress-test the qualify-based column validation through the full pipeline.
+"""Smoke-test the SQL pipeline with a diverse set of questions.
 
-Runs a diverse set of questions through AtlasTextToSQL in sql_only mode,
-checking that validation doesn't produce false positives and queries execute.
+Runs 21 questions through AtlasTextToSQL in sql_only mode, covering
+regional aggregates, RCA counting, CTEs, subqueries, cross-schema JOINs,
+window functions, services, and edge cases. Records status, timing,
+generated SQL, and answer previews.
 
 Results are saved incrementally so a crash on one query doesn't lose prior results.
+
+Usage:
+    PYTHONPATH=$(pwd) uv run python scripts/smoke_test_sql_pipeline.py
 """
 
 import asyncio
@@ -56,7 +61,7 @@ TEST_QUERIES = [
     "What products does Ethiopia export with RCA > 2?",
 ]
 
-OUTPUT_PATH = Path("scripts/validation_stress_results.json")
+OUTPUT_PATH = Path("scripts/smoke_test_sql_pipeline_results.json")
 
 
 def save_results(results: list[dict]) -> None:
