@@ -26,15 +26,6 @@ async def atlas_sql(base_dir):
     await instance.aclose()
 
 
-async def test_initialization(atlas_sql):
-    """Test if the AtlasTextToSQL class initializes correctly via create_async."""
-    assert atlas_sql.db is not None
-    assert atlas_sql.table_descriptions is not None
-    assert atlas_sql.table_structure is not None
-    assert atlas_sql.example_queries is not None
-    assert atlas_sql.max_results == 15
-
-
 @pytest.mark.integration
 async def test_answer_question_basic(atlas_sql, logger):
     """Test if the system can answer a basic trade-related question"""

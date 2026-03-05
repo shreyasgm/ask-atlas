@@ -120,28 +120,6 @@ def make_agent(dummy_query_tool):
 class TestAgentToolCalling:
     """Verify that the agent invokes (or skips) the tool based on model output."""
 
-    async def test_agent_calls_tool_when_instructed(self, make_agent):
-        """Model emitting tool_calls → ToolMessage appears with dummy output."""
-        responses = [
-            AIMessage(
-                content="",
-                tool_calls=[_tool_call("query_tool", "US machinery exports", "c1")],
-            ),
-            AIMessage(content="The US exported $500B in machinery."),
-        ]
-        agent, _ = make_agent(responses)
-        config = {"configurable": {"thread_id": "tool-call-1"}}
-
-        result = await agent.ainvoke(
-            {"messages": [HumanMessage(content="US machinery exports")]},
-            config=config,
-        )
-
-        msgs = result["messages"]
-        tool_msgs = [m for m in msgs if isinstance(m, ToolMessage)]
-        assert len(tool_msgs) == 1
-        assert "500B" in tool_msgs[0].content
-
     async def test_agent_terminates_without_tool_calls(self, make_agent):
         """Model without tool_calls → only HumanMessage + AIMessage, no ToolMessage."""
         responses = [

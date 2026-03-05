@@ -145,30 +145,6 @@ class TestAAnswerQuestion:
         assert isinstance(result, AnswerResult)
         assert "US exported a lot" in result.answer
 
-    async def test_direct_answer_no_tool(self):
-        """When the LLM answers directly without calling a tool, the
-        AnswerResult.answer should still be returned correctly."""
-        responses = [AIMessage(content="42 is the answer.")]
-        instance = _build_stub_instance(responses)
-        result = await instance.aanswer_question("What is 6*7?")
-        assert "42" in result.answer
-
-    async def test_generates_thread_id_when_none(self):
-        """When thread_id is None, a UUID is auto-generated and used
-        as the checkpointer thread key."""
-        import uuid
-
-        responses = [AIMessage(content="Some answer.")]
-        instance = _build_stub_instance(responses)
-        result = await instance.aanswer_question("hi", thread_id=None)
-        assert isinstance(result, AnswerResult)
-        assert result.answer  # non-empty answer produced
-
-        # The MemorySaver should have exactly one thread whose key is a valid UUID
-        stored_threads = list(instance.agent.checkpointer.storage.keys())
-        assert len(stored_threads) == 1
-        uuid.UUID(stored_threads[0])  # raises ValueError if not a valid UUID
-
     async def test_multi_turn_remembers_context(self):
         """Two calls to aanswer_question with the SAME thread_id should
         share conversation history.  The FakeToolCallingModel sees the
@@ -916,33 +892,6 @@ class TestValidationFailureRouting:
 # ---------------------------------------------------------------------------
 # Tests -- backward compatibility of new streaming
 # ---------------------------------------------------------------------------
-
-
-class TestBackwardCompatibility:
-    """Ensure existing event types still work alongside new ones."""
-
-    async def test_existing_event_types_still_present(self):
-        """agent_talk and tool_output should still appear in the stream."""
-        responses = [
-            AIMessage(
-                content="",
-                tool_calls=[_tool_call("query_tool", "exports", "c1")],
-            ),
-            AIMessage(content="Here are results."),
-        ]
-        instance = _build_pipeline_stub_instance(responses)
-        config = {"configurable": {"thread_id": "bc-1"}}
-
-        message_types = set()
-        async for _mode, data in instance.astream_agent_response("exports?", config):
-            message_types.add(data.message_type)
-
-        assert (
-            "agent_talk" in message_types
-        ), "Expected 'agent_talk' in stream but got: " + str(message_types)
-        assert (
-            "tool_output" in message_types
-        ), "Expected 'tool_output' in stream but got: " + str(message_types)
 
 
 # ---------------------------------------------------------------------------

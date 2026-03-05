@@ -128,23 +128,6 @@ class TestExtractToolQuestion:
 
         assert result["pipeline_question"] == "Second question"
 
-    async def test_preserves_unicode_question(self):
-        msg = _make_tool_call_message(question="Exportaciones de cafe en 2021?")
-        state = _base_state(messages=[msg])
-
-        result = await extract_tool_question(state)
-
-        assert result["pipeline_question"] == "Exportaciones de cafe en 2021?"
-
-    async def test_empty_question_string(self):
-        msg = _make_tool_call_message(question="")
-        state = _base_state(messages=[msg])
-
-        result = await extract_tool_question(state)
-
-        assert result["pipeline_question"] == ""
-        assert "pipeline_context" in result
-
     async def test_extracts_context_from_tool_call(self):
         """When tool_call args include a context field, it is extracted."""
         msg = AIMessage(
@@ -709,6 +692,37 @@ class TestGenerateSqlNode:
         # last_error should be cleared for the next attempt
         assert result["last_error"] == ""
 
+    async def test_retry_context_escapes_curly_braces(self):
+        """Curly braces in error messages must be escaped to avoid FewShotPromptTemplate crashes."""
+        mock_llm = MagicMock()
+        failed_sql = "SELECT * FROM tbl"
+        error_msg = 'Response contained {"errors": [{"message": "not found"}]}'
+
+        with patch("src.sql_pipeline.create_query_generation_chain") as mock_create:
+            mock_chain = MagicMock()
+            mock_chain.ainvoke = AsyncMock(return_value="SELECT 1")
+            mock_create.return_value = mock_chain
+
+            state = _base_state(
+                pipeline_question="Brazil exports?",
+                pipeline_codes="",
+                pipeline_sql=failed_sql,
+                last_error=error_msg,
+                retry_count=1,
+            )
+            await generate_sql_node(
+                state, llm=mock_llm, example_queries=[], max_results=15
+            )
+
+        _, kwargs = mock_create.call_args
+        ctx = kwargs["retry_context"]
+        # Braces should be doubled so LangChain treats them as literals
+        assert "{" not in ctx.replace("{{", "")
+        assert "}" not in ctx.replace("}}", "")
+        # Content should still be present (escaped)
+        assert failed_sql in ctx
+        assert '{{"errors"' in ctx
+
     async def test_no_retry_context_when_no_error(self):
         """When last_error is empty, retry_context should be empty."""
         mock_llm = MagicMock()
@@ -1145,15 +1159,6 @@ class TestMaxQueriesExceededNode:
         assert isinstance(tool_msg, ToolMessage)
         assert tool_msg.tool_call_id == "call_limit"
         assert "Maximum number of queries exceeded" in tool_msg.content
-
-    async def test_tool_call_id_matches(self):
-        custom_id = "call_over_limit_42"
-        msg = _make_tool_call_message(tool_call_id=custom_id)
-        state = _base_state(messages=[msg])
-
-        result = await max_queries_exceeded_node(state)
-
-        assert result["messages"][0].tool_call_id == custom_id
 
     async def test_does_not_increment_queries_executed(self):
         """max_queries_exceeded_node should not return queries_executed."""

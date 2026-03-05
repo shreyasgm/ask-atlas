@@ -306,8 +306,8 @@ class TestDocsToolRouting:
         response = result["messages"][0]
         tool_name = _extract_tool_call_name(response)
 
-        assert tool_name in (
-            "docs_tool",
-            "query_tool",
-            "atlas_graphql",
-        ), f"Expected docs_tool (or fallback data tool) for methodology question, got {tool_name}"
+        assert tool_name == "docs_tool", (
+            f"Expected docs_tool for a pure methodology question in GRAPHQL_SQL mode, "
+            f"got {tool_name}. The agent should use docs_tool for questions about "
+            f"definitions and methodology, not data tools."
+        )

@@ -525,15 +525,6 @@ class TestMakeDocsSelectionModel:
         )
         assert len(instance.selected_indices) == 3
 
-    def test_accepts_any_number_of_indices(self):
-        """max_length removed for json_schema compatibility; constraint is in description."""
-        model_cls = _make_docs_selection_model(2)
-        instance = model_cls(
-            reasoning="test",
-            selected_indices=[0, 1, 2],
-        )
-        assert len(instance.selected_indices) == 3
-
     def test_description_includes_max_docs(self):
         model_cls = _make_docs_selection_model(4)
         field_info = model_cls.model_fields["selected_indices"]

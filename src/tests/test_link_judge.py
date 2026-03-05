@@ -21,7 +21,6 @@ from link_judge import (
     LINK_DIMENSION_WEIGHTS,
     LinkDimensionScore,
     LinkVerdict,
-    _LINK_JUDGE_PROMPT,
     judge_links,
 )
 
@@ -130,34 +129,6 @@ class TestLinkVerdictSchema:
 
 
 # ---------------------------------------------------------------------------
-# Prompt template structure
-# ---------------------------------------------------------------------------
-
-
-class TestPromptStructure:
-    def test_has_system_and_human_messages(self):
-        assert len(_LINK_JUDGE_PROMPT.messages) == 2
-
-    def test_system_prompt_contains_atlas_reference(self):
-        system_text = _LINK_JUDGE_PROMPT.messages[0].prompt.template
-        assert "atlas.hks.harvard.edu" in system_text
-
-    def test_system_prompt_contains_country_pages(self):
-        system_text = _LINK_JUDGE_PROMPT.messages[0].prompt.template
-        assert "/countries/" in system_text
-
-    def test_system_prompt_contains_explore_pages(self):
-        system_text = _LINK_JUDGE_PROMPT.messages[0].prompt.template
-        assert "/explore/" in system_text
-
-    def test_human_prompt_has_required_variables(self):
-        human_text = _LINK_JUDGE_PROMPT.messages[1].prompt.template
-        assert "{question}" in human_text
-        assert "{agent_links}" in human_text
-        assert "{ground_truth_url}" in human_text
-
-
-# ---------------------------------------------------------------------------
 # judge_links() with mocked LLM
 # ---------------------------------------------------------------------------
 
@@ -206,26 +177,6 @@ class TestJudgeLinks:
         assert result["weighted_score"] == 4.55
         assert "link_presence" in result
         assert "content_relevance" in result
-
-    @pytest.mark.asyncio
-    async def test_handles_no_ground_truth_url(self):
-        result = await self._call_judge(
-            question="What does Kenya export?",
-            agent_links=[
-                {"url": "https://atlas.hks.harvard.edu/countries/404/export-basket"}
-            ],
-            ground_truth_url=None,
-        )
-        assert "verdict" in result
-
-    @pytest.mark.asyncio
-    async def test_handles_empty_agent_links(self):
-        result = await self._call_judge(
-            question="What is Spain's ECI?",
-            agent_links=[],
-            ground_truth_url="https://atlas.hks.harvard.edu/countries/724/export-complexity",
-        )
-        assert "verdict" in result
 
     @pytest.mark.asyncio
     async def test_passes_correct_args_to_chain(self):

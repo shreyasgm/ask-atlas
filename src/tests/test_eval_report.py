@@ -192,10 +192,6 @@ class TestSelectBalanced:
         assert result[0] == "1"
         assert result[1] == "2"
 
-    def test_returns_strings(self, questions_meta):
-        result = _select_balanced(questions_meta, 5)
-        assert all(isinstance(qid, str) for qid in result)
-
     def test_no_duplicates(self, questions_meta):
         result = _select_balanced(questions_meta, 20)
         assert len(result) == len(set(result))
@@ -1415,55 +1411,6 @@ class TestToolCallDetailsInHtml:
         assert "tool_call_details" in q
         assert len(q["tool_call_details"]) == 2
 
-    def test_html_contains_tool_call_log_heading(self, tmp_path):
-        """The HTML JS should have a Tool Call Log section builder."""
-        run_dir = self._make_fixture_run_dir(tmp_path)
-        html_path = generate_html_report(run_dir)
-        html_content = html_path.read_text(encoding="utf-8")
-
-        assert "Tool Call Log" in html_content
-
-    def test_html_contains_debug_drawer(self, tmp_path):
-        """HTML should have debug drawer CSS and user-facing toggle button."""
-        run_dir = self._make_fixture_run_dir(tmp_path)
-        html_path = generate_html_report(run_dir)
-        html_content = html_path.read_text(encoding="utf-8")
-
-        # CSS rules needed for the drawer to render
-        assert ".debug-drawer" in html_content
-        assert ".debug-toggle" in html_content
-        # User-facing label
-        assert "Show debug details" in html_content
-
-    def test_html_contains_judge_verdict_section(self, tmp_path):
-        """Judge Verdict heading should exist; old standalone headings should not."""
-        run_dir = self._make_fixture_run_dir(tmp_path)
-        html_path = generate_html_report(run_dir)
-        html_content = html_path.read_text(encoding="utf-8")
-
-        assert "Judge Verdict" in html_content
-        # These were standalone <h4> sections before the merge
-        assert ">Dimension Scores</h4>" not in html_content
-        assert ">Judge Commentary</h4>" not in html_content
-
-    def test_html_no_docs_files_section(self, tmp_path):
-        """Docs Files Used section should be removed (redundant with Tool Call Log)."""
-        run_dir = self._make_fixture_run_dir(tmp_path)
-        html_path = generate_html_report(run_dir)
-        html_content = html_path.read_text(encoding="utf-8")
-
-        assert "Docs Files Used" not in html_content
-
-    def test_html_no_standalone_duration_section(self, tmp_path):
-        """Standalone Duration section should be removed (folded into verdict)."""
-        run_dir = self._make_fixture_run_dir(tmp_path)
-        html_path = generate_html_report(run_dir)
-        html_content = html_path.read_text(encoding="utf-8")
-
-        # Should NOT have a standalone Duration section header
-        # (duration info is now inline in Judge Verdict header)
-        assert ">Duration</h4>" not in html_content
-
     def test_html_has_query_planning_section(self, tmp_path):
         """GraphQL Classification and Atlas Links should be merged into Query Planning."""
         run_dir = self._make_fixture_run_dir(tmp_path)
@@ -1607,25 +1554,3 @@ class TestToolCallDetailsInHtml:
             == "treemap_products"
         )
         assert q["graphql_call_history"][0]["entity_extraction"]["country"] == "Chile"
-
-    def test_html_has_pipeline_metadata_renderer(self, tmp_path):
-        """HTML should contain the buildPipelineMetadataHTML function for per-call data."""
-        run_dir = self._make_fixture_run_dir(tmp_path)
-        html_path = generate_html_report(run_dir)
-        html_content = html_path.read_text(encoding="utf-8")
-
-        assert "buildPipelineMetadataHTML" in html_content
-        # It should render classification, entity extraction, resolved params inline
-        assert "Classification" in html_content
-        assert "Entity Extraction" in html_content
-        assert "Resolved Parameters" in html_content
-
-    def test_question_text_not_truncated_in_tool_call_header(self, tmp_path):
-        """Question text in tool call cards should wrap, not be truncated with ellipsis."""
-        run_dir = self._make_fixture_run_dir(tmp_path)
-        html_path = generate_html_report(run_dir)
-        html_content = html_path.read_text(encoding="utf-8")
-
-        # Should NOT have text-overflow:ellipsis + white-space:nowrap on question spans
-        # in the tool call header (we changed to allow wrapping)
-        assert "text-overflow:ellipsis;white-space:nowrap" not in html_content

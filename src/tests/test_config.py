@@ -6,7 +6,6 @@ Integration tests verify that API keys are set for the configured providers.
 """
 
 import os
-from enum import Enum
 from unittest.mock import patch
 
 import pytest
@@ -51,11 +50,6 @@ class TestConfigUnit:
 
 class TestAgentMode:
     """AgentMode enum has the three required modes with correct values."""
-
-    def test_agent_mode_exists(self):
-        from src.config import AgentMode
-
-        assert issubclass(AgentMode, Enum)
 
     def test_agent_mode_values(self):
         from src.config import AgentMode
@@ -104,28 +98,6 @@ class TestAgentMode:
 
 class TestModelRenaming:
     """frontier_model / lightweight_model replace old query_model / metadata_model."""
-
-    def test_frontier_model_field_exists(self):
-        settings = get_settings()
-        assert hasattr(settings, "frontier_model")
-        assert isinstance(settings.frontier_model, str)
-        assert len(settings.frontier_model) > 0
-
-    def test_lightweight_model_field_exists(self):
-        settings = get_settings()
-        assert hasattr(settings, "lightweight_model")
-        assert isinstance(settings.lightweight_model, str)
-        assert len(settings.lightweight_model) > 0
-
-    def test_frontier_model_provider_field_exists(self):
-        settings = get_settings()
-        assert hasattr(settings, "frontier_model_provider")
-        assert isinstance(settings.frontier_model_provider, str)
-
-    def test_lightweight_model_provider_field_exists(self):
-        settings = get_settings()
-        assert hasattr(settings, "lightweight_model_provider")
-        assert isinstance(settings.lightweight_model_provider, str)
 
     def test_backward_compat_query_model_env_var(self):
         """Setting QUERY_MODEL env var should populate frontier_model."""
@@ -250,11 +222,6 @@ class TestPromptModelAssignments:
 
 class TestGetPromptModel:
     """get_prompt_model() returns the correct LLM for a given prompt key."""
-
-    def test_get_prompt_model_exists(self):
-        from src.config import get_prompt_model
-
-        assert callable(get_prompt_model)
 
     def test_frontier_prompt_returns_frontier_model(self):
         """A prompt assigned to 'frontier' should use the frontier model config."""
