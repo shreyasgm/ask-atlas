@@ -297,6 +297,36 @@ class TestBuildSqlGenerationPrefix:
         )
         assert not _has_unresolved_format_fields(result)
 
+    def test_context_with_curly_braces_escaped(self):
+        """Curly braces in context must be escaped to avoid template injection."""
+        result = prompts.build_sql_generation_prefix(
+            codes=None,
+            top_k=10,
+            table_info="DDL",
+            direction_constraint=None,
+            mode_constraint=None,
+            context='Response had {"errors": ["not found"]}',
+        )
+        assert not _has_unresolved_format_fields(result)
+        # Content should still be present (escaped form)
+        assert '{{"errors"' in result
+
+    def test_retry_context_with_curly_braces_safe(self):
+        """Retry context containing curly braces must not introduce template variables."""
+        retry = 'Previous SQL failed.\n{"errors": ["bad"]}\nFix it.'
+        # Pre-escape as sql_pipeline.py does before passing to this function
+        safe_retry = retry.replace("{", "{{").replace("}", "}}")
+        result = prompts.build_sql_generation_prefix(
+            codes=None,
+            top_k=10,
+            table_info="DDL",
+            direction_constraint=None,
+            mode_constraint=None,
+            context="",
+            retry_context=safe_retry,
+        )
+        assert not _has_unresolved_format_fields(result)
+
 
 class TestBuildClassificationPrompt:
     def test_no_context_omits_context_section(self):
