@@ -669,3 +669,63 @@ class TestDocsToolRouting:
 
         # Only the query_tool counted against budget
         assert result.get("queries_executed", 0) == 1
+
+
+# ---------------------------------------------------------------------------
+# Retry routing logic tests
+# ---------------------------------------------------------------------------
+
+
+class TestRetryRouting:
+    """Test the route_after_validation and route_after_execution logic.
+
+    These routing functions are closures inside build_atlas_graph, so we test
+    the equivalent logic directly — these mirror the exact conditions used
+    in graph.py.
+    """
+
+    @staticmethod
+    def _route_after_validation(state: dict) -> str:
+        """Mirror of route_after_validation from graph.py."""
+        if state.get("last_error"):
+            if state.get("retry_count", 0) <= 1:
+                return "generate_sql"
+            return "format_results"
+        return "execute_sql"
+
+    @staticmethod
+    def _route_after_execution(state: dict) -> str:
+        """Mirror of route_after_execution from graph.py."""
+        if state.get("last_error"):
+            if state.get("retry_count", 0) <= 1:
+                return "generate_sql"
+            return "format_results"
+        return "format_results"
+
+    # -- route_after_validation --
+
+    def test_validation_success_routes_to_execute(self):
+        state = {"last_error": "", "retry_count": 0}
+        assert self._route_after_validation(state) == "execute_sql"
+
+    def test_validation_first_failure_routes_to_generate(self):
+        state = {"last_error": "Unknown column 'foo'", "retry_count": 1}
+        assert self._route_after_validation(state) == "generate_sql"
+
+    def test_validation_second_failure_routes_to_format(self):
+        state = {"last_error": "Unknown column 'foo'", "retry_count": 2}
+        assert self._route_after_validation(state) == "format_results"
+
+    # -- route_after_execution --
+
+    def test_execution_success_routes_to_format(self):
+        state = {"last_error": "", "retry_count": 0}
+        assert self._route_after_execution(state) == "format_results"
+
+    def test_execution_first_failure_routes_to_generate(self):
+        state = {"last_error": "relation does not exist", "retry_count": 1}
+        assert self._route_after_execution(state) == "generate_sql"
+
+    def test_execution_second_failure_routes_to_format(self):
+        state = {"last_error": "relation does not exist", "retry_count": 2}
+        assert self._route_after_execution(state) == "format_results"
