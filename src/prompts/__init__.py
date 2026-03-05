@@ -65,7 +65,9 @@ from .prompt_sql import (
     SQL_CONTEXT_BLOCK,
     SQL_DIRECTION_BLOCK,
     SQL_GENERATION_PROMPT,
+    SQL_GROUP_TABLES_BLOCK,
     SQL_MODE_BLOCK,
+    SQL_RETRY_BLOCK,
     build_sql_generation_prefix,
 )
 
@@ -97,6 +99,8 @@ __all__ = [
     "SQL_CONTEXT_BLOCK",
     "SQL_DIRECTION_BLOCK",
     "SQL_GENERATION_PROMPT",
+    "SQL_GROUP_TABLES_BLOCK",
     "SQL_MODE_BLOCK",
+    "SQL_RETRY_BLOCK",
     "build_sql_generation_prefix",
 ]
