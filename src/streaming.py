@@ -51,6 +51,14 @@ warnings.filterwarnings(
     message="Did not recognize type 'vector' of column 'embedding'",
 )
 
+# Suppress Pydantic serialization warnings from LangChain structured output
+# (known issue: LangChain's structured output wrapper triggers unexpected-value warnings)
+warnings.filterwarnings(
+    "ignore",
+    category=UserWarning,
+    message="Pydantic serializer warnings",
+)
+
 # Load settings (replaces load_dotenv)
 settings = get_settings()
 
