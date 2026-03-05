@@ -1,6 +1,6 @@
 SELECT
     p.code as hs_code,
-    p.name_en as product_name,
+    p.name_short_en as product_name,
     cpy.export_value,
     cpy.global_market_share
 FROM hs92.country_product_year_4 cpy

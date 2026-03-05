@@ -6,7 +6,7 @@ combined_distances AS (
     (SELECT
         'Goods' as category,
         p.code as product_code,
-        p.name_en as product_name,
+        p.name_short_en as product_name,
         cpy.distance,
         RANK() OVER (ORDER BY cpy.distance) as distance_rank
     FROM hs92.country_product_year_4 cpy
@@ -24,7 +24,7 @@ combined_distances AS (
     (SELECT
         'Services' as category,
         p.code as product_code,
-        p.name_en as product_name,
+        p.name_short_en as product_name,
         cpy.distance,
         RANK() OVER (ORDER BY cpy.distance) as distance_rank
     FROM services_unilateral.country_product_year_4 cpy

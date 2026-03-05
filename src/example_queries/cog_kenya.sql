@@ -5,7 +5,7 @@ WITH latest_year AS (
 -- Best products by COG (higher is better)
 SELECT
     p.code as product_code,
-    p.name_en as product_name,
+    p.name_short_en as product_name,
     cpy.cog,
     RANK() OVER (ORDER BY cpy.cog DESC) as cog_rank
 FROM hs92.country_product_year_4 cpy

@@ -13,7 +13,7 @@ SELECT
     pci
 FROM (
     -- Get top 5 imported goods for Canada
-    SELECT 'Goods' AS category, p.code, p.name_en AS name, cpy.import_value, py.pci
+    SELECT 'Goods' AS category, p.code, p.name_short_en AS name, cpy.import_value, py.pci
     FROM hs92.country_product_year_4 cpy
     JOIN hs92.product_year_4 py ON cpy.product_id = py.product_id AND cpy.year = py.year
     JOIN classification.location_country loc_exp ON cpy.country_id = loc_exp.country_id AND loc_exp.iso3_code = 'CAN'
@@ -33,7 +33,7 @@ SELECT
     pci
 FROM (
     -- Get top 5 imported services for Canada
-    SELECT 'Services' AS category, p.code, p.name_en AS name, cpy.import_value, py.pci
+    SELECT 'Services' AS category, p.code, p.name_short_en AS name, cpy.import_value, py.pci
     FROM services_unilateral.country_product_year_4 cpy
     JOIN services_unilateral.product_year_4 py ON cpy.product_id = py.product_id AND cpy.year = py.year
     JOIN classification.location_country loc_exp ON cpy.country_id = loc_exp.country_id AND loc_exp.iso3_code = 'CAN'
