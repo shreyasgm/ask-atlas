@@ -425,6 +425,9 @@ def build_sql_generation_prefix(
         prefix += retry_context
 
     if context:
-        prefix += SQL_CONTEXT_BLOCK.format(context=context)
+        # Escape stray curly braces in free-form context so LangChain's
+        # FewShotPromptTemplate doesn't treat them as template variables.
+        safe_context = context.replace("{", "{{").replace("}", "}}")
+        prefix += SQL_CONTEXT_BLOCK.format(context=safe_context)
 
     return prefix

@@ -488,6 +488,10 @@ async def generate_sql_node(
             retry_context = SQL_RETRY_BLOCK.format(
                 previous_sql=previous_sql, error_message=last_error
             )
+            # Escape stray curly braces so LangChain's FewShotPromptTemplate
+            # doesn't interpret them as template variables (e.g. {"errors"}
+            # from a GraphQL error message embedded in the retry context).
+            retry_context = retry_context.replace("{", "{{").replace("}", "}}")
 
         chain = create_query_generation_chain(
             llm=llm,
