@@ -22,7 +22,8 @@ SQL_GENERATION_PROMPT = """
 You are a SQL expert that writes queries for a postgres database containing international trade data. Your task is to create a syntactically correct SQL query to answer the user's question about trade data.
 
 Notes on these tables:
-- Unless otherwise specified, do not return more than {top_k} rows.
+- For most queries, apply LIMIT {top_k} unless the user specifies a different number.
+- For enumeration queries (e.g. "list all", "which countries belong to", "how many", "members of") — do NOT apply LIMIT. Return all matching rows.
 - If a time period is not specified, assume the latest available year in the database ({sql_max_year} for goods, usually {sql_max_year} for services).
 - Schema year coverage: hs12 data starts from 2012, hs92 from 1995, sitc from 1962, services_unilateral from 1980, services_bilateral from 1980. Use the appropriate schema for the time range requested.
 - Never use the `location_level` or `partner_level` columns.
@@ -358,13 +359,43 @@ BOTH group_name AND group_type to avoid double-counting.
 
 Example — total exports of Sub-Saharan Africa:
 ```sql
-SELECT lgm.group_name, SUM(cpy.export_value) AS total_exports
-FROM hs12.country_product_year_4 cpy
-JOIN classification.location_group_member lgm ON cpy.country_id = lgm.country_id
+SELECT lgm.group_name, SUM(cy.export_value) AS total_exports
+FROM hs12.country_year cy
+JOIN classification.location_group_member lgm ON cy.country_id = lgm.country_id
 WHERE lgm.group_name = 'Sub-Saharan Africa'
   AND lgm.group_type = 'wdi_region'
-  AND cpy.year = (SELECT MAX(year) FROM hs12.country_product_year_4)
+  AND cy.year = (SELECT MAX(year) FROM hs12.country_year)
 GROUP BY lgm.group_name;
+```
+
+When the question is about "total exports" for a group (not product-specific),
+use country_year tables and include BOTH goods and services via UNION ALL,
+just as you would for a single country. If a specific product is named, use
+the appropriate country_product_year tables instead.
+
+**Derived metrics for groups — aggregate first, compute second:**
+For any derived metric (CAGR, market share, growth rate, etc.), first aggregate
+the raw values (export_value, import_value) across member countries, then apply
+the formula to the aggregated totals. Never compute per-country metrics then average.
+
+Example — 5-year export CAGR for Sub-Saharan Africa:
+```sql
+WITH yearly AS (
+  SELECT cy.year, SUM(cy.export_value) AS total_exports
+  FROM hs12.country_year cy
+  JOIN classification.location_group_member lgm ON cy.country_id = lgm.country_id
+  WHERE lgm.group_name = 'Sub-Saharan Africa'
+    AND lgm.group_type = 'wdi_region'
+    AND cy.year IN (2017, 2022)
+  GROUP BY cy.year
+)
+SELECT
+  (POWER(
+    MAX(CASE WHEN year = 2022 THEN total_exports END)
+    / NULLIF(MAX(CASE WHEN year = 2017 THEN total_exports END), 0),
+    1.0 / 5
+  ) - 1) * 100 AS cagr_pct
+FROM yearly;
 ```
 
 Do NOT use the group_group_product_year tables."""
