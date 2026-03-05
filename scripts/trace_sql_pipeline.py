@@ -4,7 +4,7 @@
 Streams every graph step and logs validation errors, retries, SQL changes,
 and agent decisions so we can see exactly why queries loop.
 
-Results saved incrementally to scripts/trace_results.json.
+Results saved incrementally to scripts/trace_sql_pipeline_results.json.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ TRACE_QUERIES = [
     "What is the total value of exports for Brazil in 2018?",
 ]
 
-OUTPUT_PATH = Path("scripts/trace_results.json")
+OUTPUT_PATH = Path("scripts/trace_sql_pipeline_results.json")
 
 
 def _msg_summary(msg) -> str:
