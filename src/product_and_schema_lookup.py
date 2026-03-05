@@ -1,7 +1,6 @@
 from typing import List, Dict, Any, Optional, Union
 
 from langchain_core.language_models import BaseLanguageModel
-from langchain_core.output_parsers.openai_tools import PydanticToolsParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import Runnable
 from pydantic import BaseModel, Field
@@ -168,12 +167,10 @@ class ProductAndSchemaLookup:
         )
 
         # Create initial chain to identify product and schema mentions
-        llm = self.llm.bind_tools([SchemasAndProductsFound], tool_choice="any")
-        mentions_chain = (
-            prompt
-            | llm
-            | PydanticToolsParser(tools=[SchemasAndProductsFound], first_tool_only=True)
+        llm = self.llm.with_structured_output(
+            SchemasAndProductsFound, method="json_schema"
         )
+        mentions_chain = prompt | llm
         return mentions_chain
 
     def extract_schemas_and_product_mentions_direct(
@@ -299,12 +296,8 @@ class ProductAndSchemaLookup:
         # Partially format prompt template using search results
         prompt = prompt.partial(product_search_results=results_str)
 
-        llm = self.llm.bind_tools([ProductCodesMapping], tool_choice="any")
-        chain = (
-            prompt
-            | llm
-            | PydanticToolsParser(tools=[ProductCodesMapping], first_tool_only=True)
-        )
+        llm = self.llm.with_structured_output(ProductCodesMapping, method="json_schema")
+        chain = prompt | llm
 
         return chain
 

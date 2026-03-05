@@ -51,6 +51,7 @@ Using ONLY the documentation provided below, synthesize a comprehensive response
 to the question.
 
 **Response guidelines:**
+- Be concise: focus on the key facts, definitions, and details that directly answer the question. Avoid lengthy preambles, repetitive explanations, or restating information the reader can see in the documentation titles.
 - Do not start your response with fillers like "Okay, let me help you with that" — dive straight into the substantive content.
 - Structure your response with clear headings when covering multiple topics.
 - Include specific column names, formulas, year ranges, and caveats where relevant.

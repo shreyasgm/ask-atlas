@@ -249,7 +249,7 @@ class DocsSelection(BaseModel):
     """LLM output: which documents to load from the manifest."""
 
     reasoning: str = Field(
-        description="Brief explanation of why these documents are relevant."
+        description="Brief explanation of why these documents are relevant (maximum 300 characters)."
     )
     selected_indices: list[int] = Field(
         description=(
@@ -259,34 +259,31 @@ class DocsSelection(BaseModel):
 
 
 def _make_docs_selection_model(max_docs: int) -> type[DocsSelection]:
-    """Create a DocsSelection subclass with a dynamic max_length constraint.
+    """Create a DocsSelection subclass with a dynamic description constraint.
 
     Args:
         max_docs: Maximum number of documents the LLM may select.
 
     Returns:
-        A Pydantic model class with the appropriate max_length on selected_indices.
+        A Pydantic model class with the appropriate description on selected_indices.
     """
-    return type(
-        "DocsSelection",
-        (BaseModel,),
-        {
-            "__annotations__": {
-                "reasoning": str,
-                "selected_indices": list[int],
-            },
-            "reasoning": Field(
-                description="Brief explanation of why these documents are relevant."
-            ),
-            "selected_indices": Field(
-                description=(
-                    f"Zero-based indices of the 1-{max_docs} most relevant documents "
-                    f"from the manifest. Select at most {max_docs} documents."
-                ),
-                max_length=max_docs,
-            ),
+
+    ns: dict = {
+        "__annotations__": {
+            "reasoning": str,
+            "selected_indices": list[int],
         },
-    )
+        "reasoning": Field(
+            description="Brief explanation of why these documents are relevant (maximum 300 characters)."
+        ),
+        "selected_indices": Field(
+            description=(
+                f"Zero-based indices of the 1-{max_docs} most relevant documents "
+                f"from the manifest. Select at most {max_docs} documents."
+            ),
+        ),
+    }
+    return type("DocsSelection", (BaseModel,), ns)
 
 
 # ---------------------------------------------------------------------------
@@ -365,7 +362,7 @@ async def select_docs(
 
             selection_model = _make_docs_selection_model(max_docs)
             selection_llm = lightweight_model.with_structured_output(
-                selection_model, method="function_calling"
+                selection_model, method="json_schema"
             )
             selection_handler = UsageMetadataCallbackHandler()
             llm_start = _time.monotonic()
