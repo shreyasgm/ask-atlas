@@ -1404,6 +1404,70 @@ class TestPostProcessResponse:
 
 
 # ---------------------------------------------------------------------------
+# 10b. post_process_response: multi-level product enrichment
+# ---------------------------------------------------------------------------
+
+
+class TestPostProcessSectionLevelEnrichment:
+    """post_process_response enriches section/chapter-level product IDs correctly."""
+
+    def test_enriches_section_level_product_ids(self):
+        """Section-level (level 1) product IDs get enriched when in cache."""
+        cache = CatalogCache("multi_level", ttl=3600)
+        cache.add_index(
+            "id",
+            key_fn=lambda e: str(e["productId"]) if "productId" in e else None,
+        )
+        cache.add_index(
+            "code",
+            key_fn=lambda e: (e.get("code") or "").strip() or None,
+            normalize_query=lambda q: q.strip(),
+        )
+        cache.populate(
+            [
+                {
+                    "productId": 1,
+                    "productLevel": 1,
+                    "code": "1",
+                    "nameShortEn": "Animal & Animal Products",
+                },
+                {
+                    "productId": 2,
+                    "productLevel": 1,
+                    "code": "2",
+                    "nameShortEn": "Vegetable Products",
+                },
+                {
+                    "productId": 726,
+                    "productLevel": 4,
+                    "code": "0901",
+                    "nameShortEn": "Coffee",
+                },
+            ]
+        )
+
+        items = [
+            {"productId": i, "exportValue": (100 - i) * 1000, "year": 2024}
+            for i in range(1, 25)
+        ]
+        raw = {"countryProductYear": items}
+
+        result = post_process_response(
+            "treemap_products", raw, product_caches={"HS92": cache}
+        )
+
+        processed = result["countryProductYear"]
+        # Product ID 1 (section level) should be enriched
+        item_1 = next(i for i in processed if i["productId"] == 1)
+        assert item_1["productName"] == "Animal & Animal Products"
+        assert item_1["productCode"] == "1"
+
+        # Product ID 2 (section level) should also be enriched
+        item_2 = next(i for i in processed if i["productId"] == 2)
+        assert item_2["productName"] == "Vegetable Products"
+
+
+# ---------------------------------------------------------------------------
 # 11. Slim query builders
 # ---------------------------------------------------------------------------
 

@@ -255,15 +255,17 @@ class CatalogCache:
         Use this in synchronous post-processing code that runs after the cache
         has been populated by prior async pipeline nodes.
 
+        Returns None if the cache is not yet populated (logs a warning).
+
         Raises:
             KeyError: If *index_name* was never registered.
-            RuntimeError: If the cache is not yet populated.
         """
         if not self.is_populated:
-            raise RuntimeError(
-                f"CatalogCache '{self.name}' is not populated — "
-                f"call populate() or await lookup() first"
+            logger.warning(
+                "CatalogCache '%s' not populated — returning None for sync lookup",
+                self.name,
             )
+            return None
         if index_name not in self._indexes:
             raise KeyError(
                 f"CatalogCache '{self.name}' has no index named '{index_name}'"
@@ -461,8 +463,29 @@ hs12_product_catalog.add_index(
 )
 registry.register_catalog(hs12_product_catalog)
 
-# Services catalog: service category names and IDs
+# SITC Product catalog: indexed by SITC code, name, and ID
+sitc_product_catalog = CatalogCache("sitc_product_catalog", ttl=CATALOG_TTL)
+sitc_product_catalog.add_index(
+    "code",
+    key_fn=lambda e: (e.get("code") or "").strip() or None,
+    normalize_query=lambda q: q.strip(),
+)
+sitc_product_catalog.add_index(
+    "name", key_fn=_name_key, normalize_query=_name_normalize
+)
+sitc_product_catalog.add_index(
+    "id",
+    key_fn=lambda e: str(e["productId"]) if "productId" in e else None,
+)
+registry.register_catalog(sitc_product_catalog)
+
+# Services catalog: service category names, codes, and IDs
 services_catalog = CatalogCache("services_catalog", ttl=CATALOG_TTL)
+services_catalog.add_index(
+    "code",
+    key_fn=lambda e: (e.get("code") or "").strip() or None,
+    normalize_query=lambda q: q.strip(),
+)
 services_catalog.add_index("name", key_fn=_name_key, normalize_query=_name_normalize)
 services_catalog.add_index(
     "id",
@@ -506,14 +529,14 @@ def wire_catalog_fetchers(explore_client: AtlasGraphQLClient) -> None:
         return data.get("locationCountry", [])
 
     async def _fetch_products() -> list[dict[str, Any]]:
-        query = "{ productHs92(productLevel: 4) { productId code nameShortEn nameEn } }"
+        query = "{ productHs92 { productId productLevel code nameShortEn nameEn } }"
         data = await explore_client.execute(query)
         return data.get("productHs92", [])
 
     async def _fetch_services() -> list[dict[str, Any]]:
         query = (
             "{ productHs92(servicesClass: unilateral)"
-            " { productId nameShortEn nameEn } }"
+            " { productId productLevel code nameShortEn nameEn } }"
         )
         data = await explore_client.execute(query)
         return data.get("productHs92", [])
@@ -524,13 +547,19 @@ def wire_catalog_fetchers(explore_client: AtlasGraphQLClient) -> None:
         return data.get("locationGroup", [])
 
     async def _fetch_hs12_products() -> list[dict[str, Any]]:
-        query = "{ productHs12(productLevel: 4) { productId code nameShortEn nameEn } }"
+        query = "{ productHs12 { productId productLevel code nameShortEn nameEn } }"
         data = await explore_client.execute(query)
         return data.get("productHs12", [])
+
+    async def _fetch_sitc_products() -> list[dict[str, Any]]:
+        query = "{ productSitc { productId productLevel code nameShortEn nameEn } }"
+        data = await explore_client.execute(query)
+        return data.get("productSitc", [])
 
     country_catalog.set_fetcher(_fetch_countries)
     hs92_product_catalog.set_fetcher(_fetch_products)
     hs12_product_catalog.set_fetcher(_fetch_hs12_products)
+    sitc_product_catalog.set_fetcher(_fetch_sitc_products)
     services_catalog.set_fetcher(_fetch_services)
     group_catalog.set_fetcher(_fetch_groups)
 

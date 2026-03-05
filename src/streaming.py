@@ -586,6 +586,7 @@ class AtlasTextToSQL:
             hs12_product_catalog,
             hs92_product_catalog,
             services_catalog,
+            sitc_product_catalog,
             wire_catalog_fetchers,
         )
         from src.graphql_client import AtlasGraphQLClient, get_shared_budget_tracker
@@ -620,6 +621,7 @@ class AtlasTextToSQL:
             product_caches={
                 "HS92": hs92_product_catalog,
                 "HS12": hs12_product_catalog,
+                "SITC": sitc_product_catalog,
             },
             services_cache=services_catalog,
             group_cache=group_catalog,

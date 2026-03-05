@@ -19,9 +19,11 @@ import pytest
 from src.cache import (
     CatalogCache,
     country_catalog,
+    hs12_product_catalog,
     hs92_product_catalog,
     registry,
     services_catalog,
+    sitc_product_catalog,
     wire_catalog_fetchers,
 )
 
@@ -570,26 +572,30 @@ class TestWireCatalogFetchersSetsAll:
     """wire_catalog_fetchers must wire fetchers to all three module-level catalogs."""
 
     async def test_wire_catalog_fetchers_sets_fetchers(self):
-        """After calling wire_catalog_fetchers, all three catalogs have a non-None _fetcher."""
+        """After calling wire_catalog_fetchers, all catalogs have a non-None _fetcher."""
         mock_client = AsyncMock()
         mock_client.execute = AsyncMock(return_value={})
 
+        all_catalogs = [
+            country_catalog,
+            hs92_product_catalog,
+            hs12_product_catalog,
+            sitc_product_catalog,
+            services_catalog,
+        ]
+
         # Ensure fetchers are initially None (clean state)
-        country_catalog._fetcher = None
-        hs92_product_catalog._fetcher = None
-        services_catalog._fetcher = None
+        for cat in all_catalogs:
+            cat._fetcher = None
 
         try:
             wire_catalog_fetchers(mock_client)
 
-            assert country_catalog._fetcher is not None
-            assert hs92_product_catalog._fetcher is not None
-            assert services_catalog._fetcher is not None
+            for cat in all_catalogs:
+                assert cat._fetcher is not None, f"{cat.name} fetcher not wired"
         finally:
-            # Reset fetchers to None to avoid leaking state to other tests
-            country_catalog._fetcher = None
-            hs92_product_catalog._fetcher = None
-            services_catalog._fetcher = None
+            for cat in all_catalogs:
+                cat._fetcher = None
 
     async def test_wired_fetcher_calls_client_execute(self):
         """The wired fetchers delegate to AtlasGraphQLClient.execute with correct queries."""
@@ -616,6 +622,287 @@ class TestWireCatalogFetchersSetsAll:
         finally:
             country_catalog._fetcher = None
             country_catalog.clear()
+
+
+# ---------------------------------------------------------------------------
+# lookup_sync graceful degradation
+# ---------------------------------------------------------------------------
+
+
+class TestLookupSyncGracefulDegradation:
+    """lookup_sync returns None (not RuntimeError) when cache is unpopulated."""
+
+    def test_returns_none_when_unpopulated(self):
+        """Unpopulated cache returns None instead of raising RuntimeError."""
+        cache = CatalogCache("test_unpopulated", ttl=3600)
+        cache.add_index(
+            "id",
+            key_fn=lambda e: str(e["productId"]) if "productId" in e else None,
+        )
+        # Don't call populate()
+
+        result = cache.lookup_sync("id", "726")
+        assert result is None
+
+    def test_returns_entry_when_populated(self):
+        """Populated cache returns the entry normally."""
+        cache = CatalogCache("test_populated", ttl=3600)
+        cache.add_index(
+            "id",
+            key_fn=lambda e: str(e["productId"]) if "productId" in e else None,
+        )
+        cache.populate(SAMPLE_PRODUCTS)
+
+        result = cache.lookup_sync("id", "726")
+        assert result is not None
+        assert result["nameShortEn"] == "Coffee"
+
+
+# ---------------------------------------------------------------------------
+# Fetcher queries: no productLevel filter
+# ---------------------------------------------------------------------------
+
+
+class TestFetcherQueriesIncludeAllLevels:
+    """Fetcher queries must NOT filter by productLevel — all levels are needed."""
+
+    async def test_hs92_fetcher_has_no_level_filter(self):
+        """HS92 product fetcher should not include productLevel filter."""
+        mock_client = AsyncMock()
+        mock_client.execute = AsyncMock(return_value={"productHs92": SAMPLE_PRODUCTS})
+
+        hs92_product_catalog._fetcher = None
+        hs92_product_catalog.clear()
+
+        try:
+            wire_catalog_fetchers(mock_client)
+            await hs92_product_catalog.lookup("id", "726")
+
+            query = mock_client.execute.call_args[0][0]
+            assert "productLevel:" not in query
+            assert "productLevel" in query  # as a returned field, not a filter
+        finally:
+            hs92_product_catalog._fetcher = None
+            hs92_product_catalog.clear()
+
+    async def test_hs12_fetcher_has_no_level_filter(self):
+        """HS12 product fetcher should not include productLevel filter."""
+        mock_client = AsyncMock()
+        mock_client.execute = AsyncMock(return_value={"productHs12": SAMPLE_PRODUCTS})
+
+        hs12_product_catalog._fetcher = None
+        hs12_product_catalog.clear()
+
+        try:
+            wire_catalog_fetchers(mock_client)
+            await hs12_product_catalog.lookup("id", "726")
+
+            # Find the HS12 query (not the first call which might be HS92)
+            hs12_calls = [
+                c
+                for c in mock_client.execute.call_args_list
+                if "productHs12" in c[0][0]
+            ]
+            assert len(hs12_calls) == 1
+            query = hs12_calls[0][0][0]
+            assert "productLevel:" not in query
+            assert "productLevel" in query  # as a returned field
+        finally:
+            hs12_product_catalog._fetcher = None
+            hs12_product_catalog.clear()
+
+
+# ---------------------------------------------------------------------------
+# Enrichment with multi-level product IDs
+# ---------------------------------------------------------------------------
+
+
+SAMPLE_MULTI_LEVEL_PRODUCTS = [
+    # Section (level 1)
+    {
+        "productId": 1,
+        "productLevel": 1,
+        "code": "1",
+        "nameEn": "Animal & Animal Products",
+        "nameShortEn": "Animal & Animal Products",
+    },
+    # Chapter (level 2)
+    {
+        "productId": 101,
+        "productLevel": 2,
+        "code": "01",
+        "nameEn": "Live Animals",
+        "nameShortEn": "Live Animals",
+    },
+    # 4-digit (level 4)
+    {
+        "productId": 726,
+        "productLevel": 4,
+        "code": "0901",
+        "nameEn": "Coffee, not roasted, not decaffeinated",
+        "nameShortEn": "Coffee",
+    },
+]
+
+
+class TestMultiLevelProductEnrichment:
+    """Product cache with all levels enables enrichment for section/chapter IDs."""
+
+    def test_lookup_section_level_product(self):
+        """Section-level (level 1) product IDs should be resolvable."""
+        cache = CatalogCache("multi_level", ttl=3600)
+        cache.add_index(
+            "id",
+            key_fn=lambda e: str(e["productId"]) if "productId" in e else None,
+        )
+        cache.populate(SAMPLE_MULTI_LEVEL_PRODUCTS)
+
+        result = cache.lookup_sync("id", "1")
+        assert result is not None
+        assert result["nameShortEn"] == "Animal & Animal Products"
+        assert result["productLevel"] == 1
+
+    def test_lookup_chapter_level_product(self):
+        """Chapter-level (level 2) product IDs should be resolvable."""
+        cache = CatalogCache("multi_level", ttl=3600)
+        cache.add_index(
+            "id",
+            key_fn=lambda e: str(e["productId"]) if "productId" in e else None,
+        )
+        cache.populate(SAMPLE_MULTI_LEVEL_PRODUCTS)
+
+        result = cache.lookup_sync("id", "101")
+        assert result is not None
+        assert result["nameShortEn"] == "Live Animals"
+        assert result["productLevel"] == 2
+
+    def test_lookup_4digit_product(self):
+        """Standard 4-digit product IDs still work in multi-level cache."""
+        cache = CatalogCache("multi_level", ttl=3600)
+        cache.add_index(
+            "id",
+            key_fn=lambda e: str(e["productId"]) if "productId" in e else None,
+        )
+        cache.populate(SAMPLE_MULTI_LEVEL_PRODUCTS)
+
+        result = cache.lookup_sync("id", "726")
+        assert result is not None
+        assert result["nameShortEn"] == "Coffee"
+
+
+# ---------------------------------------------------------------------------
+# SITC product catalog
+# ---------------------------------------------------------------------------
+
+
+SAMPLE_SITC_PRODUCTS = [
+    {
+        "productId": 2001,
+        "productLevel": 4,
+        "code": "0111",
+        "nameEn": "Bovine meat, fresh, chilled or frozen",
+        "nameShortEn": "Bovine meat",
+    },
+    {
+        "productId": 2002,
+        "productLevel": 2,
+        "code": "01",
+        "nameEn": "Meat and meat preparations",
+        "nameShortEn": "Meat products",
+    },
+]
+
+
+class TestSITCProductCatalog:
+    """SITC product catalog is indexed by code, name, and ID."""
+
+    def setup_method(self):
+        sitc_product_catalog.populate(SAMPLE_SITC_PRODUCTS)
+
+    async def test_lookup_by_code(self):
+        result = await sitc_product_catalog.lookup("code", "0111")
+        assert result is not None
+        assert result["nameShortEn"] == "Bovine meat"
+
+    async def test_lookup_by_name(self):
+        result = await sitc_product_catalog.lookup("name", "bovine meat")
+        assert result is not None
+        assert result["code"] == "0111"
+
+    async def test_lookup_by_id(self):
+        result = await sitc_product_catalog.lookup("id", "2001")
+        assert result is not None
+        assert result["code"] == "0111"
+
+    async def test_sitc_fetcher_wired(self):
+        """wire_catalog_fetchers wires the SITC product catalog fetcher."""
+        mock_client = AsyncMock()
+        mock_client.execute = AsyncMock(
+            return_value={"productSitc": SAMPLE_SITC_PRODUCTS}
+        )
+
+        sitc_product_catalog._fetcher = None
+        sitc_product_catalog.clear()
+
+        try:
+            wire_catalog_fetchers(mock_client)
+            await sitc_product_catalog.lookup("id", "2001")
+
+            sitc_calls = [
+                c
+                for c in mock_client.execute.call_args_list
+                if "productSitc" in c[0][0]
+            ]
+            assert len(sitc_calls) == 1
+            query = sitc_calls[0][0][0]
+            assert "productLevel" in query  # returned field
+            assert "code" in query
+        finally:
+            sitc_product_catalog._fetcher = None
+            sitc_product_catalog.clear()
+
+
+# ---------------------------------------------------------------------------
+# Services catalog: code index and fields
+# ---------------------------------------------------------------------------
+
+
+class TestServicesCatalogCodeIndex:
+    """Services catalog includes a code index and returns code/productLevel fields."""
+
+    def setup_method(self):
+        services_catalog.populate(SAMPLE_SERVICES)
+
+    async def test_lookup_by_code(self):
+        """Services catalog supports lookup by code."""
+        result = await services_catalog.lookup("code", "S01")
+        assert result is not None
+        assert result["nameShortEn"] == "Travel & tourism"
+
+    async def test_services_fetcher_includes_code_and_level(self):
+        """Services fetcher query includes code and productLevel fields."""
+        mock_client = AsyncMock()
+        mock_client.execute = AsyncMock(return_value={"productHs92": SAMPLE_SERVICES})
+
+        services_catalog._fetcher = None
+        services_catalog.clear()
+
+        try:
+            wire_catalog_fetchers(mock_client)
+            await services_catalog.lookup("name", "travel & tourism")
+
+            services_calls = [
+                c
+                for c in mock_client.execute.call_args_list
+                if "servicesClass" in c[0][0]
+            ]
+            assert len(services_calls) == 1
+            query = services_calls[0][0][0]
+            assert "code" in query
+            assert "productLevel" in query
+        finally:
+            services_catalog._fetcher = None
+            services_catalog.clear()
 
 
 @pytest.mark.integration
