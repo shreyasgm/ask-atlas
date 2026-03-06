@@ -1199,16 +1199,6 @@
       "expected_classification": "HS92"
     },
     {
-      "id": 127,
-      "category_id": "cp_growth_opportunities",
-      "difficulty": "easy",
-      "text": "What product selection strategy is shown by default for Kenya's growth opportunities? Use the HS 1992 classification for goods and also use the services schema.",
-      "source": "atlas_country_page",
-      "atlas_url": "https://atlas.hks.harvard.edu/countries/404/growth-opportunities",
-      "expected_api_target": "country_pages",
-      "expected_classification": "HS92"
-    },
-    {
       "id": 128,
       "category_id": "cp_growth_opportunities",
       "difficulty": "easy",
