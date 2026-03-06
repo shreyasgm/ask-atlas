@@ -612,6 +612,19 @@ class AtlasTextToSQL:
         )
         wire_catalog_fetchers(graphql_client)
 
+        # Warm all catalog caches at startup (idempotent, has stampede prevention)
+        import asyncio
+
+        await asyncio.gather(
+            country_catalog._ensure_populated(),
+            hs92_product_catalog._ensure_populated(),
+            hs12_product_catalog._ensure_populated(),
+            sitc_product_catalog._ensure_populated(),
+            services_catalog._ensure_populated(),
+            group_catalog._ensure_populated(),
+            return_exceptions=True,
+        )
+
         instance.agent = build_atlas_graph(
             llm=instance.query_llm,
             lightweight_llm=instance.metadata_llm,

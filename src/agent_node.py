@@ -43,6 +43,26 @@ class AtlasGraphQLInput(BaseModel):
     )
 
 
+class LookupCatalogInput(BaseModel):
+    entity_type: str = Field(description="'product' or 'country'")
+    ids: list[int] = Field(description="List of Atlas internal IDs to look up")
+    product_class: str = Field(
+        default="HS12",
+        description="Classification system (e.g. HS92, HS12, SITC). Only relevant for product lookups.",
+    )
+
+
+@tool("lookup_catalog", args_schema=LookupCatalogInput)
+def _lookup_catalog_schema(
+    entity_type: str, ids: list[int], product_class: str = "HS12"
+) -> str:
+    """Look up human-readable names for Atlas internal product or country IDs.
+
+    Use when you receive data with numeric IDs but no corresponding names.
+    Returns a mapping of ID -> name for each resolved ID."""
+    raise NotImplementedError("Schema-only tool; execution routes through graph nodes.")
+
+
 @tool("atlas_graphql", args_schema=AtlasGraphQLInput)
 def _atlas_graphql_schema(question: str, context: str = "") -> str:
     """Queries the Atlas platform's GraphQL API for pre-calculated economic complexity
@@ -131,12 +151,21 @@ def make_agent_node(
                 effective_config_mode, budget_tracker
             )
             if effective_mode == AgentMode.GRAPHQL_ONLY:
-                tools = [_atlas_graphql_schema, _docs_tool_schema]
+                tools = [
+                    _atlas_graphql_schema,
+                    _lookup_catalog_schema,
+                    _docs_tool_schema,
+                ]
             elif effective_mode == AgentMode.SQL_ONLY:
                 tools = [_query_tool_schema, _docs_tool_schema]
             else:
                 # GRAPHQL_SQL (and AUTO resolved to GRAPHQL_SQL)
-                tools = [_query_tool_schema, _atlas_graphql_schema, _docs_tool_schema]
+                tools = [
+                    _query_tool_schema,
+                    _atlas_graphql_schema,
+                    _lookup_catalog_schema,
+                    _docs_tool_schema,
+                ]
 
             # Select system prompt based on effective mode
             if effective_mode == AgentMode.SQL_ONLY:

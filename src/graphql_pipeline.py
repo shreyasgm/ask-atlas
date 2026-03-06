@@ -1408,8 +1408,23 @@ async def format_graphql_results(
             )
             # Discard links on failure
         else:
-            # Success — post-process then serialize
+            # Success — warm caches before synchronous post-processing
+            import asyncio
             import json
+
+            warm_tasks = []
+            if product_caches:
+                warm_tasks.extend(
+                    c._ensure_populated()
+                    for c in product_caches.values()
+                    if not c.is_populated
+                )
+            if country_cache and not country_cache.is_populated:
+                warm_tasks.append(country_cache._ensure_populated())
+            if services_cache and not services_cache.is_populated:
+                warm_tasks.append(services_cache._ensure_populated())
+            if warm_tasks:
+                await asyncio.gather(*warm_tasks, return_exceptions=True)
 
             trade_direction = (entity_extraction or {}).get(
                 "trade_direction"
@@ -1731,64 +1746,16 @@ _FILTERS: dict[str, Callable] = {
 }
 
 
-def post_process_response(
+def _enrich_items(
+    items: list[dict],
+    enrich_type: str,
+    product_caches: dict | None,
+    product_class: str,
+    country_cache: CatalogCache | None,
+    services_cache: CatalogCache | None,
     query_type: str,
-    raw_response: dict,
-    *,
-    trade_direction: str = "exports",
-    product_caches: dict[str, CatalogCache] | None = None,
-    product_class: str = "HS12",
-    country_cache: CatalogCache | None = None,
-    services_cache: CatalogCache | None = None,
-) -> dict:
-    """Sort, truncate, and enrich large GraphQL responses before sending to the LLM.
-
-    Args:
-        query_type: Classified query type (e.g., "treemap_products").
-        raw_response: Raw GraphQL API response dict.
-        trade_direction: "exports" or "imports" — determines which value field to sort by.
-        product_caches: Product catalog caches keyed by classification
-            (e.g. ``{"HS92": ..., "HS12": ...}``).
-        product_class: Which classification to use for enrichment (default HS12).
-        country_cache: Optional country catalog cache for name enrichment.
-        services_cache: Optional services catalog cache for name enrichment.
-
-    Returns:
-        Post-processed response dict, or raw_response if no rules apply.
-    """
-    rules = _POST_PROCESS_RULES.get(query_type)
-    if rules is None:
-        return raw_response
-
-    root_key = rules["root"]
-    items = raw_response.get(root_key)
-    if not isinstance(items, list) or len(items) <= rules["top_n"]:
-        return raw_response
-
-    total_items = len(items)
-
-    # Apply filter if specified
-    filter_name = rules.get("filter")
-    if filter_name and filter_name in _FILTERS:
-        items = [item for item in items if _FILTERS[filter_name](item)]
-
-    # Override sort field for imports
-    sort_field = rules["sort"]
-    if trade_direction == "imports" and sort_field == "exportValue":
-        sort_field = "importValue"
-
-    sort_ascending = rules.get("sort_ascending", False)
-    items.sort(
-        key=lambda x: (x.get(sort_field) is not None, x.get(sort_field) or 0),
-        reverse=not sort_ascending,
-    )
-
-    # Truncate
-    top_n = rules["top_n"]
-    items = items[:top_n]
-
-    # Enrich with human-readable names
-    enrich_type = rules.get("enrich", "none")
+) -> None:
+    """Enrich items in-place with human-readable names from catalog caches."""
     if enrich_type == "product" and product_caches:
         product_cache = product_caches.get(
             product_class, next(iter(product_caches.values()))
@@ -1828,6 +1795,88 @@ def post_process_response(
                     entry = country_cache.lookup_sync("id", str(cid))
                     if entry:
                         item["partnerName"] = entry.get("nameShortEn", "")
+
+
+def post_process_response(
+    query_type: str,
+    raw_response: dict,
+    *,
+    trade_direction: str = "exports",
+    product_caches: dict[str, CatalogCache] | None = None,
+    product_class: str = "HS12",
+    country_cache: CatalogCache | None = None,
+    services_cache: CatalogCache | None = None,
+) -> dict:
+    """Sort, truncate, and enrich large GraphQL responses before sending to the LLM.
+
+    Args:
+        query_type: Classified query type (e.g., "treemap_products").
+        raw_response: Raw GraphQL API response dict.
+        trade_direction: "exports" or "imports" — determines which value field to sort by.
+        product_caches: Product catalog caches keyed by classification
+            (e.g. ``{"HS92": ..., "HS12": ...}``).
+        product_class: Which classification to use for enrichment (default HS12).
+        country_cache: Optional country catalog cache for name enrichment.
+        services_cache: Optional services catalog cache for name enrichment.
+
+    Returns:
+        Post-processed response dict, or raw_response if no rules apply.
+    """
+    rules = _POST_PROCESS_RULES.get(query_type)
+    if rules is None:
+        return raw_response
+
+    root_key = rules["root"]
+    items = raw_response.get(root_key)
+    if not isinstance(items, list):
+        return raw_response
+
+    top_n = rules["top_n"]
+
+    # Small result sets: enrich only, no sort/truncate/metadata
+    if len(items) <= top_n:
+        _enrich_items(
+            items,
+            rules.get("enrich", "none"),
+            product_caches,
+            product_class,
+            country_cache,
+            services_cache,
+            query_type,
+        )
+        return {root_key: items}
+
+    total_items = len(items)
+
+    # Apply filter if specified
+    filter_name = rules.get("filter")
+    if filter_name and filter_name in _FILTERS:
+        items = [item for item in items if _FILTERS[filter_name](item)]
+
+    # Override sort field for imports
+    sort_field = rules["sort"]
+    if trade_direction == "imports" and sort_field == "exportValue":
+        sort_field = "importValue"
+
+    sort_ascending = rules.get("sort_ascending", False)
+    items.sort(
+        key=lambda x: (x.get(sort_field) is not None, x.get(sort_field) or 0),
+        reverse=not sort_ascending,
+    )
+
+    # Truncate
+    items = items[:top_n]
+
+    # Enrich with human-readable names
+    _enrich_items(
+        items,
+        rules.get("enrich", "none"),
+        product_caches,
+        product_class,
+        country_cache,
+        services_cache,
+        query_type,
+    )
 
     return {
         root_key: items,
@@ -2877,3 +2926,68 @@ _QUERY_BUILDERS: dict[str, Callable[[dict], tuple[str, dict]]] = {
     "global_datum": _build_global_datum,
     "growth_opportunities": _build_growth_opportunities,
 }
+
+
+# ---------------------------------------------------------------------------
+# Catalog lookup node (for lookup_catalog tool)
+# ---------------------------------------------------------------------------
+
+
+async def execute_catalog_lookup(
+    state: "AtlasAgentState",
+    *,
+    product_caches: dict[str, CatalogCache] | None = None,
+    country_cache: CatalogCache | None = None,
+    services_cache: CatalogCache | None = None,
+) -> dict:
+    """Execute a lookup_catalog tool call, resolving IDs to human-readable names.
+
+    Args:
+        state: Current agent state — expects the last message to have a
+            ``lookup_catalog`` tool call.
+        product_caches: Product catalog caches keyed by classification.
+        country_cache: Country catalog cache.
+        services_cache: Services catalog cache.
+
+    Returns:
+        Dict with a ToolMessage containing JSON mapping of ID → name.
+    """
+    import json
+
+    last_msg = state["messages"][-1]
+    tool_call = next(tc for tc in last_msg.tool_calls if tc["name"] == "lookup_catalog")
+    args = tool_call["args"]
+    entity_type = args.get("entity_type", "product")
+    ids = args.get("ids", [])
+    product_class = args.get("product_class", "HS12")
+
+    results: dict[int, str | None] = {}
+
+    if entity_type == "product" and product_caches:
+        cache = product_caches.get(
+            product_class, next(iter(product_caches.values()), None)
+        )
+        for pid in ids:
+            entry = None
+            if cache:
+                entry = await cache.lookup("id", str(pid))
+            # Fall back to services cache
+            if entry is None and services_cache:
+                entry = await services_cache.lookup("id", str(pid))
+            results[pid] = entry.get("nameShortEn") if entry else None
+    elif entity_type == "country" and country_cache:
+        for cid in ids:
+            entry = await country_cache.lookup("id", str(cid))
+            results[cid] = entry.get("nameShortEn") if entry else None
+    else:
+        results = {i: None for i in ids}
+
+    return {
+        "messages": [
+            ToolMessage(
+                content=json.dumps(results, default=str),
+                tool_call_id=tool_call["id"],
+                name="lookup_catalog",
+            )
+        ]
+    }
