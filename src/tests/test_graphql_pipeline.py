@@ -2535,7 +2535,9 @@ class TestBuildersExtended:
             {"location": "location-76", "product_class": "SITC"},
         )
         assert variables["productClass"] == "SITC"
-        assert "year" not in variables
+        from src.prompts import GRAPHQL_DATA_MAX_YEAR
+
+        assert variables["year"] == GRAPHQL_DATA_MAX_YEAR
 
     def test_product_table_builder(self):
         """product_table builder produces countryProductYear query."""
