@@ -155,8 +155,12 @@ QUERY_TYPE_DESCRIPTION = (
     "- feasibility : Growth opportunity scatter — products plotted by complexity vs.\n"
     "                distance/feasibility (countryProductYear + productYear APIs).\n"
     "- feasibility_table : Growth opportunity table — same data as feasibility in tabular form.\n"
-    "- growth_opportunities : Growth opportunity metrics including COG, distance, RCA\n"
-    "                         for products in a country's product space (productSpace API).\n"
+    "- growth_opportunities : Pre-computed growth opportunity metrics from the Atlas\n"
+    "                         Country Pages (treeMap API). Returns opportunityGain,\n"
+    "                         distance, PCI, and normalized variants per product.\n"
+    "                         **Only supports HS (= HS92) classification.**\n"
+    "                         For SITC or custom product classifications, use\n"
+    "                         feasibility or feasibility_table instead (Explore API).\n"
     "- product_table : Tabular product-level data for a country — export values, RCA,\n"
     "                  complexity metrics (countryProductYear API).\n"
     "- country_year : Country aggregate data by year — GDP, ECI, total trade values (countryYear API).\n"
@@ -184,7 +188,12 @@ QUERY_TYPE_DESCRIPTION = (
     "\n"
     "Routing guidance:\n"
     "- For time-series questions ('how has X changed since Y'), prefer overtime_* or marketshare.\n"
-    "- For growth opportunity / diversification questions, prefer feasibility, feasibility_table, or growth_opportunities.\n"
+    "- For growth opportunity / diversification questions:\n"
+    "  - If using HS/HS92 classification (or unspecified): prefer growth_opportunities\n"
+    "    (richer pre-computed metrics from Country Pages treeMap).\n"
+    "  - If using SITC or a non-HS classification: prefer feasibility or feasibility_table\n"
+    "    (Explore API countryProductYear, which supports all classifications).\n"
+    "  - If the user wants custom weighting of COG/distance/PCI: prefer feasibility.\n"
     "- For 'what does country X export' snapshot questions, prefer treemap_products or product_table.\n"
     "- For country overview / profile questions, prefer country_profile.\n"
     "- For questions specifically about a country's export basket or export composition,\n"
@@ -212,7 +221,7 @@ API_TARGET_DESCRIPTION = (
     "            explore_data_availability query types.\n"
     "- country_pages : The Country Pages API at /api/countries/graphql — provides derived analytical\n"
     "                  profiles including countryProfile (46 fields), countryLookback (growth dynamics),\n"
-    "                  newProductsCountry, growth_opportunities (productSpace), peer comparisons, and\n"
+    "                  newProductsCountry, growth_opportunities (treeMap), peer comparisons, and\n"
     "                  policy recommendations. Used by country_profile, country_profile_exports,\n"
     "                  country_profile_partners, country_profile_complexity, country_lookback,\n"
     "                  new_products, and growth_opportunities query types.\n"
@@ -1570,14 +1579,13 @@ async def format_graphql_results(
                 "feasibility_table",
                 "growth_opportunities",
             ):
-                if isinstance(items, list) and len(items) == 0:
-                    warnings.append(
-                        "NOTE: The Atlas does not display growth opportunity products for countries "
-                        "classified under the 'Technological Frontier' strategic approach "
-                        "(highest-complexity economies). If results are empty, tell the user this "
-                        "data is unavailable for frontier economies and suggest exploring existing "
-                        "export strengths instead."
-                    )
+                warnings.append(
+                    "NOTE: The Atlas does not display growth opportunity products for countries "
+                    "classified under the 'Technological Frontier' strategic approach "
+                    "(highest-complexity economies). If results are empty, tell the user this "
+                    "data is unavailable for frontier economies and suggest exploring existing "
+                    "export strengths instead."
+                )
 
             if warnings:
                 content = "\n".join(warnings) + "\n\n" + content
@@ -1701,10 +1709,11 @@ _POST_PROCESS_RULES: dict[str, dict] = {
         "enrich": "product",
     },
     "growth_opportunities": {
-        "root": "productSpace",
-        "sort": "rca",
+        "root": "treeMap",
+        "sort": "opportunityGain",
         "top_n": 20,
         "enrich": "none",
+        "filter": "rca_lt_1_treemap",
     },
     "country_profile_exports": {
         "root": "treeMap",
@@ -1747,6 +1756,7 @@ _POST_PROCESS_RULES: dict[str, dict] = {
 
 _FILTERS: dict[str, Callable] = {
     "rca_lt_1": lambda item: (item.get("exportRca") or 0) < 1,
+    "rca_lt_1_treemap": lambda item: (item.get("rca") or 0) < 1,
 }
 
 
@@ -2489,21 +2499,34 @@ def _build_new_products(params: dict) -> tuple[str, dict]:
 
 
 def _build_growth_opportunities(params: dict) -> tuple[str, dict]:
-    """Build growth opportunities query (Country Pages productSpace API)."""
+    """Build growth opportunities query (Country Pages treeMap API).
+
+    Uses treeMap(facet: CPY_C) which provides pre-computed opportunity
+    metrics. Only supports productClass HS (= HS92). For SITC or custom
+    queries, the classification prompt routes to ``feasibility`` instead.
+    """
     location = params.get("location", "")
     product_class = _normalize_cp_product_class(params.get("product_class")) or "HS"
+    product_level = params.get("product_level", "fourDigit")
     year = params.get("year") or GRAPHQL_DATA_MAX_YEAR
     variables: dict[str, Any] = {
         "location": location,
         "productClass": product_class,
+        "productLevel": product_level,
         "year": int(year),
     }
     query = """
-    query GO($location: ID!, $productClass: ProductClass!, $year: Int!) {
-      productSpace(location: $location, productClass: $productClass, year: $year) {
-        product { id shortName code }
-        exportValue importValue rca
-        x y
+    query GO($location: ID!, $productClass: ProductClass!,
+             $productLevel: ProductLevel!, $year: Int!) {
+      treeMap(facet: CPY_C, location: $location, productClass: $productClass,
+              productLevel: $productLevel, year: $year) {
+        ... on TreeMapProduct {
+          product { id shortName code }
+          exportValue rca
+          opportunityGain distance pci
+          normalizedOpportunityGain normalizedDistance normalizedPci
+          globalMarketShare
+        }
       }
     }
     """

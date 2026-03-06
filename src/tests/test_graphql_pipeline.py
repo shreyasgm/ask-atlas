@@ -2485,48 +2485,41 @@ class TestBuildersExtended:
         assert "countryLookback" in query
 
     def test_growth_opportunities_builder(self):
-        """growth_opportunities builder produces productSpace query with correct args."""
+        """growth_opportunities builder produces treeMap query with correct args."""
         query, variables = build_graphql_query(
             "growth_opportunities",
             {"location": "location-404", "year": 2024},
         )
-        assert "productSpace" in query
+        assert "treeMap" in query
+        assert "TreeMapProduct" in query
         assert variables["location"] == "location-404"
         assert variables["productClass"] == "HS"  # Country Pages uses "HS" not "HS92"
         assert variables["year"] == 2024
-        # Must NOT use the old $id variable
-        assert "$id" not in query
-        assert "id" not in variables
-        # Must use $location and $productClass
+        assert variables["productLevel"] == "fourDigit"  # default
         assert "$location: ID!" in query
         assert "$productClass: ProductClass!" in query
+        assert "$productLevel: ProductLevel!" in query
 
-    def test_growth_opportunities_uses_valid_product_space_fields(self):
-        """growth_opportunities must only request fields that exist on ProductSpaceDatum.
-
-        ProductSpaceDatum fields (from Country Pages API introspection):
-        product, exportValue, importValue, rca, x, y, connections
-        """
+    def test_growth_opportunities_uses_valid_treemap_fields(self):
+        """growth_opportunities must request TreeMapProduct fields for opportunity metrics."""
         query, _ = build_graphql_query(
             "growth_opportunities",
             {"location": "location-404", "year": 2024},
         )
-        # These fields DO exist on ProductSpaceDatum
-        assert "exportValue" in query
+        # Core opportunity metrics from TreeMapProduct
+        assert "opportunityGain" in query
+        assert "distance" in query
+        assert "pci" in query
         assert "rca" in query
-        assert "importValue" in query
-        # These fields do NOT exist — builder must not request them
+        assert "exportValue" in query
+        # Normalized variants
+        assert "normalizedOpportunityGain" in query
+        assert "normalizedDistance" in query
+        assert "normalizedPci" in query
+        # Old productSpace-only fields should NOT be present
         assert (
             "exportRca" not in query
-        ), "exportRca does not exist on ProductSpaceDatum — use 'rca' instead"
-        assert (
-            " cog" not in query and "\ncog" not in query
-        ), "cog does not exist on ProductSpaceDatum"
-        assert "cogRank" not in query, "cogRank does not exist on ProductSpaceDatum"
-        assert "distance" not in query, "distance does not exist on ProductSpaceDatum"
-        assert (
-            "distanceRank" not in query
-        ), "distanceRank does not exist on ProductSpaceDatum"
+        ), "exportRca is an Explore API field, not treeMap"
 
     def test_growth_opportunities_builder_custom_product_class(self):
         """growth_opportunities builder respects product_class param."""
@@ -4168,33 +4161,22 @@ class TestProductYearNaturalResource:
         assert "naturalResource" in query_str
 
 
-class TestFrontierWarningConditional:
-    """Change 3: frontier warning only when data is empty."""
+class TestFrontierWarningUnconditional:
+    """Frontier warning is always injected for feasibility/growth_opportunities."""
 
-    async def test_frontier_warning_suppressed_when_data_present(self):
-        """Non-empty growth_opportunities data should NOT get frontier warning."""
+    async def test_frontier_warning_present_when_data_exists(self):
+        """growth_opportunities with data should still get frontier warning."""
         raw_response = {
-            "productSpace": [
-                {"productId": i, "rca": 0.5, "cog": 0.3, "distance": 0.7}
-                for i in range(10)
+            "treeMap": [
+                {
+                    "product": {"id": "1", "shortName": "Fish", "code": "0301"},
+                    "rca": 0.5,
+                    "opportunityGain": 0.3,
+                    "distance": 0.7,
+                }
+                for _ in range(10)
             ]
         }
-        state = _base_graphql_state(
-            graphql_question="Growth opportunities for Kenya",
-            graphql_classification=_explore_classification(
-                query_type="growth_opportunities",
-                api_target="country_pages",
-            ),
-            graphql_entity_extraction=_explore_extraction(),
-            graphql_raw_response=raw_response,
-        )
-        result = await format_graphql_results(state)
-        content = result["messages"][0].content
-        assert "Technological Frontier" not in content
-
-    async def test_frontier_warning_injected_when_data_empty(self):
-        """Empty growth_opportunities data SHOULD get frontier warning."""
-        raw_response = {"productSpace": []}
         state = _base_graphql_state(
             graphql_question="Growth opportunities for USA",
             graphql_classification=_explore_classification(
@@ -4207,6 +4189,53 @@ class TestFrontierWarningConditional:
         result = await format_graphql_results(state)
         content = result["messages"][0].content
         assert "Technological Frontier" in content
+
+    async def test_frontier_warning_present_when_data_empty(self):
+        """Empty growth_opportunities data should also get frontier warning."""
+        raw_response = {"treeMap": []}
+        state = _base_graphql_state(
+            graphql_question="Growth opportunities for USA",
+            graphql_classification=_explore_classification(
+                query_type="growth_opportunities",
+                api_target="country_pages",
+            ),
+            graphql_entity_extraction=_explore_extraction(),
+            graphql_raw_response=raw_response,
+        )
+        result = await format_graphql_results(state)
+        content = result["messages"][0].content
+        assert "Technological Frontier" in content
+
+
+class TestGrowthOpportunitiesTreeMap:
+    """growth_opportunities uses treeMap API with opportunity metrics."""
+
+    def test_build_growth_opportunities_uses_treemap(self):
+        """Query should use treeMap with TreeMapProduct fragment."""
+        query, variables = build_graphql_query(
+            "growth_opportunities",
+            {"location": "404", "product_class": "HS"},
+        )
+        assert "treeMap" in query
+        assert "TreeMapProduct" in query
+        assert "opportunityGain" in query
+
+    def test_build_growth_opportunities_has_product_level(self):
+        """Variables should include productLevel."""
+        _, variables = build_graphql_query(
+            "growth_opportunities",
+            {"location": "404", "product_class": "HS", "product_level": "twoDigit"},
+        )
+        assert variables["productLevel"] == "twoDigit"
+
+    def test_growth_opportunities_post_process_rules(self):
+        """Post-process rules should use treeMap root and opportunityGain sort."""
+        from src.graphql_pipeline import _POST_PROCESS_RULES
+
+        rules = _POST_PROCESS_RULES["growth_opportunities"]
+        assert rules["root"] == "treeMap"
+        assert rules["sort"] == "opportunityGain"
+        assert rules["filter"] == "rca_lt_1_treemap"
 
 
 class TestCountryYearLookbackYears:
