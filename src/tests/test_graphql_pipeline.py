@@ -4149,3 +4149,116 @@ class TestNewProductsBuilder:
         )
         assert variables["location"] == "location-484"
         assert variables["year"] == 2022
+
+
+# ---------------------------------------------------------------------------
+# Eval-driven fixes: naturalResource, frontier warning, lookback_years, strategy routing
+# ---------------------------------------------------------------------------
+
+
+class TestProductYearNaturalResource:
+    """Change 2: naturalResource field in product_info query."""
+
+    def test_product_year_includes_natural_resource(self):
+        """_build_product_year query string includes naturalResource field."""
+        query_str, _ = build_graphql_query(
+            "product_info",
+            {"product_id": 726, "product_level": "fourDigit", "year": 2024},
+        )
+        assert "naturalResource" in query_str
+
+
+class TestFrontierWarningConditional:
+    """Change 3: frontier warning only when data is empty."""
+
+    async def test_frontier_warning_suppressed_when_data_present(self):
+        """Non-empty growth_opportunities data should NOT get frontier warning."""
+        raw_response = {
+            "productSpace": [
+                {"productId": i, "rca": 0.5, "cog": 0.3, "distance": 0.7}
+                for i in range(10)
+            ]
+        }
+        state = _base_graphql_state(
+            graphql_question="Growth opportunities for Kenya",
+            graphql_classification=_explore_classification(
+                query_type="growth_opportunities",
+                api_target="country_pages",
+            ),
+            graphql_entity_extraction=_explore_extraction(),
+            graphql_raw_response=raw_response,
+        )
+        result = await format_graphql_results(state)
+        content = result["messages"][0].content
+        assert "Technological Frontier" not in content
+
+    async def test_frontier_warning_injected_when_data_empty(self):
+        """Empty growth_opportunities data SHOULD get frontier warning."""
+        raw_response = {"productSpace": []}
+        state = _base_graphql_state(
+            graphql_question="Growth opportunities for USA",
+            graphql_classification=_explore_classification(
+                query_type="growth_opportunities",
+                api_target="country_pages",
+            ),
+            graphql_entity_extraction=_explore_extraction(),
+            graphql_raw_response=raw_response,
+        )
+        result = await format_graphql_results(state)
+        content = result["messages"][0].content
+        assert "Technological Frontier" in content
+
+
+class TestCountryYearLookbackYears:
+    """Change 4: lookback_years wired into _build_country_year."""
+
+    def test_lookback_years_sets_year_range(self):
+        """lookback_years=5 should produce yearMin = max_year - 5."""
+        from src.prompts import GRAPHQL_DATA_MAX_YEAR
+
+        _, variables = build_graphql_query(
+            "country_year",
+            {"country_id": 404, "lookback_years": 5},
+        )
+        assert variables["yearMin"] == GRAPHQL_DATA_MAX_YEAR - 5
+        assert variables["yearMax"] == GRAPHQL_DATA_MAX_YEAR
+
+    def test_explicit_year_takes_precedence_over_lookback(self):
+        """An explicit year should override lookback_years."""
+        _, variables = build_graphql_query(
+            "country_year",
+            {"country_id": 404, "year": 2020, "lookback_years": 5},
+        )
+        assert variables["yearMin"] == 2020
+        assert variables["yearMax"] == 2020
+
+    def test_year_min_max_takes_precedence_over_lookback(self):
+        """Explicit year_min/year_max should override lookback_years."""
+        _, variables = build_graphql_query(
+            "country_year",
+            {
+                "country_id": 404,
+                "year_min": 2018,
+                "year_max": 2022,
+                "lookback_years": 5,
+            },
+        )
+        assert variables["yearMin"] == 2018
+        assert variables["yearMax"] == 2022
+
+
+class TestStrategyRoutingHint:
+    """Change 5: classification prompt includes policyRecommendation routing hint."""
+
+    def test_classification_prompt_mentions_policy_recommendation(self):
+        """QUERY_TYPE_DESCRIPTION should guide strategy questions to country_profile."""
+        from src.graphql_pipeline import QUERY_TYPE_DESCRIPTION
+
+        assert "policyRecommendation" in QUERY_TYPE_DESCRIPTION
+        # The routing hint should mention country_profile in the context of
+        # strategy/policyRecommendation (they span adjacent lines in the same bullet)
+        assert "country_profile" in QUERY_TYPE_DESCRIPTION
+        assert (
+            "strategic approach" in QUERY_TYPE_DESCRIPTION
+            or "policy recommendation" in QUERY_TYPE_DESCRIPTION
+        )

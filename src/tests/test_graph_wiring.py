@@ -84,6 +84,7 @@ def build_test_graph(
                 ToolMessage(
                     content="Only one query can be executed at a time.",
                     tool_call_id=extra_tc["id"],
+                    name=extra_tc["name"],
                 )
             )
 
@@ -735,3 +736,42 @@ class TestGraphqlAtlasLinksReducer:
         assert len(links) == 3
         labels = {link["label"] for link in links}
         assert labels == {"Link A", "Link B", "Link C"}
+
+
+class TestMixedParallelToolCallNames:
+    """Verify stub ToolMessages use the correct tool name from each tool_call."""
+
+    async def test_mixed_tool_names_in_parallel_calls(self):
+        """When agent emits [query_tool, atlas_graphql], stub messages preserve each name."""
+        model = FakeToolCallingModel(
+            responses=[
+                AIMessage(
+                    content="",
+                    tool_calls=[
+                        _tool_call("query_tool", "US exports 2020", "call-sql"),
+                        {
+                            "name": "atlas_graphql",
+                            "args": {"question": "Kenya growth"},
+                            "id": "call-gql",
+                            "type": "tool_call",
+                        },
+                    ],
+                ),
+                AIMessage(content="Here are both results."),
+            ]
+        )
+        graph = build_test_graph(model)
+        config = {"configurable": {"thread_id": "mixed-tools"}}
+
+        result = await graph.ainvoke(
+            {"messages": [HumanMessage(content="Compare US and Kenya")]},
+            config=config,
+        )
+
+        tool_msgs = [m for m in result["messages"] if isinstance(m, ToolMessage)]
+        assert len(tool_msgs) == 2
+
+        # The stub for the second tool_call should have name="atlas_graphql"
+        stub_msg = tool_msgs[1]
+        assert stub_msg.tool_call_id == "call-gql"
+        assert stub_msg.name == "atlas_graphql"

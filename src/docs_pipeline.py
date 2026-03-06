@@ -531,7 +531,7 @@ async def format_docs_results(state: AtlasAgentState) -> dict:
                 ToolMessage(
                     content="Only one tool can be executed at a time. Please make additional requests sequentially.",
                     tool_call_id=tc["id"],
-                    name="docs_tool",
+                    name=tc["name"],
                 )
             )
 
