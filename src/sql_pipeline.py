@@ -171,8 +171,11 @@ class QueryToolInput(BaseModel):
 
 @tool("query_tool", args_schema=QueryToolInput)
 def _query_tool_schema(question: str, context: str = "") -> str:
-    """A tool that generates and executes SQL queries on the trade database.
-    Input should be a natural language question about trade data."""
+    """An agentic SQL tool that writes, executes, and iteratively refines queries
+    on the Atlas trade database. Handles complex analytical questions — including
+    multi-step logic, cross-period comparisons, and multi-table aggregations —
+    internally. Pass the full question with all its complexity; do not simplify
+    or decompose it."""
     raise NotImplementedError("Schema-only tool; execution routes through graph nodes.")
 
 

@@ -2480,12 +2480,14 @@ def _build_growth_opportunities(params: dict) -> tuple[str, dict]:
     """Build growth opportunities query (Country Pages productSpace API)."""
     location = params.get("location", "")
     product_class = _normalize_cp_product_class(params.get("product_class")) or "HS"
-    year = params.get("year")
-    variables: dict[str, Any] = {"location": location, "productClass": product_class}
-    if year:
-        variables["year"] = int(year)
+    year = params.get("year") or GRAPHQL_DATA_MAX_YEAR
+    variables: dict[str, Any] = {
+        "location": location,
+        "productClass": product_class,
+        "year": int(year),
+    }
     query = """
-    query GO($location: ID!, $productClass: ProductClass!, $year: Int) {
+    query GO($location: ID!, $productClass: ProductClass!, $year: Int!) {
       productSpace(location: $location, productClass: $productClass, year: $year) {
         product { id shortName code }
         exportValue importValue rca
