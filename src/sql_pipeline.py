@@ -729,7 +729,7 @@ async def format_results_node(state: AtlasAgentState) -> dict:
                 ToolMessage(
                     content="Only one query can be executed at a time. Please make additional queries sequentially.",
                     tool_call_id=tc["id"],
-                    name="query_tool",
+                    name=tc["name"],
                 )
             )
 

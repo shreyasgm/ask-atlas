@@ -584,7 +584,7 @@ async def reasoning_node(
         sql_max_year=SQL_DATA_MAX_YEAR,
     )
 
-    model = llm.bind_tools(TOOL_SCHEMAS)
+    model = llm.bind_tools(TOOL_SCHEMAS, parallel_tool_calls=False)
     response = await model.ainvoke(
         [SystemMessage(content=system_prompt)] + state["messages"]
     )

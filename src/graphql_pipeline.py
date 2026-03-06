@@ -197,7 +197,10 @@ QUERY_TYPE_DESCRIPTION = (
     "- For questions about what a GROUP exports to a country, prefer group_bilateral.\n"
     "- For questions about services trade, use servicesClass: unilateral in the Explore API.\n"
     "- For questions about whether a product is a natural resource or green product,\n"
-    "  use product_info with productClass HS92 (naturalResource metadata is only in HS92)."
+    "  use product_info with productClass HS92 (naturalResource metadata is only in HS92).\n"
+    "- For questions about a country's strategic approach, policy recommendation, or\n"
+    "  diversification strategy for growth opportunities, use country_profile (which has\n"
+    "  policyRecommendation) — NOT growth_opportunities (which only has product-level data)."
 )
 
 API_TARGET_DESCRIPTION = (
@@ -1567,13 +1570,14 @@ async def format_graphql_results(
                 "feasibility_table",
                 "growth_opportunities",
             ):
-                warnings.append(
-                    "NOTE: The Atlas does not display growth opportunity products for countries "
-                    "classified under the 'Technological Frontier' strategic approach "
-                    "(highest-complexity economies). If results are empty, tell the user this "
-                    "data is unavailable for frontier economies and suggest exploring existing "
-                    "export strengths instead."
-                )
+                if isinstance(items, list) and len(items) == 0:
+                    warnings.append(
+                        "NOTE: The Atlas does not display growth opportunity products for countries "
+                        "classified under the 'Technological Frontier' strategic approach "
+                        "(highest-complexity economies). If results are empty, tell the user this "
+                        "data is unavailable for frontier economies and suggest exploring existing "
+                        "export strengths instead."
+                    )
 
             if warnings:
                 content = "\n".join(warnings) + "\n\n" + content
@@ -1590,7 +1594,7 @@ async def format_graphql_results(
                 ToolMessage(
                     content="Only one query can be executed at a time. Please make additional queries sequentially.",
                     tool_call_id=tc["id"],
-                    name="atlas_graphql",
+                    name=tc["name"],
                 )
             )
 
@@ -2096,12 +2100,19 @@ def _build_country_year(params: dict) -> tuple[str, dict]:
     # Explore API path (original)
     variables: dict[str, Any] = {"countryId": params.get("country_id")}
     year = params.get("year")
+    lookback = params.get("lookback_years")
     if year:
         variables["yearMin"] = year
         variables["yearMax"] = year
-    else:
+    elif params.get("year_min") or params.get("year_max"):
         variables["yearMin"] = params.get("year_min", GRAPHQL_DATA_MAX_YEAR)
         variables["yearMax"] = params.get("year_max", GRAPHQL_DATA_MAX_YEAR)
+    elif lookback:
+        variables["yearMax"] = GRAPHQL_DATA_MAX_YEAR
+        variables["yearMin"] = GRAPHQL_DATA_MAX_YEAR - lookback
+    else:
+        variables["yearMin"] = GRAPHQL_DATA_MAX_YEAR
+        variables["yearMax"] = GRAPHQL_DATA_MAX_YEAR
 
     services_class = params.get("services_class")
     if services_class:
@@ -2161,6 +2172,7 @@ def _build_product_year(params: dict) -> tuple[str, dict]:
         exportValueConstGrowth5 importValueConstGrowth5
         exportValueConstCagr5 importValueConstCagr5
         pci complexityEnum
+        naturalResource
       }}
     }}
     """

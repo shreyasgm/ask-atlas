@@ -205,6 +205,27 @@ class TestRouteAfterReasoning:
 # ---------------------------------------------------------------------------
 
 
+class TestReasoningNodeParallelToolCalls:
+    async def test_bind_tools_disables_parallel_tool_calls(self):
+        """reasoning_node passes parallel_tool_calls=False to bind_tools."""
+        model = FakeToolCallingModel(responses=[AIMessage(content="thinking...")])
+        captured_kwargs: list[dict] = []
+        original_bind = FakeToolCallingModel.bind_tools
+
+        def spy_bind(self_inner, tools, **kwargs):
+            captured_kwargs.append(kwargs)
+            return original_bind(self_inner, tools, **kwargs)
+
+        state = _base_subagent_state(
+            iteration_count=0,
+            messages=[HumanMessage(content="Write SQL")],
+        )
+        with patch.object(FakeToolCallingModel, "bind_tools", spy_bind):
+            await reasoning_node(state, llm=model)
+        assert len(captured_kwargs) == 1
+        assert captured_kwargs[0].get("parallel_tool_calls") is False
+
+
 class TestReasoningNode:
     async def test_max_iterations_enforced(self):
         state = _base_subagent_state(iteration_count=MAX_ITERATIONS)
