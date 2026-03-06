@@ -34,7 +34,7 @@ Model aliases (short names that work in each provider's API):
 from dataclasses import dataclass
 
 # --- Frontier model (complex reasoning, agent orchestration, SQL generation) ---
-FRONTIER_MODEL = "gpt-5.2"
+FRONTIER_MODEL = "gpt-5.4"
 FRONTIER_MODEL_PROVIDER = "openai"
 
 # --- Lightweight model (extraction, classification, selection) ---
