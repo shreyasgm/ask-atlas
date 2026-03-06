@@ -68,6 +68,7 @@ from .prompt_sql import (
     SQL_GROUP_TABLES_BLOCK,
     SQL_MODE_BLOCK,
     SQL_RETRY_BLOCK,
+    SQL_SUBAGENT_PROMPT,
     build_sql_generation_prefix,
 )
 
@@ -102,5 +103,6 @@ __all__ = [
     "SQL_GROUP_TABLES_BLOCK",
     "SQL_MODE_BLOCK",
     "SQL_RETRY_BLOCK",
+    "SQL_SUBAGENT_PROMPT",
     "build_sql_generation_prefix",
 ]

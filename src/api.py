@@ -898,7 +898,7 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                                 "products": stream_data.payload.get("products", []),
                                 "countries": stream_data.payload.get("countries", []),
                             }
-                        elif stage == "execute_sql":
+                        elif stage == "sql_query_agent":
                             total_queries += 1
                             total_rows += stream_data.payload.get("row_count", 0)
                             total_execution_time_ms += stream_data.payload.get(

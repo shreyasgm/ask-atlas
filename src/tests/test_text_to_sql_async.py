@@ -567,20 +567,18 @@ def _build_pipeline_stub_instance(
     async def get_table_info(state: AtlasAgentState) -> dict:
         return {"pipeline_table_info": "Table: hs92.country_product_year_4"}
 
-    async def generate_sql(state: AtlasAgentState) -> dict:
-        return {"pipeline_sql": "SELECT * FROM hs92.country_product_year_4 LIMIT 5"}
-
-    async def validate_sql(state: AtlasAgentState) -> dict:
+    async def sql_query_agent(state: AtlasAgentState) -> dict:
         if validation_error:
             return {
-                "pipeline_sql": state.get("pipeline_sql", ""),
+                "pipeline_sql": "SELECT * FROM hs92.country_product_year_4 LIMIT 5",
                 "pipeline_result": "",
+                "pipeline_result_columns": [],
+                "pipeline_result_rows": [],
+                "pipeline_execution_time_ms": 0,
                 "last_error": "SQL validation failed: unknown table",
             }
-        return {"pipeline_sql": state.get("pipeline_sql", ""), "last_error": ""}
-
-    async def execute_sql(state: AtlasAgentState) -> dict:
         return {
+            "pipeline_sql": "SELECT * FROM hs92.country_product_year_4 LIMIT 5",
             "pipeline_result": "{'country': 'USA', 'value': 1000}\n{'country': 'CHN', 'value': 800}",
             "pipeline_result_columns": ["country", "value"],
             "pipeline_result_rows": [["USA", 1000], ["CHN", 800]],
@@ -631,20 +629,13 @@ def _build_pipeline_stub_instance(
             return "extract_tool_question"
         return END
 
-    def route_after_validation(state: AtlasAgentState) -> str:
-        if state.get("last_error"):
-            return "format_results"
-        return "execute_sql"
-
     builder = StateGraph(AtlasAgentState)
     builder.add_node("agent", agent_node)
     builder.add_node("extract_tool_question", extract_tool_question)
     builder.add_node("extract_products", extract_products)
     builder.add_node("lookup_codes", lookup_codes)
     builder.add_node("get_table_info", get_table_info)
-    builder.add_node("generate_sql", generate_sql)
-    builder.add_node("validate_sql", validate_sql)
-    builder.add_node("execute_sql", execute_sql)
+    builder.add_node("sql_query_agent", sql_query_agent)
     builder.add_node("format_results", format_results)
     builder.add_node("max_queries_exceeded", max_queries_exceeded)
 
@@ -653,10 +644,8 @@ def _build_pipeline_stub_instance(
     builder.add_edge("extract_tool_question", "extract_products")
     builder.add_edge("extract_products", "lookup_codes")
     builder.add_edge("lookup_codes", "get_table_info")
-    builder.add_edge("get_table_info", "generate_sql")
-    builder.add_edge("generate_sql", "validate_sql")
-    builder.add_conditional_edges("validate_sql", route_after_validation)
-    builder.add_edge("execute_sql", "format_results")
+    builder.add_edge("get_table_info", "sql_query_agent")
+    builder.add_edge("sql_query_agent", "format_results")
     builder.add_edge("format_results", "agent")
     builder.add_edge("max_queries_exceeded", "agent")
 
@@ -816,8 +805,8 @@ class TestPipelineStateEvents:
         assert "schemas" in payload
         assert "products" in payload
 
-    async def test_pipeline_state_execute_sql_payload(self):
-        """pipeline_state for execute_sql has columns, rows, row_count, execution_time_ms."""
+    async def test_pipeline_state_sql_query_agent_payload(self):
+        """pipeline_state for sql_query_agent has columns, rows, row_count, execution_time_ms."""
         responses = [
             AIMessage(
                 content="",
@@ -828,16 +817,16 @@ class TestPipelineStateEvents:
         instance = _build_pipeline_stub_instance(responses)
         config = {"configurable": {"thread_id": "ps-3"}}
 
-        execute_sql_states = []
+        sql_agent_states = []
         async for _mode, data in instance.astream_agent_response("data?", config):
             if (
                 data.message_type == "pipeline_state"
-                and data.payload.get("stage") == "execute_sql"
+                and data.payload.get("stage") == "sql_query_agent"
             ):
-                execute_sql_states.append(data)
+                sql_agent_states.append(data)
 
-        assert len(execute_sql_states) == 1
-        payload = execute_sql_states[0].payload
+        assert len(sql_agent_states) == 1
+        payload = sql_agent_states[0].payload
         assert "columns" in payload
         assert "rows" in payload
         assert "row_count" in payload
@@ -866,10 +855,15 @@ class TestPipelineStateEvents:
 
 
 class TestValidationFailureRouting:
-    """Tests for correct node_start routing when validation fails."""
+    """Tests for correct node_start routing when validation fails.
 
-    async def test_validation_error_skips_execute_sql_node_start(self):
-        """When validate_sql fails, execute_sql should NOT appear in node_starts."""
+    With the agentic SQL sub-agent, validation is handled internally — there
+    are no separate validate_sql/execute_sql nodes. The sql_query_agent node
+    always flows to format_results.
+    """
+
+    async def test_validation_error_flows_through_sql_query_agent(self):
+        """When SQL validation fails, sql_query_agent still runs and format_results follows."""
         responses = [
             AIMessage(
                 content="",
@@ -885,7 +879,11 @@ class TestValidationFailureRouting:
             if data.message_type == "node_start":
                 node_start_names.append(data.payload["node"])
 
+        # Old separate nodes should not exist
+        assert "validate_sql" not in node_start_names
         assert "execute_sql" not in node_start_names
+        # sql_query_agent and format_results should be present
+        assert "sql_query_agent" in node_start_names
         assert "format_results" in node_start_names
 
 

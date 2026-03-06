@@ -44,13 +44,11 @@ from src.sql_pipeline import (
     extract_products_node,
     extract_tool_question,
     format_results_node,
-    generate_sql_node,
     get_table_info_node,
     lookup_codes_node,
     max_queries_exceeded_node,
-    validate_sql_node,
-    execute_sql_node,
 )
+from src.sql_subagent import build_sql_subagent, sql_query_agent_node
 from src.state import AtlasAgentState
 
 try:
@@ -181,24 +179,6 @@ def build_atlas_graph(
             return "format_graphql_results"
         return "resolve_ids"
 
-    def route_after_validation(
-        state: AtlasAgentState,
-    ) -> Literal["format_results", "execute_sql", "generate_sql"]:
-        if state.get("last_error"):
-            if state.get("retry_count", 0) <= 1:
-                return "generate_sql"
-            return "format_results"
-        return "execute_sql"
-
-    def route_after_execution(
-        state: AtlasAgentState,
-    ) -> Literal["format_results", "generate_sql"]:
-        if state.get("last_error"):
-            if state.get("retry_count", 0) <= 1:
-                return "generate_sql"
-            return "format_results"
-        return "format_results"
-
     # --- Build graph ---
     builder = StateGraph(AtlasAgentState)
 
@@ -226,24 +206,23 @@ def build_atlas_graph(
         "get_table_info",
         partial(get_table_info_node, db=db, table_descriptions=table_descriptions),
     )
+    # SQL sub-agent (replaces generate_sql + validate_sql + execute_sql + retry loop)
+    _subagent, _top_k = build_sql_subagent(
+        llm=llm,
+        lightweight_llm=lightweight_llm,
+        db=db,
+        engine=engine,
+        table_descriptions=table_descriptions,
+        async_engine=async_engine if async_engine is not None else engine,
+        top_k=top_k_per_query,
+    )
     builder.add_node(
-        "generate_sql",
+        "sql_query_agent",
         partial(
-            generate_sql_node,
-            llm=llm,
+            sql_query_agent_node,
+            subagent=_subagent,
+            top_k=_top_k,
             example_queries=example_queries,
-            max_results=top_k_per_query,
-        ),
-    )
-    builder.add_node(
-        "validate_sql",
-        validate_sql_node,
-    )
-    builder.add_node(
-        "execute_sql",
-        partial(
-            execute_sql_node,
-            async_engine=async_engine if async_engine is not None else engine,
         ),
     )
     builder.add_node("format_results", format_results_node)
@@ -365,25 +344,8 @@ def build_atlas_graph(
     builder.add_edge("extract_tool_question", "extract_products")
     builder.add_edge("extract_products", "lookup_codes")
     builder.add_edge("lookup_codes", "get_table_info")
-    builder.add_edge("get_table_info", "generate_sql")
-    builder.add_edge("generate_sql", "validate_sql")
-    builder.add_conditional_edges(
-        "validate_sql",
-        route_after_validation,
-        {
-            "execute_sql": "execute_sql",
-            "format_results": "format_results",
-            "generate_sql": "generate_sql",
-        },
-    )
-    builder.add_conditional_edges(
-        "execute_sql",
-        route_after_execution,
-        {
-            "format_results": "format_results",
-            "generate_sql": "generate_sql",
-        },
-    )
+    builder.add_edge("get_table_info", "sql_query_agent")
+    builder.add_edge("sql_query_agent", "format_results")
     builder.add_edge("format_results", "agent")
     builder.add_edge("max_queries_exceeded", "agent")
 
