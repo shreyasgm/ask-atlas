@@ -106,6 +106,25 @@ def add_sql_call_history(
     return (existing or []) + (new or [])
 
 
+def add_reasoning_traces(
+    existing: list[list[dict]] | None, new: list[list[dict]] | None
+) -> list[list[dict]]:
+    """Reducer that accumulates per-call reasoning traces from the SQL sub-agent.
+
+    Each entry is a list of serialized message dicts (one list per SQL tool
+    invocation) capturing the sub-agent's full AI reasoning and tool
+    call/response sequence.
+
+    Args:
+        existing: Previously accumulated traces (may be None).
+        new: New traces to append (may be None).
+
+    Returns:
+        Combined list of all reasoning traces.
+    """
+    return (existing or []) + (new or [])
+
+
 def add_graphql_call_history(
     existing: list[dict] | None, new: list[dict] | None
 ) -> list[dict]:
@@ -202,6 +221,8 @@ class AtlasAgentState(TypedDict):
     step_timing: Annotated[list[dict], add_step_timing]
     # Accumulated SQL query history (every version with stage and errors)
     pipeline_sql_history: Annotated[list[dict], add_sql_history]
+    # Accumulated SQL sub-agent reasoning traces (one per SQL tool invocation)
+    pipeline_reasoning_trace: Annotated[list[list[dict]], add_reasoning_traces]
     # Trade toggle overrides (None = auto-detect)
     override_schema: Optional[str]
     override_direction: Optional[str]
