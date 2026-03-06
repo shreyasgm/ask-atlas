@@ -72,9 +72,7 @@ PIPELINE_SEQUENCE = [
     "extract_products",
     "lookup_codes",
     "get_table_info",
-    "generate_sql",
-    "validate_sql",
-    "execute_sql",
+    "sql_query_agent",
     "format_results",
 ]
 
@@ -98,9 +96,7 @@ NODE_LABELS = {
     "extract_products": "Identifying products",
     "lookup_codes": "Looking up product codes",
     "get_table_info": "Loading table metadata",
-    "generate_sql": "Generating SQL query",
-    "validate_sql": "Validating SQL",
-    "execute_sql": "Executing query",
+    "sql_query_agent": "Generating and executing SQL query",
     "format_results": "Formatting results",
     "max_queries_exceeded": "Query limit reached",
     # GraphQL pipeline
@@ -205,28 +201,24 @@ def _extract_pipeline_state(node_name: str, state_snapshot: dict) -> dict:
         products = state_snapshot.get("pipeline_products")
         base["schemas"] = products.classification_schemas if products else []
 
-    elif node_name == "generate_sql":
-        base["sql"] = state_snapshot.get("pipeline_sql", "")
-        base["question"] = state_snapshot.get("pipeline_question", "")
-
-    elif node_name == "validate_sql":
-        error = state_snapshot.get("last_error", "")
-        base["sql"] = state_snapshot.get("pipeline_sql", "")
-        base["is_valid"] = not bool(error)
-        if error:
-            base["error"] = error
-
-    elif node_name == "execute_sql":
+    elif node_name == "sql_query_agent":
         sql = state_snapshot.get("pipeline_sql", "")
         base["sql"] = sql
+        base["question"] = state_snapshot.get("pipeline_question", "")
         base["columns"] = state_snapshot.get("pipeline_result_columns", [])
         base["rows"] = _json_safe_deep(state_snapshot.get("pipeline_result_rows", []))
         base["row_count"] = len(base["rows"])
         base["execution_time_ms"] = state_snapshot.get("pipeline_execution_time_ms", 0)
         base["tables"] = _extract_tables_from_sql(sql)
+        error = state_snapshot.get("last_error", "")
+        if error:
+            base["error"] = error
         products = state_snapshot.get("pipeline_products")
         if products and products.classification_schemas:
             base["schema"] = products.classification_schemas[0]
+        attempt_history = state_snapshot.get("pipeline_sql_history", [])
+        base["attempt_count"] = len(attempt_history)
+        base["attempt_history"] = attempt_history
 
     elif node_name == "format_results":
         base["query_index"] = state_snapshot.get("_query_index", 0)
@@ -878,11 +870,6 @@ class AtlasTextToSQL:
 
         def _next_pipeline_node(current_node: str) -> str | None:
             """Return the next node in PIPELINE_SEQUENCE or GRAPHQL_PIPELINE_SEQUENCE, respecting routing."""
-            if current_node == "validate_sql":
-                # Check if validation failed → skip execute_sql
-                if pipeline_snapshot.get("last_error"):
-                    return "format_results"
-                return "execute_sql"
             if current_node == "plan_query":
                 # Check if query was rejected → skip to format_graphql_results
                 classification = pipeline_snapshot.get("graphql_classification") or {}

@@ -103,28 +103,20 @@ export function getStepDetail(
       return typeof codes === 'string' && codes ? `\u2192 ${truncate(codes)}` : null;
     }
 
-    case 'generate_sql': {
-      const sql = detail.sql;
-      return typeof sql === 'string' && sql ? `\u2192 ${truncate(sql)}` : null;
-    }
-
-    case 'validate_sql': {
-      if (detail.is_valid === true) {
-        return '\u2192 Valid';
-      }
-      if (typeof detail.error === 'string' && detail.error) {
-        return `\u2192 Error: ${truncate(detail.error, 50)}`;
-      }
-      return detail.is_valid === false ? '\u2192 Invalid' : null;
-    }
-
-    case 'execute_sql': {
+    case 'sql_query_agent': {
       const parts: Array<string> = [];
+      const attemptCount = typeof detail.attempt_count === 'number' ? detail.attempt_count : 0;
+      if (attemptCount > 1) {
+        parts.push(`${attemptCount} attempts`);
+      }
       if (typeof detail.row_count === 'number') {
         parts.push(`${detail.row_count} row${detail.row_count === 1 ? '' : 's'}`);
       }
       if (typeof detail.execution_time_ms === 'number') {
         parts.push(`${(detail.execution_time_ms / 1000).toFixed(1)}s`);
+      }
+      if (typeof detail.error === 'string' && detail.error) {
+        parts.push(`Error: ${truncate(detail.error, 80)}`);
       }
       return parts.length > 0 ? `\u2192 ${parts.join(', ')}` : null;
     }
