@@ -90,35 +90,40 @@ describe('getStepDetail', () => {
     expect(getStepDetail('lookup_codes', { codes: 'HS92: 0901' })).toBe('\u2192 HS92: 0901');
   });
 
-  it('generate_sql — shows full SQL (CSS handles visual truncation)', () => {
-    const longSql =
-      "SELECT product_name, export_value FROM hs92.country_year WHERE country_id = 'bra' AND year = 2022 ORDER BY export_value DESC LIMIT 10";
-    const result = getStepDetail('generate_sql', { sql: longSql });
-    expect(result).toBe(`\u2192 ${longSql}`);
-  });
-
-  it('validate_sql — shows Valid', () => {
-    expect(getStepDetail('validate_sql', { is_valid: true, sql: 'SELECT 1' })).toBe('\u2192 Valid');
-  });
-
-  it('validate_sql — shows error message', () => {
-    expect(getStepDetail('validate_sql', { error: 'column not found', is_valid: false })).toBe(
-      '\u2192 Error: column not found',
-    );
-  });
-
-  it('execute_sql — shows row count and time', () => {
-    const result = getStepDetail('execute_sql', {
+  it('sql_query_agent — shows row count and time', () => {
+    const result = getStepDetail('sql_query_agent', {
+      attempt_count: 1,
       execution_time_ms: 312,
       row_count: 42,
     });
     expect(result).toBe('\u2192 42 rows, 0.3s');
   });
 
-  it('execute_sql — singular row', () => {
-    expect(getStepDetail('execute_sql', { execution_time_ms: 100, row_count: 1 })).toBe(
-      '\u2192 1 row, 0.1s',
-    );
+  it('sql_query_agent — shows attempt count when > 1', () => {
+    const result = getStepDetail('sql_query_agent', {
+      attempt_count: 3,
+      execution_time_ms: 1500,
+      row_count: 15,
+    });
+    expect(result).toBe('\u2192 3 attempts, 15 rows, 1.5s');
+  });
+
+  it('sql_query_agent — singular row', () => {
+    expect(
+      getStepDetail('sql_query_agent', { attempt_count: 1, execution_time_ms: 100, row_count: 1 }),
+    ).toBe('\u2192 1 row, 0.1s');
+  });
+
+  it('sql_query_agent — shows error', () => {
+    const result = getStepDetail('sql_query_agent', {
+      attempt_count: 2,
+      error: 'column "export_val" does not exist',
+    });
+    expect(result).toBe('\u2192 2 attempts, Error: column "export_val" does not exist');
+  });
+
+  it('sql_query_agent — returns null for empty detail', () => {
+    expect(getStepDetail('sql_query_agent', {})).toBeNull();
   });
 
   // --- Docs pipeline ---
@@ -158,7 +163,7 @@ describe('getStepDetail', () => {
     expect(getStepDetail('extract_entities', {})).toBeNull();
     expect(getStepDetail('resolve_ids', {})).toBeNull();
     expect(getStepDetail('build_and_execute_graphql', {})).toBeNull();
-    expect(getStepDetail('execute_sql', {})).toBeNull();
+    expect(getStepDetail('sql_query_agent', {})).toBeNull();
   });
 
   it('handles null field values gracefully', () => {
