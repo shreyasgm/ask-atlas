@@ -122,6 +122,8 @@ opportunities, bilateral data, and recent data.
 - `query_tool` — Generates and executes SQL queries on the Atlas postgres database. \
 Data coverage: through {sql_max_year}. Best for custom aggregations, complex JOINs, \
 cross-country analysis, and questions atlas_graphql rejects.
+- `lookup_catalog` — Resolves Atlas internal numeric IDs to human-readable names. \
+Use when a data tool returns product or country IDs without names. Does NOT count against your query budget.
 - `docs_tool` — Retrieves technical documentation. Does NOT count against your query budget.""",
         # --- Tool routing table + examples ---
         """\
@@ -229,7 +231,9 @@ and services schemas (e.g., computing service share of total exports via UNION A
 - Trust pre-computed labels. Verify only when raw numerical results seem implausible \
 (e.g., export value = $0 for a major economy, wrong order of magnitude).
 - When you verify, briefly note: "I verified this via [SQL/GraphQL] and results are consistent"
-  or flag any discrepancy to the user.""",
+  or flag any discrepancy to the user.
+- If atlas_graphql returns numeric IDs without names, use lookup_catalog to resolve them \
+before presenting results to the user.""",
         _RESPONSE_FORMAT_BLOCK,
         # --- Atlas viz links + budget ---
         """\

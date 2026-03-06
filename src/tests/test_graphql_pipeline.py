@@ -1454,6 +1454,207 @@ class TestPostProcessSectionLevelEnrichment:
 
 
 # ---------------------------------------------------------------------------
+# 10c. post_process_response: small result set enrichment (early-return fix)
+# ---------------------------------------------------------------------------
+
+
+class TestPostProcessSmallResultSetEnrichment:
+    """post_process_response enriches small result sets (items <= top_n)."""
+
+    def test_small_product_result_set_gets_enriched(self):
+        """5 items < top_n=20: should still get productName/productCode enrichment."""
+        items = [
+            {"productId": 726, "exportValue": 5000, "year": 2024},
+            {"productId": 897, "exportValue": 3000, "year": 2024},
+            {"productId": 112, "exportValue": 1000, "year": 2024},
+        ]
+        raw = {"countryProductYear": items}
+        product_cache = _make_product_cache()
+        result = post_process_response(
+            "treemap_products", raw, product_caches={"HS92": product_cache}
+        )
+
+        assert result["countryProductYear"][0]["productName"] == "Coffee"
+        assert result["countryProductYear"][0]["productCode"] == "0901"
+        assert result["countryProductYear"][1]["productName"] == "Petroleum oils, crude"
+        assert result["countryProductYear"][2]["productName"] == "Cotton"
+        # No _postProcessed metadata for small sets
+        assert "_postProcessed" not in result
+
+    def test_small_country_result_set_gets_enriched(self):
+        """5 items < top_n=20: should still get partnerName enrichment."""
+        items = [
+            {"partnerCountryId": 76, "exportValue": 5000, "year": 2024},
+            {"partnerCountryId": 404, "exportValue": 3000, "year": 2024},
+        ]
+        raw = {"countryCountryYear": items}
+        country_cache = _make_country_cache()
+        result = post_process_response(
+            "treemap_partners", raw, country_cache=country_cache
+        )
+
+        assert result["countryCountryYear"][0]["partnerName"] == "Brazil"
+        assert result["countryCountryYear"][1]["partnerName"] == "Kenya"
+        assert "_postProcessed" not in result
+
+    def test_boundary_exactly_top_n_items_get_enriched(self):
+        """Exactly top_n items should get enriched (was broken due to <= check)."""
+        top_n = _POST_PROCESS_RULES["treemap_products"]["top_n"]  # 20
+        items = [{"productId": 726, "exportValue": 999, "year": 2024}] + [
+            {"productId": i, "exportValue": i, "year": 2024} for i in range(top_n - 1)
+        ]
+        assert len(items) == top_n
+        raw = {"countryProductYear": items}
+        product_cache = _make_product_cache()
+        result = post_process_response(
+            "treemap_products", raw, product_caches={"HS92": product_cache}
+        )
+
+        enriched = next(
+            it for it in result["countryProductYear"] if it["productId"] == 726
+        )
+        assert enriched["productName"] == "Coffee"
+        assert "_postProcessed" not in result
+
+    def test_unpopulated_cache_small_set_no_crash(self):
+        """Small result set with unpopulated cache: no crash, no enrichment."""
+        items = [
+            {"productId": 726, "exportValue": 5000, "year": 2024},
+        ]
+        raw = {"countryProductYear": items}
+        empty_cache = CatalogCache("empty", ttl=3600)
+        empty_cache.add_index(
+            "id",
+            key_fn=lambda e: str(e["productId"]) if "productId" in e else None,
+        )
+        # Note: NOT calling .populate() — cache is unpopulated
+        result = post_process_response(
+            "treemap_products", raw, product_caches={"HS92": empty_cache}
+        )
+
+        # Should return items without enrichment, no crash
+        assert "productName" not in result["countryProductYear"][0]
+
+
+# ---------------------------------------------------------------------------
+# 10d. execute_catalog_lookup
+# ---------------------------------------------------------------------------
+
+
+class TestExecuteCatalogLookup:
+    """Tests for the execute_catalog_lookup node."""
+
+    @pytest.mark.asyncio
+    async def test_product_lookup(self):
+        """Resolves product IDs to names."""
+        from src.graphql_pipeline import execute_catalog_lookup
+
+        product_cache = _make_product_cache()
+        state = {
+            "messages": [
+                AIMessage(
+                    content="",
+                    tool_calls=[
+                        {
+                            "id": "call_1",
+                            "name": "lookup_catalog",
+                            "args": {
+                                "entity_type": "product",
+                                "ids": [726, 897, 9999],
+                                "product_class": "HS92",
+                            },
+                        }
+                    ],
+                )
+            ]
+        }
+        result = await execute_catalog_lookup(
+            state,
+            product_caches={"HS92": product_cache},
+            country_cache=None,
+            services_cache=None,
+        )
+        import json
+
+        content = json.loads(result["messages"][0].content)
+        assert content["726"] == "Coffee"
+        assert content["897"] == "Petroleum oils, crude"
+        assert content["9999"] is None
+
+    @pytest.mark.asyncio
+    async def test_country_lookup(self):
+        """Resolves country IDs to names."""
+        from src.graphql_pipeline import execute_catalog_lookup
+
+        country_cache = _make_country_cache()
+        state = {
+            "messages": [
+                AIMessage(
+                    content="",
+                    tool_calls=[
+                        {
+                            "id": "call_2",
+                            "name": "lookup_catalog",
+                            "args": {
+                                "entity_type": "country",
+                                "ids": [76, 404, 0],
+                            },
+                        }
+                    ],
+                )
+            ]
+        }
+        result = await execute_catalog_lookup(
+            state,
+            product_caches=None,
+            country_cache=country_cache,
+            services_cache=None,
+        )
+        import json
+
+        content = json.loads(result["messages"][0].content)
+        assert content["76"] == "Brazil"
+        assert content["404"] == "Kenya"
+        assert content["0"] is None
+
+    @pytest.mark.asyncio
+    async def test_product_falls_back_to_services_cache(self):
+        """Product lookup falls back to services cache for service IDs."""
+        from src.graphql_pipeline import execute_catalog_lookup
+
+        product_cache = _make_product_cache()
+        services_cache = _make_services_cache()
+        state = {
+            "messages": [
+                AIMessage(
+                    content="",
+                    tool_calls=[
+                        {
+                            "id": "call_3",
+                            "name": "lookup_catalog",
+                            "args": {
+                                "entity_type": "product",
+                                "ids": [1],
+                                "product_class": "HS92",
+                            },
+                        }
+                    ],
+                )
+            ]
+        }
+        result = await execute_catalog_lookup(
+            state,
+            product_caches={"HS92": product_cache},
+            country_cache=None,
+            services_cache=services_cache,
+        )
+        import json
+
+        content = json.loads(result["messages"][0].content)
+        assert content["1"] == "Transport"
+
+
+# ---------------------------------------------------------------------------
 # 11. Slim query builders
 # ---------------------------------------------------------------------------
 

@@ -33,6 +33,7 @@ from src.docs_pipeline import (
 from src.graphql_client import GraphQLBudgetTracker
 from src.graphql_pipeline import (
     build_and_execute_graphql,
+    execute_catalog_lookup,
     extract_graphql_question,
     format_graphql_results,
     plan_query,
@@ -120,6 +121,7 @@ def build_atlas_graph(
         "extract_tool_question",
         "extract_graphql_question",
         "extract_docs_question",
+        "execute_catalog_lookup",
         "max_queries_exceeded",
         "tool_call_nudge",
         "__end__",
@@ -141,9 +143,11 @@ def build_atlas_graph(
                     return "tool_call_nudge"
             return END
         tool_name = last_msg.tool_calls[0]["name"]
-        # docs_tool bypasses the query budget — check BEFORE budget gate
+        # Budget-free tools: bypass query budget gate
         if tool_name == "docs_tool":
             return "extract_docs_question"
+        if tool_name == "lookup_catalog":
+            return "execute_catalog_lookup"
         if state.get("queries_executed", 0) >= max_uses:
             return "max_queries_exceeded"
         if tool_name == "query_tool":
@@ -300,6 +304,17 @@ def build_atlas_graph(
         ),
     )
 
+    # Catalog lookup node (budget-free, like docs_tool)
+    builder.add_node(
+        "execute_catalog_lookup",
+        partial(
+            execute_catalog_lookup,
+            product_caches=product_caches or {},
+            country_cache=country_cache,
+            services_cache=services_cache,
+        ),
+    )
+
     # Anti-hallucination nudge node
     builder.add_node("tool_call_nudge", tool_call_nudge)
 
@@ -337,12 +352,14 @@ def build_atlas_graph(
             "extract_tool_question": "extract_tool_question",
             "extract_graphql_question": "extract_graphql_question",
             "extract_docs_question": "extract_docs_question",
+            "execute_catalog_lookup": "execute_catalog_lookup",
             "max_queries_exceeded": "max_queries_exceeded",
             "tool_call_nudge": "tool_call_nudge",
             END: END,
         },
     )
     builder.add_edge("tool_call_nudge", "agent")
+    builder.add_edge("execute_catalog_lookup", "agent")
 
     # SQL pipeline
     builder.add_edge("extract_tool_question", "extract_products")
