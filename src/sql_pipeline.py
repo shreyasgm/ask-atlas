@@ -781,9 +781,7 @@ PIPELINE_NODES = frozenset(
         "extract_products",
         "lookup_codes",
         "get_table_info",
-        "generate_sql",
-        "validate_sql",
-        "execute_sql",
+        "sql_query_agent",
         "format_results",
         "max_queries_exceeded",
     }

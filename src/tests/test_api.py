@@ -549,8 +549,8 @@ class TestChatStreamEnhancedEvents:
                 content="",
                 message_type="node_start",
                 payload={
-                    "node": "execute_sql",
-                    "label": "Executing query",
+                    "node": "sql_query_agent",
+                    "label": "Generating and executing SQL query",
                     "query_index": 1,
                 },
             )
@@ -559,7 +559,7 @@ class TestChatStreamEnhancedEvents:
                 content="",
                 message_type="pipeline_state",
                 payload={
-                    "stage": "execute_sql",
+                    "stage": "sql_query_agent",
                     "columns": ["country", "value"],
                     "rows": [["USA", 1000], ["CHN", 800]],
                     "row_count": 2,

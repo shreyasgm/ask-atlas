@@ -184,7 +184,7 @@ class TestSQLOnlyModeRegression:
            → agent produced no tool calls at all (routing failure / empty response)
         2. atlas_graphql NEVER called
            → mode override ignored; agent had both tools and routed to GraphQL
-        3. execute_sql stage present in pipeline_states
+        3. sql_query_agent stage present in pipeline_states
            → SQL pipeline started but silently stopped before execution
         4. No GraphQL stages in pipeline_states
            → agent called query_tool but graph routing sent output to GraphQL node
@@ -228,9 +228,10 @@ class TestSQLOnlyModeRegression:
             f"tool_calls={tool_calls}"
         )
 
-        # 3. execute_sql stage present
-        assert "execute_sql" in stages, (
-            "SQL pipeline did not reach execute_sql stage; " f"observed stages={stages}"
+        # 3. sql_query_agent stage present
+        assert "sql_query_agent" in stages, (
+            "SQL pipeline did not reach sql_query_agent stage; "
+            f"observed stages={stages}"
         )
 
         # 4. No GraphQL stages in pipeline_states
@@ -241,7 +242,7 @@ class TestSQLOnlyModeRegression:
 
         # 5. SQL returned at least 1 row
         execute_sql_states = [
-            p for p in pipeline_states if p.get("stage") == "execute_sql"
+            p for p in pipeline_states if p.get("stage") == "sql_query_agent"
         ]
         row_counts = [p.get("row_count", 0) for p in execute_sql_states]
         assert any(
