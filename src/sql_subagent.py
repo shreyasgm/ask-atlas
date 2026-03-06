@@ -53,12 +53,56 @@ from src.token_usage import make_usage_record_from_msg, node_timer
 
 logger = logging.getLogger(__name__)
 
+
+# ---------------------------------------------------------------------------
+# Message serialization
+# ---------------------------------------------------------------------------
+
+
+def _serialize_subagent_messages(messages: list[BaseMessage]) -> list[dict]:
+    """Serialize sub-agent LangChain messages into JSON-safe dicts.
+
+    Captures the full reasoning trace: AI thinking, tool calls, and tool
+    responses. The initial HumanMessage (context dump) is excluded to avoid
+    bloating the trace with DDL/schema info already visible elsewhere.
+
+    Returns:
+        List of dicts with keys: role, content, tool_calls (if AI),
+        tool_call_id/tool_name (if Tool).
+    """
+    trace: list[dict] = []
+    for msg in messages:
+        if isinstance(msg, HumanMessage):
+            # Skip the initial context dump — it's large and redundant
+            continue
+        if isinstance(msg, AIMessage):
+            entry: dict = {"role": "assistant", "content": msg.content or ""}
+            if msg.tool_calls:
+                entry["tool_calls"] = [
+                    {"name": tc["name"], "args": tc["args"]} for tc in msg.tool_calls
+                ]
+            trace.append(entry)
+        elif isinstance(msg, ToolMessage):
+            # Cap tool output to keep traces bounded
+            content = str(msg.content or "")
+            if len(content) > 2000:
+                content = content[:2000] + f"\n[truncated from {len(content)} chars]"
+            trace.append(
+                {
+                    "role": "tool",
+                    "tool_name": getattr(msg, "name", ""),
+                    "content": content,
+                }
+            )
+    return trace
+
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
-MAX_ITERATIONS = 5
-"""Maximum reasoning iterations (initial attempt + up to 4 corrections)."""
+MAX_ITERATIONS = 12
+"""Maximum reasoning iterations (initial attempt + up to 11 corrections)."""
 
 RESULT_TRUNCATION_THRESHOLD = 50
 """Row count above which results are truncated in the tool response."""
@@ -176,6 +220,40 @@ TOOL_SCHEMAS = [
                     }
                 },
                 "required": ["instruction"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "report_results",
+            "description": (
+                "Finish the SQL task and report your results. You MUST call this "
+                "tool when you are done — it is the only way to complete the task. "
+                "Before calling, review your results for correctness."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "assessment": {
+                        "type": "string",
+                        "description": (
+                            "Your assessment of the results: what was queried, whether "
+                            "the results look correct, any caveats or data limitations "
+                            "(e.g. stale year, missing services data)."
+                        ),
+                    },
+                    "needs_verification": {
+                        "type": "boolean",
+                        "description": (
+                            "Set to true if you haven't verified the results yet and "
+                            "they warrant a check (e.g. aggregate values, year "
+                            "freshness, goods-vs-services completeness). Set to false "
+                            "for simple lookups with unambiguous results."
+                        ),
+                    },
+                },
+                "required": ["assessment", "needs_verification"],
             },
         },
     },
@@ -556,6 +634,64 @@ async def lookup_products_node(
 
 
 # ---------------------------------------------------------------------------
+# Report results node
+# ---------------------------------------------------------------------------
+
+
+async def report_results_node(state: SQLSubAgentState) -> dict:
+    """Handle the report_results tool call.
+
+    If needs_verification is True, bounce back to reasoning by returning a
+    ToolMessage that prompts the LLM to run verification queries. Otherwise
+    this is a terminal node — the graph routes to END after it.
+    """
+    last_msg = state["messages"][-1]
+    tool_call = _find_tool_call(last_msg, "report_results")
+    assessment = tool_call["args"].get("assessment", "")
+    needs_verification = tool_call["args"].get("needs_verification", False)
+
+    if needs_verification:
+        return {
+            "messages": [
+                ToolMessage(
+                    content=(
+                        "You indicated verification is needed. Run lightweight "
+                        "verification queries now (e.g. SELECT MAX(year), "
+                        "magnitude checks, product code verification). "
+                        "Call report_results again when satisfied."
+                    ),
+                    tool_call_id=tool_call["id"],
+                    name="report_results",
+                )
+            ],
+        }
+
+    # Terminal: store the assessment as a ToolMessage so the trace is complete
+    return {
+        "messages": [
+            ToolMessage(
+                content=f"Results reported. Assessment: {assessment}",
+                tool_call_id=tool_call["id"],
+                name="report_results",
+            )
+        ],
+    }
+
+
+def route_after_report(state: SQLSubAgentState) -> str:
+    """After report_results: continue if verification needed, else END."""
+    # Find the report_results tool call in the AI message before the ToolMessage
+    for msg in reversed(state["messages"]):
+        if isinstance(msg, AIMessage) and msg.tool_calls:
+            for tc in msg.tool_calls:
+                if tc["name"] == "report_results":
+                    if tc["args"].get("needs_verification", False):
+                        return "reasoning"
+                    return END
+    return END
+
+
+# ---------------------------------------------------------------------------
 # Reasoning node
 # ---------------------------------------------------------------------------
 
@@ -584,7 +720,7 @@ async def reasoning_node(
         sql_max_year=SQL_DATA_MAX_YEAR,
     )
 
-    model = llm.bind_tools(TOOL_SCHEMAS, parallel_tool_calls=False)
+    model = llm.bind_tools(TOOL_SCHEMAS, parallel_tool_calls=False, tool_choice="any")
     response = await model.ainvoke(
         [SystemMessage(content=system_prompt)] + state["messages"]
     )
@@ -604,6 +740,7 @@ def route_after_reasoning(state: SQLSubAgentState) -> str:
     """Dispatch to tool or end based on the last AI message."""
     last_msg = state["messages"][-1]
     if not hasattr(last_msg, "tool_calls") or not last_msg.tool_calls:
+        # With tool_choice="any" this shouldn't happen, but handle gracefully
         return END
 
     tool_name = last_msg.tool_calls[0]["name"]
@@ -613,6 +750,8 @@ def route_after_reasoning(state: SQLSubAgentState) -> str:
         return "explore_schema"
     elif tool_name == "lookup_products":
         return "lookup_products"
+    elif tool_name == "report_results":
+        return "report_results"
     return END
 
 
@@ -677,6 +816,8 @@ def build_sql_subagent(
         ),
     )
 
+    builder.add_node("report_results", report_results_node)
+
     builder.add_edge(START, "reasoning")
     builder.add_conditional_edges(
         "reasoning",
@@ -685,12 +826,18 @@ def build_sql_subagent(
             "execute_sql": "execute_sql",
             "explore_schema": "explore_schema",
             "lookup_products": "lookup_products",
+            "report_results": "report_results",
             END: END,
         },
     )
     builder.add_edge("execute_sql", "reasoning")
     builder.add_edge("explore_schema", "reasoning")
     builder.add_edge("lookup_products", "reasoning")
+    builder.add_conditional_edges(
+        "report_results",
+        route_after_report,
+        {"reasoning": "reasoning", END: END},
+    )
 
     return builder.compile(), top_k
 
@@ -800,17 +947,21 @@ async def sql_query_agent_node(
         llm_start = time.monotonic()
         result = await subagent.ainvoke(
             sub_input,
-            config={"recursion_limit": 25},
+            config={"recursion_limit": 50},
         )
         t.mark_llm(llm_start, time.monotonic())
 
     # Collect token usage from all AI messages in the sub-agent trace
     token_records = []
-    for msg in result.get("messages", []):
+    sub_messages = result.get("messages", [])
+    for msg in sub_messages:
         if isinstance(msg, AIMessage) and getattr(msg, "usage_metadata", None):
             token_records.append(
                 make_usage_record_from_msg("sql_query_agent", "query_tool", msg)
             )
+
+    # Serialize the sub-agent's full reasoning trace (AI + Tool messages)
+    reasoning_trace = _serialize_subagent_messages(sub_messages)
 
     return {
         "pipeline_sql": result.get("sql", ""),
@@ -821,6 +972,7 @@ async def sql_query_agent_node(
         "last_error": result.get("last_error", ""),
         "retry_count": 0,
         "pipeline_sql_history": result.get("attempt_history", []),
+        "pipeline_reasoning_trace": [reasoning_trace],
         "token_usage": token_records,
         "step_timing": [t.record],
     }

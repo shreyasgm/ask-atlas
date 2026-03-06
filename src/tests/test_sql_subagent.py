@@ -87,6 +87,7 @@ def _base_parent_state(**overrides) -> dict:
         "token_usage": [],
         "step_timing": [],
         "pipeline_sql_history": [],
+        "pipeline_reasoning_trace": [],
         "override_schema": None,
         "override_direction": None,
         "override_mode": None,
@@ -849,7 +850,7 @@ class TestFullSubagentFlow:
 
         subagent = self._build_subagent(fake_model, mock_engine)
         result = await subagent.ainvoke(
-            self._subagent_input(), config={"recursion_limit": 25}
+            self._subagent_input(), config={"recursion_limit": 50}
         )
 
         # Verify successful execution
@@ -908,7 +909,7 @@ class TestFullSubagentFlow:
 
         subagent = self._build_subagent(fake_model, mock_engine)
         result = await subagent.ainvoke(
-            self._subagent_input(), config={"recursion_limit": 25}
+            self._subagent_input(), config={"recursion_limit": 50}
         )
 
         # Final state has CORRECTED SQL, not the bad one
@@ -1102,7 +1103,7 @@ class TestSubagentIntegration:
         }
 
         # --- Invoke ---
-        result = await subagent.ainvoke(sub_input, config={"recursion_limit": 25})
+        result = await subagent.ainvoke(sub_input, config={"recursion_limit": 50})
 
         # --- Assertions ---
 

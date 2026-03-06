@@ -219,6 +219,10 @@ def _extract_pipeline_state(node_name: str, state_snapshot: dict) -> dict:
         attempt_history = state_snapshot.get("pipeline_sql_history", [])
         base["attempt_count"] = len(attempt_history)
         base["attempt_history"] = attempt_history
+        # Include the latest SQL sub-agent reasoning trace
+        reasoning_traces = state_snapshot.get("pipeline_reasoning_trace", [])
+        if reasoning_traces:
+            base["reasoning_trace"] = reasoning_traces[-1]
 
     elif node_name == "format_results":
         base["query_index"] = state_snapshot.get("_query_index", 0)

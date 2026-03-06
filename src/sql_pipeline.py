@@ -752,6 +752,10 @@ async def format_results_node(state: AtlasAgentState) -> dict:
         "result_columns": state.get("pipeline_result_columns", []) or [],
         "execution_time_ms": state.get("pipeline_execution_time_ms", 0),
     }
+    # Attach the latest reasoning trace (last entry from the accumulated list)
+    reasoning_traces = state.get("pipeline_reasoning_trace", [])
+    if reasoning_traces:
+        call_snapshot["reasoning_trace"] = reasoning_traces[-1]
 
     return {
         "messages": messages,

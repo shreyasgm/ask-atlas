@@ -239,6 +239,11 @@ async def run_single_question(
                 # SQL per-call history (accumulated across all calls)
                 result["sql_call_history"] = state.values.get("sql_call_history", [])
 
+                # SQL sub-agent reasoning traces (one per SQL tool invocation)
+                result["reasoning_traces"] = state.values.get(
+                    "pipeline_reasoning_trace", []
+                )
+
                 # Docs pipeline
                 result["docs_selected_files"] = state.values.get(
                     "docs_selected_files", []

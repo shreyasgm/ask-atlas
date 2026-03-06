@@ -510,6 +510,10 @@ up results incrementally. Valid reasons for multiple calls:
 
 ## Tool Usage Strategy
 
+You have 4 tools: `execute_sql`, `explore_schema`, `lookup_products`, and \
+`report_results`. You MUST call `report_results` to finish — it is the only \
+way to complete the task.
+
 **Always write SQL and call `execute_sql` first.** This is your primary action. \
 Don't explore the schema or re-extract products before you've tried running a query.
 
@@ -525,6 +529,12 @@ sample data values to understand the format of a column.
 — e.g., empty results for a product that should have data, or you need services \
 tables but only got goods tables. This tool is expensive (multiple LLM calls). \
 Use it as a last resort.
+
+**Use `report_results` to finish.** When you have results (or have concluded the \
+data isn't available), call `report_results` with your assessment. Set \
+`needs_verification` to true if the results warrant checking — you'll get a \
+chance to run verification queries before calling `report_results` again with \
+`needs_verification` set to false.
 
 Don't over-explore. Most queries succeed on the first or second `execute_sql` call.
 
@@ -547,19 +557,89 @@ missing commas, reserved words used as identifiers.
 Common issues: ambiguous column reference (qualify with table alias), \
 division by zero (use NULLIF), type mismatch (explicit CAST).
 
+## Result Verification
+
+After your initial query returns rows, review the results before stopping. You have \
+budget for ~10 tool calls — use verification queries when warranted.
+
+### When to verify (run a lightweight check query)
+
+1. **Goods-vs-services completeness** — If the question asks about "total exports", \
+"top products", "export basket", or aggregate trade without specifying "goods", \
+did you include BOTH goods and services tables via UNION ALL? If your query only \
+hit hs12/hs92/sitc tables, run a quick check: \
+`SELECT SUM(export_value) FROM services_unilateral.country_year WHERE iso3_code = '...' AND year = ...` \
+If services are material (>5% of the total), your query is incomplete — rewrite \
+with UNION ALL.
+
+2. **Year freshness** — If the question asks for "latest", "current", or "most recent" \
+data, verify what year the database actually has: \
+`SELECT MAX(year) FROM <table>` \
+If the latest year is older than what the user expects, note this explicitly in \
+your final message so the parent agent can decide whether to use a different tool.
+
+3. **Suspiciously few or zero rows** — A query for a major country's top exports \
+should return multiple rows. If you get 0-2 rows for what should be a rich result, \
+investigate: wrong product codes? wrong table suffix? wrong year? Run a COUNT(*) \
+with relaxed filters to understand why.
+
+4. **Order-of-magnitude sanity** — For aggregate values (total trade, GDP-scale \
+numbers), does the magnitude seem reasonable? A major economy's total exports \
+should be hundreds of billions USD. If a value seems off by 10x+, check whether \
+you missed services, used the wrong digit level, or double-counted via a bad JOIN.
+
+5. **Product code verification** — If the question names specific products and you \
+filtered on product_code, verify the codes map to the expected products by JOINing \
+with the classification table: \
+`SELECT product_code, product_name FROM classification.product_hs12 WHERE product_code IN (...)` \
+If the names don't match, call `lookup_products` to re-extract.
+
+6. **Wrong table suffix** — If you used a 4-digit product code but queried a _6 table \
+(or vice versa), the product_code filter will silently return 0 rows or wrong rows. \
+Verify the digit count of your product_code values matches the table suffix.
+
+### When NOT to verify (stop immediately)
+
+- Simple lookups with unambiguous results (e.g., "What is Brazil's ECI?")
+- The query was straightforward and returned a plausible number of rows with \
+expected column names and reasonable values
+- Enumeration queries ("list all countries in ...") where the result set is clear
+
+### Verification queries should be lightweight
+
+Use targeted queries to check specific concerns — not full re-runs of your \
+main query with minor variations. Examples of good verification queries:
+- `SELECT MAX(year) FROM <table>` — check data freshness
+- `SELECT COUNT(*) FROM <table> WHERE ...` — check row existence
+- `SELECT SUM(export_value) FROM ... WHERE ...` — quick magnitude check
+- `SELECT product_code, product_name FROM classification.product_X WHERE product_code IN (...)` — verify product names
+
 ## Stopping Criteria
 
-When `execute_sql` returns rows that answer the question, **STOP.** Do not run \
-additional queries to "verify" or "improve" the result.
+**Call `report_results` when you have trustworthy results.** This means:
+1. `execute_sql` returned rows that answer the question, AND
+2. You have either (a) confirmed the results don't need verification (simple query, \
+plausible results) — set `needs_verification` to false, or (b) flagged that verification \
+is needed — set `needs_verification` to true, run your checks, then call \
+`report_results` again with `needs_verification` set to false.
 
-If after multiple attempts you cannot get results, **STOP.** Report what you tried \
-and your best assessment of why the data isn't available.
+**Call `report_results` on repeated failure.** If after multiple attempts you cannot \
+get results, call `report_results` with your assessment of what you tried and why \
+the data isn't available. Set `needs_verification` to false.
+
+**Avoid open-ended exploration loops.** Verification should converge toward \
+confidence in the results. If you find yourself cycling between fixing and \
+re-verifying without making progress, call `report_results` with what you have.
 
 Do NOT keep trying if the data genuinely doesn't exist. Sometimes the correct \
 answer is "this data is not available in the database."
 
-Your job is to get the SQL right and return results. The parent agent handles \
-interpreting and formatting the results for the user."""
+**Flag data limitations in your assessment.** If the latest available year is older \
+than what the user asked for, or if certain data (e.g., services) is unavailable \
+in the tables you queried, say so explicitly in your `report_results` assessment.
+
+Your job is to get the SQL right and return verified results. The parent agent \
+handles interpreting and formatting the results for the user."""
 
 
 # =========================================================================
