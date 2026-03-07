@@ -83,18 +83,50 @@ def _serialize_subagent_messages(messages: list[BaseMessage]) -> list[dict]:
                 ]
             trace.append(entry)
         elif isinstance(msg, ToolMessage):
-            # Cap tool output to keep traces bounded
+            tool_name = getattr(msg, "name", "")
             content = str(msg.content or "")
-            if len(content) > 2000:
+            if tool_name == "execute_sql":
+                # Summarize — full data is in pipeline_result_rows already
+                content = _summarize_execute_sql_result(content)
+            elif len(content) > 2000:
                 content = content[:2000] + f"\n[truncated from {len(content)} chars]"
             trace.append(
                 {
                     "role": "tool",
-                    "tool_name": getattr(msg, "name", ""),
+                    "tool_name": tool_name,
                     "content": content,
                 }
             )
     return trace
+
+
+def _summarize_execute_sql_result(content: str) -> str:
+    """Summarize execute_sql tool output for the reasoning trace.
+
+    Keeps only the status line (success/error + row count), strips raw data
+    rows and redundant SQL dumps since both are available elsewhere.
+    """
+    if content.startswith("Success."):
+        # Extract just the first line: "Success. N rows returned"
+        first_line = content.split("\n", 1)[0]
+        return first_line
+    if content.startswith("0 rows returned"):
+        # Strip column names and hints — they clutter the UI trace.
+        # The full message (with hint) still reaches the LLM via ToolMessage.
+        return "0 rows returned"
+    if content.startswith("Validation error:") or content.startswith(
+        "Execution error:"
+    ):
+        # Strip "SQL attempted:" section — the SQL is in the preceding tool_call
+        marker = "\n\nSQL attempted:"
+        idx = content.find(marker)
+        if idx != -1:
+            return content[:idx]
+        return content
+    # Fallback: return as-is but capped
+    if len(content) > 500:
+        return content[:500] + "\n[truncated]"
+    return content
 
 
 # ---------------------------------------------------------------------------
@@ -164,12 +196,20 @@ TOOL_SCHEMAS = [
             "parameters": {
                 "type": "object",
                 "properties": {
+                    "reasoning": {
+                        "type": "string",
+                        "description": (
+                            "Brief explanation of your approach: what you're querying, "
+                            "why you chose this table/join/filter, and what you changed "
+                            "if this is a retry after an error."
+                        ),
+                    },
                     "sql": {
                         "type": "string",
                         "description": "The complete SQL query to validate and execute.",
-                    }
+                    },
                 },
-                "required": ["sql"],
+                "required": ["reasoning", "sql"],
             },
         },
     },
