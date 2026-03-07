@@ -17,6 +17,7 @@ from src.sql_subagent import (
     _explore_schema_sync,
     _extract_table_name,
     _format_result_rows,
+    _summarize_execute_sql_result,
     build_sql_subagent,
     execute_sql_tool_node,
     lookup_products_node,
@@ -149,6 +150,44 @@ def _mock_engine_fail_then_succeed(error_msg, columns, rows):
     mock_conn.__exit__ = MagicMock(return_value=False)
     mock_engine.connect.return_value = mock_conn
     return mock_engine
+
+
+# ---------------------------------------------------------------------------
+# Summarize helper tests
+# ---------------------------------------------------------------------------
+
+
+class TestSummarizeExecuteSqlResult:
+    def test_success_keeps_first_line(self):
+        content = "Success. 5 rows returned\ncol1\tcol2\nval1\tval2"
+        assert _summarize_execute_sql_result(content) == "Success. 5 rows returned"
+
+    def test_zero_rows_strips_columns_and_hint(self):
+        content = (
+            "0 rows returned. Columns: country_name, eci_2010\n"
+            "Hint: Check product codes and filters."
+        )
+        assert _summarize_execute_sql_result(content) == "0 rows returned"
+
+    def test_zero_rows_plain(self):
+        assert _summarize_execute_sql_result("0 rows returned") == "0 rows returned"
+
+    def test_validation_error_strips_sql(self):
+        content = "Validation error: bad column\n\nSQL attempted:\nSELECT ..."
+        result = _summarize_execute_sql_result(content)
+        assert result == "Validation error: bad column"
+        assert "SQL attempted" not in result
+
+    def test_execution_error_strips_sql(self):
+        content = "Execution error: timeout\n\nSQL attempted:\nSELECT ..."
+        result = _summarize_execute_sql_result(content)
+        assert result == "Execution error: timeout"
+
+    def test_fallback_truncates_long_content(self):
+        long_content = "x" * 600
+        result = _summarize_execute_sql_result(long_content)
+        assert len(result) < 600
+        assert result.endswith("[truncated]")
 
 
 # ---------------------------------------------------------------------------
