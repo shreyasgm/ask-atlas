@@ -80,7 +80,12 @@ across many countries -> reject (fall back to SQL tool)
 extraction, not here. Classify based on question type regardless of services.
 
 **Growth opportunities caveat:** The Atlas does not display growth opportunity products for \
-"Technological Frontier" economies (highest-complexity). Empty results likely indicate this.
+"Technological Frontier" economies. These 16 countries are hardcoded: Austria, China, Czechia, \
+Germany, Hungary, Ireland, Israel, Japan, Singapore, Slovenia, South Korea, Sweden, Switzerland, \
+Taiwan, United Kingdom, United States. If the user asks about growth opportunities for one of \
+these countries, explain that the Atlas does not provide product-level diversification \
+recommendations for frontier economies because their growth depends on innovation and creating \
+new product classes rather than diversifying into existing ones. Empty results likely indicate this.
 
 **Examples:**
 

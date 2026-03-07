@@ -92,7 +92,7 @@ _METRICS_REFERENCE_BLOCK = """\
 - **Distance** (0 to 1): A measure of a country’s ability to enter a specific product. A product’s distance (from 0 to 1) looks to capture the extent of a country’s existing capabilities to make the product as measured by how closely related a product is to its current exports. Lower = more feasible. Defined at country-product-year.
 - **Product Proximity**: Measures the probability that a country exports product A given that it exports product B, or vice versa. Given that a country makes one product, proximity captures the ease of obtaining the know-how needed to move into another product. Defined at product-product-year.
 - **Market Share**: Country product exports / global product exports * 100%. Calculable from trade data.
-- **New Products**: Products where a country gained RCA (< 1 to >= 1) year-over-year.
+- **New Products**: Products where a country has newly developed comparative advantage. The Atlas Country Pages default uses HS92 with a ~15-year window, but users may ask for different periods or classification systems (HS12, SITC). RCA is recomputed from 3-year averaged export values at each end of the window: a product is "new" if its RCA was < 0.5 at the start and >= 1 at the end. All 4-digit products are eligible (including natural resources). Note: HS12 data starts in 2012 so the max window is shorter. For details and the full calculation, call docs_tool.
 
 For formulas, column names, and methodology details, call docs_tool."""
 

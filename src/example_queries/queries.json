@@ -50,5 +50,9 @@
     {
         "question": "How many products does Brazil export with a revealed comparative advantage (RCA > 1)?",
         "file": "rca_count_brazil.sql"
+    },
+    {
+        "question": "What new products has Russia developed comparative advantage in over the period 2009-2022?",
+        "file": "new_products_country.sql"
     }
 ]
