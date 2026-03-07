@@ -107,7 +107,7 @@ export function getStepDetail(
       const parts: Array<string> = [];
       const attemptCount = typeof detail.attempt_count === 'number' ? detail.attempt_count : 0;
       if (attemptCount > 1) {
-        parts.push(`${attemptCount} attempts`);
+        parts.push(`${attemptCount} queries`);
       }
       if (typeof detail.row_count === 'number') {
         parts.push(`${detail.row_count} row${detail.row_count === 1 ? '' : 's'}`);

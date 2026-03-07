@@ -99,13 +99,13 @@ describe('getStepDetail', () => {
     expect(result).toBe('\u2192 42 rows, 0.3s');
   });
 
-  it('sql_query_agent — shows attempt count when > 1', () => {
+  it('sql_query_agent — shows query count when > 1', () => {
     const result = getStepDetail('sql_query_agent', {
       attempt_count: 3,
       execution_time_ms: 1500,
       row_count: 15,
     });
-    expect(result).toBe('\u2192 3 attempts, 15 rows, 1.5s');
+    expect(result).toBe('\u2192 3 queries, 15 rows, 1.5s');
   });
 
   it('sql_query_agent — singular row', () => {
@@ -119,7 +119,7 @@ describe('getStepDetail', () => {
       attempt_count: 2,
       error: 'column "export_val" does not exist',
     });
-    expect(result).toBe('\u2192 2 attempts, Error: column "export_val" does not exist');
+    expect(result).toBe('\u2192 2 queries, Error: column "export_val" does not exist');
   });
 
   it('sql_query_agent — returns null for empty detail', () => {

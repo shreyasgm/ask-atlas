@@ -1,8 +1,9 @@
 import { Check, ChevronDown, ChevronRight, Loader } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
-import type { PipelineStep, PipelineType } from '@/types/chat';
+import type { PipelineStep, PipelineType, ReasoningTraceEntry } from '@/types/chat';
 import { cn } from '@/lib/utils';
 import { getStepDetail } from '@/utils/step-detail';
+import ReasoningTrace from './reasoning-trace';
 
 interface PipelineStepperProps {
   steps: Array<PipelineStep>;
@@ -149,6 +150,14 @@ export default memo(function PipelineStepper({ steps }: PipelineStepperProps) {
                           {detail}
                         </p>
                       )}
+                      {step.node === 'sql_query_agent' &&
+                        Array.isArray(step.detail?.reasoning_trace) &&
+                        (step.detail.reasoning_trace as Array<ReasoningTraceEntry>).length > 0 && (
+                          <ReasoningTrace
+                            entries={step.detail.reasoning_trace as Array<ReasoningTraceEntry>}
+                            isActive={step.status === 'active'}
+                          />
+                        )}
                     </div>
                   );
                 })}
