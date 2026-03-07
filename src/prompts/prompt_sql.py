@@ -35,7 +35,7 @@ Technical metrics:
 - Calculable metrics:
 - Growth opportunities: Products where a country does NOT yet have comparative advantage (RCA < 1). Sort by `cog` DESC for attractiveness. `distance` indicates feasibility - before you sort by `cog`, filter for distance < 10th percentile of distance of products for that country.
   * Market Share: A country's exports of a product as a percentage of total global exports of that product in the same year.  Calculated as: (Country's exports of product X) / (Total global exports of product X) * 100%.
-  * New Products: A product is considered "new" to a country in a given year if the country had an RCA <1 for that product in the previous year and an RCA >=1 in the current year.
+  * New Products: Products where a country has newly developed comparative advantage. The Atlas defines a product as "new" if it was absent from the country's export basket ~15 years ago (RCA < 0.5) and is now firmly exported (RCA >= 1 for at least the last 3 years). In SQL, use `is_new = TRUE` or `product_status = 'new'` in `country_product_year_*` tables — do NOT recompute from raw RCA.
   * CAGR (Compound Annual Growth Rate): Compute from export values at two points in time. Default to a 5-year window if the user does not specify. Formula: (POWER(end_value / start_value, 1.0 / n_years) - 1) * 100. Do NOT use country_product_lookback tables (they are empty).
 
 Only use the tables and columns provided. Here is the relevant table information:
@@ -413,8 +413,9 @@ write and execute SQL queries to answer questions about international trade data
 
 You MUST call `execute_sql` to run your SQL. Never answer without executing a query.
 
-Your query results are returned to the parent system — your final text message is \
-NOT shown to the user. Focus on getting the SQL right, not on prose summaries.
+Your query results are returned to the parent system. Always fill in the \
+`reasoning` parameter when calling `execute_sql` — explain what you're querying \
+and why, especially after errors.
 
 ## Domain Knowledge
 

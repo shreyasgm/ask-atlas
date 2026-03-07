@@ -57,6 +57,18 @@ export interface PipelineStep {
   status: 'active' | 'completed';
 }
 
+export interface ReasoningTraceToolCall {
+  args: Record<string, unknown>;
+  name: string;
+}
+
+export interface ReasoningTraceEntry {
+  content: string;
+  role: 'assistant' | 'tool';
+  tool_calls?: Array<ReasoningTraceToolCall>;
+  tool_name?: string;
+}
+
 export interface ResolvedProduct {
   codes: Array<string>;
   name: string;
