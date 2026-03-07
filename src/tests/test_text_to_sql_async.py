@@ -806,7 +806,7 @@ class TestPipelineStateEvents:
         assert "products" in payload
 
     async def test_pipeline_state_sql_query_agent_payload(self):
-        """pipeline_state for sql_query_agent has columns, rows, row_count, execution_time_ms."""
+        """pipeline_state for sql_query_agent has row_count, execution_time_ms, tables."""
         responses = [
             AIMessage(
                 content="",
@@ -827,8 +827,8 @@ class TestPipelineStateEvents:
 
         assert len(sql_agent_states) == 1
         payload = sql_agent_states[0].payload
-        assert "columns" in payload
-        assert "rows" in payload
+        assert "columns" not in payload
+        assert "rows" not in payload
         assert "row_count" in payload
         assert "execution_time_ms" in payload
         assert "tables" in payload

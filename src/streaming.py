@@ -205,9 +205,7 @@ def _extract_pipeline_state(node_name: str, state_snapshot: dict) -> dict:
         sql = state_snapshot.get("pipeline_sql", "")
         base["sql"] = sql
         base["question"] = state_snapshot.get("pipeline_question", "")
-        base["columns"] = state_snapshot.get("pipeline_result_columns", [])
-        base["rows"] = _json_safe_deep(state_snapshot.get("pipeline_result_rows", []))
-        base["row_count"] = len(base["rows"])
+        base["row_count"] = len(state_snapshot.get("pipeline_result_rows", []) or [])
         base["execution_time_ms"] = state_snapshot.get("pipeline_execution_time_ms", 0)
         base["tables"] = _extract_tables_from_sql(sql)
         error = state_snapshot.get("last_error", "")
@@ -218,7 +216,6 @@ def _extract_pipeline_state(node_name: str, state_snapshot: dict) -> dict:
             base["schema"] = products.classification_schemas[0]
         attempt_history = state_snapshot.get("pipeline_sql_history", [])
         base["attempt_count"] = len(attempt_history)
-        base["attempt_history"] = attempt_history
         # Include the latest SQL sub-agent reasoning trace
         reasoning_traces = state_snapshot.get("pipeline_reasoning_trace", [])
         if reasoning_traces:
