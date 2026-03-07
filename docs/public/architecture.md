@@ -38,7 +38,8 @@ ask-atlas/
 │   ├── prompts.py                  # All LLM prompts (agent, SQL, GraphQL, docs)
 │   ├── config.py                   # Pydantic Settings (loads from .env + model_config.py)
 │   ├── model_config.py             # Non-secret LLM settings (model names, prompt assignments)
-│   ├── sql_pipeline.py             # SQL pipeline nodes (extract → generate → validate → execute)
+│   ├── sql_pipeline.py             # SQL pipeline nodes (extract → sql_query_agent → format)
+│   ├── sql_subagent.py             # Agentic SQL sub-agent (ReAct loop with 4 tools)
 │   ├── graphql_pipeline.py         # GraphQL pipeline nodes (classify → extract → resolve → execute)
 │   ├── graphql_client.py           # Async GraphQL HTTP client, circuit breaker, budget tracker
 │   ├── docs_pipeline.py            # Docs pipeline nodes (select → synthesize)
@@ -248,7 +249,7 @@ The top-level class that owns all backend resources. Created once at server star
 
 **Pipeline sequences** (displayed in UI):
 
-SQL pipeline (8 nodes):
+SQL pipeline (6 nodes):
 
 | Order | Node Name | UI Label |
 |-------|-----------|----------|
@@ -256,10 +257,8 @@ SQL pipeline (8 nodes):
 | 2 | `extract_products` | Identifying products |
 | 3 | `lookup_codes` | Looking up product codes |
 | 4 | `get_table_info` | Loading table metadata |
-| 5 | `generate_sql` | Generating SQL query |
-| 6 | `validate_sql` | Validating SQL |
-| 7 | `execute_sql` | Executing query |
-| 8 | `format_results` | Formatting results |
+| 5 | `sql_query_agent` | Generating and executing SQL query |
+| 6 | `format_results` | Formatting results |
 
 GraphQL pipeline (5 nodes):
 
@@ -313,13 +312,8 @@ graph LR
     etq --> ep[extract_products]
     ep --> lc[lookup_codes]
     lc --> gti[get_table_info]
-    gti --> gs[generate_sql]
-    gs --> vs[validate_sql]
-    vs -->|valid| es[execute_sql]
-    vs -->|"error, retry_count≤1"| gs
-    vs -->|"error, no retries left"| fr[format_results]
-    es --> fr
-    es -->|"error, retry_count≤1"| gs
+    gti --> sqa[sql_query_agent]
+    sqa --> fr[format_results]
     fr --> agent
 
     egq --> pq[plan_query]
@@ -341,9 +335,7 @@ graph LR
     style ep fill:#e3f2fd,stroke:#1976D2
     style lc fill:#e3f2fd,stroke:#1976D2
     style gti fill:#e3f2fd,stroke:#1976D2
-    style gs fill:#e3f2fd,stroke:#1976D2
-    style vs fill:#fff3e0,stroke:#F57C00
-    style es fill:#e3f2fd,stroke:#1976D2
+    style sqa fill:#e3f2fd,stroke:#1976D2
     style fr fill:#e8f5e9,stroke:#388E3C
     style egq fill:#fff3e0,stroke:#F57C00
     style pq fill:#fff3e0,stroke:#F57C00
@@ -360,7 +352,7 @@ graph LR
 
 **Key design decisions** (see `docs/public/backend_architecture.md` for full rationale):
 
-1. **Flat graph, no subgraphs.** Subgraphs would cleanly isolate pipeline state, but are incompatible with the dual-mode streaming architecture (`stream_mode=["messages", "updates"]`). At ~16 nodes, the graph is manageable with pipeline-prefixed state fields (`pipeline_*`, `graphql_*`, `docs_*`).
+1. **Mostly flat graph with one internal sub-agent.** The outer graph remains flat for streaming compatibility (`stream_mode=["messages", "updates"]`). The `sql_query_agent` node internally runs a compiled ReAct sub-graph (`src/sql_subagent.py`) via function call (not a LangGraph subgraph), keeping the outer graph topology simple while allowing iterative SQL generation inside the sub-agent.
 
 2. **Atlas link generation is combined with `resolve_ids`, not a separate node.** Link generation is deterministic and takes microseconds — running it in parallel with the ~100-500ms GraphQL API call saves no perceptible latency. Combining it with `resolve_ids` (which already has all the data) is simpler.
 
@@ -390,15 +382,11 @@ graph LR
 
 5. **`get_table_info`** — Loads DDL and descriptions for relevant tables based on detected schemas. Cached with 1-hour TTL.
 
-6. **`generate_sql`** — Builds a few-shot prompt with table metadata, product codes, direction/mode constraints, and example queries. Invokes the frontier LLM via `create_query_generation_chain()`.
+6. **`sql_query_agent`** (`src/sql_subagent.py`) — Agentic ReAct sub-agent that generates, validates, executes, and iterates on SQL queries. Replaces the former `generate_sql` → `validate_sql` → `execute_sql` chain. Equipped with 4 tools: `execute_sql` (run SQL against Atlas DB), `explore_schema` (inspect table structure), `lookup_products` (re-extract product codes), and `report_results` (forced explicit assessment before stopping, via `tool_choice="any"`). Runs up to `MAX_ITERATIONS=12` with `recursion_limit=50`. Captures full reasoning trace (AI messages + tool calls + tool results) and streams it to the frontend via `pipeline_state` events.
 
-7. **`validate_sql`** — Runs `validate_sql()` from `src/sql_validation.py`. On failure, sets `last_error`. If `retry_count ≤ 1`, routes back to `generate_sql` for a retry; otherwise short-circuits to `format_results`.
+7. **`format_results`** — Packages results into a `ToolMessage` for the agent to interpret. Increments `queries_executed`.
 
-8. **`execute_sql`** — Runs the query against the Atlas Data DB using the async engine. Wrapped in `async_execute_with_retry()` (3 attempts, exponential backoff). Returns columns, rows, row count, and execution time. On execution error with `retry_count ≤ 1`, routes back to `generate_sql` for a retry.
-
-9. **`format_results`** — Packages results into a `ToolMessage` for the agent to interpret. Increments `queries_executed`.
-
-10. **`max_queries_exceeded`** — Returns an error `ToolMessage` when `queries_executed >= max_queries_per_question`.
+8. **`max_queries_exceeded`** — Returns an error `ToolMessage` when `queries_executed >= max_queries_per_question`.
 
 **GraphQL pipeline node details** (`src/graphql_pipeline.py`):
 
@@ -427,13 +415,7 @@ graph LR
 
 4. **`format_docs_results`** — Returns the synthesized response as a `ToolMessage`.
 
-**Query generation chain** (SQL): LCEL composition: `prompt | llm | StrOutputParser() | _strip`. The prompt injects:
-- Table DDL with descriptions
-- Resolved product codes
-- Direction/mode constraints
-- Few-shot example queries (loaded from `src/example_queries/`)
-- Domain rules (product_id vs. product_code, country_id vs. iso3_code, RCA/ECI/PCI definitions, market share calculation, new products definition)
-- Optional context from docs_tool if used earlier in the turn
+**SQL sub-agent** (`src/sql_subagent.py`): A compiled ReAct graph with a frontier LLM and 4 tools. The system prompt (`SQL_SUBAGENT_PROMPT` from `src/prompts/prompt_sql.py`) injects table DDL, resolved product codes, direction/mode constraints, few-shot example queries, and domain rules. The sub-agent iterates autonomously — generating SQL, executing it, inspecting results, and retrying on errors — until it calls `report_results` with an explicit assessment. The reasoning trace (all AI messages, tool calls, and tool results) is captured and streamed to the frontend.
 
 ### AtlasAgentState (`src/state.py`)
 
@@ -450,6 +432,7 @@ graph LR
 | `token_usage` | `Annotated[list[dict], add_token_usage]` | Per-node LLM token usage records (reducer: append) |
 | `step_timing` | `Annotated[list[dict], add_step_timing]` | Per-step wall-clock/LLM/I/O timing records (reducer: append) |
 | `pipeline_sql_history` | `Annotated[list[dict], add_sql_history]` | Every SQL version with stage and errors (reducer: append) |
+| `pipeline_reasoning_trace` | `Annotated[list[list[dict]], add_reasoning_traces]` | SQL sub-agent reasoning traces (one list per SQL tool invocation, reducer: append) |
 | **Overrides** | | |
 | `override_schema` | `Optional[str]` | User-specified classification (hs92/hs12/sitc) |
 | `override_direction` | `Optional[str]` | User-specified trade direction (exports/imports) |
@@ -489,7 +472,7 @@ graph LR
 
 **`src/model_config.py`** (checked into source, non-secret):
 ```python
-FRONTIER_MODEL = "gpt-5.2"           # Complex reasoning, agent orchestration, SQL generation
+FRONTIER_MODEL = "gpt-5.4"           # Complex reasoning, agent orchestration, SQL generation
 FRONTIER_MODEL_PROVIDER = "openai"
 LIGHTWEIGHT_MODEL = "gpt-5-mini"     # Extraction, classification, selection
 LIGHTWEIGHT_MODEL_PROVIDER = "openai"
@@ -542,7 +525,7 @@ Central registry for all LLM prompts. Zero imports from other `src/` modules (pr
 | Prompt Key | Model Tier | Purpose |
 |------------|-----------|---------|
 | `agent_system_prompt` | Frontier | Agent orchestration: tool selection, budget status, verification guidance, trade data schema |
-| `sql_generation` | Frontier | SQL query generation with few-shot examples, table DDL, domain rules |
+| `sql_generation` | Frontier | SQL sub-agent system prompt (`SQL_SUBAGENT_PROMPT` from `src/prompts/prompt_sql.py`) with few-shot examples, table DDL, domain rules |
 | `graphql_classification` | Lightweight | Classify user question into ~20 GraphQL query types or reject |
 | `graphql_entity_extraction` | Lightweight | Extract structured entities (countries, products, years) given classified query type |
 | `id_resolution_selection` | Lightweight | Select best entity IDs from dual-source candidates |
@@ -681,7 +664,7 @@ The `/api/chat/stream` endpoint returns `text/event-stream`. Events are sent in 
 
 - **SQL pipeline:**
   - **`extract_products`**: `{ "stage": "extract_products", "schemas": [...], "products": [...] }`
-  - **`execute_sql`**: `{ "stage": "execute_sql", "sql": "...", "columns": [...], "rows": [...], "row_count": N, "execution_time_ms": N, "tables": [...], "schema": "hs92" }`
+  - **`sql_query_agent`**: `{ "stage": "sql_query_agent", "row_count": N, "execution_time_ms": N, "attempt_count": N, "reasoning_trace": [...], "error": "..." }`
 - **GraphQL pipeline:**
   - **`plan_query`**: `{ "stage": "plan_query", "query_type": "...", "api_target": "...", "country": "...", "product": "...", "year": "..." }`
   - **`resolve_ids`**: `{ "stage": "resolve_ids", "resolved_params": {...} }`
