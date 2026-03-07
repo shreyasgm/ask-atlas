@@ -367,7 +367,47 @@ COI is one of the four inputs to the Atlas growth projections (alongside ECI, GD
 
 ---
 
-## 9. The Feasibility Scatter Plot (Growth Opportunity)
+## 9. Strategic Approaches and Technological Frontier Countries
+
+COI and ECI together determine a country's recommended **strategic approach** to diversification. The Atlas assigns each country one of four approaches, displayed at `/countries/{id}/strategic-approach`:
+
+### Assignment Algorithm
+
+**Technological Frontier** countries are a **hardcoded list** of 16 economies. These are the world's most complex economies where the standard COI/ECI heuristics don't cleanly apply — they have already captured most nearby product opportunities and growth must come from innovation rather than diversification into existing product classes.
+
+**Current TechFrontier countries:** Austria, China, Czechia, Germany, Hungary, Ireland, Israel, Japan, Singapore, Slovenia, South Korea, Sweden, Switzerland, Taiwan, United Kingdom, United States.
+
+For all other countries, the assignment uses two numeric thresholds on **COI** (from `countryYear`) and **`eciNatResourcesGdpControlled`** (ECI adjusted for natural resource rents and GDP per capita, from `countryProfile`):
+
+| Condition | Approach | API Enum | Policy Logic |
+|---|---|---|---|
+| COI ≥ 0 AND ECI* ≥ 0 | **Light Touch** | `LightTouch` | Country is complex and well-connected to opportunities. Leverage existing successes with minimal intervention. |
+| COI ≥ 0 AND ECI* < 0 | **Parsimonious Industrial Policy** | `ParsimoniousIndustrial` | Many opportunities nearby but current basket is simpler than income predicts. Targeted support for promising sectors. |
+| COI < 0 | **Strategic Bets** | `StrategicBets` | Few nearby opportunities. Must make deliberate, concentrated investments in strategic sectors. |
+
+Note: COI < 0 always yields Strategic Bets regardless of ECI*. The bottom-right quadrant (high complexity, low COI) is occupied only by the hardcoded TechFrontier list above.
+
+### Growth opportunities unavailable for frontier countries
+
+The Atlas **does not display growth opportunity products** for TechFrontier countries. The Country Pages growth opportunities page (`/countries/{id}/growth-opportunities`) is hidden for these 16 economies. This is because the standard distance/COG/PCI framework is designed for countries that can diversify into existing product classes — frontier countries need innovation to expand the frontier itself and create new product classes, which the product space framework cannot capture.
+
+If a user asks about growth opportunities for a TechFrontier country, explain that the Atlas does not provide product-level diversification recommendations for these economies because they have already captured most existing nearby opportunities and their growth path depends on innovation rather than diversification into known product categories.
+
+### GraphQL API
+
+```graphql
+query {
+  countryProfile(location: "location-404") {
+    policyRecommendation   # LightTouch | ParsimoniousIndustrial | StrategicBets | TechFrontier
+    eciNatResourcesGdpControlled  # Float — x-axis of strategic approach scatter
+    latestCoi                     # Float — y-axis
+  }
+}
+```
+
+---
+
+## 10. The Feasibility Scatter Plot (Growth Opportunity)
 
 ### Axes and Data Mapping
 
@@ -398,11 +438,25 @@ COI is one of the four inputs to the Atlas growth projections (alongside ECI, GD
 
 | Feature | Explore API (`/explore/feasibility`) | Country Pages (`/countries/{id}/growth-opportunities`) |
 |---|---|---|
-| Availability | All countries | Hidden for highest-complexity frontier countries |
+| Availability | All countries | Hidden for TechFrontier countries (16 economies — see Section 9) |
 | Y-axis numeric labels | Yes (e.g., -3.5 to 2.5) | No — uses qualitative categories |
 | Strategy selector | No | Yes (Low-Hanging Fruit / Balanced Portfolio / Long Jumps radio buttons) |
 | Table view | `/explore/feasibility/table` | `/countries/{id}/product-table` (top 50 only) |
 | Diamond ratings | 7 diamonds, all products | 7 diamonds, top 50 |
+
+### Product Selection Strategies (Country Pages Growth Opportunities)
+
+The Country Pages growth opportunities page offers three product selection strategies, each a weighted combination of the three criteria (distance, complexity, opportunity gain):
+
+| Strategy | Distance Weight | Opportunity Gain Weight | Complexity Weight | Best For |
+|---|---|---|---|---|
+| **Low-Hanging Fruit** | 60% | 25% | 15% | Products closest to current capabilities |
+| **Balanced Portfolio** | 60% | 20% | 20% | Even spread across criteria |
+| **Long Jumps** | 45% | 35% | 20% | Higher-payoff products further from current basket |
+
+In all three modes, distance receives the largest weight — feasibility always matters most. The balance shifts as the strategy moves from conservative (Low-Hanging Fruit) to ambitious (Long Jumps), reducing the distance penalty and increasing the reward for opportunity gain and complexity.
+
+These strategies appear as radio buttons on `/countries/{id}/growth-opportunities`. The Explore API feasibility page (`/explore/feasibility`) does not offer these strategy presets.
 
 ### GraphQL Query for Feasibility Scatter Data
 
@@ -443,7 +497,7 @@ The table view (`/explore/feasibility/table`) presents the same data in sortable
 
 ---
 
-## 10. SQL Schema Reference
+## 11. SQL Schema Reference
 
 The product space data spans two schema layers:
 
@@ -492,7 +546,7 @@ LIMIT 10;
 
 ---
 
-## 11. GraphQL Queries Summary
+## 12. GraphQL Queries Summary
 
 | Query | Required Args | Returns | Use for |
 |---|---|---|---|
@@ -504,7 +558,7 @@ LIMIT 10;
 
 ---
 
-## 12. Metric Relationships: Quick Reference
+## 13. Metric Relationships: Quick Reference
 
 ```
 Proximity φ(i,j)  — product-to-product; symmetric; globally fixed

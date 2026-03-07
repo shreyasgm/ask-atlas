@@ -49,24 +49,52 @@ The scatter plot appears at `/countries/{id}/strategic-approach`. All 145 countr
 
 ```
 High COI │ PARSIMONIOUS INDUSTRIAL │  LIGHT TOUCH
-         │ POLICY (top-left)       │  (top-right)
+(COI≥0)  │ POLICY (top-left)       │  (top-right)
 ─────────┼─────────────────────────┼──────────────
 Low COI  │ STRATEGIC BETS          │  TECHNOLOGICAL
-         │ (bottom-left)           │  FRONTIER (bottom-right)
+(COI<0)  │ (bottom-left)           │  FRONTIER (bottom-right)
          └─────────────────────────────────────────
-                Low rel. complexity   High rel. complexity
+              ECI* < 0                ECI* ≥ 0
+              (* = eciNatResourcesGdpControlled)
 ```
+
+### Assignment Algorithm
+
+The strategic approach is determined as follows:
+
+1. **Technological Frontier** countries are a **hardcoded list** (16 countries). These are the world's most complex economies where COI-based heuristics don't cleanly apply. The list is maintained server-side and returned via the `policyRecommendation` field. Current TechFrontier countries: Austria, China, Czechia, Germany, Hungary, Ireland, Israel, Japan, Singapore, Slovenia, South Korea, Sweden, Switzerland, Taiwan, United Kingdom, United States.
+
+2. For all other countries, the assignment follows two numeric thresholds using **COI** (from `countryYear` or `allCountryYear`) and **`eciNatResourcesGdpControlled`** (from `countryProfile`):
+
+| Condition | Approach | API Enum |
+|---|---|---|
+| COI ≥ 0 AND ECI* ≥ 0 | **Light Touch** | `LightTouch` |
+| COI ≥ 0 AND ECI* < 0 | **Parsimonious Industrial Policy** | `ParsimoniousIndustrial` |
+| COI < 0 | **Strategic Bets** | `StrategicBets` |
+
+Where ECI* = `eciNatResourcesGdpControlled` (ECI adjusted for natural resource rents and GDP per capita via partial correlation). Note that COI < 0 always yields Strategic Bets regardless of ECI* — the Technological Frontier quadrant (low COI + high ECI*) is occupied only by the hardcoded list above.
 
 ### Approach Definitions
 
-| Approach | API Enum | Quadrant | Condition | Policy Logic |
-|---|---|---|---|---|
-| **Light Touch** | `LightTouch` | Top-right | High COI + High relative complexity | Country is complex and well-connected to opportunities. Ample space to diversify by leveraging existing successes. Minimal government intervention needed — markets are functioning. |
-| **Parsimonious Industrial Policy** | `ParsimoniousIndustrial` | Top-left | High COI + Low relative complexity | Many opportunities nearby but current basket is simpler than income predicts. Targeted support for specific promising sectors. Easiest path to complexity growth. |
-| **Strategic Bets** | `StrategicBets` | Bottom-left | Low COI + Low relative complexity | Few nearby opportunities and simple current basket. Must make deliberate, concentrated investments in specific sectors. Highest-risk approach — necessary for countries far from the complexity frontier. |
-| **Technological Frontier** | `TechFrontier` | Bottom-right | Low COI + High relative complexity | Already at the frontier. Few unexploited nearby opportunities because most have been captured. Growth comes from innovation, not product diversification. Examples: USA, Germany, Japan. |
+| Approach | API Enum | Quadrant | Policy Logic |
+|---|---|---|---|
+| **Light Touch** | `LightTouch` | Top-right (44 countries) | Country is complex and well-connected to opportunities. Ample space to diversify by leveraging existing successes. Minimal government intervention needed — markets are functioning. |
+| **Parsimonious Industrial Policy** | `ParsimoniousIndustrial` | Top-left (22 countries) | Many opportunities nearby but current basket is simpler than income predicts. Targeted support for specific promising sectors. Easiest path to complexity growth. |
+| **Strategic Bets** | `StrategicBets` | Bottom-left (63 countries) | Few nearby opportunities and simple current basket. Must make deliberate, concentrated investments in specific sectors. Highest-risk approach — necessary for countries far from the complexity frontier. |
+| **Technological Frontier** | `TechFrontier` | Bottom-right (16 countries) | Already at the frontier. Few unexploited nearby opportunities because most have been captured. Growth comes from innovation, not product diversification. |
 
-**Country examples:** Kenya → `LightTouch`; USA → `TechFrontier`; Spain and Turkiye → `LightTouch`.
+**Country examples:** Kenya → `LightTouch`; USA → `TechFrontier`; Spain → `ParsimoniousIndustrial`; Nigeria → `StrategicBets`.
+
+### Narrative Decision Tree
+
+The quadrant assignment can also be understood through two diagnostic questions:
+
+1. **Can the country grow using its existing knowhow?** If **yes** — the country is already complex relative to its income (ECI* ≥ 0) and well-connected to opportunities (COI ≥ 0) → **Light Touch**.
+
+2. If **no**, **how easy is it to diversify into new products?** This is assessed by COI — how many complex products are near the country's current capabilities.
+   - **COI ≥ 0** (many nearby opportunities) → **Parsimonious Industrial Policy**. Remove specific bottlenecks to help firms move into closely related products.
+   - **COI < 0** (few nearby opportunities) → **Strategic Bets**. The country faces a sparse opportunity landscape and must make coordinated investments to leap into strategic areas that open future diversification paths.
+   - **Technological Frontier** countries are an exception — they have high complexity but low COI because they've already captured most nearby opportunities. These are identified by a hardcoded list rather than the COI/ECI* thresholds.
 
 ---
 
@@ -161,11 +189,13 @@ Displayed on the `/countries/{id}/new-products` page top bar as a letter grade (
 
 ### What diversification grades measure
 
-Diversification grades rank countries by the number of new products they have successfully added to their export basket over an approximately 18-year window. A "new product" is one where:
-- The first 3 years of the window all had RCA < 0.5 (not meaningfully exported)
-- The last 3 years all had RCA >= 1.0 (now firmly exported)
+Diversification grades rank countries by the number of new products they have successfully added to their export basket over an approximately 15-year window (default 2009–2024 as of the latest data). A "new product" is determined by recomputing RCA from 3-year averaged export values at each end of the window:
 
-This filters out noisy, one-off export spikes — only sustained new comparative advantages qualify.
+1. **Start period:** Average each country-product `export_value` over the first 3 years (e.g., 2009–2011). Compute RCA from those averages across all countries and all 4-digit products in the chosen classification.
+2. **End period:** Repeat for the last 3 years (e.g., 2022–2024).
+3. A product is **"new"** if its start-period RCA < 0.5 AND end-period RCA >= 1.0.
+
+The Atlas Country Pages default to HS92 for this calculation, but the same method works with any classification (HS12, SITC). Note that HS12 data starts in 2012, so the maximum window is shorter (~11 years). All 4-digit products are eligible (including natural resources). No product filters are applied. This filters out noisy, one-off export spikes — only sustained new comparative advantages qualify.
 
 ### Grade thresholds
 
@@ -219,6 +249,18 @@ query {
   }
 }
 ```
+
+## Interpreting Diversification Performance
+
+Beyond the letter grade, several qualitative factors help assess whether a country's diversification is meaningful:
+
+- **Composition of new products matters as much as count.** If a single low-complexity commodity accounts for over 70% of new export value, the country has not meaningfully broadened its productive capabilities — even if the total dollar value appears large. Ideally, new products should span multiple sectors and reflect movement into higher-complexity goods.
+
+- **Share of total exports from new products.** A small share (e.g., only 4% of total exports) signals that the export structure has remained largely unchanged and diversification efforts have had limited impact on the overall economy. The API field `newProductExportValue / exportValue` captures this ratio.
+
+- **Per-capita income contribution.** The number of new products and the income per capita they contribute (via `newProductExportValuePerCapita`) measures how successfully a country has translated diversification into broad-based income growth.
+
+- **Peer comparison context.** A country that added 9 new products contributing $94 per capita looks markedly different from a peer that added 35 new products contributing $310 per capita. Use `newProductsComparisonCountries` to contextualize performance against similar economies.
 
 ---
 
