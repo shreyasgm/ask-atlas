@@ -604,11 +604,13 @@ SELECT
 
 ### New Products Logic
 
-A product is "new" if:
-- First 3 years of an 18-year window: RCA < 0.5 (not meaningfully exported)
-- Last 3 years of the window: RCA >= 1.0 (firmly exported)
+A product is "new" if RCA recomputed from 3-year averaged export values shows a transition from absent to present over a ~15-year window:
+- **Start period**: Average export values over the first 3 years of the window. Compute RCA from those averages across all countries and products. Start-period RCA must be < 0.5.
+- **End period**: Repeat for the last 3 years. End-period RCA must be >= 1.0.
 
-The `product_status = 'new'` flag in `hs92.country_product_year_4` captures this determination for the most recent year. `is_new = true` is equivalent.
+The Atlas Country Pages default to HS92, but the same method works with any classification (HS12, SITC). HS12 data starts in 2012, so the max window might be shorter. All 4-digit products are eligible (including natural resources). No product filters are applied.
+
+> **WARNING:** The `product_status` and `is_new` columns exist in the schema but are **ALL NULL** in the current database. To identify new products in SQL, you must recompute RCA from raw export values. See the few-shot example `src/example_queries/new_products_country.sql` for the full pattern.
 
 ### Diversification Grade Thresholds
 
@@ -785,12 +787,26 @@ WHERE cy.country_id = 404
 
 | Approach | Quadrant | Meaning |
 |----------|----------|---------|
-| `LightTouch` | High complexity, high COI | Ample nearby opportunities; leverage existing successes |
-| `ParsimoniousIndustrial` | Low complexity, high COI | Opportunities nearby but not yet realized; targeted policy interventions |
-| `TechFrontier` | High complexity, low COI | Already at frontier; growth from innovation, not diversification |
-| `StrategicBets` | Low complexity, low COI | Few nearby paths; must make deliberate ambitious sectoral investments |
+| `LightTouch` | High complexity, high COI | Ample nearby opportunities; leverage existing successes. Minimal government intervention needed. |
+| `ParsimoniousIndustrial` | Low complexity, high COI | Opportunities nearby but not yet realized; targeted policy interventions to move into closely related products. |
+| `TechFrontier` | High complexity, low COI | Already at frontier; growth from innovation, not diversification. Most nearby opportunities already captured. |
+| `StrategicBets` | Low complexity, low COI | Few nearby paths; must make deliberate ambitious sectoral investments to leap into strategic areas. |
 
-**This metric (`policyRecommendation`) is NOT reproducible via SQL alone.** It is a derived classification from `eciNatResourcesGdpControlled` (ECI adjusted via partial correlation removing natural resource rents and GDP effects) and COI, computed by the Country Pages API.
+### Assignment Algorithm
+
+**Technological Frontier** countries are a **hardcoded list** of 16 economies maintained server-side: Austria, China, Czechia, Germany, Hungary, Ireland, Israel, Japan, Singapore, Slovenia, South Korea, Sweden, Switzerland, Taiwan, United Kingdom, United States. These don't follow a simple threshold rule — they are the world's most complex economies where COI-based heuristics don't cleanly apply.
+
+For all other countries, the assignment uses two numeric thresholds on **COI** and **`eciNatResourcesGdpControlled`** (ECI adjusted via partial correlation removing natural resource rents and GDP effects, a.k.a. ECI*):
+
+| Condition | Approach |
+|-----------|----------|
+| COI ≥ 0 AND ECI* ≥ 0 | `LightTouch` (44 countries) |
+| COI ≥ 0 AND ECI* < 0 | `ParsimoniousIndustrial` (22 countries) |
+| COI < 0 | `StrategicBets` (63 countries) |
+
+Note that COI < 0 always yields Strategic Bets regardless of ECI* — the bottom-right quadrant (high complexity, low COI) is occupied only by the hardcoded TechFrontier list.
+
+**This metric (`policyRecommendation`) is best retrieved from the GraphQL API** since `eciNatResourcesGdpControlled` is not available as a SQL column.
 
 ### GraphQL API (Country Pages)
 

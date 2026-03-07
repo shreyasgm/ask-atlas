@@ -3,14 +3,14 @@ title: New Products Methodology
 purpose: >
   Defines how the Atlas identifies, measures, and compares "new products" for a
   country -- products in which a country has newly developed a revealed comparative
-  advantage -- as shown on the Country Pages new-products section.
+  advantage. Covers both the GraphQL API (Country Pages, HS92-only) and the SQL
+  computation method (works with any classification: HS92, HS12, SITC).
 keywords: [new products, product_status, is_new, RCA, lookback, diversification, country_product_lookback, newProductsCountry, newProductsComparisonCountries, diversificationGrade, comparative advantage, peer comparison]
 when_to_load: >
-  Load when the user asks how Atlas identifies new products, what `product_status`
-  field values mean (new/present/lost/absent), how lookback periods (3/5/10/15
-  years) work, what `is_new` captures vs. `product_status`, or how to query
-  `country_product_lookback` tables. Also load for `newProductsCountry` or
-  `newProductsComparisonCountries` GraphQL query details.
+  Load when the user asks how Atlas identifies new products, how to compute new
+  products from SQL for any classification system, what `product_status` field
+  values mean (new/present/lost/absent), how lookback periods work, or how to
+  query `newProductsCountry` / `newProductsComparisonCountries` via GraphQL.
 when_not_to_load: >
   Do NOT load for diversification grades (see `strategic_approaches.md`) or for
   general product space diversification analysis (see `product_space_and_relatedness.md`).
@@ -19,52 +19,89 @@ related_docs: [strategic_approaches.md, product_space_and_relatedness.md]
 
 ## 1. Definition of a "New Product"
 
-A product is classified as **new** for a country when it transitions from not meaningfully exported to firmly exported over an observation window — specifically, when the country's Revealed Comparative Advantage (RCA) crosses the threshold of 1.
+A product is classified as **new** for a country when it transitions from not meaningfully exported to firmly exported over an observation window. The determination is based on **3-year averaged export values** at each end of the window:
 
-**The `newProductsCountry` GraphQL query** applies a stricter, rolling-window criterion to filter out noise:
+- **Observation window**: approximately 15 years (default), anchored to the latest data year. The Atlas Country Pages title (e.g., "New Products Exported, 2009–2024") reflects this window.
+- **Start period**: Average each country-product `export_value` over the first 3 years of the window (e.g., 2009–2011). Compute RCA from those averages across all countries and all 4-digit products.
+- **End period**: Repeat for the last 3 years of the window (e.g., 2022–2024).
+- **Absence condition**: Start-period RCA < 0.5 — the country was not meaningfully exporting the product at the start of the window.
+- **Presence condition**: End-period RCA ≥ 1.0 — the country now firmly exports the product.
 
-- **Observation window**: approximately 18 years of RCA history (anchored to the latest data year)
-- **Absence condition**: RCA < 0.5 in each of the **first 3 years** of the window — the country was not meaningfully exporting the product at the start
-- **Presence condition**: RCA ≥ 1.0 in each of the **last 3 years** of the window — the country now firmly exports the product
+All 4-digit products are eligible (including natural resources). No product filters are applied. This approach filters out noisy, one-off export spikes — only sustained new comparative advantages qualify.
 
-This sustained-transition filter excludes temporary RCA spikes and counts only products where the new capability has been demonstrated consistently over multiple years.
+### Classification system availability
 
-**The default lookback period shown on the New Products page is 15 years.** The year range shown in the page title (e.g., "New Products Exported, 2009–2024") reflects this 15-year window.
+| Method | HS92 | HS12 | SITC |
+|--------|------|------|------|
+| **GraphQL** (`newProductsCountry`) | Yes (default, only option) | No | No |
+| **SQL** (recompute from `export_value`) | Yes (data from 1995) | Yes (data from 2012, max ~11-year window) | Yes (data from 1962) |
 
----
-
-## 2. `product_status` Field (4 Values)
-
-`product_status` is stored as an enum in `country_product_year` tables (all digit-level variants) and classifies the **current-year status** of each country–product pair relative to its past RCA trajectory:
-
-| Value | Meaning |
-|-------|---------|
-| `new` | RCA < 1 in the base/lookback year; RCA ≥ 1 in the current year — newly acquired comparative advantage |
-| `present` | RCA ≥ 1 continuously — the country has been exporting this product throughout the window |
-| `lost` | RCA ≥ 1 in the base year; RCA < 1 in the current year — comparative advantage was lost |
-| `absent` | RCA < 1 in both the base and current year — the country never meaningfully exported this product |
-
-The base year against which status is evaluated depends on the **lookback period** used (3, 5, 10, or 15 years). The `product_status` stored in the DB reflects the default lookback period used at data-build time. The Country Pages new-products section uses the 15-year default.
+The GraphQL Country Pages API only returns new products in HS92. For HS12 or SITC new products, use SQL with the same RCA-averaging method — just use the appropriate `{schema}.country_product_year_4` table and `classification.product_{schema}` for product names. See the few-shot example `new_products_country.sql` for the full SQL pattern.
 
 ---
 
-## 3. `is_new` Boolean Flag
+## 2. SQL: Computing New Products
 
-`is_new` (type: `bool`) is a convenience shorthand stored alongside `product_status` in `country_product_year` tables:
+Since the `is_new` and `product_status` columns are **ALL NULL** in the current database (see Section 4), new products must be computed from raw export values in SQL. The method works identically across all goods schemas.
 
-```
-is_new = (product_status == 'new')
-```
+### SQL pattern (any schema)
 
-It is `TRUE` when a product transitions from non-exported to exported over the lookback window, and `FALSE` for all other statuses (`present`, `lost`, `absent`). It does **not** encode information about the direction of loss — to detect `lost` products, filter on `product_status = 'lost'` directly.
+Use `{schema}.country_product_year_4` (e.g., `hs92.country_product_year_4`, `hs12.country_product_year_4`, `sitc.country_product_year_4`):
 
-Both `is_new` and `product_status` are available at all product digit levels (1, 2, 4) in every `country_product_year_*` table in the HS92, HS12, and SITC schemas.
+1. Average `export_value` per country-product over the first 3 years of the window → compute RCA from those averages across ALL countries and products
+2. Repeat for the last 3 years
+3. Filter: start-period RCA < 0.5 AND end-period RCA >= 1.0
+
+See `src/example_queries/new_products_country.sql` for the complete CTE pattern.
+
+### Schema-specific considerations
+
+| Schema | Data starts | Max window (to 2022) | Default start period | Notes |
+|--------|-------------|---------------------|---------------------|-------|
+| `hs92` | 1995 | 28 years | 2009–2011 (for ~15-yr window) | Matches GraphQL Country Pages output |
+| `hs12` | 2012 | 11 years | 2012–2014 (max available) | Shorter window catches more transitions |
+| `sitc` | 1962 | 61 years | 2009–2011 (for ~15-yr window) | Different product granularity than HS |
+
+### Primary table: `{schema}.country_product_year_4`
+
+This is the primary table for new-product SQL queries. It has one row per country–product–year and stores export values. The table exists in all goods schemas (hs92, hs12, sitc).
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `country_id` | `int4` | M49 code |
+| `product_id` | `int4` | Product ID for the schema |
+| `year` | `int4` | Data year |
+| `export_value` | `int8` | Gross export value (USD) — use this for RCA computation |
+| `export_rca` | `float8` | Pre-computed single-year RCA (not used for new products — use averaged RCA instead) |
+| `is_new` | `bool` | **ALL NULL** — do not use |
+| `product_status` | `ENUM` | **ALL NULL** — do not use |
+
+### Lookback table: `hs92.country_product_lookback_4`
+
+> **HS92-only.** This table exists only in the `hs92` schema — not in HS12 or SITC.
+
+Stores pre-calculated export change metrics over configured lookback periods (3, 5, 10, 15 years). **Does not contain `product_status` or `is_new`** — those fields are in `country_product_year_*` tables only (and are NULL).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `country_id` | `int4` | M49 country code |
+| `product_id` | `int4` | HS92 4-digit product ID |
+| `lookback` | `int4` | Lookback length in years (3, 5, 10, or 15) |
+| `lookback_year` | `int4` | Base year of the lookback window |
+| `export_value_change` | `float8` | Absolute change in export value (USD) |
+| `export_value_cagr` | `float8` | CAGR of export value over the period |
+| `export_value_growth` | `float8` | Total growth ratio |
+| `export_value_percent_change` | `float8` | Percentage change |
+| `export_rpop_change` | `float8` | Change in population-adjusted RCA |
+| `global_market_share_change` | `float8` | Change in global market share |
+| `global_market_share_growth` | `float8` | Growth ratio of global market share |
+| `global_market_share_cagr` | `float8` | CAGR of global market share |
 
 ---
 
-## 4. Lookback Periods
+## 3. Lookback Periods
 
-Four lookback periods are available. They appear as interactive options on other Country Pages sections (e.g., Growth Dynamics uses 3/5/10 years) and map to the `LookBackYearRange` GraphQL enum:
+Four lookback periods are available in the GraphQL API. They appear as interactive options on Country Pages sections (e.g., Growth Dynamics uses 3/5/10 years) and map to the `LookBackYearRange` GraphQL enum:
 
 | Period | Enum Value | What It Measures |
 |--------|------------|-----------------|
@@ -73,125 +110,37 @@ Four lookback periods are available. They appear as interactive options on other
 | 10 years | `TenYears` | Decade-scale structural change |
 | 15 years | `FifteenYears` | Long-run diversification; **default for the new-products page** |
 
-The new-products page always displays the 15-year window. The `countryLookback(yearRange: FifteenYears)` query returns the `diversityRankChange` over this same window.
+The new-products page always displays the 15-year window. In SQL, any window length can be used — just adjust the start/end year ranges.
 
 ---
 
-## 5. DB Table: `hs92.country_product_lookback_4`
+## 4. `product_status` and `is_new` DB Columns (Schema Only — NOT POPULATED)
 
-The **"4" suffix** denotes the 4-digit HS92 product level (the most granular level used for new-product analysis). Equivalent tables exist at 1-digit (`country_product_lookback_1`) and 2-digit (`country_product_lookback_2`). These tables exist **only in the HS92 schema** — not in SITC, HS12, or other schemas.
+> **WARNING:** These columns exist in the database schema but are **ALL NULL** in the current data. Do NOT use them in SQL queries. Compute new products from raw `export_value` as described in Section 2.
 
-These tables store pre-calculated export change metrics over the configured lookback periods. **They do not contain `product_status` or `is_new` — those fields live in `country_product_year_*` tables.**
+The schema defines:
 
-### `hs92.country_product_lookback_4` — All Columns
+| Column | Type | Intended Meaning |
+|--------|------|-----------------|
+| `product_status` | `ENUM(new, absent, lost, present)` | Export status relative to a lookback period |
+| `is_new` | `bool` | Shorthand for `product_status = 'new'` |
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `country_id` | `int4` | M49 country code |
-| `product_id` | `int4` | HS92 4-digit product ID (foreign key to `classification.product_hs92`) |
-| `location_level` | `ENUM(country, group)` | Row applies to a single country or a group |
-| `product_level` | `int4` | Product digit level (4 for this table) |
-| `lookback` | `int4` | Lookback length in years (3, 5, 10, or 15) |
-| `lookback_year` | `int4` | Base year of the lookback window (current year minus `lookback`) |
-| `export_value_change` | `float8` | Absolute change in export value over the period (USD) |
-| `export_value_cagr` | `float8` | Compound annual growth rate of export value over the period |
-| `export_value_growth` | `float8` | Total (cumulative) growth ratio over the period |
-| `export_value_percent_change` | `float8` | Percentage change in export value over the period |
-| `export_rpop_change` | `float8` | Change in population-adjusted RCA (RPOP) over the period |
-| `global_market_share_change` | `float8` | Absolute change in the country's global market share for this product |
-| `global_market_share_growth` | `float8` | Total growth ratio of global market share |
-| `global_market_share_cagr` | `float8` | CAGR of global market share over the period |
+**Intended values** (for reference if they become populated in a future data build):
 
-To identify new products in SQL, use `hs92.country_product_year_4` (not the lookback table), filtering on `product_status` or `is_new`.
+| Value | Meaning |
+|-------|---------|
+| `new` | RCA crossed from < 1 to ≥ 1 over the lookback window |
+| `present` | RCA ≥ 1 throughout the window |
+| `lost` | RCA dropped from ≥ 1 to < 1 over the window |
+| `absent` | RCA < 1 throughout the window |
+
+Both columns are defined at all product digit levels (1, 2, 4) in every `country_product_year_*` table across HS92, HS12, and SITC schemas.
 
 ---
 
-## 6. DB Table: `hs92.country_product_year_4` — New-Product Relevant Columns
+## 5. GraphQL API: `newProductsCountry` Query
 
-This is the primary table for new-product SQL queries. It has one row per country–product–year and stores the point-in-time RCA alongside status flags.
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `country_id` | `int4` | M49 code |
-| `product_id` | `int4` | HS92 4-digit product ID |
-| `year` | `int4` | Data year |
-| `location_level` | `ENUM(country, group)` | Filter to `'country'` for country-level rows |
-| `product_level` | `int4` | Filter to `4` for 4-digit results |
-| `export_rca` | `float8` | Revealed Comparative Advantage (threshold: 1.0) |
-| `export_value` | `int8` | Gross export value (USD) |
-| `is_new` | `bool` | `TRUE` when `product_status = 'new'` |
-| `product_status` | `ENUM(new, absent, lost, present)` | Full status classification |
-| `distance` | `float8` | Distance from current capabilities |
-| `cog` | `float8` | Complexity Outlook Gain (opportunity gain) |
-| `normalized_pci` | `float8` | Normalized Product Complexity Index |
-| `normalized_distance` | `float8` | Normalized distance |
-| `normalized_cog` | `float8` | Normalized COG |
-| `global_market_share` | `float8` | Country's share of world exports for this product |
-| `export_rpop` | `float8` | Population-adjusted RCA |
-
----
-
-## 7. SQL Pattern: Identifying New Products
-
-### New products for a given country in the most recent year
-
-```sql
-SELECT
-    cpy.country_id,
-    cpy.product_id,
-    p.long_name            AS product_name,
-    p.code                 AS hs92_code,
-    cpy.export_value,
-    cpy.export_rca
-FROM hs92.country_product_year_4 cpy
-JOIN classification.product_hs92 p
-    ON p.id = cpy.product_id
-WHERE cpy.country_id    = 404          -- Kenya (M49)
-  AND cpy.year          = 2024         -- latest year
-  AND cpy.location_level = 'country'
-  AND cpy.product_level  = 4
-  AND cpy.is_new         = TRUE        -- or: cpy.product_status = 'new'
-ORDER BY cpy.export_value DESC;
-```
-
-### Count of new products per country, latest year
-
-```sql
-SELECT
-    country_id,
-    COUNT(*) FILTER (WHERE product_status = 'new')    AS new_count,
-    COUNT(*) FILTER (WHERE product_status = 'present') AS present_count,
-    COUNT(*) FILTER (WHERE product_status = 'lost')    AS lost_count,
-    COUNT(*) FILTER (WHERE product_status = 'absent')  AS absent_count
-FROM hs92.country_product_year_4
-WHERE year          = 2024
-  AND location_level = 'country'
-  AND product_level  = 4
-GROUP BY country_id;
-```
-
-### Per-capita income contribution from new products
-
-```sql
-SELECT
-    cpy.country_id,
-    SUM(cpy.export_value)                         AS new_product_total_value,
-    SUM(cpy.export_value) / cy.population::float  AS new_product_value_per_capita
-FROM hs92.country_product_year_4 cpy
-JOIN hs92.country_year cy
-    ON cy.country_id = cpy.country_id
-   AND cy.year       = cpy.year
-WHERE cpy.country_id     = 404
-  AND cpy.year           = 2024
-  AND cpy.location_level = 'country'
-  AND cpy.product_level  = 4
-  AND cpy.product_status = 'new'
-GROUP BY cpy.country_id, cy.population;
-```
-
----
-
-## 8. GraphQL API: `newProductsCountry` Query
+> **HS92-only.** The Country Pages API only supports HS92 for new products. For HS12 or SITC, use SQL.
 
 **Endpoint**: `POST https://atlas.hks.harvard.edu/api/countries/graphql`
 
@@ -230,11 +179,13 @@ query {
 | `location` | `ID!` | `"location-404"` |
 | `year` | `Int!` | `2024` |
 
-This query has **no optional arguments** — all fields are always returned.
+This query has **no optional arguments** — all fields are always returned. There is no `productClass` parameter; it always uses HS92.
 
 ---
 
-## 9. GraphQL API: `newProductsComparisonCountries` Query
+## 6. GraphQL API: `newProductsComparisonCountries` Query
+
+> **HS92-only.** Same as `newProductsCountry`.
 
 Used exclusively for the peer comparison table on the new-products page.
 
@@ -263,7 +214,7 @@ Returns a list of `NewProductsComparisonCountries` objects — one per peer coun
 
 ---
 
-## 10. Peer Country Selection
+## 7. Peer Country Selection
 
 The peer countries shown in the comparison table are selected automatically by the Country Pages API. The selection criterion is geographic and economic similarity — Atlas uses `countryProfile.comparisonLocations` (a list of `Location` objects) to determine peers. Peer selection is not configurable by the caller; it is pre-computed server-side based on the country's income level, region, and export structure.
 
@@ -287,7 +238,9 @@ The same peers returned here appear in the `newProductsComparisonCountries` resp
 
 ---
 
-## 11. `countryProfile` Fields Relevant to New Products
+## 8. `countryProfile` Fields Relevant to New Products
+
+> **GraphQL only (HS92).**
 
 The `countryProfile` query (required args: `location: ID!`) returns several fields that power the new-products page top bar and narrative text:
 
@@ -306,7 +259,7 @@ The `countryLookback(yearRange: FifteenYears)` query returns `diversityRankChang
 
 ---
 
-## 12. Diversification Grade Thresholds
+## 9. Diversification Grade Thresholds
 
 The `diversificationGrade` is assigned by ranking all countries by their new product count and applying fixed cut-offs:
 
@@ -321,19 +274,22 @@ The `diversificationGrade` is assigned by ranking all countries by their new pro
 
 ---
 
-## 13. Per-Capita Income Contribution
+## 10. Per-Capita Income Contribution
 
 **What it measures**: The total export value of new products divided by the country's population. It answers "how much additional income per person comes from the products the country has newly started exporting."
 
-- **API field**: `newProductExportValuePerCapita` (Int, USD) in both `newProductsCountry` and `countryProfile`
+- **API field** (GraphQL, HS92): `newProductExportValuePerCapita` (Int, USD) in both `newProductsCountry` and `countryProfile`
 - **API field**: `newProductExportValue` (Float, USD) for the total (non-per-capita) value
 - **Derived field** on the page: "New Export Proportion" = `newProductExportValue / exportValue` — the share of the current export basket consisting of newly added products
+- **SQL**: Can be computed for any schema by joining new products with population data from `{schema}.country_year`
 
 The `newProductsIncomeGrowthComments` enum (`LargeEnough` / `TooSmall`) classifies whether the per-capita contribution is considered economically significant.
 
 ---
 
-## 14. New-Products Page: Complete Data Point Map
+## 11. New-Products Page: Complete Data Point Map
+
+> **GraphQL / Country Pages only (HS92).**
 
 | # | Visible Element | Source Query | API Field |
 |---|-----------------|-------------|-----------|
@@ -350,13 +306,14 @@ The `newProductsIncomeGrowthComments` enum (`LargeEnough` / `TooSmall`) classifi
 
 ---
 
-## 15. Known Limitations and Data Gaps
+## 12. Known Limitations and Data Gaps
 
-- **`country_product_lookback_*` tables exist only in the `hs92` schema.** They are not present in `sitc`, `hs12`, or any services schema.
-- **`product_status` and `is_new` are absent from `country_product_lookback_*` tables.** These fields are in `country_product_year_*` tables only.
-- **The `newProductsCountry` GraphQL query does not expose the lookback period** as an argument — it always uses the server-side default (~15-year rolling window with the sustained-transition filter described in Section 1). The `product_status` field in the DB is computed at build time from a fixed lookback.
+- **GraphQL new products are HS92-only.** The `newProductsCountry` query has no `productClass` parameter. For HS12 or SITC new products, use SQL.
+- **`is_new` and `product_status` are ALL NULL** in the current database. Compute new products from raw `export_value` using the 3-year averaging method.
+- **`country_product_lookback_*` tables exist only in the `hs92` schema.** They are not present in HS12, SITC, or services schemas.
+- **HS12 data starts in 2012**, limiting the max new-products window to ~11 years (vs. 15+ for HS92 and SITC).
+- **The `newProductsCountry` GraphQL query does not expose the lookback period** as an argument — it always uses the server-side default (~15-year window). In SQL, any window length can be used.
 - **No historical series**: The new-products count is a snapshot at `year`. There is no API query to retrieve new product counts for a historical year other than by changing the `year` argument, and the server-side RCA window shifts accordingly.
 - **Peer selection is not documented** in any public API specification. The peers returned by `newProductsComparisonCountries` match those in `countryProfile.comparisonLocations` but the selection algorithm is proprietary.
 - **Country Pages API is undocumented** by the Growth Lab (only the Explore API at `/api/graphql` has official docs). The schema described here was verified via live introspection in February 2026.
-- **`is_new` reflects a fixed lookback at DB build time** — it cannot be recomputed for arbitrary lookback periods in SQL without re-implementing the full rolling-window logic against the `country_product_year` time series.
 - **Highest-complexity countries** (e.g., USA, Germany) may show unusual new product counts because at the technological frontier, RCA transitions happen rarely and the diversification grade thresholds may classify them as low-grade diversifiers despite strong absolute export performance.
