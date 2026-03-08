@@ -382,9 +382,9 @@ graph LR
 
 5. **`get_table_info`** — Loads DDL and descriptions for relevant tables based on detected schemas. Cached with 1-hour TTL.
 
-6. **`sql_query_agent`** (`src/sql_subagent.py`) — Agentic ReAct sub-agent that generates, validates, executes, and iterates on SQL queries. Replaces the former `generate_sql` → `validate_sql` → `execute_sql` chain. Equipped with 4 tools: `execute_sql` (run SQL against Atlas DB), `explore_schema` (inspect table structure), `lookup_products` (re-extract product codes), and `report_results` (forced explicit assessment before stopping, via `tool_choice="any"`). Runs up to `MAX_ITERATIONS=12` with `recursion_limit=50`. Captures full reasoning trace (AI messages + tool calls + tool results) and streams it to the frontend via `pipeline_state` events.
+6. **`sql_query_agent`** (`src/sql_subagent.py`) — Agentic ReAct sub-agent that generates, validates, executes, and iterates on SQL queries. Replaces the former `generate_sql` → `validate_sql` → `execute_sql` chain. Equipped with 4 tools: `execute_sql` (run SQL against Atlas DB), `explore_schema` (inspect table structure), `lookup_products` (re-extract product codes), and `report_results` (forced explicit assessment before stopping, via `tool_choice="any"`). `report_results` requires `assessment`, `needs_verification`, and `surface_to_agent` fields — the last flags caveats (missing data, corrected codes, partial results) that the parent agent needs to see. Runs up to `MAX_ITERATIONS=12` with `recursion_limit=50`. Captures full reasoning trace (AI messages + tool calls + tool results) and streams it to the frontend via `pipeline_state` events.
 
-7. **`format_results`** — Packages results into a `ToolMessage` for the agent to interpret. Increments `queries_executed`.
+7. **`format_results`** — Packages results into a `ToolMessage` for the agent to interpret. When `pipeline_surface_to_agent` is true, prepends the sub-agent's assessment to the tool message content so the parent agent can factor in caveats. Increments `queries_executed`.
 
 8. **`max_queries_exceeded`** — Returns an error `ToolMessage` when `queries_executed >= max_queries_per_question`.
 
@@ -449,6 +449,8 @@ graph LR
 | `pipeline_result_columns` | `list[str]` | Column names from query |
 | `pipeline_result_rows` | `list[list]` | Row data |
 | `pipeline_execution_time_ms` | `int` | Query execution time |
+| `pipeline_assessment` | `str` | Sub-agent's self-assessment text from `report_results` |
+| `pipeline_surface_to_agent` | `bool` | Whether assessment should be surfaced to parent agent |
 | **GraphQL pipeline** | | Reset by `extract_graphql_question` at cycle start |
 | `graphql_question` | `str` | Extracted question from GraphQL tool call |
 | `graphql_context` | `str` | Conversational context for the GraphQL question |
@@ -664,7 +666,7 @@ The `/api/chat/stream` endpoint returns `text/event-stream`. Events are sent in 
 
 - **SQL pipeline:**
   - **`extract_products`**: `{ "stage": "extract_products", "schemas": [...], "products": [...] }`
-  - **`sql_query_agent`**: `{ "stage": "sql_query_agent", "row_count": N, "execution_time_ms": N, "attempt_count": N, "reasoning_trace": [...], "error": "..." }`
+  - **`sql_query_agent`**: `{ "stage": "sql_query_agent", "row_count": N, "execution_time_ms": N, "attempt_count": N, "reasoning_trace": [...], "assessment": "...", "surface_to_agent": bool, "error": "..." }`
 - **GraphQL pipeline:**
   - **`plan_query`**: `{ "stage": "plan_query", "query_type": "...", "api_target": "...", "country": "...", "product": "...", "year": "..." }`
   - **`resolve_ids`**: `{ "stage": "resolve_ids", "resolved_params": {...} }`
@@ -1168,7 +1170,7 @@ The Atlas database stores economic complexity metrics. Understanding these is es
 | **Distance** | `distance` | How far a product is from a country's current export capabilities. Lower = more achievable. |
 | **Diversity** | `diversity` | Number of products a country exports with RCA > 1. |
 | **Market Share** | (calculated) | `export_value / total_world_exports` for a product. Must be calculated via SQL, not stored directly. |
-| **New Products** | `is_new` | Boolean. A product is "new" if a country recently gained RCA > 1 in it. |
+| **New Products** | (computed) | A product is "new" if a country's 3-year averaged RCA went from < 0.5 to >= 1 over a ~15-year window. The `is_new`/`product_status` columns are NOT populated — must be recomputed from raw export values. |
 
 ---
 

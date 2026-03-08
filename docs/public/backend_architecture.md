@@ -231,7 +231,7 @@ route_after_agent ──┬─────────────────�
    - Which system prompt to use
    - What budget status line to include (if dual-tool)
 
-4. **SQL pipeline uses an agentic sub-agent.** The SQL pipeline nodes (`extract_products`, `lookup_codes`, `get_table_info`, `sql_query_agent`, `format_results`) use an agentic ReAct sub-agent (`src/sql_subagent.py`) that replaces the former `generate_sql` → `validate_sql` → `execute_sql` chain. The sub-agent iterates autonomously with 4 tools (`execute_sql`, `explore_schema`, `lookup_products`, `report_results`) and captures a full reasoning trace.
+4. **SQL pipeline uses an agentic sub-agent.** The SQL pipeline nodes (`extract_products`, `lookup_codes`, `get_table_info`, `sql_query_agent`, `format_results`) use an agentic ReAct sub-agent (`src/sql_subagent.py`) that replaces the former `generate_sql` → `validate_sql` → `execute_sql` chain. The sub-agent iterates autonomously with 4 tools (`execute_sql`, `explore_schema`, `lookup_products`, `report_results`) and captures a full reasoning trace. `report_results` requires `assessment`, `needs_verification`, and `surface_to_agent` fields — the last flags caveats that the parent agent needs to see. When `surface_to_agent` is true, `format_results` prepends the assessment to the tool message content.
 
 5. **Classification and entity extraction are combined in `plan_query`.** The former `classify_query` → `extract_entities` split has been merged into a single `plan_query` LLM call, roughly halving latency for those two steps. Early rejection is still supported — if `query_type == "reject"`, the pipeline skips directly to `format_graphql_results`. The combined schema handles both classification and entity extraction in one structured output call.
 
@@ -1009,6 +1009,8 @@ class AtlasAgentState(TypedDict):
     pipeline_result_columns: list[str]   # Column names from the last executed query
     pipeline_result_rows: list[list]     # Row data from the last executed query (for frontend tables)
     pipeline_execution_time_ms: int      # SQL execution time in milliseconds
+    pipeline_assessment: str             # Sub-agent's self-assessment text from report_results
+    pipeline_surface_to_agent: bool      # Whether assessment should be surfaced to parent agent
     pipeline_sql_history: Annotated[list[dict], add_sql_history]  # Every SQL version with stage/errors (reducer: append)
     sql_call_history: Annotated[list[dict], add_sql_call_history]  # Per-call SQL pipeline snapshots (reducer: append)
 
@@ -1075,7 +1077,7 @@ class AtlasAgentState(TypedDict):
 | `src/streaming.py` | `AtlasTextToSQL` orchestrator, `StreamData`, pipeline node registry (`NODE_LABELS`), `_extract_pipeline_state` for all three pipelines (SQL, GraphQL, docs), turn summary builder. (Formerly `src/text_to_sql.py`.) |
 | `src/api.py` | Track GraphQL events + atlas_links in SSE generator. Add `mode` parameter to `/api/chat/stream`. Persist atlas_links in turn summaries. |
 | `src/cache.py` | Add country lookup cache (24h TTL), product ID cache (24h TTL), services catalog cache (24h TTL, full list of service category names and IDs from `productHs92(servicesClass: unilateral)` query), GraphQL response cache (optional). **Lazy fetching with warm-on-first-request:** Catalogs are NOT fetched at server startup (avoids cold-start delays and startup failures if the API is down). Instead, the first `resolve_ids` call triggers the fetch and caches the result. Subsequent calls use the cache. Consider adding a background task in `create_async` to warm the cache shortly after the first request. |
-| `src/product_and_schema_lookup.py` | No changes to internals. Used by SQL pipeline as-is. |
+| `src/product_and_schema_lookup.py` | `aextract_schemas_and_product_mentions_direct()` and `aselect_final_codes_direct()` gain an optional `context` parameter for agent guidance. |
 
 ### Test Files
 
@@ -1137,7 +1139,7 @@ Each prompt in the system is assigned one of these two model types. The assignme
 
 ```python
 # --- Frontier model (complex reasoning, agent orchestration) ---
-FRONTIER_MODEL = "gpt-5.2"
+FRONTIER_MODEL = "gpt-5.4"
 FRONTIER_MODEL_PROVIDER = "openai"
 
 # --- Lightweight model (extraction, classification, selection) ---
@@ -1513,19 +1515,22 @@ The existing `query_tool` and `atlas_graphql` tool schemas should also gain an o
 
 ```python
 class QueryToolInput(BaseModel):
-    question: str = Field(description="The data query question.")
+    question: str = Field(description="A question about international trade data")
     context: str = Field(
         default="",
-        description="Additional technical context (e.g., metric definitions, column guidance, "
-        "data caveats) that may help answer the query accurately."
+        description="Optional corrective feedback or technical context to guide the query pipeline. "
+        "Use when retrying after an unsatisfactory result (e.g., 'use SITC classification "
+        "instead of HS', 'include services data', 'the product is electronic chips not "
+        "potato chips') or to pass methodology context from docs_tool.",
     )
 
 class AtlasGraphQLInput(BaseModel):
-    question: str = Field(description="The data query question.")
+    question: str = Field(description="A question about trade data or economic complexity")
     context: str = Field(
         default="",
-        description="Additional technical context that may help classify the query "
-        "and interpret the results."
+        description="Optional corrective feedback or technical context. Use when retrying after an "
+        "unsatisfactory result (e.g., 'use HS92 classification', 'the country is Turkey "
+        "not the poultry product') or to pass methodology notes from docs_tool.",
     )
 ```
 
@@ -1569,8 +1574,8 @@ The `question` and `context` flow through each pipeline differently:
 
 | Node | Uses `pipeline_question` | Uses `pipeline_context` |
 |------|-------------------------|------------------------|
-| `extract_products` | Yes — detects schemas, products, classification systems | **No** — context may mention product names or table names as metadata guidance, not as query targets |
-| `lookup_codes` | Yes — matches products | **No** — same reasoning |
+| `extract_products` | Yes — detects schemas, products, classification systems | **Yes** — agent guidance (e.g., corrective feedback like "use SITC not HS") is appended to the question to steer extraction |
+| `lookup_codes` | Yes — matches products | **Yes** — agent guidance is passed through to the final code selection LLM call |
 | `get_table_info` | Yes — selects relevant schemas | **No** — schema selection should be driven by the query |
 | `sql_query_agent` | Yes — injected into sub-agent system prompt | **Yes** — metric definitions, column names, time comparability caveats, table guidance all improve SQL quality |
 | `format_results` | No (uses execution results) | No |
@@ -1580,7 +1585,7 @@ The `question` and `context` flow through each pipeline differently:
 | Node | Uses `graphql_question` | Uses `graphql_context` |
 |------|------------------------|----------------------|
 | `plan_query` | Yes — drives classification + entity extraction | **Yes** — context may disambiguate query type and help identify entities (e.g., "this involves feasibility metrics" helps route to `feasibility`; "looking at the coffee sector" helps extract product) |
-| `resolve_ids` (+ inline `generate_atlas_links()`) | Yes — entity names to resolve | **No** — context won't contain entity IDs |
+| `resolve_ids` (+ inline `generate_atlas_links()`) | Yes — entity names to resolve | **Yes** — agent guidance is passed to the disambiguation LLM when multiple entity candidates exist |
 | `build_and_execute_graphql` | No (uses resolved params) | No |
 | `format_graphql_results` | No (uses API results) | No |
 
