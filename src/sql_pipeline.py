@@ -715,9 +715,9 @@ async def format_results_node(state: AtlasAgentState) -> dict:
         else:
             content = state.get("pipeline_result", "SQL query returned no results.")
 
-        # Prepend assessment when the sub-agent flagged it for the top-level agent
-        if state.get("pipeline_surface_to_agent", False):
-            assessment = state.get("pipeline_assessment", "")
+        # Prepend assessment when the sub-agent flagged it for the parent agent
+        if state["pipeline_surface_to_agent"]:
+            assessment = state["pipeline_assessment"]
             if assessment:
                 content = f"--- Assessment ---\n{assessment}\n--- Data ---\n{content}"
 

@@ -163,6 +163,8 @@ class TestToolMessageNames:
             "last_error": "",
             "pipeline_result": "Some SQL results",
             "queries_executed": 0,
+            "pipeline_assessment": "",
+            "pipeline_surface_to_agent": False,
         }
         result = await format_results_node(state)
         for msg in result["messages"]:

@@ -413,7 +413,7 @@ write and execute SQL queries to answer questions about international trade data
 
 You MUST call `execute_sql` to run your SQL. Never answer without executing a query.
 
-Your query results are returned to the parent system. Always fill in the \
+Your query results are returned to the parent agent. Always fill in the \
 `reasoning` parameter when calling `execute_sql` — explain what you're querying \
 and why, especially after errors.
 

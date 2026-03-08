@@ -6,6 +6,7 @@ dependencies so that no LLM, database, or network access is required.
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from langchain_core.messages import AIMessage, ToolMessage
 
 from src.error_handling import QueryExecutionError
@@ -93,6 +94,8 @@ def _base_state(**overrides) -> dict:
         "pipeline_result_columns": [],
         "pipeline_result_rows": [],
         "pipeline_execution_time_ms": 0,
+        "pipeline_assessment": "",
+        "pipeline_surface_to_agent": False,
         "override_schema": None,
         "override_direction": None,
         "override_mode": None,
@@ -1123,6 +1126,8 @@ class TestFormatResultsNode:
             "messages": [msg],
             "last_error": "",
             "queries_executed": 0,
+            "pipeline_assessment": "",
+            "pipeline_surface_to_agent": False,
         }
 
         result = await format_results_node(state)
@@ -1151,6 +1156,8 @@ class TestFormatResultsNode:
             "messages": [msg],
             "pipeline_result": "data",
             "last_error": "",
+            "pipeline_assessment": "",
+            "pipeline_surface_to_agent": False,
         }
 
         result = await format_results_node(state)
@@ -1254,21 +1261,21 @@ class TestFormatResultsNode:
         assert not content.startswith("--- Assessment ---")
         assert "country | value" in content
 
-    async def test_no_assessment_when_key_missing(self):
-        """When pipeline_surface_to_agent is absent, no assessment prepended (backward compat)."""
-        msg = _make_tool_call_message(tool_call_id="call_compat")
+    async def test_fails_fast_when_assessment_keys_missing(self):
+        """When pipeline_surface_to_agent is absent, fail with KeyError (not silent default)."""
+        msg = _make_tool_call_message(tool_call_id="call_missing")
         state = _base_state(
             messages=[msg],
             pipeline_result="x | 42",
             last_error="",
             queries_executed=0,
         )
+        # Ensure keys are absent
+        state.pop("pipeline_surface_to_agent", None)
+        state.pop("pipeline_assessment", None)
 
-        result = await format_results_node(state)
-
-        content = result["messages"][0].content
-        assert not content.startswith("--- Assessment ---")
-        assert "x | 42" in content
+        with pytest.raises(KeyError):
+            await format_results_node(state)
 
 
 # ---------------------------------------------------------------------------
