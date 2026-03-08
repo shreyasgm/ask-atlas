@@ -164,8 +164,10 @@ class QueryToolInput(BaseModel):
     question: str = Field(description="A question about international trade data")
     context: str = Field(
         default="",
-        description="Additional technical context (e.g., metric definitions, data caveats) "
-        "that may help answer the query accurately. Optional.",
+        description="Optional corrective feedback or technical context to guide the query pipeline. "
+        "Use when retrying after an unsatisfactory result (e.g., 'use SITC classification "
+        "instead of HS', 'include services data', 'the product is electronic chips not "
+        "potato chips') or to pass methodology context from docs_tool.",
     )
 
 
@@ -352,6 +354,7 @@ async def extract_products_node(
         products = await lookup.aextract_schemas_and_product_mentions_direct(
             state["pipeline_question"],
             callbacks=[usage_handler],
+            context=state.get("pipeline_context", ""),
         )
         t.mark_llm(llm_start, time.monotonic())
 
@@ -427,7 +430,10 @@ async def lookup_codes_node(
         usage_handler = UsageMetadataCallbackHandler()
         llm_start = time.monotonic()
         codes = await lookup.aselect_final_codes_direct(
-            state["pipeline_question"], candidates, callbacks=[usage_handler]
+            state["pipeline_question"],
+            candidates,
+            callbacks=[usage_handler],
+            context=state.get("pipeline_context", ""),
         )
         t.mark_llm(llm_start, time.monotonic())
 
@@ -708,6 +714,12 @@ async def format_results_node(state: AtlasAgentState) -> dict:
             content = f"Error executing query: {state['last_error']}"
         else:
             content = state.get("pipeline_result", "SQL query returned no results.")
+
+        # Prepend assessment when the sub-agent flagged it for the top-level agent
+        if state.get("pipeline_surface_to_agent", False):
+            assessment = state.get("pipeline_assessment", "")
+            if assessment:
+                content = f"--- Assessment ---\n{assessment}\n--- Data ---\n{content}"
 
         # Cap response size to prevent context-window overflow
         max_chars = 15_000

@@ -213,6 +213,8 @@ class AtlasAgentState(TypedDict):
     pipeline_result_columns: list[str]
     pipeline_result_rows: list[list]
     pipeline_execution_time_ms: int
+    pipeline_assessment: str
+    pipeline_surface_to_agent: bool
     # Accumulated per-turn pipeline summaries (persisted in checkpoint)
     turn_summaries: Annotated[list[dict], add_turn_summaries]
     # Accumulated LLM token usage records (per-node granularity)

@@ -29,6 +29,28 @@ from ._blocks import (
 # Pipeline: agent_node
 # Placeholders: {max_uses}, {top_k_per_query}, {sql_max_year}
 
+_SQL_ONLY_ASSESSMENT_BLOCK = """\
+**Pipeline Assessments:**
+Tool responses may begin with an `--- Assessment ---` section before the `--- Data ---`.
+This contains the pipeline's self-assessment — caveats about missing data, corrected \
+product codes, stale year data, or partial results.
+- When present, factor the assessment into your answer. If the issue is fixable (e.g., \
+wrong classification, missing services data), retry with corrective `context`. \
+Otherwise, mention the limitation to the user.
+- When absent, the data tool thinks the result is clean — no special handling needed."""
+
+_DUAL_TOOL_ASSESSMENT_BLOCK = """\
+**Pipeline Assessments:**
+Tool responses may begin with an `--- Assessment ---` section before the `--- Data ---`.
+This contains the pipeline's self-assessment — caveats about missing data, corrected \
+product codes, stale year data, or partial results.
+- When present, factor the assessment into your answer. If the issue is fixable (e.g., \
+wrong classification, missing services data), retry with corrective `context`. If the \
+data limitation is inherent to one tool, consider whether the other data tool might \
+cover it (e.g., atlas_graphql has more recent data than query_tool). Otherwise, mention \
+the limitation to the user.
+- When absent, the data tool thinks the result is clean — no special handling needed."""
+
 SQL_ONLY_SYSTEM_PROMPT = "\n\n".join(
     [
         _IDENTITY_BLOCK,
@@ -67,6 +89,7 @@ coverage: goods trade through {sql_max_year} (varies by schema for services).
 - `docs_tool` — Retrieves technical documentation about metrics, methodology, and data coverage. \
 Does NOT count against your query budget.""",
         _DATA_INTEGRITY_BLOCK,
+        _SQL_ONLY_ASSESSMENT_BLOCK,
         _DATA_DESCRIPTION_BLOCK,
         _SERVICES_AWARENESS_BLOCK,
         _METRICS_REFERENCE_BLOCK,
@@ -217,6 +240,7 @@ descriptions, and complexity-income classifications are ONLY available via `atla
 - If you must use SQL and the requested year exceeds {sql_max_year}, return the latest
   available data and note the limitation in your response.""",
         _DATA_INTEGRITY_BLOCK,
+        _DUAL_TOOL_ASSESSMENT_BLOCK,
         # --- Trust pre-computed fields (lean version) ---
         """\
 **Trusting Pre-Computed Fields:**

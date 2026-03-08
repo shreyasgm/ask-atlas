@@ -174,47 +174,58 @@ class ProductAndSchemaLookup:
         return mentions_chain
 
     def extract_schemas_and_product_mentions_direct(
-        self, question: str
+        self, question: str, context: str = ""
     ) -> SchemasAndProductsFound:
         """Run product/schema extraction and return the result directly.
 
         Args:
             question: The user's trade-related question.
+            context: Optional agent guidance to steer extraction.
 
         Returns:
             SchemasAndProductsFound with identified schemas and products.
         """
         chain = self.extract_schemas_and_product_mentions()
-        return chain.invoke({"question": question})
+        human_input = (
+            question if not context else f"{question}\n\nAgent guidance:\n{context}"
+        )
+        return chain.invoke({"question": human_input})
 
     async def aextract_schemas_and_product_mentions_direct(
         self,
         question: str,
         callbacks: list | None = None,
+        context: str = "",
     ) -> SchemasAndProductsFound:
         """Async variant: run product/schema extraction and return the result directly.
 
         Args:
             question: The user's trade-related question.
             callbacks: Optional list of callback handlers (e.g. for token tracking).
+            context: Optional agent guidance to steer extraction.
 
         Returns:
             SchemasAndProductsFound with identified schemas and products.
         """
         chain = self.extract_schemas_and_product_mentions()
         config = {"callbacks": callbacks} if callbacks else {}
-        return await chain.ainvoke({"question": question}, config=config)
+        human_input = (
+            question if not context else f"{question}\n\nAgent guidance:\n{context}"
+        )
+        return await chain.ainvoke({"question": human_input}, config=config)
 
     def select_final_codes_direct(
         self,
         question: str,
         product_search_results: List[ProductSearchResult],
+        context: str = "",
     ) -> ProductCodesMapping:
         """Select final product codes and return the result directly.
 
         Args:
             question: The user's trade-related question.
             product_search_results: Combined search results from LLM and DB.
+            context: Optional agent guidance to steer code selection.
 
         Returns:
             ProductCodesMapping with the final selected codes.
@@ -222,13 +233,17 @@ class ProductAndSchemaLookup:
         if not product_search_results:
             return ProductCodesMapping(mappings=[])
         chain = self.select_final_codes(product_search_results)
-        return chain.invoke({"question": question})
+        human_input = (
+            question if not context else f"{question}\n\nAgent guidance:\n{context}"
+        )
+        return chain.invoke({"question": human_input})
 
     async def aselect_final_codes_direct(
         self,
         question: str,
         product_search_results: List[ProductSearchResult],
         callbacks: list | None = None,
+        context: str = "",
     ) -> ProductCodesMapping:
         """Async variant: select final product codes and return the result directly.
 
@@ -236,6 +251,7 @@ class ProductAndSchemaLookup:
             question: The user's trade-related question.
             product_search_results: Combined search results from LLM and DB.
             callbacks: Optional list of callback handlers (e.g. for token tracking).
+            context: Optional agent guidance to steer code selection.
 
         Returns:
             ProductCodesMapping with the final selected codes.
@@ -244,7 +260,10 @@ class ProductAndSchemaLookup:
             return ProductCodesMapping(mappings=[])
         chain = self.select_final_codes(product_search_results)
         config = {"callbacks": callbacks} if callbacks else {}
-        return await chain.ainvoke({"question": question}, config=config)
+        human_input = (
+            question if not context else f"{question}\n\nAgent guidance:\n{context}"
+        )
+        return await chain.ainvoke({"question": human_input}, config=config)
 
     def select_final_codes(
         self,

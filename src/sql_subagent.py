@@ -270,7 +270,8 @@ TOOL_SCHEMAS = [
             "description": (
                 "Finish the SQL task and report your results. You MUST call this "
                 "tool when you are done — it is the only way to complete the task. "
-                "Before calling, review your results for correctness."
+                "Before calling, review your results for correctness. Use "
+                "surface_to_agent to flag caveats that the parent agent needs."
             ),
             "parameters": {
                 "type": "object",
@@ -292,8 +293,19 @@ TOOL_SCHEMAS = [
                             "for simple lookups with unambiguous results."
                         ),
                     },
+                    "surface_to_agent": {
+                        "type": "boolean",
+                        "description": (
+                            "Set to true if the parent agent needs to see this "
+                            "assessment to make a good decision — e.g., caveats about "
+                            "missing data categories, wrong product codes that were "
+                            "corrected, stale year data, or partial results. Set to "
+                            "false for clean, straightforward results."
+                        ),
+                        "default": False,
+                    },
                 },
-                "required": ["assessment", "needs_verification"],
+                "required": ["assessment", "needs_verification", "surface_to_agent"],
             },
         },
     },
@@ -1003,6 +1015,19 @@ async def sql_query_agent_node(
     # Serialize the sub-agent's full reasoning trace (AI + Tool messages)
     reasoning_trace = _serialize_subagent_messages(sub_messages)
 
+    # Extract assessment from the final report_results tool call
+    assessment = ""
+    surface_to_agent = False
+    for msg in reversed(sub_messages):
+        if isinstance(msg, AIMessage) and msg.tool_calls:
+            for tc in msg.tool_calls:
+                if tc["name"] == "report_results":
+                    assessment = tc["args"].get("assessment", "")
+                    surface_to_agent = tc["args"].get("surface_to_agent", False)
+                    break
+            if assessment:
+                break
+
     return {
         "pipeline_sql": result.get("sql", ""),
         "pipeline_result": result.get("result", ""),
@@ -1013,6 +1038,8 @@ async def sql_query_agent_node(
         "retry_count": 0,
         "pipeline_sql_history": result.get("attempt_history", []),
         "pipeline_reasoning_trace": [reasoning_trace],
+        "pipeline_assessment": assessment,
+        "pipeline_surface_to_agent": surface_to_agent,
         "token_usage": token_records,
         "step_timing": [t.record],
     }

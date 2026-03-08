@@ -284,6 +284,35 @@ class TestExtractProductsNode:
             "services_bilateral",
         ]
 
+    async def test_context_passed_to_extraction(self):
+        """pipeline_context is forwarded to aextract_schemas_and_product_mentions_direct."""
+        canned = SchemasAndProductsFound(
+            classification_schemas=["sitc"],
+            products=[],
+            requires_product_lookup=False,
+        )
+
+        mock_llm = MagicMock()
+        mock_engine = MagicMock()
+
+        with patch("src.sql_pipeline.ProductAndSchemaLookup") as MockLookup:
+            mock_instance = MagicMock()
+            mock_instance.aextract_schemas_and_product_mentions_direct = AsyncMock(
+                return_value=canned
+            )
+            MockLookup.return_value = mock_instance
+
+            state = _base_state(
+                pipeline_question="Brazil cotton exports?",
+                pipeline_context="Use SITC classification, not HS.",
+            )
+            await extract_products_node(state, llm=mock_llm, engine=mock_engine)
+
+        call_kwargs = (
+            mock_instance.aextract_schemas_and_product_mentions_direct.call_args
+        )
+        assert call_kwargs.kwargs["context"] == "Use SITC classification, not HS."
+
 
 # ---------------------------------------------------------------------------
 # 3. lookup_codes_node
@@ -426,6 +455,54 @@ class TestLookupCodesNode:
 
         assert "cotton" in result["pipeline_codes"]
         assert "wheat" in result["pipeline_codes"]
+
+    async def test_context_passed_to_code_selection(self):
+        """pipeline_context is forwarded to aselect_final_codes_direct."""
+        products_found = SchemasAndProductsFound(
+            classification_schemas=["hs92"],
+            products=[
+                ProductDetails(
+                    name="wheat", classification_schema="hs92", codes=["1001"]
+                )
+            ],
+            requires_product_lookup=True,
+        )
+        candidates = [
+            ProductSearchResult(
+                name="wheat",
+                classification_schema="hs92",
+                llm_suggestions=[{"product_code": "1001", "product_name": "Wheat"}],
+                db_suggestions=[],
+            )
+        ]
+        final_codes = ProductCodesMapping(
+            mappings=[
+                ProductDetails(
+                    name="wheat", classification_schema="hs92", codes=["1001"]
+                )
+            ]
+        )
+
+        mock_llm = MagicMock()
+        mock_engine = MagicMock()
+
+        with patch("src.sql_pipeline.ProductAndSchemaLookup") as MockLookup:
+            mock_instance = MagicMock()
+            mock_instance.get_candidate_codes.return_value = candidates
+            mock_instance.aselect_final_codes_direct = AsyncMock(
+                return_value=final_codes
+            )
+            MockLookup.return_value = mock_instance
+
+            state = _base_state(
+                pipeline_question="US wheat exports?",
+                pipeline_products=products_found,
+                pipeline_context="Prefer 4-digit codes over 2-digit.",
+            )
+            await lookup_codes_node(state, llm=mock_llm, engine=mock_engine)
+
+        call_kwargs = mock_instance.aselect_final_codes_direct.call_args
+        assert call_kwargs.kwargs["context"] == "Prefer 4-digit codes over 2-digit."
 
 
 # ---------------------------------------------------------------------------
@@ -1138,6 +1215,60 @@ class TestFormatResultsNode:
         assert result["messages"][0].tool_call_id == "call_e1"
         assert result["messages"][1].tool_call_id == "call_e2"
         assert "one query" in result["messages"][1].content.lower()
+
+    async def test_assessment_prepended_when_surface_true(self):
+        """When pipeline_surface_to_agent is True, assessment is prepended with delimiters."""
+        msg = _make_tool_call_message(tool_call_id="call_assess")
+        state = _base_state(
+            messages=[msg],
+            pipeline_result="country | value\nBRA | 1000",
+            last_error="",
+            queries_executed=0,
+            pipeline_surface_to_agent=True,
+            pipeline_assessment="Only goods data; services not included.",
+        )
+
+        result = await format_results_node(state)
+
+        content = result["messages"][0].content
+        assert content.startswith("--- Assessment ---\n")
+        assert "Only goods data; services not included." in content
+        assert "--- Data ---\n" in content
+        assert "BRA | 1000" in content
+
+    async def test_no_assessment_when_surface_false(self):
+        """When pipeline_surface_to_agent is False, content is plain data."""
+        msg = _make_tool_call_message(tool_call_id="call_clean")
+        state = _base_state(
+            messages=[msg],
+            pipeline_result="country | value\nBRA | 1000",
+            last_error="",
+            queries_executed=0,
+            pipeline_surface_to_agent=False,
+            pipeline_assessment="Clean result.",
+        )
+
+        result = await format_results_node(state)
+
+        content = result["messages"][0].content
+        assert not content.startswith("--- Assessment ---")
+        assert "country | value" in content
+
+    async def test_no_assessment_when_key_missing(self):
+        """When pipeline_surface_to_agent is absent, no assessment prepended (backward compat)."""
+        msg = _make_tool_call_message(tool_call_id="call_compat")
+        state = _base_state(
+            messages=[msg],
+            pipeline_result="x | 42",
+            last_error="",
+            queries_executed=0,
+        )
+
+        result = await format_results_node(state)
+
+        content = result["messages"][0].content
+        assert not content.startswith("--- Assessment ---")
+        assert "x | 42" in content
 
 
 # ---------------------------------------------------------------------------

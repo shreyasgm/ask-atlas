@@ -201,3 +201,38 @@ class TestExtractPipelineStateCountries:
         result = _extract_pipeline_state("extract_products", snapshot)
 
         assert result["countries"] == []
+
+
+class TestExtractPipelineStateAssessment:
+    """Verify that _extract_pipeline_state includes assessment fields
+    in the sql_query_agent event payload."""
+
+    def test_sql_query_agent_includes_assessment_fields(self):
+        snapshot = {
+            "pipeline_sql": "SELECT 1",
+            "pipeline_question": "test?",
+            "pipeline_result_rows": [[1]],
+            "pipeline_execution_time_ms": 42,
+            "pipeline_sql_history": [],
+            "pipeline_reasoning_trace": [],
+            "pipeline_assessment": "Services data missing.",
+            "pipeline_surface_to_agent": True,
+        }
+        result = _extract_pipeline_state("sql_query_agent", snapshot)
+
+        assert result["assessment"] == "Services data missing."
+        assert result["surface_to_agent"] is True
+
+    def test_sql_query_agent_defaults_when_absent(self):
+        snapshot = {
+            "pipeline_sql": "SELECT 1",
+            "pipeline_question": "test?",
+            "pipeline_result_rows": [[1]],
+            "pipeline_execution_time_ms": 42,
+            "pipeline_sql_history": [],
+            "pipeline_reasoning_trace": [],
+        }
+        result = _extract_pipeline_state("sql_query_agent", snapshot)
+
+        assert result["assessment"] == ""
+        assert result["surface_to_agent"] is False
