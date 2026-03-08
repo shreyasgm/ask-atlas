@@ -88,6 +88,25 @@ def _load_enriched_data(run_dir: Path) -> dict[str, Any]:
             entry["ground_truth"] = None
             entry["ground_truth_atlas_url"] = ""
 
+        # Load web research
+        wr_path = (
+            EVALUATION_BASE_DIR / "results" / qid / "ground_truth" / "web_research.json"
+        )
+        if wr_path.exists():
+            try:
+                wr = load_json_file(wr_path)
+                entry["web_research"] = {
+                    "research_answer": wr.get("research_answer", ""),
+                    "sources": wr.get("sources", []),
+                    "confidence": wr.get("confidence", ""),
+                    "provider": wr.get("provider", ""),
+                    "model": wr.get("model", ""),
+                }
+            except Exception:
+                entry["web_research"] = None
+        else:
+            entry["web_research"] = None
+
         # Add expected_behavior for refusal questions
         if qid in expected_behaviors:
             entry["expected_behavior"] = expected_behaviors[qid]
@@ -1168,6 +1187,30 @@ function buildDetailHTML(q) {
           ).join('')}</tbody>
         </table>
       </div>
+    </div>`;
+  }
+
+  // Web research content (for web_research judge mode)
+  if (q.web_research && q.web_research.research_answer) {
+    const confBadge = q.web_research.confidence
+      ? ' <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:' +
+        (q.web_research.confidence === 'high' ? '#d1fae5;color:#065f46' : q.web_research.confidence === 'medium' ? '#fef3c7;color:#92400e' : '#fee2e2;color:#991b1b') +
+        '">' + esc(q.web_research.confidence) + ' confidence</span>'
+      : '';
+    const metaLine = [q.web_research.provider, q.web_research.model].filter(Boolean).join(' / ');
+    let wrRendered;
+    try { wrRendered = marked.parse(q.web_research.research_answer); }
+    catch(e) { wrRendered = '<pre>' + esc(q.web_research.research_answer) + '</pre>'; }
+    let sourcesHtml = '';
+    if (q.web_research.sources && q.web_research.sources.length > 0) {
+      sourcesHtml = '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:12px;"><strong>Sources:</strong><ol style="margin:4px 0 0 20px;padding:0;">' +
+        q.web_research.sources.map(s => '<li><a href="' + esc(s) + '" target="_blank" rel="noopener" style="color:#2563eb;word-break:break-all;">' + esc(s) + '</a></li>').join('') +
+        '</ol></div>';
+    }
+    primary += `<div class="detail-section">
+      <h4>Web Research Reference${confBadge}</h4>
+      ${metaLine ? '<div style="font-size:11px;color:#6b7280;margin-bottom:6px;">' + esc(metaLine) + '</div>' : ''}
+      <div class="content md-rendered" style="max-height:400px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:6px;padding:12px;">${wrRendered}${sourcesHtml}</div>
     </div>`;
   }
 
