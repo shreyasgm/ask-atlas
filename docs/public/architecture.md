@@ -299,7 +299,7 @@ Set via `model_config.py` (default: `"auto"`) and overridable per-request via `o
 **Graph topology:**
 
 ```mermaid
-graph LR
+graph TD
     START([START]) --> agent
     agent -->|no tool_calls| END_NODE([END])
     agent -->|no tool_calls, first time| tcn[tool_call_nudge]
