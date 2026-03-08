@@ -39,7 +39,9 @@ class AtlasGraphQLInput(BaseModel):
     )
     context: str = Field(
         default="",
-        description="Additional context from prior turns that may help answer the question. Optional.",
+        description="Optional corrective feedback or technical context. Use when retrying after an "
+        "unsatisfactory result (e.g., 'use HS92 classification', 'the country is Turkey "
+        "not the poultry product') or to pass methodology notes from docs_tool.",
     )
 
 

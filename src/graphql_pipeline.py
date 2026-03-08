@@ -832,6 +832,7 @@ async def _resolve_ids_inner(
     api_target = classification.get("api_target", "explore")
     query_type = classification.get("query_type", "")
     question = state["graphql_question"]
+    context = state.get("graphql_context", "")
 
     resolved: dict[str, Any] = {}
     resolution_notes: list[str] = []
@@ -850,6 +851,7 @@ async def _resolve_ids_inner(
             llm=lightweight_model,
             question=question,
             usage_sink=usage_sink,
+            context=context,
         )
         if country:
             resolved["country_id"] = country["countryId"]
@@ -873,6 +875,7 @@ async def _resolve_ids_inner(
             llm=lightweight_model,
             question=question,
             usage_sink=usage_sink,
+            context=context,
         )
         if partner:
             resolved["partner_id"] = partner["countryId"]
@@ -895,6 +898,7 @@ async def _resolve_ids_inner(
             llm=lightweight_model,
             question=question,
             usage_sink=usage_sink,
+            context=context,
         )
         if product:
             resolved["product_id"] = product["productId"]
@@ -911,6 +915,7 @@ async def _resolve_ids_inner(
             llm=lightweight_model,
             question=question,
             usage_sink=usage_sink,
+            context=context,
         )
         if service_entry:
             resolved["product_id"] = service_entry.get("productId")
@@ -960,6 +965,7 @@ async def _resolve_ids_inner(
             llm=lightweight_model,
             question=question,
             usage_sink=usage_sink,
+            context=context,
         )
         if group_entry:
             resolved["group_id"] = group_entry["groupId"]
@@ -981,6 +987,7 @@ async def _resolve_ids_inner(
             llm=lightweight_model,
             question=question,
             usage_sink=usage_sink,
+            context=context,
         )
         if partner_group_entry:
             resolved["partner_group_id"] = partner_group_entry["groupId"]
@@ -1070,6 +1077,7 @@ async def _resolve_entity(
     llm: Any,
     question: str,
     usage_sink: list[dict] | None = None,
+    context: str = "",
 ) -> dict[str, Any] | None:
     """Resolve an entity name/code to a catalog entry.
 
@@ -1081,6 +1089,7 @@ async def _resolve_entity(
     Args:
         usage_sink: Optional list to append token usage records to when
             the LLM is invoked for disambiguation.
+        context: Optional agent guidance passed through to the disambiguation prompt.
     """
     candidates: list[dict[str, Any]] = []
 
@@ -1123,6 +1132,7 @@ async def _resolve_entity(
             question=question,
             options=options,
             num_candidates=len(candidates),
+            context=context,
         )
         response = await llm.ainvoke(prompt)
 
@@ -1785,8 +1795,8 @@ def _enrich_items(
                 pid = item.get("productId")
                 if pid is not None:
                     entry = product_cache.lookup_sync("id", str(pid))
-                    # Fall back to services cache for service product IDs
-                    # (e.g., IDs 14, 400-404 which are not in the HS product cache)
+                    # Fall back to services cache if the product cache
+                    # misses (e.g., stale cache or classification mismatch)
                     if (
                         entry is None
                         and services_cache is not None

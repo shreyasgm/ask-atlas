@@ -598,6 +598,107 @@ class TestSqlQueryAgentNode:
         assert result["last_error"] == "column 'bad' does not exist"
         assert result["pipeline_result"] == ""
 
+    async def test_extracts_assessment_with_surface_true(self):
+        """When sub-agent calls report_results with surface_to_agent=True, fields are set."""
+        report_msg = AIMessage(
+            content="",
+            tool_calls=[
+                _tool_call(
+                    "report_results",
+                    {
+                        "assessment": "Data only covers goods, services missing.",
+                        "needs_verification": False,
+                        "surface_to_agent": True,
+                    },
+                    call_id="tc-report",
+                )
+            ],
+        )
+        report_tool_msg = ToolMessage(
+            content="Results reported.",
+            tool_call_id="tc-report",
+            name="report_results",
+        )
+        mock_subagent = AsyncMock()
+        mock_subagent.ainvoke.return_value = {
+            "sql": "SELECT 1",
+            "result": "1",
+            "result_columns": ["one"],
+            "result_rows": [[1]],
+            "execution_time_ms": 10,
+            "last_error": "",
+            "attempt_history": [],
+            "messages": [report_msg, report_tool_msg],
+        }
+
+        state = _base_parent_state()
+        result = await sql_query_agent_node(
+            state, subagent=mock_subagent, top_k=15, example_queries=[]
+        )
+
+        assert (
+            result["pipeline_assessment"] == "Data only covers goods, services missing."
+        )
+        assert result["pipeline_surface_to_agent"] is True
+
+    async def test_extracts_assessment_with_surface_false(self):
+        """When sub-agent calls report_results with surface_to_agent=False, surface flag is False."""
+        report_msg = AIMessage(
+            content="",
+            tool_calls=[
+                _tool_call(
+                    "report_results",
+                    {
+                        "assessment": "Clean result.",
+                        "needs_verification": False,
+                        "surface_to_agent": False,
+                    },
+                    call_id="tc-report",
+                )
+            ],
+        )
+        mock_subagent = AsyncMock()
+        mock_subagent.ainvoke.return_value = {
+            "sql": "SELECT 1",
+            "result": "1",
+            "result_columns": ["one"],
+            "result_rows": [[1]],
+            "execution_time_ms": 10,
+            "last_error": "",
+            "attempt_history": [],
+            "messages": [report_msg],
+        }
+
+        state = _base_parent_state()
+        result = await sql_query_agent_node(
+            state, subagent=mock_subagent, top_k=15, example_queries=[]
+        )
+
+        assert result["pipeline_assessment"] == "Clean result."
+        assert result["pipeline_surface_to_agent"] is False
+
+    async def test_no_report_results_defaults_empty(self):
+        """When sub-agent never calls report_results, assessment fields default to empty/False."""
+        mock_subagent = AsyncMock()
+        mock_subagent.ainvoke.return_value = {
+            "sql": "",
+            "result": "",
+            "result_columns": [],
+            "result_rows": [],
+            "execution_time_ms": 0,
+            "last_error": "max iterations",
+            "attempt_history": [],
+            "messages": [AIMessage(content="Failed.")],
+        }
+
+        state = _base_parent_state()
+        result = await sql_query_agent_node(
+            state, subagent=mock_subagent, top_k=15, example_queries=[]
+        )
+
+        assert result["pipeline_assessment"] == ""
+        assert result["pipeline_surface_to_agent"] is False
+
 
 # ---------------------------------------------------------------------------
 # Format result rows helper

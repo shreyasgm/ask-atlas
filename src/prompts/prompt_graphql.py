@@ -158,8 +158,11 @@ Supports per-metric yearRange overrides. Match lookback to question: "past five 
 **Services class** (`services_class`):
 - Set to "unilateral" when the question asks about total/all exports, top products, or \
 overall trade without limiting to goods. This includes services in the response.
-- Set to "bilateral" for bilateral services trade questions.
 - Leave as null when the question says "goods" or names a specific goods product.
+- **Data limitation:** Bilateral query types (treemap_bilateral, explore_bilateral, \
+group_bilateral, group_products) do NOT include services data — this is an API limitation. \
+If the user asks about services trade between two specific countries, note that only goods \
+data is available for bilateral queries.
 
 **Trade direction** (`trade_direction`):
 - Set to "imports" for import questions (keywords: "imports", "imported", "buys from", \
@@ -376,6 +379,7 @@ def build_id_resolution_prompt(
     question: str,
     options: str,
     num_candidates: int,
+    context: str = "",
 ) -> str:
     """Assemble the ID resolution disambiguation prompt.
 
@@ -383,12 +387,16 @@ def build_id_resolution_prompt(
         question: The original user question for context.
         options: Formatted numbered list of candidate entities.
         num_candidates: Total number of candidates.
+        context: Optional agent guidance to aid disambiguation.
 
     Returns:
         Formatted ID resolution prompt string.
     """
-    return ID_RESOLUTION_SELECTION_PROMPT.format(
+    prompt = ID_RESOLUTION_SELECTION_PROMPT.format(
         question=question,
         options=options,
         num_candidates=num_candidates,
     )
+    if context:
+        prompt += f"\n\nAgent guidance:\n{context}"
+    return prompt

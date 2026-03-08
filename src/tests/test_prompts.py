@@ -373,6 +373,17 @@ class TestBuildIdResolutionPrompt:
         result = prompts.build_id_resolution_prompt("q", "1. opt", 1)
         assert not _has_unresolved_format_fields(result)
 
+    def test_context_appended_when_provided(self):
+        result = prompts.build_id_resolution_prompt(
+            "q", "1. opt", 1, context="use HS92 classification"
+        )
+        assert "Agent guidance:" in result
+        assert "use HS92 classification" in result
+
+    def test_no_context_when_empty(self):
+        result = prompts.build_id_resolution_prompt("q", "1. opt", 1, context="")
+        assert "Agent guidance:" not in result
+
 
 # ---------------------------------------------------------------------------
 # Guard rail: no XML tags (provider-agnostic design rule)

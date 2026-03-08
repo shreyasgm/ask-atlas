@@ -220,6 +220,11 @@ def _extract_pipeline_state(node_name: str, state_snapshot: dict) -> dict:
         reasoning_traces = state_snapshot.get("pipeline_reasoning_trace", [])
         if reasoning_traces:
             base["reasoning_trace"] = reasoning_traces[-1]
+        # Include assessment fields from the SQL sub-agent
+        base["assessment"] = state_snapshot.get("pipeline_assessment", "")
+        base["surface_to_agent"] = state_snapshot.get(
+            "pipeline_surface_to_agent", False
+        )
 
     elif node_name == "format_results":
         base["query_index"] = state_snapshot.get("_query_index", 0)
