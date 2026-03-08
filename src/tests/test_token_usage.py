@@ -524,6 +524,8 @@ class TestPipelineNodesReturnStepTiming:
             "pipeline_result_rows": [["Brazil", 100]],
             "pipeline_execution_time_ms": 50,
             "pipeline_sql": "SELECT country FROM t",
+            "pipeline_assessment": "",
+            "pipeline_surface_to_agent": False,
         }
         result = asyncio.run(format_results_node(state))
 

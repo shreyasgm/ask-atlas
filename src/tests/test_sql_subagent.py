@@ -84,6 +84,8 @@ def _base_parent_state(**overrides) -> dict:
         "pipeline_result_columns": [],
         "pipeline_result_rows": [],
         "pipeline_execution_time_ms": 0,
+        "pipeline_assessment": "",
+        "pipeline_surface_to_agent": False,
         "turn_summaries": [],
         "token_usage": [],
         "step_timing": [],
