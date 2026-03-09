@@ -21,6 +21,13 @@ logger = logging.getLogger(__name__)
 # Shared rate limiter — smooths burst patterns to avoid provider throttling.
 # A single instance is shared across all LLM calls in the process so that
 # concurrent requests from different users are collectively throttled.
+#
+# NOTE: This is a per-process limiter. With multiple uvicorn workers (separate
+# OS processes) and multiple Cloud Run instances, each gets its own independent
+# rate limiter. This does NOT protect against hitting the provider's API-key-level
+# rate limits (RPM/TPM). Its purpose is to smooth local burst patterns only.
+# For actual provider rate limit protection, rely on the provider's 429 responses
+# and LangChain's built-in retry logic.
 # ---------------------------------------------------------------------------
 _rate_limiter = InMemoryRateLimiter(
     requests_per_second=10,
