@@ -28,7 +28,7 @@ const SCHEMA_OPTIONS: Array<ToggleOption<ClassificationSchema>> = [
 
 const SYSTEM_MODE_OPTIONS: Array<ToggleOption<SystemMode>> = [
   { label: 'Auto', value: null },
-  { label: 'GQL+SQL', value: 'graphql_sql' },
+  { label: 'GQL Only', value: 'graphql_only' },
   { label: 'SQL Only', value: 'sql_only' },
 ];
 

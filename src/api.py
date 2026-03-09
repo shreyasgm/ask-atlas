@@ -75,7 +75,7 @@ class ChatRequest(BaseModel):
     override_schema: Literal["hs92", "hs12", "sitc"] | None = None
     override_direction: Literal["exports", "imports"] | None = None
     override_mode: Literal["goods", "services"] | None = None
-    mode: Literal["auto", "sql_only", "graphql_sql"] | None = None
+    mode: Literal["auto", "sql_only", "graphql_only"] | None = None
 
 
 class QueryResultResponse(BaseModel):

@@ -14,7 +14,7 @@ export interface AtlasLink {
 }
 
 export type PipelineType = 'docs' | 'graphql' | 'sql';
-export type SystemMode = 'auto' | 'graphql_sql' | 'sql_only';
+export type SystemMode = 'auto' | 'graphql_only' | 'sql_only';
 
 export interface GraphqlClassification {
   apiTarget: string;
