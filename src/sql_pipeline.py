@@ -318,6 +318,60 @@ def get_table_info_for_schemas(
     return table_info
 
 
+async def aget_table_info_for_schemas(
+    db,
+    table_descriptions: Dict,
+    classification_schemas: List[str],
+    requires_group_tables: bool = False,
+) -> str:
+    """Async version of get_table_info_for_schemas.
+
+    Uses db.aget_table_info() instead of db.get_table_info(). Same cache.
+
+    Args:
+        db: AsyncSQLDatabaseWithSchemas (or any object with aget_table_info).
+        table_descriptions: Dict of table descriptions keyed by schema.
+        classification_schemas: List of classification schema names.
+        requires_group_tables: Whether to include group member tables.
+
+    Returns:
+        Formatted table info string with DDL and descriptions.
+    """
+    from src.cache import registry, table_info_cache, table_info_key
+
+    key = table_info_key(classification_schemas, requires_group_tables)
+    cached = table_info_cache.get(key)
+    if cached is not None:
+        registry.record_hit("table_info")
+        logger.debug("Cache HIT for table_info key=%s", key)
+        return cached
+
+    registry.record_miss("table_info")
+    logger.debug("Cache MISS for table_info key=%s", key)
+
+    tables = get_tables_in_schemas(
+        table_descriptions=table_descriptions,
+        classification_schemas=classification_schemas,
+    )
+    tables.extend(
+        _classification_tables_for_schemas(
+            classification_schemas, table_descriptions, requires_group_tables
+        )
+    )
+    tables = [table for table in tables if "group_group_" not in table["table_name"]]
+
+    table_info = ""
+    for table in tables:
+        table_info += (
+            f"Table: {table['table_name']}\nDescription: {table['context_str']}\n"
+        )
+        table_info += await db.aget_table_info(table_names=[table["table_name"]])
+        table_info += "\n\n"
+
+    table_info_cache[key] = table_info
+    return table_info
+
+
 # ---------------------------------------------------------------------------
 # Pipeline node functions (each takes AtlasAgentState, returns partial update)
 # ---------------------------------------------------------------------------
@@ -450,10 +504,15 @@ async def lookup_codes_node(
 async def get_table_info_node(
     state: AtlasAgentState,
     *,
-    db: SQLDatabaseWithSchemas,
+    db,
     table_descriptions: Dict,
+    async_db=None,
 ) -> dict:
-    """Get table info for the identified schemas."""
+    """Get table info for the identified schemas.
+
+    Uses async_db.aget_table_info when an async DB is available; falls back
+    to asyncio.to_thread with sync db otherwise.
+    """
     async with node_timer("get_table_info", "query_tool") as t:
         products = state.get("pipeline_products")
         schemas = products.classification_schemas if products else []
@@ -461,13 +520,21 @@ async def get_table_info_node(
             getattr(products, "requires_group_tables", False) if products else False
         )
         io_start = time.monotonic()
-        info = await asyncio.to_thread(
-            get_table_info_for_schemas,
-            db=db,
-            table_descriptions=table_descriptions,
-            classification_schemas=schemas,
-            requires_group_tables=requires_group,
-        )
+        if async_db is not None:
+            info = await aget_table_info_for_schemas(
+                db=async_db,
+                table_descriptions=table_descriptions,
+                classification_schemas=schemas,
+                requires_group_tables=requires_group,
+            )
+        else:
+            info = await asyncio.to_thread(
+                get_table_info_for_schemas,
+                db=db,
+                table_descriptions=table_descriptions,
+                classification_schemas=schemas,
+                requires_group_tables=requires_group,
+            )
         t.mark_io(io_start, time.monotonic())
     return {"pipeline_table_info": info, "step_timing": [t.record]}
 

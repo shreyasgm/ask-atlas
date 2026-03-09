@@ -13,7 +13,7 @@ from decimal import Decimal
 from sqlalchemy import exc as sa_exc
 import sqlglot
 from sqlglot import exp
-from src.sql_multiple_schemas import SQLDatabaseWithSchemas
+from src.sql_multiple_schemas import AsyncSQLDatabaseWithSchemas, SQLDatabaseWithSchemas
 from src.sql_pipeline import (
     load_example_queries,
     PIPELINE_NODES as SQL_PIPELINE_NODES,
@@ -586,6 +586,9 @@ class AtlasTextToSQL:
         attach_pool_listeners(instance.async_engine)
 
         instance.db = SQLDatabaseWithSchemas(engine=instance.engine)
+        instance.async_db = await AsyncSQLDatabaseWithSchemas.create(
+            instance.async_engine
+        )
         instance.table_descriptions = cls._load_json_as_dict(table_descriptions_json)
         instance.table_structure = cls._load_json_as_dict(table_structure_json)
         instance.example_queries = load_example_queries(
@@ -657,6 +660,7 @@ class AtlasTextToSQL:
             max_uses=instance.max_queries,
             checkpointer=checkpointer,
             async_engine=instance.async_engine,
+            async_db=instance.async_db,
             graphql_client=graphql_client,
             country_pages_client=country_pages_client,
             country_cache=country_catalog,

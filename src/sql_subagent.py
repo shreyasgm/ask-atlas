@@ -444,16 +444,24 @@ async def execute_sql_tool_node(
 async def explore_schema_node(
     state: SQLSubAgentState,
     *,
-    db: SQLDatabaseWithSchemas,
+    db,
     engine: Engine,
+    async_engine: AsyncEngine | None = None,
 ) -> dict:
-    """Handle explore_schema tool calls by querying the database schema."""
+    """Handle explore_schema tool calls by querying the database schema.
+
+    Uses async helpers when an async_engine is provided; falls back to
+    asyncio.to_thread with sync engine otherwise.
+    """
     last_msg = state["messages"][-1]
     tool_call = _find_tool_call(last_msg, "explore_schema")
     query = tool_call["args"]["query"].lower()
 
     try:
-        result = await asyncio.to_thread(_explore_schema_sync, query, db, engine)
+        if async_engine is not None:
+            result = await _explore_schema_async(query, db, async_engine)
+        else:
+            result = await asyncio.to_thread(_explore_schema_sync, query, db, engine)
     except Exception as e:
         result = f"Error exploring schema: {e}"
 
@@ -509,6 +517,51 @@ def _explore_schema_sync(query: str, db: SQLDatabaseWithSchemas, engine: Engine)
     if table_name:
         try:
             return db.get_table_info(table_names=[table_name])
+        except Exception as e:
+            return f"Error: {e}"
+
+    return (
+        "Available schemas: hs92, hs12, hs22, sitc, services_unilateral, services_bilateral, classification.\n"
+        "Try: 'List tables in hs92', 'Show columns in hs92.country_year', "
+        "'Show 5 sample rows from hs92.country_product_year_4'"
+    )
+
+
+async def _explore_schema_async(query: str, db, async_engine: AsyncEngine) -> str:
+    """Async schema exploration — uses async engine directly, no threads."""
+    if "sample" in query or "example rows" in query or "sample rows" in query:
+        table_name = _extract_table_name(query)
+        if table_name:
+            return await _aget_sample_rows(table_name, async_engine, limit=5)
+        return "Could not determine which table to sample. Please specify a table name."
+
+    if (
+        "what schemas" in query
+        or "available schemas" in query
+        or "list schemas" in query
+    ):
+        return _list_schemas(None)
+
+    if "list tables" in query or "tables in" in query:
+        schema_name = _extract_schema_name(query)
+        if schema_name:
+            return await _alist_tables_in_schema(schema_name, async_engine)
+        return "Could not determine which schema. Available: hs92, hs12, hs22, sitc, services_unilateral, services_bilateral, classification."
+
+    if "columns" in query or "show columns" in query or "ddl" in query:
+        table_name = _extract_table_name(query)
+        if table_name:
+            try:
+                return await db.aget_table_info(table_names=[table_name])
+            except Exception as e:
+                return f"Error getting DDL for {table_name}: {e}"
+        return "Could not determine which table. Please specify a schema-qualified table name (e.g. hs92.country_year)."
+
+    # Default: try to get DDL for any table name found in the query
+    table_name = _extract_table_name(query)
+    if table_name:
+        try:
+            return await db.aget_table_info(table_names=[table_name])
         except Exception as e:
             return f"Error: {e}"
 
@@ -583,10 +636,46 @@ def _list_tables_in_schema(schema_name: str, engine: Engine) -> str:
     )
 
 
+async def _alist_tables_in_schema(schema_name: str, async_engine: AsyncEngine) -> str:
+    """Async version: list tables in a specific schema."""
+    async with async_engine.connect() as conn:
+        result = await conn.execute(
+            text(
+                "SELECT table_name FROM information_schema.tables "
+                "WHERE table_schema = :schema ORDER BY table_name"
+            ),
+            {"schema": schema_name},
+        )
+        tables = [row[0] for row in result]
+    if not tables:
+        return f"No tables found in schema '{schema_name}'."
+    return f"Tables in {schema_name}:\n" + "\n".join(
+        f"- {schema_name}.{t}" for t in tables
+    )
+
+
 def _get_sample_rows(table_name: str, engine: Engine, limit: int = 5) -> str:
     """Get sample rows from a table."""
     with engine.connect() as conn:
         result = conn.execute(
+            text(f"SELECT * FROM {table_name} LIMIT :limit"), {"limit": limit}
+        )
+        columns = list(result.keys())
+        rows = result.fetchall()
+    if not rows:
+        return f"No rows in {table_name}."
+    header = " | ".join(columns)
+    separator = "-|-".join("-" * len(c) for c in columns)
+    data_rows = "\n".join(" | ".join(str(v) for v in row) for row in rows)
+    return f"Sample rows from {table_name} ({len(rows)} rows):\n{header}\n{separator}\n{data_rows}"
+
+
+async def _aget_sample_rows(
+    table_name: str, async_engine: AsyncEngine, limit: int = 5
+) -> str:
+    """Async version: get sample rows from a table."""
+    async with async_engine.connect() as conn:
+        result = await conn.execute(
             text(f"SELECT * FROM {table_name} LIMIT :limit"), {"limit": limit}
         )
         columns = list(result.keys())
@@ -604,9 +693,10 @@ async def lookup_products_node(
     *,
     lightweight_llm: BaseLanguageModel,
     engine: Engine,
-    db: SQLDatabaseWithSchemas,
+    db,
     table_descriptions: Dict,
     async_engine: AsyncEngine | None = None,
+    async_db=None,
 ) -> dict:
     """Re-extract product codes with a guidance instruction."""
     last_msg = state["messages"][-1]
@@ -644,13 +734,23 @@ async def lookup_products_node(
             new_codes = ""
 
         # Get updated DDL for any newly identified schemas
-        new_table_info = await asyncio.to_thread(
-            get_table_info_for_schemas,
-            db=db,
-            table_descriptions=table_descriptions,
-            classification_schemas=products.classification_schemas,
-            requires_group_tables=getattr(products, "requires_group_tables", False),
-        )
+        if async_db is not None:
+            from src.sql_pipeline import aget_table_info_for_schemas
+
+            new_table_info = await aget_table_info_for_schemas(
+                db=async_db,
+                table_descriptions=table_descriptions,
+                classification_schemas=products.classification_schemas,
+                requires_group_tables=getattr(products, "requires_group_tables", False),
+            )
+        else:
+            new_table_info = await asyncio.to_thread(
+                get_table_info_for_schemas,
+                db=db,
+                table_descriptions=table_descriptions,
+                classification_schemas=products.classification_schemas,
+                requires_group_tables=getattr(products, "requires_group_tables", False),
+            )
 
         response_parts = [
             f"Re-extracted products with instruction: {instruction}",
@@ -818,10 +918,11 @@ def build_sql_subagent(
     *,
     llm: BaseLanguageModel,
     lightweight_llm: BaseLanguageModel,
-    db: SQLDatabaseWithSchemas,
+    db,
     engine: Engine,
     table_descriptions: Dict,
     async_engine: AsyncEngine | Engine | None = None,
+    async_db=None,
     top_k: int = 15,
 ):
     """Build the SQL sub-agent subgraph.
@@ -833,6 +934,7 @@ def build_sql_subagent(
         engine: Sync SQLAlchemy engine.
         table_descriptions: Table descriptions dict.
         async_engine: Async or sync engine for SQL execution.
+        async_db: Optional AsyncSQLDatabaseWithSchemas for async DDL.
         top_k: Default row limit.
 
     Returns:
@@ -841,6 +943,7 @@ def build_sql_subagent(
     from functools import partial
 
     _exec_engine = async_engine if async_engine is not None else engine
+    _real_async_engine = async_engine if isinstance(async_engine, AsyncEngine) else None
 
     builder = StateGraph(SQLSubAgentState)
 
@@ -852,9 +955,16 @@ def build_sql_subagent(
         "execute_sql",
         partial(execute_sql_tool_node, async_engine=_exec_engine),
     )
+    # Use async_db for DDL if available; use async_engine for sample rows/table listing
+    _explore_db = async_db if async_db is not None else db
     builder.add_node(
         "explore_schema",
-        partial(explore_schema_node, db=db, engine=engine),
+        partial(
+            explore_schema_node,
+            db=_explore_db,
+            engine=engine,
+            async_engine=_real_async_engine,
+        ),
     )
     builder.add_node(
         "lookup_products",
@@ -864,9 +974,8 @@ def build_sql_subagent(
             engine=engine,
             db=db,
             table_descriptions=table_descriptions,
-            async_engine=(
-                async_engine if isinstance(async_engine, AsyncEngine) else None
-            ),
+            async_engine=_real_async_engine,
+            async_db=async_db,
         ),
     )
 

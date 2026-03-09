@@ -76,6 +76,7 @@ def build_atlas_graph(
     max_uses: int = 3,
     checkpointer: BaseCheckpointSaver | None = None,
     async_engine: AsyncEngine | None = None,
+    async_db=None,
     graphql_client=None,
     country_pages_client=None,
     country_cache=None,
@@ -207,7 +208,12 @@ def build_atlas_graph(
     builder.add_node("lookup_codes", partial(lookup_codes_node, **_lookup_kwargs))
     builder.add_node(
         "get_table_info",
-        partial(get_table_info_node, db=db, table_descriptions=table_descriptions),
+        partial(
+            get_table_info_node,
+            db=db,
+            table_descriptions=table_descriptions,
+            async_db=async_db,
+        ),
     )
     # SQL sub-agent (replaces generate_sql + validate_sql + execute_sql + retry loop)
     _subagent, _top_k = build_sql_subagent(
@@ -217,6 +223,7 @@ def build_atlas_graph(
         engine=engine,
         table_descriptions=table_descriptions,
         async_engine=async_engine if async_engine is not None else engine,
+        async_db=async_db,
         top_k=top_k_per_query,
     )
     builder.add_node(
