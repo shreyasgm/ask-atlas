@@ -88,9 +88,24 @@ def compare_runs(run_a: str, run_b: str) -> str:
     lines.append("| Metric | Run A | Run B | Delta |")
     lines.append("|--------|-------|-------|-------|")
 
+    # Scoring version detection
+    has_pass_count_a = any(
+        q.get("judge_details", {}).get("pass_count") is not None
+        for q in report_a.get("per_question", [])
+    )
+    has_pass_count_b = any(
+        q.get("judge_details", {}).get("pass_count") is not None
+        for q in report_b.get("per_question", [])
+    )
+    if has_pass_count_a != has_pass_count_b:
+        lines.append(
+            "\n> **Warning**: Comparing old Likert (1-5) scoring with new binary "
+            "pass/fail scoring. Score deltas may not be meaningful.\n"
+        )
+
     for key, label in [
         ("count", "Questions"),
-        ("avg_weighted_score", "Avg Score"),
+        ("avg_pass_count", "Avg Pass Count"),
         ("pass_rate", "Pass Rate (%)"),
         ("pass_count", "Pass"),
         ("partial_count", "Partial"),
@@ -107,6 +122,31 @@ def compare_runs(run_a: str, run_b: str) -> str:
         else:
             delta_str = "—"
         lines.append(f"| {label} | {va} | {vb} | {delta_str} |")
+
+    # By Judge Mode comparison
+    bjm_a = report_a.get("by_judge_mode", {})
+    bjm_b = report_b.get("by_judge_mode", {})
+    all_modes = sorted(set(bjm_a.keys()) | set(bjm_b.keys()))
+    if all_modes:
+        lines.append("\n## By Judge Mode\n")
+        lines.append("| Mode | Run A Pass Rate | Run B Pass Rate | Delta |")
+        lines.append("|------|----------------|----------------|-------|")
+        for mode in all_modes:
+            pr_a = bjm_a.get(mode, {}).get("pass_rate", 0)
+            pr_b = bjm_b.get(mode, {}).get("pass_rate", 0)
+            delta = round(pr_b - pr_a, 1)
+            delta_str = f"+{delta}" if delta > 0 else str(delta)
+            cnt_a = bjm_a.get(mode, {}).get("count", 0)
+            cnt_b = bjm_b.get(mode, {}).get("count", 0)
+            # Flag mode distribution shifts > 10%
+            total_a = sum(m.get("count", 0) for m in bjm_a.values()) or 1
+            total_b = sum(m.get("count", 0) for m in bjm_b.values()) or 1
+            pct_a = cnt_a / total_a * 100
+            pct_b = cnt_b / total_b * 100
+            shift_note = " (distribution shift!)" if abs(pct_b - pct_a) > 10 else ""
+            lines.append(
+                f"| {mode} | {pr_a}% ({cnt_a}) | {pr_b}% ({cnt_b}) | {delta_str}%{shift_note} |"
+            )
 
     # Per-question comparison
     pq_a = _per_question_index(report_a)
@@ -238,11 +278,8 @@ def main() -> None:
             summary = _load_summary(run_id)
             report = _load_report(run_id)
             qs = summary.get("questions_run", "?") if summary else "?"
-            score = (
-                report.get("aggregate", {}).get("avg_weighted_score", "?")
-                if report
-                else "?"
-            )
+            agg = report.get("aggregate", {}) if report else {}
+            score = agg.get("avg_pass_count", agg.get("avg_weighted_score", "?"))
             model = summary.get("agent_model", "?") if summary else "?"
             print(f"  {run_id}  ({qs} questions, avg={score}, model={model})")
         return

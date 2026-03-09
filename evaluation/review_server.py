@@ -314,6 +314,7 @@ async def rejudge_question(qid: str) -> dict[str, Any]:
     # Update report entry with new verdict
     entry["verdict"] = verdict.get("verdict")
     entry["weighted_score"] = verdict.get("weighted_score")
+    entry["pass_count"] = verdict.get("pass_count")
     entry["judge_mode"] = verdict.get("judge_mode")
     entry["judge_comment"] = verdict.get("overall_comment", "")
     entry["judge_details"] = verdict
@@ -344,6 +345,7 @@ async def rejudge_question(qid: str) -> dict[str, Any]:
     return {
         "status": "ok",
         "verdict": verdict.get("verdict"),
+        "pass_count": verdict.get("pass_count"),
         "weighted_score": verdict.get("weighted_score"),
         "judge_details": verdict,
         "link_verdict": link_verdict,

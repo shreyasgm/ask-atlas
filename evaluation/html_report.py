@@ -366,7 +366,7 @@ function renderDashboard() {
   const stats = [
     { label: 'Questions', value: a.count || 0 },
     { label: 'Pass Rate', value: (a.pass_rate || 0) + '%', sub: `${a.pass_count || 0}P / ${a.partial_count || 0}M / ${a.fail_count || 0}F` },
-    { label: 'Avg Score', value: (a.avg_weighted_score || 0).toFixed(2), sub: 'out of 5.0' },
+    { label: 'Avg Pass Count', value: (a.avg_pass_count != null ? a.avg_pass_count : a.avg_weighted_score || 0).toFixed(1), sub: '/ 4' },
     { label: 'Duration', value: formatDuration(rs.total_duration_s || 0), sub: 'avg ' + formatDuration(rs.avg_question_duration_s || 0) + '/q' },
   ];
 
@@ -388,9 +388,19 @@ function renderDashboard() {
     stats.push({ label: 'Budget Violations', value: bv.total_violations, sub: bv.duration_violations + ' duration, ' + bv.cost_violations + ' cost' });
   }
 
-  // Add dimension averages
-  for (const [dim, score] of Object.entries(dims)) {
-    stats.push({ label: dim.replace(/_/g, ' '), value: score.toFixed(2), sub: '/5.0' });
+  // Add dimension pass rates
+  for (const [dim, rate] of Object.entries(dims)) {
+    // v2: rate is 0.0-1.0 fraction; v1 compat: rate > 1.0 means old Likert average
+    const pct = rate <= 1.0 ? (rate * 100).toFixed(1) : ((rate / 5.0) * 100).toFixed(1);
+    stats.push({ label: dim.replace(/_/g, ' '), value: pct + '%', sub: 'pass rate' });
+  }
+
+  // Per-mode summary cards
+  const bjm = REPORT.by_judge_mode || {};
+  for (const [mode, ms] of Object.entries(bjm)) {
+    const modeLabel = mode.replace(/_/g, ' ');
+    const avgPC = ms.avg_pass_count != null ? ms.avg_pass_count : ms.avg_weighted_score || 0;
+    stats.push({ label: modeLabel, value: (ms.pass_rate || 0).toFixed(1) + '%', sub: ms.count + ' qs · avg ' + avgPC.toFixed(1) + '/4' });
   }
 
   // Link judge aggregate
@@ -544,10 +554,11 @@ function renderBreakdown(tab) {
 
   el.innerHTML = `
     <table class="breakdown-table">
-      <thead><tr><th>${esc(tab === 'pipeline' ? 'Pipeline' : tab.charAt(0).toUpperCase() + tab.slice(1))}</th><th>Count</th><th>Avg Score</th><th>Pass Rate</th><th>Pass</th><th>Partial</th><th>Fail</th></tr></thead>
-      <tbody>${Object.entries(data).sort((a,b) => a[0].localeCompare(b[0])).map(([k, v]) =>
-        `<tr><td>${esc(k)}</td><td>${v.count}</td><td>${(v.avg_weighted_score || 0).toFixed(2)}</td><td>${(v.pass_rate || 0).toFixed(1)}%</td><td>${v.pass_count || 0}</td><td>${v.partial_count || 0}</td><td>${v.fail_count || 0}</td></tr>`
-      ).join('')}</tbody>
+      <thead><tr><th>${esc(tab === 'pipeline' ? 'Pipeline' : tab.charAt(0).toUpperCase() + tab.slice(1))}</th><th>Count</th><th>Avg Pass Count</th><th>Pass Rate</th><th>Pass</th><th>Partial</th><th>Fail</th></tr></thead>
+      <tbody>${Object.entries(data).sort((a,b) => a[0].localeCompare(b[0])).map(([k, v]) => {
+        const avg = v.avg_pass_count != null ? v.avg_pass_count : (v.avg_weighted_score || 0);
+        return `<tr><td>${esc(k)}</td><td>${v.count}</td><td>${avg.toFixed(1)}/4</td><td>${(v.pass_rate || 0).toFixed(1)}%</td><td>${v.pass_count || 0}</td><td>${v.partial_count || 0}</td><td>${v.fail_count || 0}</td></tr>`;
+      }).join('')}</tbody>
     </table>
   `;
 }
@@ -597,7 +608,7 @@ function renderQuestions(questions) {
         <div class="badges">
           <span class="badge ${esc(q.difficulty || '')}">${esc(q.difficulty || '')}</span>
           <span class="badge cat">${esc(q.category || '')}</span>
-          <span class="badge score">${(q.weighted_score || 0).toFixed(1)}/5</span>
+          <span class="badge score">${Math.round(q.pass_count != null ? q.pass_count : (q.weighted_score || 0))}/4</span>
           <span class="badge ${verdictClass}">${esc(q.verdict || 'n/a')}</span>
           ${q.judge_mode ? `<span class="badge mode">${esc(q.judge_mode)}</span>` : ''}
         </div>
@@ -758,9 +769,9 @@ function buildVerdictSummary(q) {
     ? ' <span style="font-size:11px;color:#94a3b8;text-transform:none;letter-spacing:0;font-weight:400;">(' + formatDuration(q.duration_s) + ')</span>'
     : '';
 
-  // Data-driven dimension discovery
+  // Data-driven dimension discovery — supports both v2 (passed) and v1 (score)
   const dimEntries = Object.entries(jd).filter(
-    ([k, v]) => v && typeof v === 'object' && v.score != null && v.reasoning != null
+    ([k, v]) => v && typeof v === 'object' && (v.passed != null || v.score != null) && v.reasoning != null
   );
 
   const hasRefusal = jd.judge_mode === 'refusal';
@@ -769,19 +780,32 @@ function buildVerdictSummary(q) {
 
   html += '<div class="detail-section"><h4>Judge Verdict' + durationBadge + '</h4><div class="content">';
 
-  // Dimension score bars
+  // Dimension pass/fail badges (v2) or score bars (v1 fallback)
   if (dimEntries.length > 0) {
     html += '<div class="dim-bars">';
     for (const [d, v] of dimEntries) {
-      const score = v.score;
-      const pct = score / 5 * 100;
-      const cls = score >= 4 ? 'high' : score >= 3 ? 'mid' : 'low';
       const label = d.replace(/_/g, ' ');
-      html += `<div class="dim-bar">
-        <span class="dim-label">${esc(label)}</span>
-        <div class="bar-bg"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
-        <span class="dim-score">${score}/5</span>
-      </div>`;
+      if (v.passed != null) {
+        // Binary pass/fail badge
+        const cls = v.passed ? 'high' : 'low';
+        const pct = v.passed ? 100 : 0;
+        const badge = v.passed ? 'PASS' : 'FAIL';
+        html += `<div class="dim-bar">
+          <span class="dim-label">${esc(label)}</span>
+          <div class="bar-bg"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
+          <span class="dim-score" style="color:${v.passed ? '#22c55e' : '#ef4444'};font-weight:700;">${badge}</span>
+        </div>`;
+      } else {
+        // Legacy 1-5 score bar
+        const score = v.score;
+        const pct = score / 5 * 100;
+        const cls = score >= 4 ? 'high' : score >= 3 ? 'mid' : 'low';
+        html += `<div class="dim-bar">
+          <span class="dim-label">${esc(label)}</span>
+          <div class="bar-bg"><div class="bar-fill ${cls}" style="width:${pct}%"></div></div>
+          <span class="dim-score">${score}/5</span>
+        </div>`;
+      }
     }
     html += '</div>';
     // Dimension reasoning
@@ -1680,7 +1704,7 @@ async function rejudge(qid) {
       q.judge_mode = result.judge_details.judge_mode || q.judge_mode;
       if (result.link_verdict) q.link_judge = result.link_verdict;
     }
-    statusEl.innerHTML = '<span class="status-msg">New verdict: <strong>' + esc(result.verdict) + '</strong> (' + (result.weighted_score || 0).toFixed(2) + '/5)</span>';
+    statusEl.innerHTML = '<span class="status-msg">New verdict: <strong>' + esc(result.verdict) + '</strong> (' + (result.pass_count != null ? result.pass_count : (result.weighted_score || 0)) + '/4)</span>';
     showToast('Q' + qid + ' re-judged: ' + result.verdict, 'success');
     // Force detail re-render on next toggle
     const questions = getFilteredQuestions();

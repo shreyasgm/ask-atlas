@@ -22,25 +22,32 @@ BUDGET_THRESHOLD_COST_USD = 0.05
 
 
 def _aggregate_scores(verdicts: list[dict]) -> dict[str, Any]:
-    """Compute aggregate statistics over a list of judge verdicts."""
+    """Compute aggregate statistics over a list of judge verdicts.
+
+    Reads ``pass_count`` (scoring v2) with fallback to ``weighted_score``
+    (scoring v1 / Likert) for backward compatibility.
+    """
     if not verdicts:
         return {
             "count": 0,
-            "avg_weighted_score": 0,
+            "avg_pass_count": 0,
+            "avg_weighted_score": 0,  # backward compat alias
             "pass_rate": 0,
             "pass_count": 0,
             "partial_count": 0,
             "fail_count": 0,
         }
 
-    scores = [v["weighted_score"] for v in verdicts if "weighted_score" in v]
+    scores = [v.get("pass_count", v.get("weighted_score", 0)) for v in verdicts]
     pass_count = sum(1 for v in verdicts if v.get("verdict") == "pass")
     partial_count = sum(1 for v in verdicts if v.get("verdict") == "partial")
     fail_count = sum(1 for v in verdicts if v.get("verdict") == "fail")
 
+    avg = round(sum(scores) / len(scores), 3) if scores else 0
     return {
         "count": len(verdicts),
-        "avg_weighted_score": round(sum(scores) / len(scores), 3) if scores else 0,
+        "avg_pass_count": avg,
+        "avg_weighted_score": avg,  # backward compat alias
         "pass_count": pass_count,
         "partial_count": partial_count,
         "fail_count": fail_count,
@@ -49,16 +56,27 @@ def _aggregate_scores(verdicts: list[dict]) -> dict[str, Any]:
 
 
 def _dimension_averages(verdicts: list[dict]) -> dict[str, float]:
-    """Average each scoring dimension across verdicts (ground-truth ones only)."""
+    """Compute pass rate per scoring dimension across verdicts.
+
+    Handles both scoring v2 (``passed`` bool) and v1 (``score`` int, treated
+    as pass if >= 4) for backward compatibility.
+
+    Returns fraction (0.0-1.0) per dimension.
+    """
     dims = ["factual_correctness", "data_accuracy", "completeness", "reasoning_quality"]
     avgs = {}
     for dim in dims:
-        scores = [
-            v[dim]["score"]
-            for v in verdicts
-            if isinstance(v.get(dim), dict) and "score" in v[dim]
-        ]
-        avgs[dim] = round(sum(scores) / len(scores), 2) if scores else 0
+        passes: list[bool] = []
+        for v in verdicts:
+            d = v.get(dim)
+            if not isinstance(d, dict):
+                continue
+            if "passed" in d:
+                passes.append(d["passed"])
+            elif "score" in d:
+                # Legacy Likert: treat score >= 4 as pass
+                passes.append(d["score"] >= 4)
+        avgs[dim] = round(sum(passes) / len(passes), 3) if passes else 0.0
     return avgs
 
 
@@ -440,6 +458,7 @@ def generate_report(
     by_category: dict[str, list[dict]] = defaultdict(list)
     by_difficulty: dict[str, list[dict]] = defaultdict(list)
     by_pipeline: dict[str, list[dict]] = defaultdict(list)
+    by_judge_mode: dict[str, list[dict]] = defaultdict(list)
     all_verdicts: list[dict] = []
     all_link_verdicts: list[dict] = []
 
@@ -465,6 +484,7 @@ def generate_report(
             "status": run.get("status", "error"),
             "duration_s": run.get("duration_s"),
             "verdict": verdict.get("verdict", "n/a"),
+            "pass_count": verdict.get("pass_count"),
             "weighted_score": verdict.get("weighted_score", 0),
             "judge_mode": verdict.get("judge_mode", "n/a"),
             "error": run.get("error"),
@@ -485,6 +505,8 @@ def generate_report(
             by_category[entry["category"]].append(verdict)
             by_difficulty[entry["difficulty"]].append(verdict)
             by_pipeline[pipeline_used].append(verdict)
+            judge_mode = verdict.get("judge_mode", "unknown")
+            by_judge_mode[judge_mode].append(verdict)
 
     cost_analysis = _aggregate_costs(run_results)
 
@@ -503,6 +525,17 @@ def generate_report(
         },
         "by_pipeline": {
             pipe: _aggregate_scores(vds) for pipe, vds in sorted(by_pipeline.items())
+        },
+        "by_judge_mode": {
+            mode: {
+                **_aggregate_scores(vds),
+                **(
+                    {"dimension_averages": _dimension_averages(vds)}
+                    if mode in ("ground_truth", "web_research")
+                    else {}
+                ),
+            }
+            for mode, vds in sorted(by_judge_mode.items())
         },
         "failed_questions": [
             {
@@ -553,7 +586,8 @@ def report_to_markdown(report: dict[str, Any]) -> str:
     lines.append("| Metric | Value |")
     lines.append("|--------|-------|")
     lines.append(f"| Questions evaluated | {agg['count']} |")
-    lines.append(f"| Avg weighted score | {agg['avg_weighted_score']} / 5.0 |")
+    avg_pc = agg.get("avg_pass_count", agg.get("avg_weighted_score", 0))
+    lines.append(f"| Avg Pass Count | {avg_pc} / 4 |")
     lines.append(f"| Pass rate | {agg['pass_rate']}% |")
     lines.append(
         f"| Pass / Partial / Fail | {agg['pass_count']} / {agg['partial_count']} / {agg['fail_count']} |"
@@ -575,14 +609,18 @@ def report_to_markdown(report: dict[str, Any]) -> str:
                 f"| Slowest question | Q{slowest['id']} ({slowest['duration_s']}s) |"
             )
 
-    # Dimension averages
+    # Dimension averages (pass rates)
     dims = report.get("dimension_averages", {})
     if dims:
-        lines.append("\n## Dimension Averages\n")
-        lines.append("| Dimension | Avg Score |")
+        lines.append("\n## Dimension Pass Rates\n")
+        lines.append("_Only ground_truth and web_research questions contribute._\n")
+        lines.append("| Dimension | Pass Rate |")
         lines.append("|-----------|-----------|")
-        for dim, score in dims.items():
-            lines.append(f"| {dim.replace('_', ' ').title()} | {score} / 5.0 |")
+        for dim, rate in dims.items():
+            pct = (
+                round(rate * 100, 1) if isinstance(rate, float) and rate <= 1 else rate
+            )
+            lines.append(f"| {dim.replace('_', ' ').title()} | {pct}% |")
 
     # Link Judge Summary
     lj = report.get("link_judge_aggregate", {})
@@ -608,33 +646,48 @@ def report_to_markdown(report: dict[str, Any]) -> str:
     by_cat = report.get("by_category", {})
     if by_cat:
         lines.append("\n## By Category\n")
-        lines.append("| Category | Count | Avg Score | Pass Rate |")
-        lines.append("|----------|-------|-----------|-----------|")
+        lines.append("| Category | Count | Avg Pass Count | Pass Rate |")
+        lines.append("|----------|-------|----------------|-----------|")
         for cat, stats in by_cat.items():
+            avg = stats.get("avg_pass_count", stats.get("avg_weighted_score", 0))
             lines.append(
-                f"| {cat} | {stats['count']} | {stats['avg_weighted_score']} | {stats['pass_rate']}% |"
+                f"| {cat} | {stats['count']} | {avg} | {stats['pass_rate']}% |"
             )
 
     # By difficulty
     by_diff = report.get("by_difficulty", {})
     if by_diff:
         lines.append("\n## By Difficulty\n")
-        lines.append("| Difficulty | Count | Avg Score | Pass Rate |")
-        lines.append("|------------|-------|-----------|-----------|")
+        lines.append("| Difficulty | Count | Avg Pass Count | Pass Rate |")
+        lines.append("|------------|-------|----------------|-----------|")
         for diff, stats in by_diff.items():
+            avg = stats.get("avg_pass_count", stats.get("avg_weighted_score", 0))
             lines.append(
-                f"| {diff} | {stats['count']} | {stats['avg_weighted_score']} | {stats['pass_rate']}% |"
+                f"| {diff} | {stats['count']} | {avg} | {stats['pass_rate']}% |"
+            )
+
+    # By judge mode
+    by_jm = report.get("by_judge_mode", {})
+    if by_jm:
+        lines.append("\n## By Judge Mode\n")
+        lines.append("| Mode | Count | Avg Pass Count | Pass Rate |")
+        lines.append("|------|-------|----------------|-----------|")
+        for mode, stats in by_jm.items():
+            avg = stats.get("avg_pass_count", stats.get("avg_weighted_score", 0))
+            lines.append(
+                f"| {mode} | {stats['count']} | {avg} | {stats['pass_rate']}% |"
             )
 
     # By pipeline
     by_pipe = report.get("by_pipeline", {})
     if by_pipe:
         lines.append("\n## By Pipeline\n")
-        lines.append("| Pipeline | Count | Avg Score | Pass Rate |")
-        lines.append("|----------|-------|-----------|-----------|")
+        lines.append("| Pipeline | Count | Avg Pass Count | Pass Rate |")
+        lines.append("|----------|-------|----------------|-----------|")
         for pipe, stats in by_pipe.items():
+            avg = stats.get("avg_pass_count", stats.get("avg_weighted_score", 0))
             lines.append(
-                f"| {pipe} | {stats['count']} | {stats['avg_weighted_score']} | {stats['pass_rate']}% |"
+                f"| {pipe} | {stats['count']} | {avg} | {stats['pass_rate']}% |"
             )
 
     # Cost analysis

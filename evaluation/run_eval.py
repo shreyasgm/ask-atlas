@@ -331,10 +331,25 @@ def _append_history(
     cost_analysis = report.get("cost_analysis", {})
     budget_violations = report.get("budget_violations", {})
 
+    avg_pc = agg.get("avg_pass_count", agg.get("avg_weighted_score", 0))
+
+    # Per-mode summary
+    by_jm = report.get("by_judge_mode", {})
+    by_judge_mode_summary = {
+        mode: {
+            "count": ms.get("count", 0),
+            "pass_rate": ms.get("pass_rate", 0),
+            "avg_pass_count": ms.get("avg_pass_count", ms.get("avg_weighted_score", 0)),
+        }
+        for mode, ms in by_jm.items()
+    }
+
     entry = {
         "timestamp": run_dir_name,
+        "scoring_version": 2,
         "questions_run": agg["count"],
-        "avg_score": agg["avg_weighted_score"],
+        "avg_pass_count": avg_pc,
+        "avg_score": avg_pc,  # backward compat alias
         "pass_rate": agg["pass_rate"],
         "pass": agg["pass_count"],
         "partial": agg["partial_count"],
@@ -347,6 +362,7 @@ def _append_history(
         "p90_duration_ms": latency.get("p90_total_ms"),
         "avg_cost_usd": cost_analysis.get("avg_cost_per_question_usd"),
         "budget_violations": budget_violations.get("total_violations", 0),
+        "by_judge_mode": by_judge_mode_summary,
     }
     history_path = EVALUATION_BASE_DIR / "runs" / "history.jsonl"
     with open(history_path, "a") as f:
@@ -535,9 +551,10 @@ async def main() -> None:
     # Print summary
     agg = report["aggregate"]
     logging.info("=" * 60)
+    avg_pc = agg.get("avg_pass_count", agg.get("avg_weighted_score", 0))
     logging.info("RESULTS SUMMARY")
     logging.info(f"  Questions evaluated: {agg['count']}")
-    logging.info(f"  Avg weighted score:  {agg['avg_weighted_score']} / 5.0")
+    logging.info(f"  Avg pass count:      {avg_pc} / 4")
     logging.info(f"  Pass rate:           {agg['pass_rate']}%")
     logging.info(
         f"  Pass/Partial/Fail:   {agg['pass_count']}/{agg['partial_count']}/{agg['fail_count']}"

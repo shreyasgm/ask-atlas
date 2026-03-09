@@ -4,7 +4,7 @@
 Four evaluation paths:
 
 1. **Ground truth** — agent's text answer is scored against verified data rows
-   from executed SQL (4-dimension rubric, 1-5 each).
+   from executed SQL (binary pass/fail per dimension).
 2. **Refusal** — for out-of-scope / data-boundary questions with an
    ``expected_behavior`` field, checks whether the agent refused appropriately.
 3. **Web research** — for questions without SQL ground truth or expected_behavior,
@@ -14,6 +14,8 @@ Four evaluation paths:
    its own knowledge to assess whether the answer is roughly plausible
    (not fabricated nonsense).  These results are flagged as
    ``"judge_mode": "plausibility"``.
+
+Scoring version 2: binary pass/fail per dimension (replacing Likert 1-5).
 """
 
 from __future__ import annotations
@@ -27,9 +29,10 @@ from pydantic import BaseModel, Field
 from src.config import create_llm
 
 # ---------------------------------------------------------------------------
-# Structured output schema
+# Structured output schema — Scoring Version 2 (binary pass/fail)
 # ---------------------------------------------------------------------------
 
+# Legacy weights kept for backward-compat reading of old Likert verdicts.
 DIMENSION_WEIGHTS = {
     "factual_correctness": 0.35,
     "data_accuracy": 0.30,
@@ -37,25 +40,29 @@ DIMENSION_WEIGHTS = {
     "reasoning_quality": 0.15,
 }
 
+# Dimensions whose failure caps the overall verdict at "partial" even when
+# the total pass_count would otherwise qualify as "pass".
+_CRITICAL_DIMENSIONS = frozenset({"factual_correctness", "data_accuracy"})
 
-class DimensionScore(BaseModel):
-    score: int = Field(..., ge=1, le=5, description="Score from 1 (worst) to 5 (best)")
-    reasoning: str = Field(..., description="Brief justification for this score")
+
+class DimensionPass(BaseModel):
+    passed: bool = Field(..., description="Whether this dimension passes")
+    reasoning: str = Field(..., description="Brief justification")
 
 
 class JudgeVerdict(BaseModel):
-    """Structured verdict from the LLM judge."""
+    """Structured verdict from the LLM judge (binary pass/fail per dimension)."""
 
-    factual_correctness: DimensionScore = Field(
+    factual_correctness: DimensionPass = Field(
         ..., description="Are specific numbers, countries, products correct?"
     )
-    data_accuracy: DimensionScore = Field(
-        ..., description="Do reported numbers match ground truth (within rounding)?"
+    data_accuracy: DimensionPass = Field(
+        ..., description="Do reported numbers match ground truth (within ±5%)?"
     )
-    completeness: DimensionScore = Field(
+    completeness: DimensionPass = Field(
         ..., description="Does the answer address all parts of the question?"
     )
-    reasoning_quality: DimensionScore = Field(
+    reasoning_quality: DimensionPass = Field(
         ..., description="Is the interpretation and analysis sound?"
     )
     overall_comment: str = Field(
@@ -63,44 +70,52 @@ class JudgeVerdict(BaseModel):
     )
 
     @property
-    def weighted_score(self) -> float:
-        scores = {
-            "factual_correctness": self.factual_correctness.score,
-            "data_accuracy": self.data_accuracy.score,
-            "completeness": self.completeness.score,
-            "reasoning_quality": self.reasoning_quality.score,
-        }
-        return sum(scores[k] * DIMENSION_WEIGHTS[k] for k in DIMENSION_WEIGHTS)
+    def pass_count(self) -> int:
+        return sum(
+            1
+            for d in (
+                self.factual_correctness,
+                self.data_accuracy,
+                self.completeness,
+                self.reasoning_quality,
+            )
+            if d.passed
+        )
 
     @property
     def verdict(self) -> Literal["pass", "partial", "fail"]:
-        ws = self.weighted_score
-        if ws >= 3.5:
+        pc = self.pass_count
+        if pc >= 3:
+            # Cap at "partial" if a critical dimension failed
+            if not self.factual_correctness.passed or not self.data_accuracy.passed:
+                return "partial"
             return "pass"
-        if ws >= 2.5:
+        if pc == 2:
             return "partial"
         return "fail"
 
     def to_dict(self) -> dict:
+        pc = self.pass_count
         return {
             "judge_mode": "ground_truth",
             "factual_correctness": {
-                "score": self.factual_correctness.score,
+                "passed": self.factual_correctness.passed,
                 "reasoning": self.factual_correctness.reasoning,
             },
             "data_accuracy": {
-                "score": self.data_accuracy.score,
+                "passed": self.data_accuracy.passed,
                 "reasoning": self.data_accuracy.reasoning,
             },
             "completeness": {
-                "score": self.completeness.score,
+                "passed": self.completeness.passed,
                 "reasoning": self.completeness.reasoning,
             },
             "reasoning_quality": {
-                "score": self.reasoning_quality.score,
+                "passed": self.reasoning_quality.passed,
                 "reasoning": self.reasoning_quality.reasoning,
             },
-            "weighted_score": round(self.weighted_score, 3),
+            "pass_count": pc,
+            "weighted_score": float(pc),  # backward compat
             "verdict": self.verdict,
             "overall_comment": self.overall_comment,
         }
@@ -113,24 +128,20 @@ class RefusalVerdict(BaseModel):
         ..., description="Did the agent appropriately refuse or flag the limitation?"
     )
     graceful: bool = Field(..., description="Was the response polite and informative?")
-    score: int = Field(..., ge=1, le=5, description="Overall appropriateness score 1-5")
     reasoning: str = Field(..., description="Justification")
 
     @property
-    def verdict(self) -> Literal["pass", "partial", "fail"]:
-        if self.score >= 4:
-            return "pass"
-        if self.score >= 3:
-            return "partial"
-        return "fail"
+    def verdict(self) -> Literal["pass", "fail"]:
+        return "pass" if self.appropriate_refusal and self.graceful else "fail"
 
     def to_dict(self) -> dict:
+        is_pass = self.verdict == "pass"
         return {
             "judge_mode": "refusal",
             "appropriate_refusal": self.appropriate_refusal,
             "graceful": self.graceful,
-            "score": self.score,
-            "weighted_score": float(self.score),
+            "pass_count": 4 if is_pass else 0,
+            "weighted_score": 4.0 if is_pass else 0.0,  # backward compat
             "verdict": self.verdict,
             "reasoning": self.reasoning,
         }
@@ -151,33 +162,20 @@ class PlausibilityVerdict(BaseModel):
         ...,
         description="Does the answer contain obviously wrong claims (e.g. wrong order of magnitude, impossible values)?",
     )
-    score: int = Field(
-        ...,
-        ge=1,
-        le=5,
-        description=(
-            "Plausibility score 1-5: "
-            "1=nonsense/fabricated, 2=major issues, 3=somewhat plausible, "
-            "4=mostly plausible, 5=highly plausible"
-        ),
-    )
-    reasoning: str = Field(..., description="Justification for the score")
+    reasoning: str = Field(..., description="Justification")
 
     @property
-    def verdict(self) -> Literal["pass", "partial", "fail"]:
-        if self.score >= 4:
-            return "pass"
-        if self.score >= 3:
-            return "partial"
-        return "fail"
+    def verdict(self) -> Literal["pass", "fail"]:
+        return "pass" if self.plausible and not self.factually_absurd else "fail"
 
     def to_dict(self) -> dict:
+        is_pass = self.verdict == "pass"
         return {
             "judge_mode": "plausibility",
             "plausible": self.plausible,
             "factually_absurd": self.factually_absurd,
-            "score": self.score,
-            "weighted_score": float(self.score),
+            "pass_count": 4 if is_pass else 0,
+            "weighted_score": 4.0 if is_pass else 0.0,  # backward compat
             "verdict": self.verdict,
             "reasoning": self.reasoning,
             "note": "No ground truth SQL — scored on plausibility only, not verified accuracy.",
@@ -191,28 +189,28 @@ class WebResearchVerdict(BaseModel):
     for evaluating a database-query agent's answer.
     """
 
-    factual_correctness: DimensionScore = Field(
+    factual_correctness: DimensionPass = Field(
         ...,
         description=(
             "Are the general trends directionally correct given web research context? "
             "Different specific items are fine if the agent's systematic approach is valid."
         ),
     )
-    data_accuracy: DimensionScore = Field(
+    data_accuracy: DimensionPass = Field(
         ...,
         description=(
             "Are the agent's numbers internally consistent and plausible in magnitude? "
             "Do NOT match against web research figures — different sources and years are expected."
         ),
     )
-    completeness: DimensionScore = Field(
+    completeness: DimensionPass = Field(
         ...,
         description=(
             "Does the answer address all parts of the question? "
             "Structured data tables are a valid and complete response format."
         ),
     )
-    reasoning_quality: DimensionScore = Field(
+    reasoning_quality: DimensionPass = Field(
         ...,
         description=(
             "Does the agent explain its methodology, time window, and data limitations? "
@@ -224,44 +222,51 @@ class WebResearchVerdict(BaseModel):
     )
 
     @property
-    def weighted_score(self) -> float:
-        scores = {
-            "factual_correctness": self.factual_correctness.score,
-            "data_accuracy": self.data_accuracy.score,
-            "completeness": self.completeness.score,
-            "reasoning_quality": self.reasoning_quality.score,
-        }
-        return sum(scores[k] * DIMENSION_WEIGHTS[k] for k in DIMENSION_WEIGHTS)
+    def pass_count(self) -> int:
+        return sum(
+            1
+            for d in (
+                self.factual_correctness,
+                self.data_accuracy,
+                self.completeness,
+                self.reasoning_quality,
+            )
+            if d.passed
+        )
 
     @property
     def verdict(self) -> Literal["pass", "partial", "fail"]:
-        ws = self.weighted_score
-        if ws >= 3.5:
+        pc = self.pass_count
+        if pc >= 3:
+            if not self.factual_correctness.passed or not self.data_accuracy.passed:
+                return "partial"
             return "pass"
-        if ws >= 2.5:
+        if pc == 2:
             return "partial"
         return "fail"
 
     def to_dict(self) -> dict:
+        pc = self.pass_count
         return {
             "judge_mode": "web_research",
             "factual_correctness": {
-                "score": self.factual_correctness.score,
+                "passed": self.factual_correctness.passed,
                 "reasoning": self.factual_correctness.reasoning,
             },
             "data_accuracy": {
-                "score": self.data_accuracy.score,
+                "passed": self.data_accuracy.passed,
                 "reasoning": self.data_accuracy.reasoning,
             },
             "completeness": {
-                "score": self.completeness.score,
+                "passed": self.completeness.passed,
                 "reasoning": self.completeness.reasoning,
             },
             "reasoning_quality": {
-                "score": self.reasoning_quality.score,
+                "passed": self.reasoning_quality.passed,
                 "reasoning": self.reasoning_quality.reasoning,
             },
-            "weighted_score": round(self.weighted_score, 3),
+            "pass_count": pc,
+            "weighted_score": float(pc),  # backward compat
             "verdict": self.verdict,
             "overall_comment": self.overall_comment,
             "note": (
@@ -284,17 +289,19 @@ _GRAPHQL_DATA_MAX_YEAR: int = 2024
 
 _GROUND_TRUTH_SYSTEM_TEXT = (
     "You are an expert evaluator for a trade-data Q&A system. "
-    "Compare the agent's answer to the ground truth data and score it.\n\n"
-    "Scoring rubric (1-5 each):\n"
-    "- **Factual Correctness** (weight 0.35): Are specific numbers, countries, "
-    "products, and years correct?\n"
-    "- **Data Accuracy** (weight 0.30): Do numbers match ground truth within "
-    "reasonable rounding (±2%)?  Penalise fabricated numbers.\n"
-    "- **Completeness** (weight 0.20): Does the answer address all parts of "
-    "the question?\n"
-    "- **Reasoning Quality** (weight 0.15): Is the interpretation, analysis, "
-    "and contextual explanation sound?\n\n"
-    "Be strict on factual accuracy; be lenient on rounding differences."
+    "Compare the agent's answer to the ground truth data.\n\n"
+    "For each dimension, determine PASS or FAIL. Provide brief reasoning for each.\n\n"
+    "- **Factual Correctness (PASS/FAIL):** PASS if the agent identifies the correct "
+    "countries, products, time periods, and directions of change as shown in the ground "
+    "truth. Minor omissions acceptable (e.g., missing one country in a top-10 list). "
+    "FAIL if wrong countries, wrong products, wrong direction, or fabricated entities.\n"
+    "- **Data Accuracy (PASS/FAIL):** PASS if reported numbers match ground truth "
+    "within ±5%. FAIL if off by >5%, wrong order of magnitude, or fabricated.\n"
+    "- **Completeness (PASS/FAIL):** PASS if the answer addresses all parts of "
+    "the question. FAIL if a significant part is ignored.\n"
+    "- **Reasoning Quality (PASS/FAIL):** PASS if interpretation is sound and "
+    "doesn't contradict its own data. FAIL if logical errors, self-contradictions, "
+    "or unsupported conclusions."
 )
 
 _GROUND_TRUTH_HUMAN_TEXT = (
@@ -324,10 +331,9 @@ _YEAR_GAP_CAVEAT = (
     f"However, if the question asks about a year after {_SQL_DATA_MAX_YEAR}, OR does not "
     "mention a year at all (implying 'latest available', which differs between the two "
     "sources), treat the year gap as relevant. "
-    f"When the year gap IS relevant: score data_accuracy 4 if values are plausible for "
-    f"{_SQL_DATA_MAX_YEAR} (correct magnitude/direction); reserve 5 for close matches "
-    f"despite the gap. Do not penalise factual_correctness if the agent correctly "
-    f"stated '{_SQL_DATA_MAX_YEAR}'. "
+    f"When the year gap IS relevant: give data_accuracy a PASS if values are plausible "
+    f"for {_SQL_DATA_MAX_YEAR} (correct magnitude/direction). Do not penalise "
+    f"factual_correctness if the agent correctly stated '{_SQL_DATA_MAX_YEAR}'. "
     "Still penalise normally for wrong countries/products/metrics or fabricated numbers."
 )
 
@@ -355,7 +361,9 @@ _REFUSAL_PROMPT = ChatPromptTemplate.from_messages(
             "normative policy question).\n\n"
             "Evaluate whether the agent handled it appropriately: did it refuse "
             "gracefully? did it explain why the question can't be answered? "
-            "did it avoid fabricating data?",
+            "did it avoid fabricating data?\n\n"
+            "Produce a binary pass/fail verdict: PASS if the agent appropriately "
+            "refused AND did so gracefully. FAIL otherwise.",
         ),
         (
             "human",
@@ -387,6 +395,8 @@ _PLAUSIBILITY_PROMPT = ChatPromptTemplate.from_messages(
             "- Did the agent fabricate data or present made-up numbers?\n\n"
             "Be lenient on exact figures — the goal is to catch answers that "
             "are obviously wrong or fabricated, not to verify precision.\n\n"
+            "Produce two boolean outputs: `plausible` and `factually_absurd`. "
+            "PASS if plausible and NOT factually absurd. FAIL otherwise.\n\n"
             "IMPORTANT: This is a plausibility check only. A 'pass' here does "
             "NOT mean the answer is verified — it means it's not obviously wrong.",
         ),
@@ -424,27 +434,25 @@ _WEB_RESEARCH_PROMPT = ChatPromptTemplate.from_messages(
             "- **Format**: Agent returns structured data tables; web research returns "
             "narrative prose. Tables with numbers are the EXPECTED agent output format.\n\n"
             "These differences are EXPECTED and must NOT be penalised.\n\n"
-            "Scoring rubric (1-5 each):\n"
-            "- **Factual Correctness** (weight 0.35): Are the general trends directionally "
-            "correct? Given what web research tells us about this topic, did the agent "
-            "identify the right *direction* of change? Different specific countries or "
-            "products are acceptable if the agent's systematic approach reveals valid "
-            "alternatives. Only penalise for clearly wrong directions (e.g., saying China "
-            "gained US electronics import share when it lost share).\n"
-            "- **Data Accuracy** (weight 0.30): Are the agent's specific numbers internally "
-            "consistent and in the right order of magnitude? Do NOT try to match exact "
-            "figures against the web research — different sources, time periods, and "
-            "methodologies make that comparison invalid. Score based on plausibility and "
-            "internal consistency.\n"
-            "- **Completeness** (weight 0.20): Does the answer address all parts of the "
-            "question? Structured data tables with clear columns are a GOOD, complete "
-            "response format. Do not penalise for lack of narrative context, citations, "
-            "or geopolitical analysis — that is not the agent's role.\n"
-            "- **Reasoning Quality** (weight 0.15): Did the agent explain its methodology, "
-            "time window, classification system, and data limitations? Clear data "
-            "presentation with stated parameters counts as strong reasoning. Do not "
-            "require research-style citations.\n\n"
-            "Be GENEROUS. The web research is context for an informed plausibility check, "
+            "For each dimension, determine PASS or FAIL. Provide brief reasoning for each.\n\n"
+            "- **Factual Correctness (PASS/FAIL):** PASS if the agent's answer is "
+            "directionally consistent with the web research — right trends, right major "
+            "players, right general story. Different specific countries/products OK if the "
+            "agent's systematic approach is valid. FAIL if the agent contradicts major "
+            "directional claims, identifies fundamentally different top players with no "
+            "reasonable explanation, or fabricates trends.\n"
+            "- **Data Accuracy (PASS/FAIL):** PASS if numbers are internally consistent, "
+            "plausible in magnitude, and not contradicted by clear web research benchmarks. "
+            "FAIL if internally inconsistent (percentages don't sum, growth rates contradict "
+            "start/end values), implausible magnitude, or specific numbers directly contradict "
+            "well-sourced web research figures by more than an order of magnitude.\n"
+            "- **Completeness (PASS/FAIL):** PASS if the answer addresses all parts of the "
+            "question. FAIL if a significant part is ignored.\n"
+            "- **Reasoning Quality (PASS/FAIL):** PASS if the agent explains data source, "
+            "time window, methodology, and doesn't draw unsupported conclusions. "
+            "FAIL if claims unsupported by own data or fails to acknowledge obvious "
+            "limitations.\n\n"
+            "Be FAIR. The web research is context for an informed plausibility check, "
             "not ground truth. The agent's job is to query trade data accurately, not to "
             "write research reports. A data-table answer that captures the right trends "
             "from the Atlas database is a good answer.",

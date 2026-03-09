@@ -84,11 +84,12 @@ def sample_judge_results() -> dict[str, dict]:
     return {
         "1": {
             "judge_mode": "ground_truth",
-            "factual_correctness": {"score": 5, "reasoning": "Correct value."},
-            "data_accuracy": {"score": 4, "reasoning": "Within 1%."},
-            "completeness": {"score": 4, "reasoning": "Answered fully."},
-            "reasoning_quality": {"score": 5, "reasoning": "Good analysis."},
-            "weighted_score": 4.55,
+            "factual_correctness": {"passed": True, "reasoning": "Correct value."},
+            "data_accuracy": {"passed": True, "reasoning": "Within 5%."},
+            "completeness": {"passed": True, "reasoning": "Answered fully."},
+            "reasoning_quality": {"passed": True, "reasoning": "Good analysis."},
+            "pass_count": 4,
+            "weighted_score": 4.0,
             "verdict": "pass",
             "overall_comment": "Accurate answer.",
         },
@@ -96,10 +97,10 @@ def sample_judge_results() -> dict[str, dict]:
             "judge_mode": "plausibility",
             "plausible": True,
             "factually_absurd": False,
-            "score": 3,
-            "weighted_score": 3.0,
-            "verdict": "partial",
-            "reasoning": "Plausible but unverified.",
+            "pass_count": 4,
+            "weighted_score": 4.0,
+            "verdict": "pass",
+            "reasoning": "Plausible.",
         },
     }
 
@@ -237,6 +238,45 @@ class TestJudgeDetails:
 
         q3 = next(q for q in report["per_question"] if q["question_id"] == "3")
         assert q3["judge_details"] == {}
+
+    def test_report_has_by_judge_mode(self, sample_run_results, sample_judge_results):
+        meta = {
+            "1": {"category": "Trade Values", "difficulty": "easy"},
+            "2": {"category": "Trade Partners", "difficulty": "medium"},
+            "3": {"category": "Other", "difficulty": "hard"},
+        }
+        report = generate_report(sample_run_results, sample_judge_results, meta)
+        bjm = report["by_judge_mode"]
+        assert "ground_truth" in bjm
+        assert "plausibility" in bjm
+        assert bjm["ground_truth"]["count"] == 1
+        assert bjm["plausibility"]["count"] == 1
+
+    def test_dimension_averages_are_pass_rates(
+        self, sample_run_results, sample_judge_results
+    ):
+        meta = {
+            "1": {"category": "Trade Values", "difficulty": "easy"},
+            "2": {"category": "Trade Partners", "difficulty": "medium"},
+            "3": {"category": "Other", "difficulty": "hard"},
+        }
+        report = generate_report(sample_run_results, sample_judge_results, meta)
+        dims = report["dimension_averages"]
+        # Only Q1 (ground_truth) has dimensions; all 4 pass → 1.0
+        assert dims["factual_correctness"] == 1.0
+        assert dims["data_accuracy"] == 1.0
+
+    def test_per_question_has_pass_count(
+        self, sample_run_results, sample_judge_results
+    ):
+        meta = {
+            "1": {"category": "Trade Values", "difficulty": "easy"},
+            "2": {"category": "Trade Partners", "difficulty": "medium"},
+            "3": {"category": "Other", "difficulty": "hard"},
+        }
+        report = generate_report(sample_run_results, sample_judge_results, meta)
+        q1 = next(q for q in report["per_question"] if q["question_id"] == "1")
+        assert q1["pass_count"] == 4
 
 
 # ---------------------------------------------------------------------------

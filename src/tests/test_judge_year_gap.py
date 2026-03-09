@@ -22,6 +22,11 @@ from judge import (
     _GROUND_TRUTH_PROMPT,
     _GROUND_TRUTH_PROMPT_WITH_YEAR_GAP,
     _YEAR_GAP_CAVEAT,
+    DimensionPass,
+    JudgeVerdict,
+    PlausibilityVerdict,
+    RefusalVerdict,
+    WebResearchVerdict,
     judge_answer,
 )
 
@@ -31,9 +36,9 @@ from judge import (
 
 
 class TestYearGapCaveatContent:
-    def test_contains_score_4_guidance(self):
-        """Caveat must instruct the judge to score data_accuracy 4 for plausible older data."""
-        assert "score data_accuracy 4" in _YEAR_GAP_CAVEAT
+    def test_contains_pass_guidance(self):
+        """Caveat must instruct the judge to give data_accuracy a PASS for plausible older data."""
+        assert "give data_accuracy a PASS" in _YEAR_GAP_CAVEAT
 
     def test_preserves_strictness_for_other_errors(self):
         """Caveat must NOT grant blanket leniency — wrong data should still be penalised."""
@@ -96,10 +101,11 @@ def _make_mock_chain(verdict_dict: dict) -> AsyncMock:
 
 _GROUND_TRUTH_VERDICT = {
     "judge_mode": "ground_truth",
-    "factual_correctness": {"score": 4, "reasoning": "ok"},
-    "data_accuracy": {"score": 4, "reasoning": "ok"},
-    "completeness": {"score": 4, "reasoning": "ok"},
-    "reasoning_quality": {"score": 4, "reasoning": "ok"},
+    "factual_correctness": {"passed": True, "reasoning": "ok"},
+    "data_accuracy": {"passed": True, "reasoning": "ok"},
+    "completeness": {"passed": True, "reasoning": "ok"},
+    "reasoning_quality": {"passed": True, "reasoning": "ok"},
+    "pass_count": 4,
     "weighted_score": 4.0,
     "verdict": "pass",
     "overall_comment": "Good",
@@ -109,8 +115,8 @@ _REFUSAL_VERDICT = {
     "judge_mode": "refusal",
     "appropriate_refusal": True,
     "graceful": True,
-    "score": 5,
-    "weighted_score": 5.0,
+    "pass_count": 4,
+    "weighted_score": 4.0,
     "verdict": "pass",
     "reasoning": "Good refusal",
 }
@@ -119,7 +125,7 @@ _PLAUSIBILITY_VERDICT = {
     "judge_mode": "plausibility",
     "plausible": True,
     "factually_absurd": False,
-    "score": 4,
+    "pass_count": 4,
     "weighted_score": 4.0,
     "verdict": "pass",
     "reasoning": "Plausible",
@@ -225,3 +231,173 @@ class TestYearGapCaveatApplication:
             tools_used=["query_tool"],
         )
         assert "year_gap_caveat_applied" not in result
+
+
+# ---------------------------------------------------------------------------
+# Binary scoring: verdict logic tests
+# ---------------------------------------------------------------------------
+
+
+def _make_dim(passed: bool) -> DimensionPass:
+    return DimensionPass(passed=passed, reasoning="test")
+
+
+class TestBinaryScoringVerdict:
+    """Test pass_count and verdict thresholds with critical-dimension caps."""
+
+    def test_all_pass(self):
+        v = JudgeVerdict(
+            factual_correctness=_make_dim(True),
+            data_accuracy=_make_dim(True),
+            completeness=_make_dim(True),
+            reasoning_quality=_make_dim(True),
+            overall_comment="ok",
+        )
+        assert v.pass_count == 4
+        assert v.verdict == "pass"
+
+    def test_fc_fail_caps_at_partial(self):
+        """FC fails, 3 others pass → pass_count=3, but capped at partial."""
+        v = JudgeVerdict(
+            factual_correctness=_make_dim(False),
+            data_accuracy=_make_dim(True),
+            completeness=_make_dim(True),
+            reasoning_quality=_make_dim(True),
+            overall_comment="ok",
+        )
+        assert v.pass_count == 3
+        assert v.verdict == "partial"
+
+    def test_da_fail_caps_at_partial(self):
+        """DA fails, 3 others pass → pass_count=3, but capped at partial."""
+        v = JudgeVerdict(
+            factual_correctness=_make_dim(True),
+            data_accuracy=_make_dim(False),
+            completeness=_make_dim(True),
+            reasoning_quality=_make_dim(True),
+            overall_comment="ok",
+        )
+        assert v.pass_count == 3
+        assert v.verdict == "partial"
+
+    def test_no_cap_when_non_critical_fails(self):
+        """Completeness fails, FC+DA+RQ pass → pass_count=3, verdict=pass (no cap)."""
+        v = JudgeVerdict(
+            factual_correctness=_make_dim(True),
+            data_accuracy=_make_dim(True),
+            completeness=_make_dim(False),
+            reasoning_quality=_make_dim(True),
+            overall_comment="ok",
+        )
+        assert v.pass_count == 3
+        assert v.verdict == "pass"
+
+    def test_pass_count_2_is_partial(self):
+        v = JudgeVerdict(
+            factual_correctness=_make_dim(True),
+            data_accuracy=_make_dim(True),
+            completeness=_make_dim(False),
+            reasoning_quality=_make_dim(False),
+            overall_comment="ok",
+        )
+        assert v.pass_count == 2
+        assert v.verdict == "partial"
+
+    def test_pass_count_1_is_fail(self):
+        v = JudgeVerdict(
+            factual_correctness=_make_dim(True),
+            data_accuracy=_make_dim(False),
+            completeness=_make_dim(False),
+            reasoning_quality=_make_dim(False),
+            overall_comment="ok",
+        )
+        assert v.pass_count == 1
+        assert v.verdict == "fail"
+
+    def test_pass_count_0_is_fail(self):
+        v = JudgeVerdict(
+            factual_correctness=_make_dim(False),
+            data_accuracy=_make_dim(False),
+            completeness=_make_dim(False),
+            reasoning_quality=_make_dim(False),
+            overall_comment="ok",
+        )
+        assert v.pass_count == 0
+        assert v.verdict == "fail"
+
+    def test_to_dict_has_pass_count_and_backward_compat(self):
+        v = JudgeVerdict(
+            factual_correctness=_make_dim(True),
+            data_accuracy=_make_dim(True),
+            completeness=_make_dim(True),
+            reasoning_quality=_make_dim(False),
+            overall_comment="ok",
+        )
+        d = v.to_dict()
+        assert d["pass_count"] == 3
+        assert d["weighted_score"] == 3.0
+        assert d["factual_correctness"]["passed"] is True
+        assert "score" not in d["factual_correctness"]
+
+
+class TestRefusalBinaryVerdict:
+    def test_pass_maps_to_4(self):
+        v = RefusalVerdict(appropriate_refusal=True, graceful=True, reasoning="ok")
+        assert v.verdict == "pass"
+        d = v.to_dict()
+        assert d["pass_count"] == 4
+        assert d["weighted_score"] == 4.0
+
+    def test_fail_maps_to_0(self):
+        v = RefusalVerdict(appropriate_refusal=False, graceful=True, reasoning="bad")
+        assert v.verdict == "fail"
+        d = v.to_dict()
+        assert d["pass_count"] == 0
+        assert d["weighted_score"] == 0.0
+
+
+class TestPlausibilityBinaryVerdict:
+    def test_pass_maps_to_4(self):
+        v = PlausibilityVerdict(plausible=True, factually_absurd=False, reasoning="ok")
+        assert v.verdict == "pass"
+        d = v.to_dict()
+        assert d["pass_count"] == 4
+        assert d["weighted_score"] == 4.0
+
+    def test_fail_maps_to_0(self):
+        v = PlausibilityVerdict(plausible=False, factually_absurd=True, reasoning="bad")
+        assert v.verdict == "fail"
+        d = v.to_dict()
+        assert d["pass_count"] == 0
+
+    def test_absurd_overrides_plausible(self):
+        v = PlausibilityVerdict(
+            plausible=True, factually_absurd=True, reasoning="contradiction"
+        )
+        assert v.verdict == "fail"
+
+
+class TestWebResearchBinaryVerdict:
+    def test_all_pass(self):
+        v = WebResearchVerdict(
+            factual_correctness=_make_dim(True),
+            data_accuracy=_make_dim(True),
+            completeness=_make_dim(True),
+            reasoning_quality=_make_dim(True),
+            overall_comment="ok",
+        )
+        assert v.pass_count == 4
+        assert v.verdict == "pass"
+        d = v.to_dict()
+        assert d["pass_count"] == 4
+        assert d["judge_mode"] == "web_research"
+
+    def test_fc_fail_caps_at_partial(self):
+        v = WebResearchVerdict(
+            factual_correctness=_make_dim(False),
+            data_accuracy=_make_dim(True),
+            completeness=_make_dim(True),
+            reasoning_quality=_make_dim(True),
+            overall_comment="ok",
+        )
+        assert v.verdict == "partial"
