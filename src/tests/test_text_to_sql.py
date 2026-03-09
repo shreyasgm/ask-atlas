@@ -1,4 +1,5 @@
 import pytest
+import pytest_asyncio
 
 from src.config import get_settings
 from src.text_to_sql import AtlasTextToSQL, StreamData
@@ -10,7 +11,7 @@ pytestmark = [pytest.mark.db, pytest.mark.asyncio(loop_scope="module")]
 
 
 # Set up fixtures — module scope to share one instance across all tests
-@pytest.fixture(scope="module")
+@pytest_asyncio.fixture(scope="module", loop_scope="module")
 async def atlas_sql(base_dir):
     instance = await AtlasTextToSQL.create_async(
         db_uri=settings.atlas_db_url,
