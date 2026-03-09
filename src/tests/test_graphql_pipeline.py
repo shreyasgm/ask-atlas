@@ -1313,25 +1313,69 @@ class TestPostProcessResponse:
         assert top_item["partnerName"] == "Brazil"
 
     def test_feasibility_filter_keeps_only_rca_lt_1(self):
-        """Feasibility query filters to products where exportRca < 1, sorts by cog desc."""
+        """Feasibility query filters to products where exportRca < 1, sorts by compositeScore desc."""
         items = [
-            {"productId": 1, "exportRca": 0.5, "cog": 0.9, "exportValue": 100},
+            {
+                "productId": 1,
+                "exportRca": 0.5,
+                "cog": 0.9,
+                "distance": 0.3,
+                "normalizedDistance": 1.5,
+                "normalizedPci": 0.8,
+                "normalizedCog": 2.0,
+                "exportValue": 100,
+            },
             {
                 "productId": 2,
                 "exportRca": 1.5,
                 "cog": 0.8,
+                "distance": 0.2,
+                "normalizedDistance": 1.0,
+                "normalizedPci": 1.0,
+                "normalizedCog": 1.0,
                 "exportValue": 200,
-            },  # filtered out
-            {"productId": 3, "exportRca": 0.0, "cog": 0.7, "exportValue": 300},
-            {"productId": 4, "exportRca": 0.3, "cog": 0.95, "exportValue": 50},
+            },  # filtered out (rca >= 1)
+            {
+                "productId": 3,
+                "exportRca": 0.0,
+                "cog": 0.7,
+                "distance": 0.5,
+                "normalizedDistance": 0.5,
+                "normalizedPci": 2.0,
+                "normalizedCog": 0.5,
+                "exportValue": 300,
+            },
+            {
+                "productId": 4,
+                "exportRca": 0.3,
+                "cog": 0.95,
+                "distance": 0.1,
+                "normalizedDistance": 2.0,
+                "normalizedPci": 0.3,
+                "normalizedCog": 2.5,
+                "exportValue": 50,
+            },
             {
                 "productId": 5,
                 "exportRca": 2.0,
                 "cog": 0.99,
+                "distance": 0.1,
+                "normalizedDistance": 2.5,
+                "normalizedPci": 1.5,
+                "normalizedCog": 3.0,
                 "exportValue": 500,
-            },  # filtered out
+            },  # filtered out (rca >= 1)
         ] + [
-            {"productId": 100 + i, "exportRca": 0.1, "cog": 0.01 * i, "exportValue": 10}
+            {
+                "productId": 100 + i,
+                "exportRca": 0.1,
+                "cog": 0.01 * i,
+                "distance": 0.5,
+                "normalizedDistance": 0.1 * i,
+                "normalizedPci": 0.05 * i,
+                "normalizedCog": 0.02 * i,
+                "exportValue": 10,
+            }
             for i in range(20)
         ]
         raw = {"countryProductYear": items}
@@ -1342,9 +1386,11 @@ class TestPostProcessResponse:
         # RCA >= 1 items should be excluded
         for item in processed:
             assert (item.get("exportRca") or 0) < 1
-        # Should be sorted by cog descending
-        cog_values = [item["cog"] for item in processed]
-        assert cog_values == sorted(cog_values, reverse=True)
+        # Should be sorted by compositeScore descending
+        scores = [item["compositeScore"] for item in processed]
+        assert scores == sorted(scores, reverse=True)
+        # Verify compositeScore is computed (50% distance + 15% PCI + 35% COG)
+        assert all(isinstance(s, float) for s in scores)
 
     def test_includes_metadata(self):
         """Truncated response includes _postProcessed metadata."""
@@ -1729,9 +1775,11 @@ class TestSlimQueryBuilders:
         assert "distance" in query
         assert "exportValue" in query
         assert "year" in query
-        # Should NOT contain normalized fields
-        assert "normalizedCog" not in query
-        assert "normalizedDistance" not in query
+        # Should contain normalized fields for composite scoring
+        assert "normalizedCog" in query
+        assert "normalizedDistance" in query
+        assert "normalizedPci" in query
+        # Should NOT contain fields unrelated to feasibility scoring
         assert "normalizedExportRca" not in query
 
 
@@ -4229,13 +4277,15 @@ class TestGrowthOpportunitiesTreeMap:
         assert variables["productLevel"] == "twoDigit"
 
     def test_growth_opportunities_post_process_rules(self):
-        """Post-process rules should use treeMap root and opportunityGain sort."""
+        """Post-process rules should use treeMap root and compositeScore sort."""
         from src.graphql_pipeline import _POST_PROCESS_RULES
 
         rules = _POST_PROCESS_RULES["growth_opportunities"]
         assert rules["root"] == "treeMap"
-        assert rules["sort"] == "opportunityGain"
+        assert rules["sort"] == "compositeScore"
         assert rules["filter"] == "rca_lt_1_treemap"
+        # score_weights resolved dynamically per-country, not in static rules
+        assert "score_weights" not in rules
 
 
 class TestCountryYearLookbackYears:
