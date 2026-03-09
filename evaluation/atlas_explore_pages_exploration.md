@@ -271,8 +271,8 @@ The top control bar varies by visualization type but always includes:
 - **Network visualization**: Canvas-based
   - **Colored nodes**: Products the country exports with high RCA (comparative advantage)
   - **Grey nodes**: Products with low or no export
-  - **Node sizing**: Based on Global Exports
-  - **Edges**: Lines connecting related products (close = similar capabilities)
+  - **Node sizing** (3 modes): WorldTrade (`d3.scaleSqrt` [2,40]px), CountryTrade (same scale, country values), or None (fixed 4px)
+  - **Edges**: Pre-pruned at data generation time (NOT filtered client-side). The pruned network contains 865 nodes and 4,316 edges (top 5 connections per product). Proximity range: 0.48–0.93.
 - **Cluster labels** (8 clusters, different from the 11 treemap sectors):
   - Agricultural Goods, Construction Goods, Electronics, Chemicals and Basic Metals, Metalworking and Machinery, Minerals, Textile and Home Goods, Apparel
 - **Legend**:
@@ -289,7 +289,7 @@ The top control bar varies by visualization type but always includes:
 |---------|---------|---------|
 | Product Class | HS 1992, HS 2012, HS 2022, SITC | HS 1992 |
 
-**GraphQL queries**: `countryProductYear` (for RCA to color nodes) + `productProduct` (for network edges/relatedness) + product catalog (`productHs92` etc.) for node positions.
+**GraphQL queries**: `countryProductYear` (for RCA to color nodes) + product catalog (`productHs92` etc.) for node positions. Note: product space edges are pre-pruned during data generation, not served via the `productProduct` GraphQL query. Services products are excluded from the product space.
 
 ---
 
@@ -340,22 +340,25 @@ The top control bar varies by visualization type but always includes:
 |--------|---------|---------|-----------|-------|
 | Sector indicator | Colored bar on left | Purple bar (Chemicals) | Derived from `topParent` | |
 | Product Name | Name + HS code | "Photographic film, developed (3705 HS)" | `productHs92.nameEn` + `code` | |
-| "Nearby" Distance | Diamond rating (7 diamonds) | ◆◆◇◇◇◇◇ | `countryProductYear.distance` | Inverted: more diamonds = closer |
-| Opportunity Gain | Diamond rating (7 diamonds) | ◆◆◆◆◆◇◇ | `countryProductYear.cog` | |
-| Product Complexity | Diamond rating (7 diamonds) | ◆◆◆◆◆◆◇ | `countryProductYear.normalizedPci` | |
+| "Nearby" Distance | Diamond rating (max 5 diamonds) | ◆◆◇◇◇◇◇ | `countryProductYear.distance` | Inverted: more diamonds = closer |
+| Opportunity Gain | Diamond rating (max 5 diamonds) | ◆◆◆◆◆◇◇ | `countryProductYear.cog` | |
+| Product Complexity | Diamond rating (max 5 diamonds) | ◆◆◆◆◆◆◇ | `countryProductYear.normalizedPci` | |
 | Global Size (USD) | Dollar amount | $2.61B | `productYear.exportValue` | |
 | Global Growth 5 YR | Percentage + arrow | ↑ 13.1% | `productYear.exportValueConstCagr5` | ↑=positive, ↓=negative |
 
 **Table behavior:**
 - All columns are **sortable** (clickable headers with ▲ indicator)
-- Default sort: Product Complexity (descending)
+- Default sort: By composite score (descending), using the hardcoded Explore formula: `score = 0.50 × normalizedDistance + 0.15 × normalizedPci + 0.35 × normalizedCog`. This is a fixed weighting (Distance=50%, Complexity=15%, Opportunity Gain=35%) that does NOT vary by country policy recommendation.
 - Rows include all products where the country does NOT have RCA > 1 (opportunity products only)
 - `&productLevel=4` is auto-appended to URL
+- Decile bins computed from percentile breakpoints (10th–90th) provided by `countryYearThresholds` query, mapped to 0.5–5.0 diamond scale
 
-**Key difference from Country Pages' product-table:**
+**Key differences from Country Pages' product-table:**
 - Explore table uses **diamond ratings** (same visual style) but the column headers use different labels ("Nearby" Distance vs just "Distance")
 - Explore table shows **all** opportunity products, not just "Top 50"
 - Explore table is available for **all countries**; Country pages' product-table is hidden for frontier economies
+- Explore uses a **single fixed scoring formula** (Distance 50% / PCI 15% / COG 35%) regardless of country policy recommendation; Country Pages uses **strategy-dependent weights** that also vary by policy recommendation for Balanced Portfolio
+- No PCI ceiling filter on Explore; Country Pages filters products by PCI ceiling for countries with GDP per capita ≤ $6,000
 
 **GraphQL queries**: Same as feasibility graph view — `countryProductYear` + `productYear`
 

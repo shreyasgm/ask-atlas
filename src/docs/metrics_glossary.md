@@ -185,6 +185,16 @@ ECI_c = (K_c - mean(K)) / std(K)
 
 The first eigenvector (lambda = 1) is trivial — it assigns equal value to all countries. The second eigenvector captures the primary axis of variation in export basket complexity.
 
+### Implementation Details
+
+- **Algorithm:** Eigenvalue method via the `py-ecomplexity` package (branch `continuous_eci`)
+- **Reliable country set:** ~123 countries (hardcoded list from `obs_atlas.dta` with overrides: excludes SYR, HKG, GNQ; includes ARM, BHR, CYP, MMR, SWZ, TGO, BFA, COD, LBR, SDN, SGP)
+- **Product filtering:** Noisy trade codes excluded (SITC 9310, 9610, 9710, 9999, XXXX; HS 7108, 9999, XXXX). Least-traded products filtered: cumulative share < 0.025%, HH-effective exporters ≤ 2, ubiquity ≤ 2
+- **Extension to all countries:** ECI is extended to all ~207 countries using a continuous MCP sigmoid: `mcp = rca / (rca + 1)`. ECI for non-reliable countries: `ECI_c = Σ(mcp × PCI) / Σ(mcp) / √(λ₂)`, then z-score standardized
+- **PCI extension:** Similarly extended to all products using reliable-country ECI values
+- **Two ECI variants stored:** `eci` (recalculated with every data update) and `eci_fixed` (frozen at annual release time)
+- **Country Profiles default ECI:** The Country Profiles frontend uses **SITC ECI** as its default (`defaultECIProductClass = ProductClass.SITC`)
+
 ### Key properties
 
 - Standardized: mean ≈ 0, std ≈ 1 across countries in any given year
@@ -319,6 +329,16 @@ The `country_product_year` tables in the HS92, HS12, and SITC schemas carry a fu
 
 **Note on the `*_rcalt1` columns:** These are provided for analytical comparability with pre-2026 data and for researchers who prefer the binary threshold approach. For current Atlas-standard analysis, use the columns without the `*_rcalt1` suffix.
 
+### Normalization Method
+
+All normalized columns use **z-score normalization per country-year**: `normalized_x = (x - mean(x)) / std(x)`, computed separately for each (country_id, year) group.
+
+Two passes are performed:
+1. **All products:** Produces `normalized_distance`, `normalized_cog`, `normalized_pci`, `normalized_export_rca`
+2. **RCA < 1 products only:** Produces the `*_rcalt1` variants, normalized only over the subset of products where `export_rca < 1`
+
+**Distance inversion:** After normalization, `normalized_distance *= -1` so that **higher values = closer/easier products** (matching the intuitive "more feasible = higher score" convention used in the composite scoring formula).
+
 **GraphQL equivalents on `CountryProductYear`:**
 
 | DB column | GraphQL field |
@@ -357,7 +377,7 @@ phi_ij = min(C_ij / k_{i,0}, C_ij / k_{j,0})
 
 Taking the minimum prevents inflated proximity when one product is much more ubiquitous than the other.
 
-**Product space edge threshold:** Only pairs with `phi >= 0.3` appear as edges in the product space visualization.
+**Product space edge pruning:** Edges are pre-pruned to the **top 5 connections per product** (by proximity strength) at data generation time. The results are served from static JSON files — not filtered client-side. The `productProduct` GraphQL query returns 0 items; use the Country Pages `productSpace` query or static JSON for edge data.
 
 **Example values:**
 
@@ -449,6 +469,15 @@ Where:
 - Low COG: product is isolated; gaining it doesn't open many new paths
 - Products with high COG have outsized strategic value as stepping stones
 
+### Implementation Detail
+
+COG uses a **separate proximity matrix** computed over ALL countries (not just the ~123 reliable set):
+```
+weighted_proximity = proximity × PCI / proximity_sum
+COG = (unexported @ weighted_proximity) × unexported
+```
+Both `unexported` terms ensure gains only come from/to products the country does NOT currently export.
+
 **DB column:** `cog` (float8) — in `{schema}.country_product_year_{level}`
 
 **GraphQL field:** `cog` on `CountryProductYear`
@@ -511,11 +540,24 @@ Where `(1 - M_cp)` ensures only products the country does NOT currently export a
 
 **Definition level:** Country × year
 
-**Variables:** The Atlas 10-year GDP per capita growth projection uses four explanatory factors:
-1. Economic Complexity Index (ECI)
-2. Complexity Outlook Index (COI)
-3. Current income level (log GDP per capita)
-4. Expected natural resource exports per capita
+**Model:** OLS regression with clustered standard errors.
+
+**Dependent variable:** Annualized 10-year constant GDP per capita growth: `(gdppc_const_{t+10} / gdppc_const_t)^(1/10) - 1`
+
+**Features (5 variables + decade dummies):**
+1. `ln_gdppc_const` — log of constant GDP per capita (convergence term)
+2. `nr_growth_10` — 10-year change in real natural resource net exports per capita (deflated and normalized by GDP per capita)
+3. `eci` — Economic Complexity Index (SITC classification)
+4. `oppval` — Complexity Outlook Index (COI)
+5. `eci × oppval` — interaction term
+6. Decade dummy variables (1970s through 2010s)
+
+**Procedure:**
+- 10 separate cohort regressions run (one per "digit year": years ending in 0, 1, 2, ..., 9)
+- Outliers > 2.5× RMSE are removed; crisis countries (VEN, LBN, YEM) excluded from training
+- High-growth Asian countries (CHN, KOR, SGP) restricted to post-1989 data only
+- Final estimate is the mean across all 10 cohort regressions
+- GDP growth (not per capita) = `100 × ((1 + point_est) × (1 + pop_est) - 1)`
 
 Countries whose ECI is high relative to their income level are predicted to grow faster; countries whose ECI is low relative to income (often natural-resource-dependent) are predicted to grow slower.
 
@@ -694,7 +736,7 @@ Where `n_p = 1 / HHI_p` is the effective number of competing countries in produc
 
 **Approach:** Observed co-occurrence count `C_ij` is tested against the expected count under independence (`k_{i,0} * k_{j,0} / N`, where N = total countries). A z-score filter zeroes out connections below a significance threshold (e.g., z > 1.96 for p < 0.05). This yields cleaner relatedness networks with fewer false edges.
 
-**Not in Atlas.** The Atlas product space uses a fixed `phi >= 0.3` threshold rather than significance testing.
+**Not in Atlas.** The Atlas product space uses a top-5-neighbors-per-product pruning strategy rather than significance testing.
 
 ### Alternative Proximity Measures for Innovation Domains
 

@@ -301,7 +301,13 @@ The country profile is a **single scrollable page** — all 12 "subpages" are se
   - **Controls**:
     - **(1) Your Strategic Approach**: Shows the recommended approach (e.g., "Light Touch Approach")
     - **(2) Product Selection Criteria** (radio buttons): Low-hanging Fruit, Balanced Portfolio, Long Jumps
-    - **Weight visualization** (pie chart): Shows relative weights of Opportunity Gain, Distance, Complexity (e.g., 20%/60%/20%)
+    - **Weight visualization** (pie chart): Shows relative weights of Distance, Complexity (PCI), and Opportunity Gain (COG). Weights vary by strategy AND by policy recommendation for Balanced Portfolio:
+      - Low-Hanging Fruit (any): Distance 60% / Complexity 15% / Opp. Gain 25%
+      - Long Jump (any): Distance 45% / Complexity 20% / Opp. Gain 35%
+      - Balanced Portfolio (StrategicBets): Distance 50% / Complexity 15% / Opp. Gain 35%
+      - Balanced Portfolio (ParsimoniousIndustrial): Distance 55% / Complexity 20% / Opp. Gain 25%
+      - Balanced Portfolio (LightTouch): Distance 60% / Complexity 20% / Opp. Gain 20%
+    - **PCI ceiling filter**: For countries with GDP per capita ≤ $6,000, products with PCI > countryECI + 2.0 (or 2.5 for Long Jump) are excluded from top products
   - **Text**: Explanation of Distance, Complexity, and Opportunity Gain concepts
 
 **GraphQL queries**: `allCountryProductYear` (distance, opportunity gain, PCI per product), `allProductYear` (global export value for bubble sizing), `countryProfile` (policy recommendation for default strategy)
@@ -319,16 +325,16 @@ The country profile is a **single scrollable page** — all 12 "subpages" are se
   - **Title**: "Top 50 Products Based on Strategy Approach"
   - **Table columns**:
     - Product Name (with HS92 code)
-    - "Nearby" Distance (diamond rating scale, ~5 diamonds)
-    - Opportunity Gain (diamond rating scale)
-    - Product Complexity (diamond rating scale)
+    - "Nearby" Distance (diamond rating: 0.5–5.0 scale from 10 deciles, max 5 diamonds)
+    - Opportunity Gain (diamond rating: 0.5–5.0 scale from 10 deciles, max 5 diamonds)
+    - Product Complexity (diamond rating: 0.5–5.0 scale from 10 deciles, max 5 diamonds)
     - Global Size (USD)
     - Global Growth 5 YR (percentage with ↑/↓ indicator)
   - **Strategy label**: Shows which approach is applied (e.g., "Light Touch Approach / Balanced Portfolio")
   - **Interactive**: "Click on product names to explore in the Atlas"
   - **Text**: Lists high-potential sectors for diversification
 
-**Diamond ratings** map to the API's `DecileClassification` enum: Last, Second, Third, Fourth, Fifth, Sixth, Seventh, Eighth, Ninth, Top — these decile values are rendered as filled/unfilled diamonds.
+**Diamond ratings** map to the API's `DecileClassification` enum: Last (0.5), Second (1.0), Third (1.5), Fourth (2.0), Fifth (2.5), Sixth (3.0), Seventh (3.5), Eighth (4.0), Ninth (4.5), Top (5.0) — rendered as filled/half-filled/unfilled diamond shapes (10px rotated squares). Max 5 diamonds displayed. Decile bins are computed from percentile breakpoints provided by `countryYearThresholds`.
 
 **GraphQL queries**: `allCountryProductYear` (normalizedDistanceDecileClassification, normalizedOpportunityGainDecileClassification, normalizedPciDecileClassification per product), `allProductYear` (globalExportValue, globalExportValueChangeFiveYears for Global Size and Global Growth columns), `countryProfile` (policy recommendation)
 

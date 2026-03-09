@@ -270,16 +270,19 @@ Beyond the letter grade, several qualitative factors help assess whether a count
 
 The Atlas provides a **10-year GDP per capita growth forecast** for each of the 145 countries. Displayed as an annualized rate (e.g., "Kenya is expected to grow 3.4% per year over the next 10 years"). The current forecast horizon ends approximately 10 years from the most recent data year.
 
-### Methodology: four-factor model
+### Methodology: OLS regression model
 
-The projection model is based on complexity-growth regressions from the Growth Lab (Hausmann, Hidalgo et al.). Four factors predict 10-year GDP per capita growth:
+The projection uses OLS regression with 5 features + decade dummies. Dependent variable: annualized 10-year constant GDP per capita growth.
 
-| Factor | Description | Direction |
+| Factor | Variable | Direction |
 |---|---|---|
-| **ECI** | Economic Complexity Index — current productive capabilities | Higher ECI → faster growth |
-| **COI** | Complexity Outlook Index — connectedness to new complex products | Higher COI → faster growth |
-| **Current income level** | GDP per capita | Countries complex *relative to income* grow faster (convergence effect) |
-| **Natural resource export share** | Expected natural resource exports per capita | Resource-driven income is "discounted" — it doesn't reflect productive capabilities |
+| **Log GDP per capita** | `ln_gdppc_const` | Convergence: poorer countries (complex relative to income) grow faster |
+| **Natural resource change** | `nr_growth_10` | 10-year change in real NR net exports per capita; resource-driven income is discounted |
+| **ECI** | `eci` (SITC classification) | Higher ECI → faster growth |
+| **COI** | `oppval` (Complexity Outlook Index) | Higher COI → faster growth |
+| **ECI × COI interaction** | `eci_oppval` | Captures synergy between complexity level and opportunity connectedness |
+
+**Procedure:** 10 separate cohort regressions are run (one per digit year), outliers > 2.5× RMSE are removed, crisis countries (VEN, LBN, YEM) are excluded from training, and high-growth Asian countries (CHN, KOR, SGP) are restricted to post-1989 data. Final GDP growth = `100 × ((1 + point_est) × (1 + pop_est) - 1)`.
 
 The key empirical finding: countries whose ECI is higher than their income level would predict tend to grow faster, converging toward the income level their complexity "deserves." The inverse is true for countries propped up by resource rents with low underlying complexity.
 

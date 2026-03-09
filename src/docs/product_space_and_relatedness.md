@@ -72,7 +72,7 @@ where C_ij is the count of countries that export both i and j, and k_{p,0} is th
 | Range | 0 to 1 |
 | Symmetry | φ_ij = φ_ji (symmetric) |
 | Interpretation | Higher = more likely to be co-exported = more related capabilities |
-| Threshold for network edges | φ ≥ 0.3 (standard; retains ~2,000 edges across ~865 nodes at HS4 level) |
+| Threshold for network edges | Pre-pruned to top-5 connections per product (Explore frontend: 4,316 edges / 865 nodes; Country Profiles: 2,532 edges / 866 nodes). Edge data is served from static JSON files, NOT from the `productProduct` GraphQL query. |
 | Fixed globally | Yes — computed from many countries' export histories; does not change per country viewed |
 
 ### Example Values
@@ -114,9 +114,9 @@ The field `strength` in the API corresponds to proximity φ in the formulas. No 
 
 ### Construction
 
-1. Compute the ~865×865 (HS4 level) proximity matrix from historical co-export patterns across 128 countries over 50 years.
-2. Threshold: retain only edges where φ ≥ 0.3 (~2,000 edges remain).
-3. Project to 2D using a force-directed layout (original Hidalgo et al. 2007 approach) or UMAP. The resulting coordinates are **fixed globally** — node positions do not change per country.
+1. Compute the ~865×865 (HS4 level) proximity matrix from historical co-export patterns across ~123 reliable countries.
+2. Prune edges: retain the **top 5 connections per product** (by proximity strength). The pruning is done at data generation time. Minimum proximity in the pruned set: ~0.17 (Country Profiles) or ~0.48 (Explore). The pruned network contains ~865 nodes and ~4,316 edges. No runtime edge filtering occurs.
+3. Project to 2D using UMAP. The resulting coordinates are **fixed globally** — node positions do not change per country. Pre-computed UMAP layouts are generated during data ingestion.
 
 ### Node Positions (API / DB)
 
@@ -343,7 +343,7 @@ where:
 | High | Country is well-positioned — many complex products are within reach |
 | Low | Country is isolated from complex products — diversification will be harder |
 
-COI is one of the four inputs to the Atlas growth projections (alongside ECI, GDP per capita, and expected natural resource exports per capita).
+COI is one of the five inputs to the Atlas growth projections (alongside ECI, log GDP per capita, natural resource export change, and the ECI×COI interaction term).
 
 ### Database and API
 
@@ -442,21 +442,32 @@ query {
 | Y-axis numeric labels | Yes (e.g., -3.5 to 2.5) | No — uses qualitative categories |
 | Strategy selector | No | Yes (Low-Hanging Fruit / Balanced Portfolio / Long Jumps radio buttons) |
 | Table view | `/explore/feasibility/table` | `/countries/{id}/product-table` (top 50 only) |
-| Diamond ratings | 7 diamonds, all products | 7 diamonds, top 50 |
+| Diamond ratings | Max 5 diamonds (0.5–5.0 scale), all products | Max 5 diamonds, top 50 |
 
 ### Product Selection Strategies (Country Pages Growth Opportunities)
 
 The Country Pages growth opportunities page offers three product selection strategies, each a weighted combination of the three criteria (distance, complexity, opportunity gain):
 
-| Strategy | Distance Weight | Opportunity Gain Weight | Complexity Weight | Best For |
+**Country Profiles** scoring: `score = normalizedDistance × distanceWeight + normalizedPci × complexityWeight + normalizedCog × opportunityGainWeight`
+
+The weights vary by strategy AND by policy recommendation (for Balanced Portfolio):
+
+| Strategy | Policy Recommendation | Distance | Complexity (PCI) | Opportunity Gain (COG) |
 |---|---|---|---|---|
-| **Low-Hanging Fruit** | 60% | 25% | 15% | Products closest to current capabilities |
-| **Balanced Portfolio** | 60% | 20% | 20% | Even spread across criteria |
-| **Long Jumps** | 45% | 35% | 20% | Higher-payoff products further from current basket |
+| **Low-Hanging Fruit** | (any) | 60% | 15% | 25% |
+| **Long Jump** | (any) | 45% | 20% | 35% |
+| **Balanced Portfolio** | StrategicBets | 50% | 15% | 35% |
+| **Balanced Portfolio** | ParsimoniousIndustrial | 55% | 20% | 25% |
+| **Balanced Portfolio** | LightTouch | 60% | 20% | 20% |
+| **Balanced Portfolio** | TechFrontier | N/A (no feasibility page) | | |
 
-In all three modes, distance receives the largest weight — feasibility always matters most. The balance shifts as the strategy moves from conservative (Low-Hanging Fruit) to ambitious (Long Jumps), reducing the distance penalty and increasing the reward for opportunity gain and complexity.
+Products are sorted descending by score and the **top 50** are highlighted.
 
-These strategies appear as radio buttons on `/countries/{id}/growth-opportunities`. The Explore API feasibility page (`/explore/feasibility`) does not offer these strategy presets.
+**PCI Ceiling Filter**: For countries with GDP per capita ≤ $6,000, product PCI must be < `countryECI + ceilingRange` (2.0 for Low-Hanging/Balanced, 2.5 for Long Jump; table view uses 1.75). Above $6k, ceiling is effectively unlimited.
+
+**Explore page** uses a different, fixed formula: `score = 0.50 × normalizedDistance + 0.15 × normalizedPci + 0.35 × normalizedCog` (no strategy variation).
+
+These strategies appear as radio buttons on `/countries/{id}/growth-opportunities`. The Explore API feasibility page (`/explore/feasibility`) does not offer these strategy presets but uses its own fixed weighting.
 
 ### GraphQL Query for Feasibility Scatter Data
 
@@ -489,9 +500,9 @@ The table view (`/explore/feasibility/table`) presents the same data in sortable
 
 | Column | API Field | Rating Display |
 |---|---|---|
-| Nearby Distance | `countryProductYear.distance` | 7 diamonds (inverted: more = closer) |
-| Opportunity Gain | `countryProductYear.cog` | 7 diamonds |
-| Product Complexity | `countryProductYear.normalizedPci` | 7 diamonds |
+| Nearby Distance | `countryProductYear.distance` | max 5 diamonds (0.5–5.0 scale from 10 deciles) (inverted: more = closer) |
+| Opportunity Gain | `countryProductYear.cog` | max 5 diamonds (0.5–5.0 scale from 10 deciles) |
+| Product Complexity | `countryProductYear.normalizedPci` | max 5 diamonds (0.5–5.0 scale from 10 deciles) |
 | Global Size (USD) | `productYear.exportValue` | Dollar amount |
 | Global Growth 5 YR | `productYear.exportValueConstCagr5` | Percentage with ↑/↓ |
 
@@ -602,7 +613,7 @@ and the standard deviation is:
 
 $$\sigma[C_{ij}] = \sqrt{\frac{k_{i,0} \cdot k_{j,0} \cdot (N - k_{i,0}) \cdot (N - k_{j,0})}{N^3}}$$
 
-Connections with z < 1.96 (95% significance threshold) are zeroed out. This produces a cleaner, more defensible relatedness network but reduces connectivity for ubiquitous products. Not used in the Atlas; the Atlas applies φ ≥ 0.3 as its threshold instead.
+Connections with z < 1.96 (95% significance threshold) are zeroed out. This produces a cleaner, more defensible relatedness network but reduces connectivity for ubiquitous products. Not used in the Atlas; the Atlas uses a top-5-neighbors-per-product pruning strategy instead of a fixed threshold.
 
 ### B. Population-Adjusted RCA (RPOP / RpCA)
 

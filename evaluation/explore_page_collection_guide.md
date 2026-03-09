@@ -563,11 +563,11 @@ The feasibility table is the **only Explore page with DOM-accessible data** — 
 | Product Name + HS code | `productHs92.nameEn` + `code` | Exact |
 | Global Size (USD) | `productYear.exportValue` | Same after rounding (e.g., `$2.61B`) |
 | Global Growth 5 YR | `productYear.exportValueConstCagr5` | Same percentage (e.g., `↑ 13.1%`) |
-| "Nearby" Distance (diamonds) | `countryProductYear.distance` | Ordinal — 7 diamond levels; more diamonds = smaller distance value |
-| Opportunity Gain (diamonds) | `countryProductYear.cog` | Ordinal — 7 diamond levels; more diamonds = higher COG |
-| Product Complexity (diamonds) | `countryProductYear.normalizedPci` | Ordinal — 7 diamond levels; more diamonds = higher PCI |
+| "Nearby" Distance (diamonds) | `countryProductYear.distance` | Ordinal — 10 decile levels mapped to max 5 diamonds (0.5–5.0 scale); more diamonds = smaller distance value |
+| Opportunity Gain (diamonds) | `countryProductYear.cog` | Ordinal — 10 decile levels mapped to max 5 diamonds (0.5–5.0 scale); more diamonds = higher COG |
+| Product Complexity (diamonds) | `countryProductYear.normalizedPci` | Ordinal — 10 decile levels mapped to max 5 diamonds (0.5–5.0 scale); more diamonds = higher PCI |
 
-**Diamond rating note:** The distance, COG, and PCI columns use 7-level diamond ratings (e.g., ◆◆◆◆◆◇◇), NOT exact numbers. Don't expect an exact match between the raw API value and the diamond count — instead verify that higher API values correspond to more filled diamonds and that the sort order is consistent.
+**Diamond rating note:** The distance, COG, and PCI columns use a 10-decile rating system displayed as 0.5–5.0 diamonds (max 5 diamond shapes with half-filled states). Decile bins are computed client-side from percentile breakpoints provided by `countryYearThresholds`. Don't expect an exact match between the raw API value and the diamond count — instead verify that higher API values correspond to more filled diamonds and that the sort order is consistent.
 
 **Global Size and Global Growth 5 YR** are displayed as exact formatted values ($USD and percentage) and should match the API data after rounding.
 

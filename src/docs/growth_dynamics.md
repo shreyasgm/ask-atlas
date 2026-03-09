@@ -247,12 +247,15 @@ The Atlas provides **two distinct types** of growth information:
 
 ### Growth Projection Model
 
-The `growthProjection` (annualized % for the next 10 years) is derived from four inputs:
+The `growthProjection` is derived from an OLS regression with 5 features + decade dummies:
 
-1. **ECI** — current productive capability level
-2. **COI** — connectedness to new complex products (Complexity Outlook Index)
-3. **Current income level** — GDP per capita (countries with high complexity relative to income grow faster)
-4. **Expected natural resource exports per capita** — adjusts for resource-driven income
+1. `ln_gdppc_const` — log of constant GDP per capita (convergence term)
+2. `nr_growth_10` — 10-year change in real natural resource net exports per capita
+3. `eci` — Economic Complexity Index (SITC classification)
+4. `oppval` — Complexity Outlook Index (COI)
+5. `eci × oppval` — interaction term (captures synergy between complexity and opportunity connectedness)
+
+Ten cohort regressions are averaged, outliers > 2.5× RMSE are removed, crisis countries (VEN, LBN, YEM) are excluded from training, and high-growth Asian countries (CHN, KOR, SGP) are restricted to post-1989 data. Final GDP growth = `100 × ((1 + point_est) × (1 + pop_est) - 1)`.
 
 Countries with **higher ECI than their income suggests** tend to grow faster (unexploited productive potential). Countries with **lower ECI than their income suggests** tend to grow slower (income may be propped up by resource rents).
 

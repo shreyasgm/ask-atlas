@@ -213,6 +213,17 @@ ORDER BY year;
 
 **Pitfall:** `growth_proj` in `hs92.country_year` is the raw growth projection float. The Country Pages API adds the rank and the `growthProjectionRelativeToIncome` enum (which classifies the country as More/ModeratelyMore/Same/ModeratelyLess/Less complex than expected for its income level using OLS regression against all 145 countries). The SQL alone cannot produce the rank or the classification.
 
+**Growth Projection Model:**
+
+The 10-year projection uses OLS regression with 5 features + decade dummies:
+1. `ln_gdppc_const` — log of constant GDP per capita (convergence term)
+2. `nr_growth_10` — 10-year change in real natural resource net exports per capita
+3. `eci` — Economic Complexity Index (SITC classification)
+4. `oppval` — Complexity Outlook Index (COI)
+5. `eci × oppval` — interaction term
+
+The dependent variable is annualized 10-year constant GDP per capita growth: `(gdppc_const_{t+10} / gdppc_const_t)^(1/10) - 1`. Ten cohort regressions are run (one per digit year), outliers > 2.5× RMSE are removed, crisis countries (VEN, LBN, YEM) are excluded from training, and high-growth Asian countries (CHN, KOR, SGP) are restricted to post-1989 data. Final GDP growth = `100 × ((1 + point_est) × (1 + pop_est) - 1)`.
+
 ---
 
 ## Subpage 2: Export Basket (`/countries/{id}/export-basket`)
@@ -858,7 +869,7 @@ ORDER BY cy.eci DESC;
 
 **Not available for highest-complexity countries** (e.g., USA, Germany, Japan — those in the Technological Frontier quadrant). The `show_feasibility = false` flag on products and API-side suppression gates these pages.
 
-**What is shown:** Scatter plot (Distance vs. Opportunity Gain) and ranked table of the top 50 non-exported products with their feasibility metrics. Diamond ratings (1–10 deciles) for Distance, Opportunity Gain, and Complexity.
+**What is shown:** Scatter plot (Distance vs. Opportunity Gain) and ranked table of the top 50 non-exported products with their feasibility metrics. Diamond ratings (0.5–5.0 scale, mapped from 10 deciles) for Distance, Opportunity Gain, and Complexity.
 
 ### SQL Patterns
 
@@ -890,8 +901,12 @@ WHERE cpy.country_id = 404
 ORDER BY cpy.cog DESC           -- Sort by opportunity gain (default)
 LIMIT 50;
 
--- To replicate "Balanced Portfolio" sort (weighted composite):
-ORDER BY (0.2 * cpy.normalized_pci + 0.6 * cpy.normalized_distance + 0.2 * cpy.normalized_cog) DESC
+-- To replicate "Balanced Portfolio" sort (weighted composite, varies by policy recommendation):
+-- For StrategicBets:     ORDER BY (0.15 * cpy.normalized_pci + 0.50 * (-cpy.normalized_distance) + 0.35 * cpy.normalized_cog) DESC
+-- For ParsimoniousInd.:  ORDER BY (0.20 * cpy.normalized_pci + 0.55 * (-cpy.normalized_distance) + 0.25 * cpy.normalized_cog) DESC
+-- For LightTouch:        ORDER BY (0.20 * cpy.normalized_pci + 0.60 * (-cpy.normalized_distance) + 0.20 * cpy.normalized_cog) DESC
+-- Note: normalized_distance is inverted during ingestion (higher = closer), so use as-is if using
+-- the DB column directly. The sign convention in the formula depends on which normalization is used.
 
 -- Diamond ratings: the API pre-computes decile bins (1-10).
 -- In SQL, approximate with NTILE(10):
@@ -932,13 +947,48 @@ WHERE country_id = 404 AND year = 2024 AND export_rca < 1;
 
 **Product Selection Strategy Weights:**
 
-| Strategy | Distance weight | Complexity weight | Opportunity Gain weight |
-|----------|----------------|-------------------|------------------------|
-| Low-hanging Fruit | 60% | 20% | 20% |
-| Balanced Portfolio | 60% | 20% | 20% |
-| Long Jumps | 20% | 20% | 60% |
+The composite score is: `score = normalizedDistance × distanceWeight + normalizedPci × complexityWeight + normalizedCog × opportunityGainWeight`
 
-(Exact weights shown on the website's pie chart for each selection criterion.)
+The weights vary by **strategy AND by the country's policy recommendation** (for Balanced Portfolio):
+
+| Strategy | Policy Recommendation | Distance | Complexity (PCI) | Opportunity Gain (COG) |
+|----------|----------------------|----------|-------------------|------------------------|
+| Low-Hanging Fruit | (any) | **60%** | **15%** | **25%** |
+| Long Jump | (any) | **45%** | **20%** | **35%** |
+| Balanced Portfolio | StrategicBets | **50%** | **15%** | **35%** |
+| Balanced Portfolio | ParsimoniousIndustrial | **55%** | **20%** | **25%** |
+| Balanced Portfolio | LightTouch | **60%** | **20%** | **20%** |
+| Balanced Portfolio | TechFrontier | N/A (no feasibility page) | | |
+
+Products are sorted descending by score and the **top 50** are highlighted (`numTopProductsToBeHighlighted = 50`).
+
+**PCI Ceiling Filter (additional top-product filter):**
+- If GDP per capita ≤ **$6,000**: product PCI must be < `countryECI + ceilingRange`
+  - Low-Hanging Fruit & Balanced Portfolio: `ceilingRange = 2.0`
+  - Long Jump: `ceilingRange = 2.5`
+- If GDP per capita > $6,000: ceiling is effectively unlimited (set to 1000)
+- The **top products table** uses a slightly different ceiling: `ceilingRange = 1.75`
+
+Only products with `rca < 1` are included. The `normalizedDistance`, `normalizedPci`, and `normalizedCog` values are server-computed z-scores (per country-year); the client does not re-normalize them.
+
+### Decile Classification and Diamond Ratings
+
+Decile bins are **computed client-side** (not during ingestion or in the API). The API provides percentile breakpoints (10th–90th) via the `countryYearThresholds` query. The client uses `d3.scaleThreshold()` to map values:
+
+| Percentile Range | Decile Classification | Diamond Rating |
+|------------------|-----------------------|----------------|
+| > 90th percentile | Top | 5.0 (5 filled) |
+| > 80th | Ninth | 4.5 (4 filled + 1 half) |
+| > 70th | Eighth | 4.0 |
+| > 60th | Seventh | 3.5 |
+| > 50th | Sixth | 3.0 |
+| > 40th | Fifth | 2.5 |
+| > 30th | Fourth | 2.0 |
+| > 20th | Third | 1.5 |
+| > 10th | Second | 1.0 |
+| ≤ 10th | Last | 0.5 |
+
+Diamond visuals are 10px rotated squares. Fill states: empty, half (diagonal gradient), or full (solid gray `#808080`). Maximum 5 diamonds displayed.
 
 ---
 
@@ -993,10 +1043,10 @@ Some Country Pages metrics are derived by the Atlas backend and cannot be recons
 |--------|--------------|--------------------------|
 | Strategic approach | `countryProfile.policyRecommendation` | Requires ECI adjusted for natural resources and GDP (partial correlation), not in DB columns |
 | Diversification grade | `countryProfile.diversificationGrade` | Threshold-based ranking across all countries; threshold values not stored in DB |
-| Growth projection rank | `countryProfile.growthProjectionRank` | Requires cross-country ranking of `growth_proj` — available as SQL RANK() but projection methodology is external (IMF WEO-based) |
+| Growth projection rank | `countryProfile.growthProjectionRank` | Requires cross-country ranking of `growth_proj` — available as SQL RANK() but projection methodology uses custom OLS (5 features + decade dummies, see metrics_glossary.md) |
 | Export growth classification | `countryLookback.exportValueGrowthClassification` | Combination of top-2 CAGR products and their complexity classification vs benchmark |
 | Peer comparison countries | `newProductsComparisonCountries` | Selection logic uses income peer group + geographic proximity filters |
-| Product decile bins | `allCountryProductYear.normalizedDistanceDecileClassification` | Pre-computed decile bins normalized within country, not in raw DB columns |
+| Product decile bins | `allCountryProductYear.normalizedDistanceDecileClassification` | Computed client-side from percentile breakpoints in `countryYearThresholds` (10th–90th), not in raw DB columns |
 | Structural transformation step | `countryProfile.structuralTransformationStep` | Computed from rolling 3-year RPOP averages against sector thresholds |
 
 ---

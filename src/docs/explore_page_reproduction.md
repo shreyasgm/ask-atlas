@@ -367,12 +367,23 @@ ORDER BY cpy.year, market_share DESC;
 - **Node size:** Based on `productYear.exportValue` (global trade value of that product)
 - **Node position:** Fixed coordinates from `productHs92.productSpaceX` and `productHs92.productSpaceY`
 
-**Edge rendering:** `productProduct.strength` — higher strength = stronger connection drawn between nodes. Edges represent co-export proximity (probability that countries exporting one product also export the other).
+**Edge rendering:** Product space edges are **pre-pruned at data generation time**, NOT computed client-side or from the `productProduct` GraphQL query:
+- **Country Profiles:** 866 nodes, 2,532 edges. Edge strengths range 0.17–0.93.
+- **Explore:** 865 nodes, 4,316 edges (2,158 unique undirected). Each product keeps its **top 5 connections** by proximity. Min proximity: 0.48, max: 0.93.
+- No client-side edge filtering by strength threshold occurs — all pre-pruned edges are rendered.
+- Edge width varies only for highlighting (hovered/selected vs. regular).
+
+**Node sizing** (3 options on Explore page):
+- `WorldTrade`: square-root scale based on global export value
+- `CountryTrade`: same scale with country-specific export values
+- `None`: uniform size
 
 **Cluster labels (8 clusters in product space, different from the 11 treemap sectors):**
 Agricultural Goods, Construction Goods, Electronics, Chemicals and Basic Metals, Metalworking and Machinery, Minerals, Textile and Home Goods, Apparel
 
 **Important distinction:** The product space uses 8 `clusterId` clusters for color/grouping, while the treemap uses 11 `topParent` sectors. These are different classification axes.
+
+**Services exclusion:** The product space excludes services products.
 
 **SQL equivalent (nodes + RCA):**
 ```sql
@@ -473,10 +484,13 @@ WHERE cpy.country_id = 404
 ORDER BY cpy.normalized_pci DESC;
 ```
 
+**Bubble radius:** Linear scale based on world trade value.
+
 **Key characteristics:**
 - Services are excluded — legend shows "PRODUCT SECTORS" without Services.
 - Available for ALL countries (unlike Country Pages' growth-opportunities, which is hidden for the highest-complexity frontier economies).
 - No Products/Locations toggle.
+- Products with `exportRca >= 1` get darker fill (0.95 opacity vs 0.65 for opportunity products) when "Hide Exports" is off.
 
 ---
 
@@ -493,13 +507,19 @@ ORDER BY cpy.normalized_pci DESC;
 | Column | API Source Field | Notes |
 |--------|-----------------|-------|
 | Product Name + HS code | `productHs92.nameEn` + `productHs92.code` | e.g., "Photographic film, developed (3705 HS)" |
-| "Nearby" Distance | `countryProductYear.distance` | Diamond rating (7 diamonds); inverted display — more diamonds = closer (lower distance) |
-| Opportunity Gain | `countryProductYear.cog` | Diamond rating (7 diamonds) |
-| Product Complexity | `countryProductYear.normalizedPci` | Diamond rating (7 diamonds) |
+| "Nearby" Distance | `countryProductYear.distance` | Diamond rating (0.5–5.0 scale, 10 deciles); inverted display — more diamonds = closer (lower distance) |
+| Opportunity Gain | `countryProductYear.cog` | Diamond rating (0.5–5.0 scale, 10 deciles) |
+| Product Complexity | `countryProductYear.normalizedPci` | Diamond rating (0.5–5.0 scale, 10 deciles) |
 | Global Size (USD) | `productYear.exportValue` | Dollar amount of global trade in that product |
 | Global Growth 5 YR | `productYear.exportValueConstCagr5` | Percentage with ↑/↓ arrow; 5-year constant-dollar CAGR |
 
-**Default sort:** Product Complexity (`normalizedPci` descending)
+**Default sort:** By composite score (descending). The Explore frontend uses a **hardcoded "balanced approach"** scoring formula:
+```
+score = 0.50 × normalizedDistance + 0.15 × normalizedPci + 0.35 × normalizedCog
+```
+This is a fixed weighting (Distance=50%, Opportunity Gain=35%, Complexity=15%) that does NOT vary by country policy recommendation — unlike the Country Profiles feasibility chart which uses strategy-dependent weights.
+
+**Decile/Diamond computation:** The API provides percentile breakpoints (10th–90th) via `countryYearThresholds`. The client maps values to deciles using `d3.scaleThreshold()`. Diamond visual: Top decile = 5.0 diamonds, Last decile = 0.5 diamonds, in 0.5 increments. Maximum 5 diamond shapes displayed.
 
 **Scope:** All products where `exportRca < 1`. Not limited — shows all opportunity products (unlike Country Pages' product-table which caps at Top 50 and is unavailable for frontier economies).
 
