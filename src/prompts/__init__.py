@@ -57,6 +57,9 @@ from .prompt_graphql import (
     build_query_plan_prompt,
 )
 
+# -- GraphQL sub-agent prompt --
+from .prompt_graphql_subagent import GRAPHQL_SUBAGENT_PROMPT
+
 # -- SQL / product prompts + builder --
 from .prompt_sql import (
     PRODUCT_CODE_SELECTION_PROMPT,
@@ -93,6 +96,8 @@ __all__ = [
     "build_extraction_prompt",
     "build_id_resolution_prompt",
     "build_query_plan_prompt",
+    # GraphQL sub-agent prompt
+    "GRAPHQL_SUBAGENT_PROMPT",
     # SQL prompts
     "PRODUCT_CODE_SELECTION_PROMPT",
     "PRODUCT_EXTRACTION_PROMPT",

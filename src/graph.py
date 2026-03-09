@@ -32,13 +32,16 @@ from src.docs_pipeline import (
 )
 from src.graphql_client import GraphQLBudgetTracker
 from src.graphql_pipeline import (
+    assess_graphql_result,
     build_and_execute_graphql,
     execute_catalog_lookup,
     extract_graphql_question,
     format_graphql_results,
     plan_query,
     resolve_ids,
+    route_after_assessment,
 )
+from src.graphql_subagent import build_graphql_subagent, graphql_correction_agent_node
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 from src.sql_pipeline import (
     extract_products_node,
@@ -283,6 +286,26 @@ def build_atlas_graph(
         ),
     )
 
+    # GraphQL assessment + correction agent
+    builder.add_node(
+        "assess_graphql_result",
+        partial(assess_graphql_result, lightweight_model=lightweight_llm),
+        retry_policy=_llm_retry,
+    )
+    _graphql_subagent = build_graphql_subagent(
+        llm=llm,
+        graphql_client=graphql_client,
+        country_pages_client=country_pages_client,
+        country_cache=country_cache,
+        product_caches=product_caches or {},
+        services_cache=services_cache,
+        group_cache=group_cache,
+    )
+    builder.add_node(
+        "graphql_correction_agent",
+        partial(graphql_correction_agent_node, subagent=_graphql_subagent),
+    )
+
     # Catalog lookup node (budget-free, like docs_tool)
     builder.add_node(
         "execute_catalog_lookup",
@@ -360,7 +383,16 @@ def build_atlas_graph(
         },
     )
     builder.add_edge("resolve_ids", "build_and_execute_graphql")
-    builder.add_edge("build_and_execute_graphql", "format_graphql_results")
+    builder.add_edge("build_and_execute_graphql", "assess_graphql_result")
+    builder.add_conditional_edges(
+        "assess_graphql_result",
+        route_after_assessment,
+        {
+            "format_graphql_results": "format_graphql_results",
+            "graphql_correction_agent": "graphql_correction_agent",
+        },
+    )
+    builder.add_edge("graphql_correction_agent", "format_graphql_results")
     builder.add_edge("format_graphql_results", "agent")
 
     # Docs pipeline

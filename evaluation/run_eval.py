@@ -9,6 +9,7 @@ Usage:
     PYTHONPATH=$(pwd) uv run python evaluation/run_eval.py --concurrency 2 --judge-model gpt-5.2
     PYTHONPATH=$(pwd) uv run python evaluation/run_eval.py --skip-judge
     PYTHONPATH=$(pwd) uv run python evaluation/run_eval.py --smoke
+    PYTHONPATH=$(pwd) uv run python evaluation/run_eval.py --rejudge 20260308T023103Z
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ import argparse
 import asyncio
 import json
 from collections import defaultdict
+from pathlib import Path
 from typing import Any
 
 from utils import (
@@ -206,6 +208,46 @@ def _select_balanced(questions_meta: dict[str, dict], n: int) -> list[str]:
                 selected.append(cat_queues[cat].pop(0))
 
     return selected
+
+
+def _load_existing_run(run_id: str) -> tuple[Path, list[dict[str, Any]]]:
+    """Load agent results from an existing run directory.
+
+    Reads per-question ``result.json`` files and reconstructs the
+    ``run_results`` list that ``_judge_all`` and ``generate_report`` expect.
+
+    Args:
+        run_id: Timestamp name of the run directory (e.g. ``20260308T023103Z``).
+
+    Returns:
+        Tuple of (run_dir, run_results).
+
+    Raises:
+        FileNotFoundError: If the run directory or summary doesn't exist.
+    """
+    run_dir = EVALUATION_BASE_DIR / "runs" / run_id
+    if not run_dir.exists():
+        raise FileNotFoundError(f"Run directory not found: {run_dir}")
+
+    summary_path = run_dir / "summary.json"
+    if not summary_path.exists():
+        raise FileNotFoundError(f"No summary.json in {run_dir}")
+
+    summary = load_json_file(summary_path)
+    run_results: list[dict[str, Any]] = []
+
+    for entry in summary.get("results", []):
+        qid = str(entry["question_id"])
+        result_path = run_dir / qid / "result.json"
+        if result_path.exists():
+            result = load_json_file(result_path)
+            run_results.append(result)
+        else:
+            # Fall back to the summary entry (less detailed but usable)
+            run_results.append(entry)
+
+    logging.info(f"Loaded {len(run_results)} results from existing run {run_id}")
+    return run_dir, run_results
 
 
 async def _judge_all(
@@ -442,6 +484,16 @@ def _parse_args() -> argparse.Namespace:
         default=None,
         help="Model for web research generation (default: provider-specific default)",
     )
+    parser.add_argument(
+        "--rejudge",
+        type=str,
+        metavar="RUN_ID",
+        help=(
+            "Re-judge an existing run (e.g. --rejudge 20260308T023103Z). "
+            "Loads agent results from the run directory and re-runs only the "
+            "judge + report steps. Does NOT re-run the agent."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -455,6 +507,49 @@ async def main() -> None:
     # Step 1: Load question metadata
     questions_meta = _load_questions_meta()
     logging.info(f"Loaded metadata for {len(questions_meta)} questions")
+
+    # ---- Re-judge path: skip agent, load existing results ----
+    if args.rejudge:
+        run_dir, run_results = _load_existing_run(args.rejudge)
+        if not run_results:
+            logging.error("No agent results found in run. Aborting.")
+            return
+
+        judge_results = await _judge_all(
+            run_results=run_results,
+            questions_meta=questions_meta,
+            judge_model=args.judge_model,
+            judge_provider=args.judge_provider,
+            concurrency=args.concurrency,
+        )
+
+        report = generate_report(
+            run_results,
+            judge_results,
+            questions_meta,
+            judge_model=args.judge_model,
+            judge_provider=args.judge_provider,
+        )
+        json_path, md_path = save_report(report, run_dir)
+        html_path = generate_html_report(run_dir)
+
+        agg = report["aggregate"]
+        logging.info("=" * 60)
+        avg_pc = agg.get("avg_pass_count", agg.get("avg_weighted_score", 0))
+        logging.info("RE-JUDGE RESULTS SUMMARY")
+        logging.info(f"  Run:                 {args.rejudge}")
+        logging.info(f"  Questions evaluated:  {agg['count']}")
+        logging.info(f"  Avg pass count:       {avg_pc} / 4")
+        logging.info(f"  Pass rate:            {agg['pass_rate']}%")
+        logging.info(
+            f"  Pass/Partial/Fail:    {agg['pass_count']}/{agg['partial_count']}/{agg['fail_count']}"
+        )
+        logging.info(f"  Report (json):        {json_path}")
+        logging.info(f"  Report (html):        {html_path}")
+        logging.info("=" * 60)
+        return
+
+    # ---- Normal path: run agent + judge ----
 
     # Resolve question IDs (mutually exclusive: --questions, --smoke, --balanced)
     specified = sum(1 for x in [args.questions, args.smoke, args.balanced] if x)

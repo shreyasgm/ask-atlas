@@ -55,6 +55,52 @@ export function getStepDetail(
       return `\u2192 ${truncate(parts.join(', '))}`;
     }
 
+    case 'assess_graphql_result': {
+      const verdict = detail.verdict;
+      const reasoning = detail.reasoning;
+      if (typeof verdict === 'string' && verdict) {
+        const parts = [
+          verdict === 'pass'
+            ? '\u2713 Pass'
+            : verdict === 'fail'
+              ? '\u2717 Fail'
+              : '\u2248 Suspicious',
+        ];
+        if (typeof reasoning === 'string' && reasoning) {
+          parts.push(truncate(reasoning, 120));
+        }
+        return parts.join(' \u2014 ');
+      }
+      return null;
+    }
+
+    case 'graphql_correction_agent': {
+      const trace = detail.reasoning_trace;
+      const queryType = detail.query_type;
+      const parts: Array<string> = [];
+      if (Array.isArray(trace)) {
+        const GRAPHQL_TOOLS = new Set([
+          'execute_graphql_freeform',
+          'execute_graphql_template',
+          'explore_catalog',
+          'introspect_schema',
+        ]);
+        const actionCount = (trace as Array<Record<string, unknown>>).filter(
+          (e) =>
+            e.role === 'tool' &&
+            typeof e.tool_name === 'string' &&
+            GRAPHQL_TOOLS.has(e.tool_name as string),
+        ).length;
+        if (actionCount > 0) {
+          parts.push(`${actionCount} action${actionCount === 1 ? '' : 's'}`);
+        }
+      }
+      if (typeof queryType === 'string' && queryType) {
+        parts.push(queryType);
+      }
+      return parts.length > 0 ? `\u2192 ${parts.join(', ')}` : null;
+    }
+
     case 'build_and_execute_graphql': {
       const parts: Array<string> = [];
       if (typeof detail.api_target === 'string' && detail.api_target) {

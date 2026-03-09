@@ -57,6 +57,8 @@ GRAPHQL_PIPELINE_NODES = frozenset(
         "plan_query",
         "resolve_ids",
         "build_and_execute_graphql",
+        "assess_graphql_result",
+        "graphql_correction_agent",
         "format_graphql_results",
     }
 )
@@ -72,6 +74,8 @@ _GRAPHQL_STATE_DEFAULTS: dict[str, Any] = {
     "graphql_api_target": None,
     "graphql_raw_response": None,
     "graphql_execution_time_ms": 0,
+    "graphql_assessment": "",
+    "graphql_surface_to_agent": False,
 }
 
 # ---------------------------------------------------------------------------
@@ -2973,6 +2977,204 @@ _QUERY_BUILDERS: dict[str, Callable[[dict], tuple[str, dict]]] = {
     "global_datum": _build_global_datum,
     "growth_opportunities": _build_growth_opportunities,
 }
+
+
+# ---------------------------------------------------------------------------
+# Assessment node: assess_graphql_result
+# ---------------------------------------------------------------------------
+
+TECHFRONTIER_COUNTRIES = frozenset(
+    {840, 156, 276, 392, 826, 250, 380, 410, 528, 756, 124, 752, 40, 246, 203, 702}
+)
+"""M49 codes for TechFrontier countries where Atlas suppresses growth opportunity visualizations."""
+
+# Country Pages classification coverage: only HS (=HS92) and SITC
+_CP_SUPPORTED_CLASSES = frozenset({"HS", "HS92", "SITC", None})
+
+
+class ResultAssessment(BaseModel):
+    """LLM assessment of a GraphQL pipeline result."""
+
+    verdict: Literal["pass", "fail", "suspicious"] = Field(
+        description="Overall assessment of the result quality."
+    )
+    failure_type: Literal[
+        "empty_results",
+        "wrong_question_answered",
+        "data_shape_mismatch",
+        "api_error",
+        "coverage_gap",
+        "entity_resolution_error",
+        "wrong_metric_or_field",
+        "classification_mismatch",
+        None,
+    ] = Field(default=None, description="Category of failure if verdict is not pass.")
+    reasoning: str = Field(
+        description="Brief reasoning for the verdict (max 200 chars)."
+    )
+
+
+def _get_root_data_list(raw_response: dict) -> list | None:
+    """Extract the root data list from a GraphQL response.
+
+    Returns the first list value found in the response dict, or None.
+    """
+    if not isinstance(raw_response, dict):
+        return None
+    for value in raw_response.values():
+        if isinstance(value, list):
+            return value
+        if isinstance(value, dict):
+            # Nested — e.g. {"data": {"countryProductYear": [...]}}
+            for inner_value in value.values():
+                if isinstance(inner_value, list):
+                    return inner_value
+    return None
+
+
+async def assess_graphql_result(
+    state: AtlasAgentState,
+    *,
+    lightweight_model: Any,
+) -> dict:
+    """Assess the quality of a GraphQL pipeline result.
+
+    Tier 1 (deterministic): catches API errors, empty results, coverage gaps.
+    Tier 2 (LLM): assesses ambiguous cases (e.g. TechFrontier empty results).
+
+    Args:
+        state: Current agent state after build_and_execute_graphql.
+        lightweight_model: Lightweight LLM for tier-2 assessment.
+
+    Returns:
+        Dict with ``graphql_assessment`` string in format ``"verdict|failure_type|reasoning"``.
+    """
+    async with node_timer("assess_graphql_result", "atlas_graphql") as t:
+        raw_response = state.get("graphql_raw_response")
+        classification = state.get("graphql_classification") or {}
+        query_type = classification.get("query_type", "")
+        resolved_params = state.get("graphql_resolved_params") or {}
+        question = state.get("graphql_question", "")
+
+        usage_sink: list[dict] = []
+
+        # --- Tier 1: Deterministic checks ---
+
+        # Check 1: API error
+        if raw_response is None or (
+            isinstance(raw_response, dict) and "error" in raw_response
+        ):
+            assessment = "fail|api_error|API returned an error or no response"
+            return {
+                "graphql_assessment": assessment,
+                "step_timing": [t.record],
+            }
+
+        # Check 2: Empty results
+        root_list = _get_root_data_list(raw_response)
+        is_empty = root_list is not None and len(root_list) == 0
+
+        if is_empty:
+            # TechFrontier exception: empty growth opportunity data is expected
+            country_id = resolved_params.get("country_id")
+            if (
+                query_type
+                in {"feasibility", "feasibility_table", "growth_opportunities"}
+                and country_id in TECHFRONTIER_COUNTRIES
+            ):
+                # Ambiguous — let LLM assess whether this is expected
+                pass  # Fall through to tier 2
+            else:
+                assessment = "fail|empty_results|Query returned zero results"
+                return {
+                    "graphql_assessment": assessment,
+                    "step_timing": [t.record],
+                }
+
+        # Check 3: Coverage gap — Country Pages with unsupported classification
+        api_target = classification.get("api_target") or state.get("graphql_api_target")
+        entity_extraction = state.get("graphql_entity_extraction") or {}
+        product_class = entity_extraction.get("product_class")
+        if (
+            api_target == "country_pages"
+            and product_class is not None
+            and product_class not in _CP_SUPPORTED_CLASSES
+        ):
+            assessment = (
+                f"fail|coverage_gap|Country Pages API does not support "
+                f"product class {product_class}"
+            )
+            return {
+                "graphql_assessment": assessment,
+                "step_timing": [t.record],
+            }
+
+        # Tier 1 clean pass — no issues detected
+        if not is_empty:
+            assessment = "pass|None|Tier 1 checks passed"
+            return {
+                "graphql_assessment": assessment,
+                "step_timing": [t.record],
+            }
+
+        # --- Tier 2: LLM assessment (only for ambiguous cases) ---
+        import json
+
+        response_sample = json.dumps(raw_response, default=str)[:4000]
+        prompt = (
+            f"Assess whether this GraphQL API result correctly answers the user's question.\n\n"
+            f"Question: {question}\n"
+            f"Query type: {query_type}\n"
+            f"Resolved params: {json.dumps(resolved_params, default=str)}\n"
+            f"Response (first 4K chars): {response_sample}\n\n"
+            f"Consider: Is the result empty because this country/product combination "
+            f"genuinely has no data (e.g. advanced economies have no growth opportunities "
+            f"in the Atlas), or is it a pipeline error?"
+        )
+
+        from langchain_core.callbacks import UsageMetadataCallbackHandler
+
+        handler = UsageMetadataCallbackHandler()
+        try:
+            llm = lightweight_model.with_structured_output(
+                ResultAssessment, method="json_schema"
+            )
+            llm_start = time.monotonic()
+            result: ResultAssessment = await llm.ainvoke(
+                prompt, config={"callbacks": [handler]}
+            )
+            t.mark_llm(llm_start, time.monotonic())
+
+            usage_sink.append(
+                make_usage_record_from_callback(
+                    "assess_graphql_result", "atlas_graphql", handler
+                )
+            )
+
+            ft = result.failure_type if result.failure_type else "None"
+            assessment = f"{result.verdict}|{ft}|{result.reasoning}"
+        except Exception as e:
+            logger.warning("LLM assessment failed, defaulting to pass: %s", e)
+            assessment = "pass|None|LLM assessment failed, defaulting to pass"
+
+    result_dict: dict[str, Any] = {
+        "graphql_assessment": assessment,
+        "step_timing": [t.record],
+    }
+    if usage_sink:
+        result_dict["token_usage"] = usage_sink
+    return result_dict
+
+
+def route_after_assessment(
+    state: AtlasAgentState,
+) -> Literal["format_graphql_results", "graphql_correction_agent"]:
+    """Route based on assessment verdict: pass → format, fail/suspicious → correct."""
+    assessment = state.get("graphql_assessment", "")
+    verdict = assessment.split("|", 1)[0] if assessment else "pass"
+    if verdict in ("fail", "suspicious"):
+        return "graphql_correction_agent"
+    return "format_graphql_results"
 
 
 # ---------------------------------------------------------------------------

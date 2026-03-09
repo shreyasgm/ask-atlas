@@ -81,6 +81,8 @@ GRAPHQL_PIPELINE_SEQUENCE = [
     "plan_query",
     "resolve_ids",
     "build_and_execute_graphql",
+    "assess_graphql_result",
+    "graphql_correction_agent",
     "format_graphql_results",
 ]
 
@@ -105,6 +107,8 @@ NODE_LABELS = {
     "resolve_ids": "Resolving entity IDs",
     "build_and_execute_graphql": "Querying Atlas API",
     "format_graphql_results": "Formatting results",
+    "assess_graphql_result": "Assessing results",
+    "graphql_correction_agent": "Correcting query",
     # Docs pipeline
     "extract_docs_question": "Extracting question",
     "select_docs": "Selecting documents",
@@ -258,6 +262,22 @@ def _extract_pipeline_state(node_name: str, state_snapshot: dict) -> dict:
         base["rejection_reason"] = classification.get("rejection_reason", "")
         entity_extraction = state_snapshot.get("graphql_entity_extraction") or {}
         base["entities"] = entity_extraction
+
+    elif node_name == "assess_graphql_result":
+        assessment = state_snapshot.get("graphql_assessment", "")
+        parts = assessment.split("|", 2)
+        base["verdict"] = parts[0] if parts else ""
+        base["failure_type"] = parts[1] if len(parts) > 1 else ""
+        base["reasoning"] = parts[2] if len(parts) > 2 else ""
+
+    elif node_name == "graphql_correction_agent":
+        reasoning_traces = state_snapshot.get("graphql_reasoning_trace", [])
+        if reasoning_traces:
+            base["reasoning_trace"] = reasoning_traces[-1]
+        base["assessment"] = state_snapshot.get("graphql_assessment", "")
+        base["surface_to_agent"] = state_snapshot.get("graphql_surface_to_agent", False)
+        classification = state_snapshot.get("graphql_classification") or {}
+        base["query_type"] = classification.get("query_type", "")
 
     elif node_name == "format_graphql_results":
         base["atlas_links"] = state_snapshot.get("graphql_atlas_links") or []
@@ -882,6 +902,13 @@ class AtlasTextToSQL:
                 if classification.get("query_type") == "reject":
                     return "format_graphql_results"
                 return "resolve_ids"
+            if current_node == "assess_graphql_result":
+                # Check assessment verdict → skip correction agent on pass
+                assessment = pipeline_snapshot.get("graphql_assessment", "")
+                verdict = assessment.split("|", 1)[0] if assessment else ""
+                if verdict == "pass":
+                    return "format_graphql_results"
+                return "graphql_correction_agent"
             # Check SQL pipeline sequence
             try:
                 idx = PIPELINE_SEQUENCE.index(current_node)

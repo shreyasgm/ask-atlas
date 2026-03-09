@@ -3,6 +3,7 @@ import { memo, useMemo, useState } from 'react';
 import type { PipelineStep, PipelineType, ReasoningTraceEntry } from '@/types/chat';
 import { cn } from '@/lib/utils';
 import { getStepDetail } from '@/utils/step-detail';
+import GraphqlReasoningTrace from './graphql-reasoning-trace';
 import ReasoningTrace from './reasoning-trace';
 
 interface PipelineStepperProps {
@@ -123,6 +124,10 @@ export default memo(function PipelineStepper({ steps }: PipelineStepperProps) {
                 {group.steps.map((step, si) => {
                   const detail =
                     step.status === 'completed' ? getStepDetail(step.node, step.detail) : null;
+                  const assessVerdict =
+                    step.node === 'assess_graphql_result'
+                      ? (step.detail?.verdict as string | undefined)
+                      : undefined;
                   return (
                     <div key={`${step.node}-${si}`}>
                       <div className="flex w-full min-w-0 items-center gap-2.5 py-1.5">
@@ -146,7 +151,16 @@ export default memo(function PipelineStepper({ steps }: PipelineStepperProps) {
                         )}
                       </div>
                       {detail && (
-                        <p className="line-clamp-5 w-full min-w-0 pl-[18px] text-[11px] leading-tight text-slate-400 dark:text-slate-500">
+                        <p
+                          className={cn(
+                            'line-clamp-5 w-full min-w-0 pl-[18px] text-[11px] leading-tight',
+                            assessVerdict === 'fail'
+                              ? 'text-red-600 dark:text-red-400'
+                              : assessVerdict === 'suspicious'
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : 'text-slate-400 dark:text-slate-500',
+                          )}
+                        >
                           {detail}
                         </p>
                       )}
@@ -154,6 +168,14 @@ export default memo(function PipelineStepper({ steps }: PipelineStepperProps) {
                         Array.isArray(step.detail?.reasoning_trace) &&
                         (step.detail.reasoning_trace as Array<ReasoningTraceEntry>).length > 0 && (
                           <ReasoningTrace
+                            entries={step.detail.reasoning_trace as Array<ReasoningTraceEntry>}
+                            isActive={step.status === 'active'}
+                          />
+                        )}
+                      {step.node === 'graphql_correction_agent' &&
+                        Array.isArray(step.detail?.reasoning_trace) &&
+                        (step.detail.reasoning_trace as Array<ReasoningTraceEntry>).length > 0 && (
+                          <GraphqlReasoningTrace
                             entries={step.detail.reasoning_trace as Array<ReasoningTraceEntry>}
                             isActive={step.status === 'active'}
                           />

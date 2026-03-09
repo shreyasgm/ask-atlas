@@ -143,6 +143,25 @@ def add_graphql_call_history(
     return (existing or []) + (new or [])
 
 
+def add_graphql_reasoning_traces(
+    existing: list[list[dict]] | None, new: list[list[dict]] | None
+) -> list[list[dict]]:
+    """Reducer that accumulates per-call reasoning traces from the GraphQL correction agent.
+
+    Each entry is a list of serialized message dicts (one list per GraphQL
+    correction invocation) capturing the sub-agent's full AI reasoning and
+    tool call/response sequence.
+
+    Args:
+        existing: Previously accumulated traces (may be None).
+        new: New traces to append (may be None).
+
+    Returns:
+        Combined list of all reasoning traces.
+    """
+    return (existing or []) + (new or [])
+
+
 def add_graphql_atlas_links(
     existing: list[dict] | None, new: list[dict] | None
 ) -> list[dict]:
@@ -246,6 +265,11 @@ class AtlasAgentState(TypedDict):
     sql_call_history: Annotated[list[dict], add_sql_call_history]
     # Accumulated per-call GraphQL pipeline snapshots (persisted across calls)
     graphql_call_history: Annotated[list[dict], add_graphql_call_history]
+    # GraphQL assessment + correction agent state (reset by extract_graphql_question)
+    graphql_assessment: str
+    graphql_surface_to_agent: bool
+    # Accumulated per-call GraphQL correction agent reasoning traces
+    graphql_reasoning_trace: Annotated[list[list[dict]], add_graphql_reasoning_traces]
     # === Docs pipeline state (reset by extract_docs_question at cycle start) ===
     docs_question: str
     docs_context: str
