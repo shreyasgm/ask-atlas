@@ -16,7 +16,7 @@ import asyncio
 import logging
 import operator
 import time
-from typing import Annotated, Dict, List, Optional, Tuple
+from typing import Annotated
 
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.messages import (
@@ -157,11 +157,11 @@ class SQLSubAgentState(TypedDict):
     # Context (populated before loop starts, from deterministic phase)
     question: str
     context: str
-    products: Optional[SchemasAndProductsFound]
+    products: SchemasAndProductsFound | None
     codes: str
     table_info: str
-    override_direction: Optional[str]
-    override_mode: Optional[str]
+    override_direction: str | None
+    override_mode: str | None
 
     # ReAct conversation (sub-agent's internal reasoning trace)
     messages: Annotated[list[BaseMessage], add_messages]
@@ -350,7 +350,7 @@ async def execute_sql_tool_node(
     try:
         if use_async:
 
-            async def _run_query() -> Tuple[str, list[str], list[list]]:
+            async def _run_query() -> tuple[str, list[str], list[list]]:
                 async with async_engine.connect() as conn:
                     result = await conn.execute(text(sql))
                     if not result.returns_rows:
@@ -369,7 +369,7 @@ async def execute_sql_tool_node(
         else:
             engine = async_engine
 
-            def _run_query_sync() -> Tuple[str, list[str], list[list]]:
+            def _run_query_sync() -> tuple[str, list[str], list[list]]:
                 with engine.connect() as conn:
                     result = conn.execute(text(sql))
                     if not result.returns_rows:
@@ -387,6 +387,19 @@ async def execute_sql_tool_node(
                 execute_with_retry, _run_query_sync
             )
             elapsed_ms = int((time.monotonic() - t0) * 1000)
+
+        # Record query metrics for observability
+        from src.db_pool_health import metrics as pool_metrics
+
+        engine_type = "async" if use_async else "sync"
+        pool_metrics.record_query(elapsed_ms, sql[:200], engine_type=engine_type)
+        logger.debug(
+            "%s query  elapsed=%dms  rows=%d  sql=%s",
+            engine_type,
+            elapsed_ms,
+            len(rows),
+            sql[:200],
+        )
 
     except (QueryExecutionError, Exception) as e:
         logger.error("SQL execution failed in sub-agent: %s", e)
@@ -694,7 +707,7 @@ async def lookup_products_node(
     lightweight_llm: BaseLanguageModel,
     engine: Engine,
     db,
-    table_descriptions: Dict,
+    table_descriptions: dict,
     async_engine: AsyncEngine | None = None,
     async_db=None,
 ) -> dict:
@@ -920,7 +933,7 @@ def build_sql_subagent(
     lightweight_llm: BaseLanguageModel,
     db,
     engine: Engine,
-    table_descriptions: Dict,
+    table_descriptions: dict,
     async_engine: AsyncEngine | Engine | None = None,
     async_db=None,
     top_k: int = 15,
@@ -1018,7 +1031,7 @@ def _build_initial_message(
     table_info: str,
     override_direction: str | None,
     override_mode: str | None,
-    example_queries: List[Dict[str, str]],
+    example_queries: list[dict[str, str]],
 ) -> HumanMessage:
     """Build the initial HumanMessage with all per-query context."""
     parts = [f"Answer this question by writing a SQL query:\n\n{question}"]
@@ -1073,7 +1086,7 @@ async def sql_query_agent_node(
     *,
     subagent,
     top_k: int,
-    example_queries: List[Dict[str, str]],
+    example_queries: list[dict[str, str]],
 ) -> dict:
     """Invoke the SQL sub-agent and map results back to parent state."""
     async with node_timer("sql_query_agent", "query_tool") as t:
