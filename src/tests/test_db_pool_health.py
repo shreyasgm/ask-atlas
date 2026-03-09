@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, patch
 
 from src.db_pool_health import (
     _on_checkin,
-    _on_checkout,
     _on_invalidate,
     _pool_stats,
     attach_pool_listeners,
@@ -20,27 +19,24 @@ from src.db_pool_health import (
 # ---------------------------------------------------------------------------
 
 
-class TestOnCheckout:
-    def test_records_checkout_time(self):
-        record = MagicMock()
-        record.info = {}
-        _on_checkout(MagicMock(), record, MagicMock())
-        assert "checkout_time" in record.info
-        assert isinstance(record.info["checkout_time"], float)
-
-
 class TestOnCheckin:
     def test_warns_on_slow_checkout(self, caplog):
         record = MagicMock()
         # Simulate a connection checked out 6 seconds ago
-        record.info = {"checkout_time": time.monotonic() - 6.0}
+        record.info = {
+            "checkout_time": time.monotonic() - 6.0,
+            "engine_label": "test",
+        }
         with caplog.at_level("WARNING", logger="src.db_pool_health"):
             _on_checkin(MagicMock(), record)
         assert "possible leak" in caplog.text.lower()
 
     def test_no_warning_on_fast_checkout(self, caplog):
         record = MagicMock()
-        record.info = {"checkout_time": time.monotonic() - 0.1}
+        record.info = {
+            "checkout_time": time.monotonic() - 0.1,
+            "engine_label": "test",
+        }
         with caplog.at_level("WARNING", logger="src.db_pool_health"):
             _on_checkin(MagicMock(), record)
         assert "possible leak" not in caplog.text.lower()
@@ -149,7 +145,12 @@ class TestGetPoolStats:
 
     def test_none_engines(self):
         result = get_pool_stats(None, None)
-        assert result == {}
+        # No sync/async pool keys, but rolling metrics are always present
+        assert "sync" not in result
+        assert "async" not in result
+        assert "query_latency" in result
+        assert "connection_hold" in result
+        assert "recent_slow_queries" in result
 
 
 # ---------------------------------------------------------------------------

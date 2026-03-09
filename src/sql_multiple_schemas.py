@@ -8,6 +8,8 @@ AsyncEngine + conn.run_sync() that eliminates asyncio.to_thread() calls.
 
 from __future__ import annotations
 
+import logging
+import time
 from typing import Any, Dict, List, Literal, Optional, Sequence, Union
 
 import sqlalchemy
@@ -20,6 +22,8 @@ from sqlalchemy.schema import CreateTable
 from sqlalchemy.sql.expression import Executable
 from sqlalchemy.types import NullType
 from langchain_community.utilities import SQLDatabase
+
+logger = logging.getLogger(__name__)
 
 
 def _format_index(index: sqlalchemy.engine.interfaces.ReflectedIndex) -> str:
@@ -190,6 +194,9 @@ class SQLDatabaseWithSchemas(SQLDatabase):
         parameters = parameters or {}
         execution_options = execution_options or {}
 
+        sql_preview = str(command)[:200] if command else ""
+        t_start = time.monotonic()
+
         with self._engine.begin() as connection:
             if isinstance(command, str):
                 command = text(command)
@@ -202,10 +209,8 @@ class SQLDatabaseWithSchemas(SQLDatabase):
 
             if cursor.returns_rows:
                 if fetch == "all":
-                    # Get both keys and rows from the cursor
                     keys = cursor.keys()
                     rows = cursor.fetchall()
-                    # Create dictionaries by zipping keys with each row's values
                     result = [dict(zip(keys, row)) for row in rows]
                 elif fetch == "one":
                     keys = cursor.keys()
@@ -217,7 +222,26 @@ class SQLDatabaseWithSchemas(SQLDatabase):
                     raise ValueError(
                         "Fetch parameter must be either 'one', 'all', or 'cursor'"
                     )
+
+                elapsed_ms = (time.monotonic() - t_start) * 1000
+                from src.db_pool_health import metrics
+
+                metrics.record_query(elapsed_ms, sql_preview, engine_type="sync")
+                logger.debug(
+                    "sync query  elapsed=%.0fms  rows=%d  sql=%s",
+                    elapsed_ms,
+                    len(result),
+                    sql_preview,
+                )
                 return result
+
+        elapsed_ms = (time.monotonic() - t_start) * 1000
+        from src.db_pool_health import metrics
+
+        metrics.record_query(elapsed_ms, sql_preview, engine_type="sync")
+        logger.debug(
+            "sync query  elapsed=%.0fms  rows=0  sql=%s", elapsed_ms, sql_preview
+        )
         return []
 
     @classmethod
@@ -852,6 +876,10 @@ class AsyncSQLDatabaseWithSchemas:
         parameters = parameters or {}
         execution_options = execution_options or {}
 
+        # Capture SQL preview for logging (before text() wrapping)
+        sql_preview = str(command)[:200] if command else ""
+        t_start = time.monotonic()
+
         async with self._async_engine.begin() as connection:
             if isinstance(command, str):
                 command = text(command)
@@ -864,10 +892,26 @@ class AsyncSQLDatabaseWithSchemas:
                 keys = list(cursor.keys())
                 if fetch == "all":
                     rows = cursor.fetchall()
-                    return [dict(zip(keys, row)) for row in rows]
+                    result = [dict(zip(keys, row)) for row in rows]
                 elif fetch == "one":
                     first_row = cursor.fetchone()
-                    return [] if first_row is None else [dict(zip(keys, first_row))]
+                    result = [] if first_row is None else [dict(zip(keys, first_row))]
                 else:
                     raise ValueError("Fetch parameter must be 'one' or 'all'")
-        return []
+            else:
+                result = []
+
+        elapsed_ms = (time.monotonic() - t_start) * 1000
+
+        # Record in metrics store and log
+        from src.db_pool_health import metrics
+
+        metrics.record_query(elapsed_ms, sql_preview, engine_type="async")
+        logger.debug(
+            "async query  elapsed=%.0fms  rows=%d  sql=%s",
+            elapsed_ms,
+            len(result),
+            sql_preview,
+        )
+
+        return result

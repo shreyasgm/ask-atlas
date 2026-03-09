@@ -582,8 +582,8 @@ class AtlasTextToSQL:
         # Attach pool health listeners for monitoring
         from src.db_pool_health import attach_pool_listeners
 
-        attach_pool_listeners(instance.engine)
-        attach_pool_listeners(instance.async_engine)
+        attach_pool_listeners(instance.engine, label="sync")
+        attach_pool_listeners(instance.async_engine, label="async")
 
         instance.db = SQLDatabaseWithSchemas(engine=instance.engine)
         instance.async_db = await AsyncSQLDatabaseWithSchemas.create(
