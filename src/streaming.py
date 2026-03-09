@@ -542,7 +542,8 @@ class AtlasTextToSQL:
         )
 
         # Sync engine: used for SQLDatabaseWithSchemas (metadata reflection)
-        # and get_table_info_node (still sync, wrapped in asyncio.to_thread)
+        # and get_table_info_node (still sync, wrapped in asyncio.to_thread).
+        # Short timeout (30s) — metadata ops should be fast.
         instance.engine = create_engine(
             db_uri,
             execution_options={"postgresql_readonly": True},
@@ -559,6 +560,8 @@ class AtlasTextToSQL:
         )
 
         # Async engine: used for query execution and product lookups (true async I/O).
+        # Longer timeout (90s) — LLM-generated analytical queries can be complex
+        # (multi-table joins, aggregations) and legitimately need more time.
         # Convert dialect to psycopg3 async: postgresql:// -> postgresql+psycopg://
         async_url = make_url(db_uri).set(drivername="postgresql+psycopg")
         instance.async_engine = create_async_engine(
@@ -566,7 +569,7 @@ class AtlasTextToSQL:
             execution_options={"postgresql_readonly": True},
             connect_args={
                 "connect_timeout": 10,
-                "options": "-c statement_timeout=30000",
+                "options": "-c statement_timeout=90000",
             },
             pool_size=5,
             max_overflow=10,

@@ -1174,7 +1174,7 @@ class TestSubagentIntegration:
             execution_options={"postgresql_readonly": True},
             connect_args={
                 "connect_timeout": 10,
-                "options": "-c statement_timeout=30000",
+                "options": "-c statement_timeout=90000",
             },
         )
 

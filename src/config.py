@@ -11,10 +11,22 @@ from functools import lru_cache
 from pathlib import Path
 
 from langchain_core.language_models import BaseChatModel
+from langchain_core.rate_limiters import InMemoryRateLimiter
 from pydantic import Field, AliasChoices
 from pydantic_settings import BaseSettings
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Shared rate limiter — smooths burst patterns to avoid provider throttling.
+# A single instance is shared across all LLM calls in the process so that
+# concurrent requests from different users are collectively throttled.
+# ---------------------------------------------------------------------------
+_rate_limiter = InMemoryRateLimiter(
+    requests_per_second=10,
+    check_every_n_seconds=0.05,
+    max_bucket_size=20,
+)
 
 # Project root directory (parent of src/)
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -222,6 +234,8 @@ def create_llm(model: str, provider: str, **kwargs) -> BaseChatModel:
     Raises:
         ValueError: If the provider is not supported.
     """
+    kwargs.setdefault("rate_limiter", _rate_limiter)
+
     if provider == "openai":
         from langchain_openai import ChatOpenAI
 
