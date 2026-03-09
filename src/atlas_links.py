@@ -41,13 +41,12 @@ PRODUCT_CLASSIFICATION_PREFIXES: dict[str, str] = {
 FRONTIER_COUNTRY_IDS: frozenset[int] = frozenset(
     {
         40,  # Austria
-        56,  # Belgium
+        124,  # Canada
+        156,  # China
         203,  # Czech Republic
-        208,  # Denmark
         246,  # Finland
         250,  # France
         276,  # Germany
-        372,  # Ireland
         380,  # Italy
         392,  # Japan
         410,  # South Korea
