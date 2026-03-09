@@ -170,6 +170,20 @@ data is available for bilateral queries.
 - Set to "exports" when the question explicitly asks about exports.
 - Leave as null when direction is not mentioned or ambiguous (defaults to exports).
 
+**Growth opportunity strategy** (`strategy`):
+- Only relevant for growth_opportunities and feasibility query types.
+- Only set when the user **explicitly** requests a specific weighting approach.
+- "low_hanging_fruit": user asks for easy wins, nearby products, low-hanging fruit, \
+products close to current capabilities.
+- "long_jumps": user asks for ambitious bets, strategic leaps, high-complexity targets, \
+distant products worth pursuing.
+- "balanced": user explicitly asks for the balanced/default mix.
+- "custom": user specifies their own numeric weights (e.g., "weight distance 40%, \
+complexity 30%, opportunity gain 30%"). When custom, also set custom_weights_distance, \
+custom_weights_pci, and custom_weights_og (must sum to ~1.0).
+- Leave as null when no strategy preference is stated — the system applies a \
+country-specific balanced default.
+
 **Year handling:**
 - If no year is mentioned, leave year fields as null (the system defaults to latest available).
 - For time-series query types (overtime_*, marketshare, country_lookback), extract \
@@ -235,6 +249,15 @@ should be the service category name as it appears in the Atlas (e.g., "Travel & 
 
 "Which countries are in the EU?" (query_type: group_membership)
 -> group_name: EU, group_type: trade
+
+"Show me low-hanging fruit opportunities for Kenya" (query_type: feasibility)
+-> country_name: Kenya, country_code_guess: KEN, strategy: low_hanging_fruit
+
+"What are Kenya's long-jump growth opportunities?" (query_type: growth_opportunities)
+-> country_name: Kenya, country_code_guess: KEN, strategy: long_jumps
+
+"Rank Kenya's opportunities with 40% distance, 30% complexity, 30% opportunity gain" (query_type: feasibility)
+-> country_name: Kenya, country_code_guess: KEN, strategy: custom, custom_weights_distance: 0.4, custom_weights_pci: 0.3, custom_weights_og: 0.3
 
 {context_block}
 

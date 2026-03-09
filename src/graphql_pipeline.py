@@ -400,6 +400,37 @@ class GraphQLEntityExtraction(BaseModel):
             "Leave null when direction is ambiguous or not mentioned (defaults to exports)."
         ),
     )
+    strategy: Optional[
+        Literal["balanced", "low_hanging_fruit", "long_jumps", "custom"]
+    ] = Field(
+        default=None,
+        description=(
+            "Growth opportunity weighting strategy. Only set when the user explicitly "
+            "requests a strategy for growth opportunities or feasibility queries. "
+            "'low_hanging_fruit' = favour nearby products, 'long_jumps' = favour distant "
+            "high-complexity products, 'balanced' = country-specific default mix, "
+            "'custom' = user specifies their own weights. Leave null for the default."
+        ),
+    )
+    custom_weights_distance: Optional[float] = Field(
+        default=None,
+        description=(
+            "Custom weight for distance (0-1). Only set when strategy is 'custom' "
+            "and the user specifies weights. Must sum to ~1.0 with pci and og weights."
+        ),
+    )
+    custom_weights_pci: Optional[float] = Field(
+        default=None,
+        description=(
+            "Custom weight for product complexity (0-1). Only set when strategy is 'custom'."
+        ),
+    )
+    custom_weights_og: Optional[float] = Field(
+        default=None,
+        description=(
+            "Custom weight for opportunity gain (0-1). Only set when strategy is 'custom'."
+        ),
+    )
 
 
 class GraphQLQueryPlan(BaseModel):
@@ -533,6 +564,37 @@ class GraphQLQueryPlan(BaseModel):
             "asks about imports, imported products, import sources, or top import partners. "
             "Set to 'exports' when the question explicitly asks about exports. "
             "Leave null when direction is ambiguous or not mentioned (defaults to exports)."
+        ),
+    )
+    strategy: Optional[
+        Literal["balanced", "low_hanging_fruit", "long_jumps", "custom"]
+    ] = Field(
+        default=None,
+        description=(
+            "Growth opportunity weighting strategy. Only set when the user explicitly "
+            "requests a strategy for growth opportunities or feasibility queries. "
+            "'low_hanging_fruit' = favour nearby products, 'long_jumps' = favour distant "
+            "high-complexity products, 'balanced' = country-specific default mix, "
+            "'custom' = user specifies their own weights. Leave null for the default."
+        ),
+    )
+    custom_weights_distance: Optional[float] = Field(
+        default=None,
+        description=(
+            "Custom weight for distance (0-1). Only set when strategy is 'custom' "
+            "and the user specifies weights. Must sum to ~1.0 with pci and og weights."
+        ),
+    )
+    custom_weights_pci: Optional[float] = Field(
+        default=None,
+        description=(
+            "Custom weight for product complexity (0-1). Only set when strategy is 'custom'."
+        ),
+    )
+    custom_weights_og: Optional[float] = Field(
+        default=None,
+        description=(
+            "Custom weight for opportunity gain (0-1). Only set when strategy is 'custom'."
         ),
     )
 
@@ -1465,6 +1527,30 @@ async def format_graphql_results(
                     country_cache=country_cache,
                 )
             else:
+                # Resolve country_id for country-specific post-processing
+                pp_country_id: int | None = None
+                raw_cid = resolved.get("country_id")
+                if raw_cid is not None:
+                    try:
+                        pp_country_id = int(str(raw_cid).replace("location-", ""))
+                    except (ValueError, TypeError):
+                        pass
+
+                # Extract strategy and custom weights from entity extraction
+                ee = entity_extraction or {}
+                pp_strategy = ee.get("strategy") or "balanced"
+                pp_custom_weights: dict[str, float] | None = None
+                if pp_strategy == "custom":
+                    wd = ee.get("custom_weights_distance")
+                    wp = ee.get("custom_weights_pci")
+                    wo = ee.get("custom_weights_og")
+                    if wd is not None and wp is not None and wo is not None:
+                        pp_custom_weights = {
+                            "normalizedDistance": float(wd),
+                            "normalizedPci": float(wp),
+                            "normalizedOpportunityGain": float(wo),
+                        }
+
                 processed = post_process_response(
                     query_type,
                     raw_response,
@@ -1473,6 +1559,9 @@ async def format_graphql_results(
                     product_class=product_class,
                     country_cache=country_cache,
                     services_cache=services_cache,
+                    country_id=pp_country_id,
+                    strategy=pp_strategy,
+                    custom_weights=pp_custom_weights,
                 )
             content = json.dumps(processed, indent=2, default=str)
 
@@ -1588,13 +1677,46 @@ async def format_graphql_results(
                     "- Labels (promising/troubling/mixed/static): from constant-price dynamics, report as-is\n"
                     "- gdpPcConstantCagrRegionalDifference: Above/InLine/Below (vs regional average)"
                 )
-            elif query_type in (
-                "feasibility",
-                "feasibility_table",
-                "growth_opportunities",
-            ):
+            elif query_type in ("feasibility", "feasibility_table"):
                 warnings.append(
-                    "NOTE: The Atlas does not display growth opportunity products for countries "
+                    "NOTE: Products are ranked by compositeScore = "
+                    "normalizedDistance × 0.50 + normalizedPci × 0.15 + normalizedCOG × 0.35 "
+                    "(fixed Explore-page weights). Higher compositeScore = better opportunity. "
+                    "This mirrors the Atlas Explore feasibility page which uses a fixed formula.\n"
+                    "Available preset strategies for the Country Pages growth opportunities view "
+                    "(use growth_opportunities query type instead): "
+                    "Low-Hanging Fruit (dist 60%, PCI 15%, OG 25%), "
+                    "Balanced Portfolio (varies by country policy), "
+                    "Long Jumps (dist 45%, PCI 20%, OG 35%). "
+                    "Users can also request custom weights."
+                )
+            elif query_type == "growth_opportunities":
+                # Extract actual weights used from post-processed metadata
+                pp_meta = processed.get("_postProcessed", {})
+                used_strategy = pp_meta.get("strategy", "balanced")
+                used_policy = pp_meta.get("policyRecommendation", "unknown")
+                used_weights = pp_meta.get("weights", {})
+                weight_parts = [
+                    f"{k.replace('normalized', '')} × {v}"
+                    for k, v in used_weights.items()
+                ]
+                weight_str = " + ".join(weight_parts) if weight_parts else "default"
+
+                warnings.append(
+                    f"NOTE: Products are ranked by compositeScore ({weight_str}) "
+                    f"using the '{used_strategy}' strategy based on this country's "
+                    f"'{used_policy}' policy recommendation. "
+                    "Higher compositeScore = better opportunity.\n"
+                    "Available strategies: "
+                    "Low-Hanging Fruit (dist 60%, PCI 15%, OG 25%) — "
+                    "focuses on most feasible products; "
+                    "Balanced Portfolio (default — weights vary by country policy: "
+                    "StrategicBets=50/15/35, ParsimoniousIndustrial=55/20/25, "
+                    "LightTouch=60/20/20); "
+                    "Long Jumps (dist 45%, PCI 20%, OG 35%) — "
+                    "favors ambitious diversification; "
+                    "Custom — user specifies weights.\n"
+                    "The Atlas does not display growth opportunity products for countries "
                     "classified under the 'Technological Frontier' strategic approach "
                     "(highest-complexity economies). If results are empty, tell the user this "
                     "data is unavailable for frontier economies and suggest exploring existing "
@@ -1641,6 +1763,166 @@ async def format_graphql_results(
         "graphql_call_history": [call_snapshot],
         "step_timing": [_fmt_t.record],
     }
+
+
+# ---------------------------------------------------------------------------
+# Growth opportunity composite scoring
+# ---------------------------------------------------------------------------
+# The Atlas ranks growth opportunities by a weighted composite of three
+# normalized components: distance (proximity), PCI (complexity), and
+# COG / opportunity gain.  Weights depend on context:
+#
+# Country Pages — vary by strategy (Low-Hanging Fruit / Balanced Portfolio /
+# Long Jumps) AND by the country's policyRecommendation for Balanced Portfolio.
+# Default is Balanced Portfolio with weights selected by policyRecommendation.
+#
+# Explore page — fixed at 50% distance, 15% PCI, 35% COG (mirrors the
+# Explore feasibility page which has no strategy selector).
+#
+# Users may override the default strategy or request custom weights.
+
+# -- Strategy weight tables (Country Pages treeMap field names) ----------
+
+# Balanced Portfolio weights vary by policyRecommendation:
+_CP_BALANCED_WEIGHTS: dict[str, dict[str, float]] = {
+    "StrategicBets": {
+        "normalizedDistance": 0.50,
+        "normalizedPci": 0.15,
+        "normalizedOpportunityGain": 0.35,
+    },
+    "ParsimoniousIndustrial": {
+        "normalizedDistance": 0.55,
+        "normalizedPci": 0.20,
+        "normalizedOpportunityGain": 0.25,
+    },
+    "LightTouch": {
+        "normalizedDistance": 0.60,
+        "normalizedPci": 0.20,
+        "normalizedOpportunityGain": 0.20,
+    },
+}
+
+# Fixed strategy weights (same regardless of policyRecommendation):
+_CP_LOW_HANGING_FRUIT_WEIGHTS: dict[str, float] = {
+    "normalizedDistance": 0.60,
+    "normalizedPci": 0.15,
+    "normalizedOpportunityGain": 0.25,
+}
+_CP_LONG_JUMPS_WEIGHTS: dict[str, float] = {
+    "normalizedDistance": 0.45,
+    "normalizedPci": 0.20,
+    "normalizedOpportunityGain": 0.35,
+}
+
+# Explore API countryProductYear field names → weights (fixed, no strategy)
+_EXPLORE_GO_WEIGHTS: dict[str, float] = {
+    "normalizedDistance": 0.50,
+    "normalizedPci": 0.15,
+    "normalizedCog": 0.35,
+}
+
+# Default fallback for Country Pages when policyRecommendation is unknown
+_CP_DEFAULT_WEIGHTS = _CP_BALANCED_WEIGHTS["StrategicBets"]
+
+# PCI ceiling thresholds — applied only for growth_opportunities (Country
+# Pages) when GDP per capita ≤ $6,000.  Products with raw PCI exceeding
+# countryECI + ceiling_offset are excluded as infeasible aspirations.
+_PCI_CEILING_GDP_THRESHOLD = 6000
+_PCI_CEILING_OFFSET: dict[str, float] = {
+    "low_hanging_fruit": 2.0,
+    "balanced": 2.0,
+    "long_jumps": 2.5,
+    "custom": 2.0,
+}
+
+
+def _get_cp_weights(
+    strategy: str,
+    policy_recommendation: str | None = None,
+) -> dict[str, float]:
+    """Resolve Country Pages composite-score weights.
+
+    Args:
+        strategy: One of ``"balanced"``, ``"low_hanging_fruit"``,
+            ``"long_jumps"``, or ``"custom"``.
+        policy_recommendation: The country's ``policyRecommendation`` from
+            ``countryProfile`` (e.g. ``"StrategicBets"``).  Only used when
+            *strategy* is ``"balanced"``.
+
+    Returns:
+        Dict mapping normalized field names to weights.
+    """
+    if strategy == "low_hanging_fruit":
+        return _CP_LOW_HANGING_FRUIT_WEIGHTS
+    if strategy == "long_jumps":
+        return _CP_LONG_JUMPS_WEIGHTS
+    # Balanced (default) — varies by policyRecommendation
+    return _CP_BALANCED_WEIGHTS.get(policy_recommendation or "", _CP_DEFAULT_WEIGHTS)
+
+
+# Country policy data loaded from CSV generated by
+# src/setup/update_country_policy_data.py.  Run that script to refresh.
+_COUNTRY_POLICY_DATA: dict[int, tuple[str, float | None, int | None]] = {}
+_COUNTRY_POLICY_DATA_LOADED = False
+
+
+def _ensure_country_policy_data() -> dict[int, tuple[str, float | None, int | None]]:
+    """Lazy-load country policy data from CSV on first access."""
+    global _COUNTRY_POLICY_DATA, _COUNTRY_POLICY_DATA_LOADED  # noqa: PLW0603
+    if _COUNTRY_POLICY_DATA_LOADED:
+        return _COUNTRY_POLICY_DATA
+    import csv
+    from pathlib import Path
+
+    csv_path = Path(__file__).parent / "data" / "country_policy_data.csv"
+    if not csv_path.exists():
+        logger.warning(
+            "country_policy_data.csv not found at %s — growth opportunity "
+            "scoring will use default StrategicBets weights for all countries. "
+            "Run src/setup/update_country_policy_data.py to generate it.",
+            csv_path,
+        )
+        _COUNTRY_POLICY_DATA_LOADED = True
+        return _COUNTRY_POLICY_DATA
+
+    with csv_path.open(newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            m49 = int(row["country_id"])
+            policy = row["policy_recommendation"]
+            eci_raw = row.get("eci", "")
+            gdppc_raw = row.get("gdp_per_capita", "")
+            eci = float(eci_raw) if eci_raw else None
+            gdppc = int(float(gdppc_raw)) if gdppc_raw else None
+            _COUNTRY_POLICY_DATA[m49] = (policy, eci, gdppc)
+
+    logger.info(
+        "Loaded country policy data for %d countries from %s",
+        len(_COUNTRY_POLICY_DATA),
+        csv_path,
+    )
+    _COUNTRY_POLICY_DATA_LOADED = True
+    return _COUNTRY_POLICY_DATA
+
+
+def _lookup_country_policy(
+    country_id: int | None,
+) -> tuple[str | None, float | None, int | None]:
+    """Look up a country's policy recommendation, ECI, and GDP per capita.
+
+    Returns:
+        Tuple of (policyRecommendation, eci, gdppc).  All ``None`` if the
+        country is not in the lookup table.
+    """
+    if country_id is None:
+        return None, None, None
+    data = _ensure_country_policy_data()
+    return data.get(country_id, (None, None, None))
+
+
+def _compute_composite_score(item: dict, weights: dict[str, float]) -> float:
+    """Compute weighted composite score from normalized opportunity fields."""
+    return sum((item.get(f) or 0.0) * w for f, w in weights.items())
 
 
 # ---------------------------------------------------------------------------
@@ -1692,14 +1974,16 @@ _POST_PROCESS_RULES: dict[str, dict] = {
     },
     "feasibility": {
         "root": "countryProductYear",
-        "sort": "cog",
+        "sort": "compositeScore",
+        "score_weights": _EXPLORE_GO_WEIGHTS,
         "top_n": 20,
         "enrich": "product",
         "filter": "rca_lt_1",
     },
     "feasibility_table": {
         "root": "countryProductYear",
-        "sort": "cog",
+        "sort": "compositeScore",
+        "score_weights": _EXPLORE_GO_WEIGHTS,
         "top_n": 20,
         "enrich": "product",
         "filter": "rca_lt_1",
@@ -1724,7 +2008,9 @@ _POST_PROCESS_RULES: dict[str, dict] = {
     },
     "growth_opportunities": {
         "root": "treeMap",
-        "sort": "opportunityGain",
+        "sort": "compositeScore",
+        # score_weights resolved dynamically in post_process_response
+        # based on country_id → policyRecommendation + strategy
         "top_n": 20,
         "enrich": "none",
         "filter": "rca_lt_1_treemap",
@@ -1834,6 +2120,9 @@ def post_process_response(
     product_class: str = "HS12",
     country_cache: CatalogCache | None = None,
     services_cache: CatalogCache | None = None,
+    country_id: int | None = None,
+    strategy: str = "balanced",
+    custom_weights: dict[str, float] | None = None,
 ) -> dict:
     """Sort, truncate, and enrich large GraphQL responses before sending to the LLM.
 
@@ -1846,6 +2135,12 @@ def post_process_response(
         product_class: Which classification to use for enrichment (default HS12).
         country_cache: Optional country catalog cache for name enrichment.
         services_cache: Optional services catalog cache for name enrichment.
+        country_id: M49 country code — used to look up policy recommendation
+            for country-specific growth opportunity weights.
+        strategy: Growth opportunity strategy.  One of ``"balanced"`` (default),
+            ``"low_hanging_fruit"``, ``"long_jumps"``, or ``"custom"``.
+        custom_weights: When *strategy* is ``"custom"``, a dict mapping
+            normalized field names to weights (must sum to ~1.0).
 
     Returns:
         Post-processed response dict, or raw_response if no rules apply.
@@ -1860,6 +2155,42 @@ def post_process_response(
         return raw_response
 
     top_n = rules["top_n"]
+
+    # Resolve composite score weights — country-specific for growth_opportunities
+    score_weights = rules.get("score_weights")
+    policy_rec: str | None = None
+    country_eci: float | None = None
+    country_gdppc: int | None = None
+    applied_strategy = strategy
+
+    if query_type == "growth_opportunities":
+        policy_rec, country_eci, country_gdppc = _lookup_country_policy(country_id)
+        if strategy == "custom" and custom_weights:
+            score_weights = custom_weights
+        else:
+            score_weights = _get_cp_weights(strategy, policy_rec)
+    elif (
+        query_type in ("feasibility", "feasibility_table")
+        and strategy == "custom"
+        and custom_weights
+    ):
+        # For Explore-API feasibility, custom weights use normalizedCog instead of
+        # normalizedOpportunityGain.  Remap if the caller used OG keys.
+        if (
+            "normalizedOpportunityGain" in custom_weights
+            and "normalizedCog" not in custom_weights
+        ):
+            custom_weights = {
+                k.replace("normalizedOpportunityGain", "normalizedCog"): v
+                for k, v in custom_weights.items()
+            }
+        score_weights = custom_weights
+
+    if score_weights:
+        for item in items:
+            item["compositeScore"] = round(
+                _compute_composite_score(item, score_weights), 4
+            )
 
     # Small result sets: enrich only, no sort/truncate/metadata
     if len(items) <= top_n:
@@ -1880,6 +2211,26 @@ def post_process_response(
     filter_name = rules.get("filter")
     if filter_name and filter_name in _FILTERS:
         items = [item for item in items if _FILTERS[filter_name](item)]
+
+    # PCI ceiling filter — growth_opportunities only, for low-income countries
+    if (
+        query_type == "growth_opportunities"
+        and country_gdppc is not None
+        and country_gdppc <= _PCI_CEILING_GDP_THRESHOLD
+        and country_eci is not None
+    ):
+        ceiling_offset = _PCI_CEILING_OFFSET.get(applied_strategy, 2.0)
+        pci_ceiling = country_eci + ceiling_offset
+        before_ceiling = len(items)
+        items = [item for item in items if (item.get("pci") or 0) < pci_ceiling]
+        if len(items) < before_ceiling:
+            logger.info(
+                "PCI ceiling filter (%.2f) removed %d items for country %s (GDPPC=%d)",
+                pci_ceiling,
+                before_ceiling - len(items),
+                country_id,
+                country_gdppc,
+            )
 
     # Override sort field for imports
     sort_field = rules["sort"]
@@ -1906,16 +2257,20 @@ def post_process_response(
         query_type,
     )
 
-    return {
-        root_key: items,
-        "_postProcessed": {
-            "totalItems": total_items,
-            "shownItems": len(items),
-            "sortField": sort_field,
-            "tradeDirection": trade_direction,
-            "summary": f"Showing top {len(items)} of {total_items} items, sorted by {sort_field} ({trade_direction}).",
-        },
+    # Build metadata
+    meta: dict = {
+        "totalItems": total_items,
+        "shownItems": len(items),
+        "sortField": sort_field,
+        "tradeDirection": trade_direction,
+        "summary": f"Showing top {len(items)} of {total_items} items, sorted by {sort_field} ({trade_direction}).",
     }
+    if query_type == "growth_opportunities" and score_weights:
+        meta["strategy"] = applied_strategy
+        meta["policyRecommendation"] = policy_rec
+        meta["weights"] = {k: v for k, v in score_weights.items()}
+
+    return {root_key: items, "_postProcessed": meta}
 
 
 # ---------------------------------------------------------------------------
@@ -2842,6 +3197,7 @@ def _build_feasibility_cpy(params: dict) -> tuple[str, dict]:
         yearMax: $yearMax{sc_arg}
       ) {{
         productId year exportValue importValue exportRca cog distance
+        normalizedCog normalizedDistance normalizedPci
       }}
     }}
     """
