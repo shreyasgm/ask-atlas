@@ -62,7 +62,7 @@ Low COI  │ STRATEGIC BETS          │  TECHNOLOGICAL
 
 The strategic approach is determined as follows:
 
-1. **Technological Frontier** countries are a **hardcoded list** (16 countries). These are the world's most complex economies where COI-based heuristics don't cleanly apply. The list is maintained server-side and returned via the `policyRecommendation` field. Current TechFrontier countries: Austria, China, Czechia, Germany, Hungary, Ireland, Israel, Japan, Singapore, Slovenia, South Korea, Sweden, Switzerland, Taiwan, United Kingdom, United States.
+1. **Technological Frontier** countries are a **hardcoded list** (16 countries). These are the world's most complex economies where COI-based heuristics don't cleanly apply. The list is maintained server-side and returned via the `policyRecommendation` field. Current TechFrontier countries: Austria, Canada, China, Czechia, Finland, France, Germany, Italy, Japan, Netherlands, Singapore, South Korea, Sweden, Switzerland, United Kingdom, United States.
 
 2. For all other countries, the assignment follows two numeric thresholds using **COI** (from `countryYear` or `allCountryYear`) and **`eciNatResourcesGdpControlled`** (from `countryProfile`):
 

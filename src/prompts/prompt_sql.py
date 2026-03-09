@@ -31,9 +31,9 @@ Notes on these tables:
 
 Technical metrics:
 - Pre-calculated metrics available: RCA, diversity, ubiquity, proximity, distance, ECI, PCI, COI, COG. Use these directly — do not recompute.
-- Use raw column names, and not the "normalized" versions: `distance` (not `normalized_distance`), `cog` (not `normalized_cog`), `export_rca` (not `normalized_export_rca`).
+- Use raw column names by default: `distance` (not `normalized_distance`), `cog` (not `normalized_cog`), `export_rca` (not `normalized_export_rca`). **Exception:** For growth opportunity composite scoring, use the pre-computed `normalized_distance`, `normalized_pci`, and `normalized_cog` columns (z-scores per country-year; `normalized_distance` is already inverted so higher = closer/easier).
 - Calculable metrics:
-- Growth opportunities: Products where a country does NOT yet have comparative advantage (RCA < 1). Sort by `cog` DESC for attractiveness. `distance` indicates feasibility - before you sort by `cog`, filter for distance < 10th percentile of distance of products for that country. NOTE: The Atlas does not provide growth opportunity analysis for "Technological Frontier" countries (Austria, China, Czechia, Germany, Hungary, Ireland, Israel, Japan, Singapore, Slovenia, South Korea, Sweden, Switzerland, Taiwan, United Kingdom, United States) — these economies grow through innovation and creating new product classes rather than diversifying into existing ones.
+  * Growth opportunities: Products where RCA < 1, ranked by a weighted composite score using `normalized_distance`, `normalized_pci`, `normalized_cog` (exception to raw-columns rule). Weights depend on country policy (COI/ECI thresholds). Requires a two-query approach — see the **Growth Opportunity Queries** section below. Not available for TechFrontier countries (16 hardcoded economies).
   * Market Share: A country's exports of a product as a percentage of total global exports of that product in the same year.  Calculated as: (Country's exports of product X) / (Total global exports of product X) * 100%.
   * New Products: Products where a country has newly developed comparative advantage. The `is_new` and `product_status` columns in `country_product_year_*` are NOT populated — you must compute new products from raw export values. The method: (1) average each country-product export_value over the first 3 years of the window, (2) compute RCA from those averages across ALL countries and products, (3) repeat for the last 3 years, (4) a product is "new" if start-period RCA < 0.5 AND end-period RCA >= 1. The default window is ~15 years but use whatever the user asks for. This works with any schema (hs92, hs12, sitc) — just use the appropriate schema's `country_product_year_4` table and matching `classification.product_*` table for product names. Note: hs12 data starts in 2012, so the max window there is ~11 years. All 4-digit products are eligible (including natural resources). See the few-shot example for the full SQL pattern.
   * CAGR (Compound Annual Growth Rate): Compute from export values at two points in time. Default to a 5-year window if the user does not specify. Formula: (POWER(end_value / start_value, 1.0 / n_years) - 1) * 100. Do NOT use country_product_lookback tables (they are empty).
@@ -69,7 +69,44 @@ Query planning:
 4. Plan tables, joins, columns, aggregations, and filters.
 5. Verify: no WHERE on `product_id`/`country_id`; correct goods/services selection; pre-calculated metrics used directly.
 
+**Growth Opportunity Queries:**
+Growth opportunity queries use a two-step process: (1) determine the country's policy recommendation, then (2) rank products by composite score with policy-specific weights.
 
+Step 1 — Query `country_year` for the country's COI and ECI, then classify:
+- TechFrontier countries (hardcoded list below): use StrategicBets weights. No growth opportunities are shown for these countries.
+- COI < 0 → StrategicBets
+- COI >= 0 AND ECI >= 0 → LightTouch
+- COI >= 0 AND ECI < 0 → ParsimoniousIndustrialPolicy
+If the user explicitly requests a strategy (e.g. "low-hanging fruit"), skip Step 1 and use those weights directly.
+
+Composite score weights (`normalized_distance` / `normalized_pci` / `normalized_cog`):
+| Context | Distance | PCI | COG |
+|---------|----------|-----|-----|
+| StrategicBets (default) | 0.50 | 0.15 | 0.35 |
+| ParsimoniousIndustrial | 0.55 | 0.20 | 0.25 |
+| LightTouch | 0.60 | 0.20 | 0.20 |
+| Low-Hanging Fruit (explicit request) | 0.60 | 0.15 | 0.25 |
+| Long Jumps (explicit request) | 0.45 | 0.20 | 0.35 |
+
+Step 2 — Query `country_product_year` with composite scoring:
+```sql
+-- Example: Kenya with StrategicBets weights (0.50/0.15/0.35)
+SELECT p.code AS product_code, p.name_short_en AS product_name,
+    cpy.export_rca, cpy.distance, cpy.cog,
+    (cpy.normalized_distance * 0.50 + cpy.normalized_pci * 0.15
+     + cpy.normalized_cog * 0.35) AS composite_score
+FROM hs92.country_product_year_4 cpy
+JOIN classification.location_country loc ON cpy.country_id = loc.country_id
+JOIN classification.product_hs92 p ON cpy.product_id = p.product_id
+WHERE loc.iso3_code = 'KEN' AND cpy.year = 2022
+  AND cpy.export_rca < 1 AND cpy.normalized_distance IS NOT NULL
+ORDER BY composite_score DESC
+LIMIT 20;
+```
+
+PCI ceiling: For countries with GDP per capita ≤ $6,000, JOIN to `product_year` and add `AND py.pci < eci_value + 2.0` (or `+ 2.5` for Long Jumps) to exclude too-complex products.
+
+TechFrontier countries (no growth opportunity analysis): Austria, Canada, China, Czechia, Finland, France, Germany, Italy, Japan, Netherlands, Singapore, South Korea, Sweden, Switzerland, United Kingdom, United States.
 
 **Common Mistakes to Avoid:**
 - Never filter on `product_id` in a WHERE clause — always use `product_code`.
@@ -430,13 +467,13 @@ and why, especially after errors.
 ### Column Naming Rules
 - Use `export_value`, NOT `export_value_usd`.
 - Filter on `product_code` and `iso3_code`, NEVER on `product_id` or `country_id` (those are internal join-only IDs).
-- Use raw column names: `distance` (not `normalized_distance`), `cog` (not `normalized_cog`), `export_rca` (not `normalized_export_rca`).
+- Use raw column names by default: `distance` (not `normalized_distance`), `cog` (not `normalized_cog`), `export_rca` (not `normalized_export_rca`). **Exception:** For growth opportunity composite scoring, use `normalized_distance`, `normalized_pci`, and `normalized_cog` (z-scores per country-year; `normalized_distance` is already inverted so higher = closer/easier).
 - Never use the `location_level` or `partner_level` columns.
 
 ### Metric Definitions
 - **Pre-calculated metrics** (use directly, do NOT recompute): RCA, diversity, ubiquity, proximity, distance, ECI, PCI, COI, COG.
 - **Calculable metrics:**
-  - Growth opportunities: Products where RCA < 1. Sort by `cog` DESC for attractiveness. Filter for `distance` < 10th percentile of distance for that country before sorting. Not applicable for countries at the "Technology Frontier" (Austria, China, Czechia, Germany, Hungary, Ireland, Israel, Japan, Singapore, Slovenia, South Korea, Sweden, Switzerland, Taiwan, UK, USA) — these now grow through innovation, not product diversification. Note that this might apply to these countries if an earlier time period is chosen when they perhaps weren't at the frontier yet (for example China grew into the technological frontier only in the last decade or so).
+  - Growth opportunities: Products where RCA < 1, ranked by weighted composite score using `normalized_distance`, `normalized_pci`, `normalized_cog` (exception to raw-columns rule). Weights depend on country policy. Requires a two-query approach — see **Growth Opportunity Queries** section below.
   - Market Share: (Country's product exports / Global product exports) * 100%.
   - New Products: Recomputed from 3-year averaged export values at each end of the window. A product is "new" if start-period RCA < 0.5 AND end-period RCA >= 1. Default ~15-year window (but hs12 data starts in 2012, so max ~11 years there). Works with any goods schema — use the appropriate schema's `country_product_year_4` table and matching `classification.product_*` table. The `is_new`/`product_status` columns are NOT populated — compute from raw export values.
   - CAGR: POWER(end_value / NULLIF(start_value, 0), 1.0 / n_years) - 1) * 100. Default 5-year window. Do NOT use lookback tables (they are empty).
@@ -488,6 +525,57 @@ First aggregate raw values (export_value, import_value) across member countries,
 then apply the formula. Never compute per-country metrics then average.
 
 Do NOT use the group_group_product_year tables.
+
+### Growth Opportunity Queries
+
+Growth opportunity queries use a two-step process: (1) determine the country's policy \
+recommendation, then (2) rank products by composite score with policy-specific weights.
+
+**Step 1 — Determine policy.** Query `country_year` for COI and ECI, then classify:
+- TechFrontier countries (hardcoded list below): use StrategicBets weights. \
+No growth opportunities are shown for these countries.
+- COI < 0 → StrategicBets
+- COI >= 0 AND ECI >= 0 → LightTouch
+- COI >= 0 AND ECI < 0 → ParsimoniousIndustrialPolicy
+
+If the user explicitly requests a strategy (e.g. "low-hanging fruit"), skip Step 1 \
+and use those weights directly.
+
+**Composite score weights** (`normalized_distance` / `normalized_pci` / `normalized_cog`):
+
+| Context | Distance | PCI | COG |
+|---------|----------|-----|-----|
+| StrategicBets (default) | 0.50 | 0.15 | 0.35 |
+| ParsimoniousIndustrial | 0.55 | 0.20 | 0.25 |
+| LightTouch | 0.60 | 0.20 | 0.20 |
+| Low-Hanging Fruit (explicit request) | 0.60 | 0.15 | 0.25 |
+| Long Jumps (explicit request) | 0.45 | 0.20 | 0.35 |
+
+**Step 2 — Composite scoring query:**
+```sql
+-- Example: Kenya with StrategicBets weights (0.50/0.15/0.35)
+SELECT p.code AS product_code, p.name_short_en AS product_name,
+    cpy.export_rca, cpy.distance, cpy.cog,
+    (cpy.normalized_distance * 0.50 + cpy.normalized_pci * 0.15
+     + cpy.normalized_cog * 0.35) AS composite_score
+FROM hs92.country_product_year_4 cpy
+JOIN classification.location_country loc ON cpy.country_id = loc.country_id
+JOIN classification.product_hs92 p ON cpy.product_id = p.product_id
+WHERE loc.iso3_code = 'KEN' AND cpy.year = 2022
+  AND cpy.export_rca < 1 AND cpy.normalized_distance IS NOT NULL
+ORDER BY composite_score DESC
+LIMIT 20;
+```
+
+**PCI ceiling:** For countries with GDP per capita ≤ $6,000, JOIN to `product_year` \
+and add `AND py.pci < eci_value + 2.0` (or `+ 2.5` for Long Jumps) to exclude \
+too-complex products.
+
+**TechFrontier countries** (no growth opportunity analysis): Austria, Canada, China, \
+Czechia, Finland, France, Germany, Italy, Japan, Netherlands, Singapore, South Korea, \
+Sweden, Switzerland, UK, USA. Note: this may apply to these countries if an earlier \
+time period is chosen when they weren't yet at the frontier (e.g. China grew into the \
+technological frontier only in the last decade or so).
 
 ## Query Planning and CTE Strategy
 

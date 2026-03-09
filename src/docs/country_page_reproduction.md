@@ -805,7 +805,7 @@ WHERE cy.country_id = 404
 
 ### Assignment Algorithm
 
-**Technological Frontier** countries are a **hardcoded list** of 16 economies maintained server-side: Austria, China, Czechia, Germany, Hungary, Ireland, Israel, Japan, Singapore, Slovenia, South Korea, Sweden, Switzerland, Taiwan, United Kingdom, United States. These don't follow a simple threshold rule — they are the world's most complex economies where COI-based heuristics don't cleanly apply.
+**Technological Frontier** countries are a **hardcoded list** of 16 economies maintained server-side: Austria, Canada, China, Czechia, Finland, France, Germany, Italy, Japan, Netherlands, Singapore, South Korea, Sweden, Switzerland, United Kingdom, United States. These don't follow a simple threshold rule — they are the world's most complex economies where COI-based heuristics don't cleanly apply.
 
 For all other countries, the assignment uses two numeric thresholds on **COI** and **`eciNatResourcesGdpControlled`** (ECI adjusted via partial correlation removing natural resource rents and GDP effects, a.k.a. ECI*):
 

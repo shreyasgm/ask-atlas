@@ -116,7 +116,7 @@ M_cp = 1 if RCA_cp >= 1 else 0
 
 ### Normalized RCA columns (`*_rcalt1` suffix)
 
-The `country_product_year` tables carry two sets of normalized metrics: one calibrated using continuous M (the current standard), and one using the older binary threshold (RCA >= 1). The `*_rcalt1` columns use the binary threshold as an alternative calibration. See the Normalized Variants section.
+The `country_product_year` tables carry two sets of normalized metrics: one computed over all products (the standard columns), and `*_rcalt1` variants normalized over only the subset of products where `export_rca < 1`. The `_rcalt1` columns are useful for feasibility analysis — they rank products among those the country does not yet export competitively. See the Normalized Variants section.
 
 ---
 
@@ -302,8 +302,8 @@ rather than the raw database value.
 
 The `country_product_year` tables in the HS92, HS12, and SITC schemas carry a full set of normalized columns that re-express raw metrics as percentile ranks or normalized scores for display purposes (diamond ratings, scatter plot axes). There are two parallel families:
 
-- **Standard columns** — calibrated using the continuous M (current Atlas standard)
-- **`*_rcalt1` columns** — calibrated using the binary RCA >= 1 threshold (alternative/historical)
+- **Standard columns** — normalized over all products (current Atlas standard)
+- **`*_rcalt1` columns** — normalized over only products where `export_rca < 1` (feasibility-focused subset)
 
 ### Full column inventory (present in all `country_product_year_{level}` tables)
 
@@ -311,14 +311,14 @@ The `country_product_year` tables in the HS92, HS12, and SITC schemas carry a fu
 |--------|------|-------------|
 | `export_rca` | float8 | Raw RCA value (see Section 1) |
 | `export_rpop` | float8 | Population-adjusted RCA (RPOP); see Note below |
-| `normalized_export_rca` | float8 | Normalized RCA (continuous M calibration) |
-| `normalized_export_rca_rcalt1` | float8 | Normalized RCA (binary RCA >= 1 calibration) |
-| `normalized_pci` | float8 | Normalized PCI (continuous M calibration) |
-| `normalized_pci_rcalt1` | float8 | Normalized PCI (binary threshold calibration) |
-| `normalized_cog` | float8 | Normalized COG (continuous M calibration) |
-| `normalized_cog_rcalt1` | float8 | Normalized COG (binary threshold calibration) |
-| `normalized_distance` | float8 | Normalized distance (continuous M calibration) |
-| `normalized_distance_rcalt1` | float8 | Normalized distance (binary threshold calibration) |
+| `normalized_export_rca` | float8 | Normalized RCA (all products) |
+| `normalized_export_rca_rcalt1` | float8 | Normalized RCA (RCA < 1 subset normalization) |
+| `normalized_pci` | float8 | Normalized PCI (all products) |
+| `normalized_pci_rcalt1` | float8 | Normalized PCI (RCA < 1 subset normalization) |
+| `normalized_cog` | float8 | Normalized COG (all products) |
+| `normalized_cog_rcalt1` | float8 | Normalized COG (RCA < 1 subset normalization) |
+| `normalized_distance` | float8 | Normalized distance (all products) |
+| `normalized_distance_rcalt1` | float8 | Normalized distance (RCA < 1 subset normalization) |
 | `cog` | float8 | Raw Complexity Outlook Gain (see Section 9) |
 | `distance` | float8 | Raw distance (see Section 8) |
 | `global_market_share` | float8 | Country's share of world exports in this product |
@@ -327,7 +327,7 @@ The `country_product_year` tables in the HS92, HS12, and SITC schemas carry a fu
 
 **Note on `export_rpop`:** This is a population-adjusted specialization measure — the country's share of world exports in a product divided by the country's share of world population. It addresses a bias in standard RCA for large countries. See the Advanced section for the formula.
 
-**Note on the `*_rcalt1` columns:** These are provided for analytical comparability with pre-2026 data and for researchers who prefer the binary threshold approach. For current Atlas-standard analysis, use the columns without the `*_rcalt1` suffix.
+**Note on the `*_rcalt1` columns:** These are provided for feasibility analysis focused on products not yet exported (RCA < 1). They are normalized over only the subset of products where `export_rca < 1`, making them useful for ranking growth opportunities among unexported products. For general analysis, use the columns without the `*_rcalt1` suffix.
 
 ### Normalization Method
 
@@ -661,17 +661,23 @@ ORDER BY py.pci DESC
 LIMIT 20;
 ```
 
-### Growth opportunity products for a country (low distance, high COG, RCA < 1)
+### Growth opportunity products for a country (composite scoring, RCA < 1)
 
 ```sql
-SELECT p.name_en, cpy.distance, cpy.cog, cpy.normalized_pci, cpy.export_rca
+-- Uses StrategicBets weights (0.50/0.15/0.35) — see prompt_sql.py for full
+-- strategy-aware two-query approach with policy determination.
+SELECT p.name_en, cpy.distance, cpy.cog, cpy.export_rca,
+    (cpy.normalized_distance * 0.50
+     + cpy.normalized_pci * 0.15
+     + cpy.normalized_cog * 0.35) AS composite_score
 FROM hs92.country_product_year_4 cpy
 JOIN classification.location_country lc USING (country_id)
 JOIN classification.product_hs92 p USING (product_id)
 WHERE lc.iso3_code = 'KEN'
   AND cpy.year = 2024
   AND cpy.export_rca < 1
-ORDER BY cpy.distance ASC, cpy.cog DESC
+  AND cpy.normalized_distance IS NOT NULL
+ORDER BY composite_score DESC
 LIMIT 20;
 ```
 

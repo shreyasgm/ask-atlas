@@ -375,7 +375,7 @@ COI and ECI together determine a country's recommended **strategic approach** to
 
 **Technological Frontier** countries are a **hardcoded list** of 16 economies. These are the world's most complex economies where the standard COI/ECI heuristics don't cleanly apply — they have already captured most nearby product opportunities and growth must come from innovation rather than diversification into existing product classes.
 
-**Current TechFrontier countries:** Austria, China, Czechia, Germany, Hungary, Ireland, Israel, Japan, Singapore, Slovenia, South Korea, Sweden, Switzerland, Taiwan, United Kingdom, United States.
+**Current TechFrontier countries:** Austria, Canada, China, Czechia, Finland, France, Germany, Italy, Japan, Netherlands, Singapore, South Korea, Sweden, Switzerland, United Kingdom, United States.
 
 For all other countries, the assignment uses two numeric thresholds on **COI** (from `countryYear`) and **`eciNatResourcesGdpControlled`** (ECI adjusted for natural resource rents and GDP per capita, from `countryProfile`):
 
