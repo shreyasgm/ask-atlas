@@ -26,15 +26,12 @@ import time
 from pathlib import Path
 from typing import Any, Literal
 
-from dotenv import load_dotenv
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import BaseModel, Field, create_model
 
-load_dotenv(Path(__file__).resolve().parent.parent / ".env")
-
-from src.config import create_llm  # noqa: E402
-from src.model_config import LIGHTWEIGHT_MODEL, LIGHTWEIGHT_MODEL_PROVIDER  # noqa: E402
-from src.prompts.prompt_graphql import build_query_plan_prompt  # noqa: E402
+from src.config import create_llm
+from src.model_config import LIGHTWEIGHT_MODEL, LIGHTWEIGHT_MODEL_PROVIDER
+from src.prompts.prompt_graphql import build_query_plan_prompt
 
 logger = logging.getLogger(__name__)
 
