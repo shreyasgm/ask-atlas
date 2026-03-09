@@ -10,6 +10,13 @@ import pytest
 from langchain_core.messages import AIMessage, ToolMessage
 
 from src.error_handling import QueryExecutionError
+from src.product_and_schema_lookup import (
+    CountryDetails,
+    ProductCodesMapping,
+    ProductDetails,
+    ProductSearchResult,
+    SchemasAndProductsFound,
+)
 from src.sql_pipeline import (
     execute_sql_node,
     extract_products_node,
@@ -20,13 +27,6 @@ from src.sql_pipeline import (
     lookup_codes_node,
     max_queries_exceeded_node,
     validate_sql_node,
-)
-from src.product_and_schema_lookup import (
-    CountryDetails,
-    ProductCodesMapping,
-    ProductDetails,
-    ProductSearchResult,
-    SchemasAndProductsFound,
 )
 
 # ---------------------------------------------------------------------------

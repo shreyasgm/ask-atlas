@@ -18,18 +18,21 @@ Usage:
 import argparse
 import asyncio
 import json
+import logging
 import time
 from pathlib import Path
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import BaseModel, Field, create_model
 
 from src.config import create_llm
 from src.model_config import LIGHTWEIGHT_MODEL, LIGHTWEIGHT_MODEL_PROVIDER
-from src.prompts.prompt_graphql import build_query_plan_prompt
 from src.prompts.prompt_docs import DOCUMENT_SELECTION_PROMPT
+from src.prompts.prompt_graphql import build_query_plan_prompt
 from src.prompts.prompt_sql import PRODUCT_EXTRACTION_PROMPT
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Token tracking callback
@@ -100,7 +103,7 @@ _GRAPHQL_FIELDS: dict[str, Any] = {
         Field(description="Query type classification."),
     ),
     "rejection_reason": (
-        Optional[str],
+        str | None,
         Field(default=None, description="Rejection reason."),
     ),
     "api_target": (
@@ -108,48 +111,48 @@ _GRAPHQL_FIELDS: dict[str, Any] = {
         Field(default=None, description="API target."),
     ),
     "country_name": (
-        Optional[str],
+        str | None,
         Field(default=None, description="Primary country."),
     ),
     "country_code_guess": (
-        Optional[str],
+        str | None,
         Field(default=None, description="ISO3 code guess."),
     ),
     "partner_name": (
-        Optional[str],
+        str | None,
         Field(default=None, description="Partner country."),
     ),
     "partner_code_guess": (
-        Optional[str],
+        str | None,
         Field(default=None, description="Partner ISO3 code."),
     ),
     "product_name": (
-        Optional[str],
+        str | None,
         Field(default=None, description="Product mentioned."),
     ),
     "product_code_guess": (
-        Optional[str],
+        str | None,
         Field(default=None, description="HS code guess."),
     ),
     "product_level": (
-        Optional[Literal["section", "twoDigit", "fourDigit", "sixDigit"]],
+        Literal["section", "twoDigit", "fourDigit", "sixDigit"] | None,
         Field(default="fourDigit", description="Product digit level."),
     ),
     "product_class": (
-        Optional[Literal["HS92", "HS12", "HS22", "SITC"]],
+        Literal["HS92", "HS12", "HS22", "SITC"] | None,
         Field(default=None, description="Product classification."),
     ),
-    "year": (Optional[int], Field(default=None, description="Specific year.")),
-    "year_min": (Optional[int], Field(default=None, description="Year range start.")),
-    "year_max": (Optional[int], Field(default=None, description="Year range end.")),
-    "group_name": (Optional[str], Field(default=None, description="Exporter group.")),
-    "group_type": (Optional[str], Field(default=None, description="Group type.")),
+    "year": (int | None, Field(default=None, description="Specific year.")),
+    "year_min": (int | None, Field(default=None, description="Year range start.")),
+    "year_max": (int | None, Field(default=None, description="Year range end.")),
+    "group_name": (str | None, Field(default=None, description="Exporter group.")),
+    "group_type": (str | None, Field(default=None, description="Group type.")),
     "partner_group_name": (
-        Optional[str],
+        str | None,
         Field(default=None, description="Partner group."),
     ),
     "partner_group_type": (
-        Optional[str],
+        str | None,
         Field(default=None, description="Partner group type."),
     ),
     "lookback_years": (
@@ -157,11 +160,11 @@ _GRAPHQL_FIELDS: dict[str, Any] = {
         Field(default=None, description="Lookback years."),
     ),
     "services_class": (
-        Optional[Literal["unilateral", "bilateral"]],
+        Literal["unilateral", "bilateral"] | None,
         Field(default=None, description="Services class."),
     ),
     "trade_direction": (
-        Optional[Literal["exports", "imports"]],
+        Literal["exports", "imports"] | None,
         Field(default=None, description="Trade direction."),
     ),
 }
@@ -724,7 +727,7 @@ async def run_single_call(
     llm: Any,
     schema: type[BaseModel],
     prompt_text: str,
-    method: str = "function_calling",
+    method: str = "json_schema",
 ) -> dict:
     """Run a single structured output call and collect metrics."""
     tracker = TokenTracker()
@@ -735,7 +738,7 @@ async def run_single_call(
         bound = llm.bind_tools([schema], tool_choice="any")
         chain = bound | PydanticToolsParser(tools=[schema])
     else:
-        chain = llm.with_structured_output(schema, method="function_calling")
+        chain = llm.with_structured_output(schema, method="json_schema")
 
     start = time.perf_counter()
     try:
@@ -774,7 +777,7 @@ async def run_experiment_group(
     make_model_with: type[BaseModel],
     make_model_without: type[BaseModel],
     score_fn: Any,
-    method: str = "function_calling",
+    method: str = "json_schema",
     repetitions: int = 3,
     concurrency: int = 10,
 ) -> dict:
@@ -795,9 +798,14 @@ async def run_experiment_group(
 
         async with lock:
             done_count += 1
-            print(
-                f"  [{done_count}/{total}] {name} | {variant} | case {tc_idx} | rep {rep+1}    ",
-                end="\r",
+            logger.info(
+                "  [%s/%s] %s | %s | case %s | rep %s",
+                done_count,
+                total,
+                name,
+                variant,
+                tc_idx,
+                rep + 1,
             )
 
         if call_result["error"]:
@@ -833,7 +841,6 @@ async def run_experiment_group(
 
     # Run all concurrently (bounded by semaphore)
     all_entries = await asyncio.gather(*tasks)
-    print()  # newline after \r
 
     results: dict[str, list] = {"with_reasoning": [], "without_reasoning": []}
     for entry in all_entries:
@@ -890,13 +897,17 @@ def product_score_adapter(result: dict, tc: dict) -> dict[str, bool]:
 
 def print_summary(name: str, results: dict) -> None:
     """Print a summary table for one experiment group."""
-    print(f"\n{'=' * 60}")
-    print(f"  {name}")
-    print(f"{'=' * 60}")
-    print(
-        f"{'Variant':<22} | {'Accuracy':>8} | {'Avg Latency':>11} | {'Avg Out Tokens':>14}"
+    logger.info("\n%s", "=" * 60)
+    logger.info("  %s", name)
+    logger.info("%s", "=" * 60)
+    logger.info(
+        "%-22s | %8s | %11s | %14s",
+        "Variant",
+        "Accuracy",
+        "Avg Latency",
+        "Avg Out Tokens",
     )
-    print(f"{'-' * 22}-+-{'-' * 8}-+-{'-' * 11}-+-{'-' * 14}")
+    logger.info("%s-+-%s-+-%s-+-%s", "-" * 22, "-" * 8, "-" * 11, "-" * 14)
 
     field_agg: dict[str, dict[str, list[bool]]] = {}
 
@@ -913,8 +924,13 @@ def print_summary(name: str, results: dict) -> None:
             avg_acc = avg_lat = avg_tok = 0.0
 
         err_str = f" ({errors} errors)" if errors else ""
-        print(
-            f"{variant:<22} | {avg_acc:>8.2%} | {avg_lat:>9.0f}ms | {avg_tok:>14.0f}{err_str}"
+        logger.info(
+            "%-22s | %8s | %9sms | %14s%s",
+            variant,
+            f"{avg_acc:.2%}",
+            f"{avg_lat:.0f}",
+            f"{avg_tok:.0f}",
+            err_str,
         )
 
         # Aggregate per-field accuracy
@@ -924,7 +940,7 @@ def print_summary(name: str, results: dict) -> None:
 
     # Per-field breakdown
     if field_agg:
-        print("\nPer-field breakdown:")
+        logger.info("\nPer-field breakdown:")
         for field in sorted(field_agg.keys()):
             vals = field_agg[field]
             with_acc = sum(vals.get("with_reasoning", [])) / max(
@@ -935,8 +951,13 @@ def print_summary(name: str, results: dict) -> None:
             )
             diff = without_acc - with_acc
             sign = "+" if diff >= 0 else ""
-            print(
-                f"  {field:<25}: {with_acc:.2%} vs {without_acc:.2%}  ({sign}{diff:.0%})"
+            logger.info(
+                "  %-25s: %s vs %s  (%s%s)",
+                field,
+                f"{with_acc:.2%}",
+                f"{without_acc:.2%}",
+                sign,
+                f"{diff:.0%}",
             )
 
 
@@ -979,10 +1000,10 @@ async def main() -> None:
     )
     args = parser.parse_args()
 
-    print(f"Model: {args.model} ({args.provider})")
-    print(f"Repetitions: {args.repetitions}")
-    print(f"Concurrency: {args.concurrency}")
-    print()
+    logger.info("Model: %s (%s)", args.model, args.provider)
+    logger.info("Repetitions: %s", args.repetitions)
+    logger.info("Concurrency: %s", args.concurrency)
+    logger.info("")
 
     llm = create_llm(args.model, args.provider, temperature=0)
 
@@ -990,8 +1011,10 @@ async def main() -> None:
 
     # --- GraphQL ---
     if not args.only or args.only == "graphql":
-        print(
-            f"Running GraphQLQueryPlan ({len(GRAPHQL_TEST_CASES)} cases × {args.repetitions} reps × 2 variants)..."
+        logger.info(
+            "Running GraphQLQueryPlan (%s cases × %s reps × 2 variants)...",
+            len(GRAPHQL_TEST_CASES),
+            args.repetitions,
         )
         graphql_results = await run_experiment_group(
             name="GraphQLQueryPlan",
@@ -1010,8 +1033,10 @@ async def main() -> None:
 
     # --- DocsSelection ---
     if not args.only or args.only == "docs":
-        print(
-            f"\nRunning DocsSelection ({len(DOCS_TEST_CASES)} cases × {args.repetitions} reps × 2 variants)..."
+        logger.info(
+            "\nRunning DocsSelection (%s cases × %s reps × 2 variants)...",
+            len(DOCS_TEST_CASES),
+            args.repetitions,
         )
         docs_results = await run_experiment_group(
             name="DocsSelection",
@@ -1030,8 +1055,10 @@ async def main() -> None:
 
     # --- SchemasAndProductsFound ---
     if not args.only or args.only == "product":
-        print(
-            f"\nRunning SchemasAndProductsFound ({len(PRODUCT_TEST_CASES)} cases × {args.repetitions} reps × 2 variants)..."
+        logger.info(
+            "\nRunning SchemasAndProductsFound (%s cases × %s reps × 2 variants)...",
+            len(PRODUCT_TEST_CASES),
+            args.repetitions,
         )
         product_results = await run_experiment_group(
             name="SchemasAndProductsFound",
@@ -1060,8 +1087,12 @@ async def main() -> None:
             ]
 
     output_path.write_text(json.dumps(serializable, indent=2, default=str))
-    print(f"\nResults saved to {output_path}")
+    logger.info("\nResults saved to %s", output_path)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(message)s",
+    )
     asyncio.run(main())

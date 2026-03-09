@@ -1,4 +1,3 @@
-from typing import Dict, List, Tuple, Union
 import asyncio
 import json
 import logging
@@ -49,8 +48,8 @@ EXAMPLE_QUERIES_DIR = BASE_DIR / "src/example_queries"
 
 
 def load_example_queries(
-    queries_json: Union[str, Path], directory: Union[str, Path]
-) -> List[Dict[str, str]]:
+    queries_json: str | Path, directory: str | Path
+) -> list[dict[str, str]]:
     """
     Loads example SQL queries from files in the specified directory and maps them to their questions.
     Returns a list of dictionaries, each containing a 'question' and its corresponding 'query'.
@@ -60,20 +59,20 @@ def load_example_queries(
         directory: Path to the directory containing the example SQL queries
     """
     # Load the queries.json file
-    with open(Path(queries_json), "r") as f:
+    with open(Path(queries_json)) as f:
         query_metadata = json.load(f)
 
     # Create list of question-query pairs
     example_queries = []
     for entry in query_metadata:
         query_path = Path(directory) / entry["file"]
-        with open(query_path, "r") as f:
+        with open(query_path) as f:
             example_queries.append({"question": entry["question"], "query": f.read()})
 
     return example_queries
 
 
-def load_table_descriptions(table_descriptions_json: Union[str, Path]) -> Dict:
+def load_table_descriptions(table_descriptions_json: str | Path) -> dict:
     """
     Loads table descriptions from a JSON file.
 
@@ -83,7 +82,7 @@ def load_table_descriptions(table_descriptions_json: Union[str, Path]) -> Dict:
     Returns:
         Dictionary containing table descriptions
     """
-    with open(table_descriptions_json, "r") as f:
+    with open(table_descriptions_json) as f:
         return json.load(f)
 
 
@@ -101,7 +100,7 @@ def create_query_generation_chain(
     codes: str = None,
     top_k: int = 15,
     table_info: str = "",
-    example_queries: List[Dict[str, str]] = [],
+    example_queries: list[dict[str, str]] | None = None,
     direction_constraint: str | None = None,
     mode_constraint: str | None = None,
     context: str = "",
@@ -126,6 +125,9 @@ def create_query_generation_chain(
     Returns:
         A chain that generates SQL queries
     """
+    if example_queries is None:
+        example_queries = []
+
     prefix = build_sql_generation_prefix(
         codes=codes,
         top_k=top_k,
@@ -187,10 +189,10 @@ def _query_tool_schema(question: str, context: str = "") -> str:
 
 
 def _classification_tables_for_schemas(
-    classification_schemas: List[str],
-    table_descriptions: Dict,
+    classification_schemas: list[str],
+    table_descriptions: dict,
     requires_group_tables: bool = False,
-) -> List[Dict]:
+) -> list[dict]:
     """Return the specific classification lookup tables needed for the given data schemas.
 
     For each data schema (e.g. hs92), includes:
@@ -198,7 +200,7 @@ def _classification_tables_for_schemas(
     - The matching product table (e.g. classification.product_hs92)
     - classification.location_group_member (only when requires_group_tables is True)
     """
-    tables: List[Dict] = []
+    tables: list[dict] = []
     seen: set[str] = set()
 
     # Always include location_country
@@ -246,8 +248,8 @@ def _classification_tables_for_schemas(
 
 
 def get_tables_in_schemas(
-    table_descriptions: Dict, classification_schemas: List[str]
-) -> List[Dict]:
+    table_descriptions: dict, classification_schemas: list[str]
+) -> list[dict]:
     """
     Gets all tables and their descriptions for the selected schemas.
 
@@ -273,8 +275,8 @@ def get_tables_in_schemas(
 
 def get_table_info_for_schemas(
     db: SQLDatabaseWithSchemas,
-    table_descriptions: Dict,
-    classification_schemas: List[str],
+    table_descriptions: dict,
+    classification_schemas: list[str],
     requires_group_tables: bool = False,
 ) -> str:
     """Get table information for a list of schemas."""
@@ -320,8 +322,8 @@ def get_table_info_for_schemas(
 
 async def aget_table_info_for_schemas(
     db,
-    table_descriptions: Dict,
-    classification_schemas: List[str],
+    table_descriptions: dict,
+    classification_schemas: list[str],
     requires_group_tables: bool = False,
 ) -> str:
     """Async version of get_table_info_for_schemas.
@@ -505,7 +507,7 @@ async def get_table_info_node(
     state: AtlasAgentState,
     *,
     db,
-    table_descriptions: Dict,
+    table_descriptions: dict,
     async_db=None,
 ) -> dict:
     """Get table info for the identified schemas.
@@ -543,7 +545,7 @@ async def generate_sql_node(
     state: AtlasAgentState,
     *,
     llm: BaseLanguageModel,
-    example_queries: List[Dict[str, str]],
+    example_queries: list[dict[str, str]],
     max_results: int,
 ) -> dict:
     """Generate SQL query using LLM."""
@@ -662,7 +664,7 @@ async def execute_sql_node(
     async with node_timer("execute_sql", "query_tool") as t:
         if use_async:
 
-            async def _run_query() -> Tuple[str, list[str], list[list]]:
+            async def _run_query() -> tuple[str, list[str], list[list]]:
                 async with async_engine.connect() as conn:
                     result = await conn.execute(text(sql))
                     if not result.returns_rows:
@@ -708,7 +710,7 @@ async def execute_sql_node(
             # Sync fallback (for tests or when async_engine is a sync Engine)
             engine = async_engine
 
-            def _run_query_sync() -> Tuple[str, list[str], list[list]]:
+            def _run_query_sync() -> tuple[str, list[str], list[list]]:
                 with engine.connect() as conn:
                     result = conn.execute(text(sql))
                     if not result.returns_rows:

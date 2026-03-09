@@ -6,19 +6,19 @@ Initial setup script that:
 """
 
 import asyncio
-import openai
-import backoff
-from pathlib import Path
-from typing import List, Optional
-from pydantic import BaseModel
 import json
+from pathlib import Path
 
+import backoff
+import openai
+from pydantic import BaseModel
 from utils import (
     BASE_DIR,
     load_json_file,
-    setup_directories,
     logging,
+    setup_directories,
 )
+
 from src.config import get_settings
 
 # Load settings
@@ -30,8 +30,8 @@ class SQLQuery(BaseModel):
 
 
 class SQLResponse(BaseModel):
-    plan: Optional[str] = None
-    queries: List[SQLQuery]
+    plan: str | None = None
+    queries: list[SQLQuery]
 
 
 @backoff.on_exception(backoff.expo, openai.RateLimitError)

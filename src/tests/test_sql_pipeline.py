@@ -1,16 +1,18 @@
-import pytest
-from pathlib import Path
 import json
 import tempfile
+from pathlib import Path
 from unittest.mock import Mock
+
+import pytest
+
+from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 from src.sql_pipeline import (
     _classification_tables_for_schemas,
+    get_table_info_for_schemas,
     get_tables_in_schemas,
     load_example_queries,
     load_table_descriptions,
-    get_table_info_for_schemas,
 )
-from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 
 
 @pytest.fixture

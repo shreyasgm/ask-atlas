@@ -4,9 +4,9 @@ Tests the sub-agent's internal routing, tool nodes, wrapper, and end-to-end flow
 using mocked LLMs and databases.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from src.sql_subagent import (
@@ -1136,9 +1136,8 @@ class TestSubagentIntegration:
         """
         from pathlib import Path
 
-        from sqlalchemy import create_engine
+        from sqlalchemy import create_engine, make_url
         from sqlalchemy.ext.asyncio import create_async_engine
-        from sqlalchemy import make_url
 
         from src.config import create_llm, get_settings
         from src.sql_multiple_schemas import SQLDatabaseWithSchemas
@@ -1254,9 +1253,9 @@ class TestSubagentIntegration:
         assert result["sql"], "Sub-agent should have generated SQL"
 
         # 2. No error in final state
-        assert (
-            result["last_error"] == ""
-        ), f"Sub-agent ended with error: {result['last_error']}"
+        assert result["last_error"] == "", (
+            f"Sub-agent ended with error: {result['last_error']}"
+        )
 
         # 3. Got actual results with columns and rows
         assert len(result["result_columns"]) > 0, "Should have result columns"
@@ -1272,9 +1271,9 @@ class TestSubagentIntegration:
         )
 
         # 5. attempt_history has at least one successful execution
-        assert any(
-            a["stage"] == "executed" for a in result["attempt_history"]
-        ), f"No successful execution in attempt_history: {result['attempt_history']}"
+        assert any(a["stage"] == "executed" for a in result["attempt_history"]), (
+            f"No successful execution in attempt_history: {result['attempt_history']}"
+        )
 
         # 6. Execution time is plausible (> 0ms)
         assert result["execution_time_ms"] > 0

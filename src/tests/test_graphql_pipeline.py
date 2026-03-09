@@ -12,16 +12,16 @@ from langchain_core.messages import AIMessage, ToolMessage
 from src.cache import CatalogCache
 from src.graphql_client import BudgetExhaustedError, GraphQLError
 from src.graphql_pipeline import (
+    _POST_PROCESS_RULES,
+    _QUERY_TYPE_TO_API,
     GRAPHQL_PIPELINE_NODES,
     MAX_RESPONSE_CHARS,
     GraphQLEntityExtraction,
     GraphQLQueryClassification,
     GraphQLQueryPlan,
-    _POST_PROCESS_RULES,
-    _QUERY_TYPE_TO_API,
     _strip_id_prefix,
-    build_graphql_query,
     build_and_execute_graphql,
+    build_graphql_query,
     classify_query,
     extract_entities,
     extract_graphql_question,
@@ -1877,9 +1877,9 @@ class TestPlanQueryIntegration:
 
         extraction = result["graphql_entity_extraction"]
         assert extraction is not None
-        assert (
-            extraction.get("trade_direction") == "imports"
-        ), f"Expected trade_direction='imports', got {extraction.get('trade_direction')!r}"
+        assert extraction.get("trade_direction") == "imports", (
+            f"Expected trade_direction='imports', got {extraction.get('trade_direction')!r}"
+        )
         assert extraction["country_name"] is not None
 
     async def test_group_membership_classified(self, lightweight_model):
@@ -2065,9 +2065,9 @@ class TestResolveIdsIntegration:
 
         params = res_result["graphql_resolved_params"]
         assert params is not None
-        assert (
-            params.get("trade_direction") == "imports"
-        ), f"Expected trade_direction='imports' in resolved params, got {params.get('trade_direction')!r}"
+        assert params.get("trade_direction") == "imports", (
+            f"Expected trade_direction='imports' in resolved params, got {params.get('trade_direction')!r}"
+        )
 
 
 @pytest.mark.integration
@@ -2289,9 +2289,9 @@ class TestBuildAndExecuteIntegration:
         assert len(rows) > 0
         row = rows[0]
         assert "exportValue" in row
-        assert (
-            "importValue" in row
-        ), "Slim builder should include importValue for direction support"
+        assert "importValue" in row, (
+            "Slim builder should include importValue for direction support"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -2565,9 +2565,9 @@ class TestBuildersExtended:
         assert "normalizedDistance" in query
         assert "normalizedPci" in query
         # Old productSpace-only fields should NOT be present
-        assert (
-            "exportRca" not in query
-        ), "exportRca is an Explore API field, not treeMap"
+        assert "exportRca" not in query, (
+            "exportRca is an Explore API field, not treeMap"
+        )
 
     def test_growth_opportunities_builder_custom_product_class(self):
         """growth_opportunities builder respects product_class param."""
@@ -2729,7 +2729,7 @@ class TestErrorHandlingExtended:
 class TestBugFixRegressions:
     """Regression tests for specific bug fixes."""
 
-    def test_group_year_uses_gdpPpp_not_gdppc(self):
+    def test_group_year_uses_gdp_ppp_not_gdppc(self):
         """GroupYear query must request gdpPpp (valid field), not gdppc (invalid)."""
         query, variables = build_graphql_query(
             "explore_group",
@@ -3028,9 +3028,9 @@ class TestDeterministicApiTarget:
         from src.graphql_pipeline import _QUERY_BUILDERS, _QUERY_TYPE_TO_API
 
         for qt in _QUERY_BUILDERS:
-            assert (
-                qt in _QUERY_TYPE_TO_API
-            ), f"Query type {qt!r} missing from _QUERY_TYPE_TO_API"
+            assert qt in _QUERY_TYPE_TO_API, (
+                f"Query type {qt!r} missing from _QUERY_TYPE_TO_API"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -3264,9 +3264,9 @@ class TestTradeDirection:
     def test_slim_builders_include_import_value(self):
         """Slim builders _build_treemap_cpy, _build_treemap_ccpy, _build_feasibility_cpy include importValue."""
         from src.graphql_pipeline import (
-            _build_treemap_cpy,
-            _build_treemap_ccpy,
             _build_feasibility_cpy,
+            _build_treemap_ccpy,
+            _build_treemap_cpy,
         )
 
         params = {
@@ -3786,17 +3786,17 @@ class TestGraphQLQueryPlan:
         """GraphQLQueryPlan contains all fields from GraphQLQueryClassification."""
         plan_fields = set(GraphQLQueryPlan.model_fields.keys())
         classification_fields = set(GraphQLQueryClassification.model_fields.keys())
-        assert classification_fields.issubset(
-            plan_fields
-        ), f"Missing classification fields: {classification_fields - plan_fields}"
+        assert classification_fields.issubset(plan_fields), (
+            f"Missing classification fields: {classification_fields - plan_fields}"
+        )
 
     def test_schema_has_all_extraction_fields(self):
         """GraphQLQueryPlan contains all fields from GraphQLEntityExtraction."""
         plan_fields = set(GraphQLQueryPlan.model_fields.keys())
         extraction_fields = set(GraphQLEntityExtraction.model_fields.keys())
-        assert extraction_fields.issubset(
-            plan_fields
-        ), f"Missing extraction fields: {extraction_fields - plan_fields}"
+        assert extraction_fields.issubset(plan_fields), (
+            f"Missing extraction fields: {extraction_fields - plan_fields}"
+        )
 
     def test_schema_accepts_valid_plan(self):
         """GraphQLQueryPlan can be instantiated with typical classification+extraction data."""

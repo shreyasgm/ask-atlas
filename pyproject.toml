@@ -56,7 +56,6 @@ dev = [
     "boto3",
     "llama-index>=0.11.16",
     "ruff>=0.1.3",
-    "black>=23.10.1",
     "llm-comparator>=0.1",
     "pytest>=8.3.4",
     "browser-use>=0.1.24",
@@ -80,6 +79,40 @@ markers = [
     "db: marks tests that require a live database connection",
     "eval: marks eval-based integration tests (real LLM + production DB + LLM-as-judge)",
 ]
+addopts = "-m 'not db and not integration and not eval'"
+asyncio_default_fixture_loop_scope = "function"
+asyncio_default_test_loop_scope = "function"
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+lint.select = [
+    "E",    # Critical errors
+    "F",    # Pyflakes
+    "B",    # Bug detection (flake8-bugbear)
+    "I",    # Import sorting
+    "N",    # PEP 8 naming
+    "T20",  # Print statements
+    "UP",   # Python upgrade suggestions
+]
+lint.ignore = [
+    "E501",  # Line too long — ruff format handles code; long strings/comments are fine
+    "N806",  # Uppercase variable in function — we use UPPER_CASE for local constants
+    "B905",  # zip() without strict= — too pedantic for our codebase
+]
+
+[tool.ruff.lint.per-file-ignores]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+skip-magic-trailing-comma = false
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+force-single-line = false
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
 
 [tool.uv]
 # Include dev dependencies by default when running uv sync

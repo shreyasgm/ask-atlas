@@ -1,8 +1,8 @@
-from pathlib import Path
-import psycopg
 import logging
 from dataclasses import dataclass
-from typing import List
+from pathlib import Path
+
+import psycopg
 
 # Setup logging
 logging.basicConfig(
@@ -48,7 +48,7 @@ def setup_extensions(conn: psycopg.Connection) -> None:
 
 
 def create_search_indices(
-    conn: psycopg.Connection, classifications: List[ProductClassification]
+    conn: psycopg.Connection, classifications: list[ProductClassification]
 ) -> None:
     """
     Create text search and trigram indices for each classification table.

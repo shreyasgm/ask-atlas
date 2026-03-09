@@ -79,7 +79,7 @@ class CacheRegistry:
         self._hits: dict[str, int] = {}
         self._misses: dict[str, int] = {}
         self._config: dict[str, dict[str, Any]] = {}
-        self._catalog_caches: dict[str, "CatalogCache"] = {}
+        self._catalog_caches: dict[str, CatalogCache] = {}
 
     def create(self, name: str, *, maxsize: int, ttl: int) -> TTLCache:
         """Create and register a new TTLCache."""
@@ -90,7 +90,7 @@ class CacheRegistry:
         self._config[name] = {"maxsize": maxsize, "ttl": ttl}
         return cache
 
-    def register_catalog(self, catalog: "CatalogCache") -> None:
+    def register_catalog(self, catalog: CatalogCache) -> None:
         """Register a CatalogCache for observability and clear_all support."""
         self._catalog_caches[catalog.name] = catalog
 

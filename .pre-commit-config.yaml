@@ -10,18 +10,13 @@ repos:
         args: ['--maxkb=1200']  # uv.lock is ~1.1 MB
       - id: detect-private-key
 
-  # Linting — version must match what `uv run ruff --version` reports
+  # Linting + formatting — version must match what `uv run ruff --version` reports
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.1
     hooks:
       - id: ruff
         args: [--fix]
-
-  # Formatting — version must match what `uv run black --version` reports
-  - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 26.1.0
-    hooks:
-      - id: black
+      - id: ruff-format
 
   # Keep uv.lock in sync with pyproject.toml
   - repo: https://github.com/astral-sh/uv-pre-commit

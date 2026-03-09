@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from functools import partial
 from pathlib import Path
-from typing import Dict, List, Literal
+from typing import Literal
 
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.messages import HumanMessage, ToolMessage
@@ -70,8 +70,8 @@ def build_atlas_graph(
     lightweight_llm: BaseLanguageModel,
     db: SQLDatabaseWithSchemas,
     engine: Engine,
-    table_descriptions: Dict,
-    example_queries: List[Dict] = [],
+    table_descriptions: dict,
+    example_queries: list[dict] | None = None,
     top_k_per_query: int = 15,
     max_uses: int = 3,
     checkpointer: BaseCheckpointSaver | None = None,
@@ -114,6 +114,9 @@ def build_atlas_graph(
     Returns:
         A compiled LangGraph StateGraph.
     """
+
+    if example_queries is None:
+        example_queries = []
 
     # --- Routing functions ---
 

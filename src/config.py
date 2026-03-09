@@ -6,13 +6,13 @@ Non-secret defaults (model names, providers) live in src/model_config.py.
 """
 
 import logging
-from enum import Enum
+from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.rate_limiters import InMemoryRateLimiter
-from pydantic import Field, AliasChoices
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings
 
 logger = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ _MODEL_DEFAULTS = {
 }
 
 
-class AgentMode(str, Enum):
+class AgentMode(StrEnum):
     """System operating mode controlling which tool pipelines are available."""
 
     AUTO = "auto"
@@ -210,7 +210,7 @@ class Settings(BaseSettings):
     }
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """Get cached settings instance.
 

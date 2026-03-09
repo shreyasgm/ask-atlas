@@ -5,7 +5,6 @@ from __future__ import annotations
 import time
 from unittest.mock import MagicMock, patch
 
-
 from src.db_pool_health import (
     _on_checkin,
     _on_invalidate,

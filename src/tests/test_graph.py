@@ -4,10 +4,9 @@ Uses FakeToolCallingModel and build_atlas_graph with mocked GraphQL dependencies
 All tests are unit tests — no database or external LLM required.
 """
 
-import pytest
-
 from unittest.mock import MagicMock, patch
 
+import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -51,7 +50,9 @@ def _build_graph(
     mock_db = _make_mock_db()
     mock_engine = _make_mock_engine()
 
-    with (patch("src.sql_pipeline.ProductAndSchemaLookup") as mock_lookup_cls,):
+    with (
+        patch("src.sql_pipeline.ProductAndSchemaLookup") as mock_lookup_cls,
+    ):
         mock_lookup = MagicMock()
         mock_lookup_cls.return_value = mock_lookup
 
@@ -236,18 +237,18 @@ class TestSQLOnlyModeRegression:
 
         # 4. No GraphQL stages in pipeline_states
         graphql_stages_seen = stages & _GRAPHQL_STAGES
-        assert (
-            not graphql_stages_seen
-        ), f"GraphQL pipeline stages appeared in SQL-only mode: {graphql_stages_seen}"
+        assert not graphql_stages_seen, (
+            f"GraphQL pipeline stages appeared in SQL-only mode: {graphql_stages_seen}"
+        )
 
         # 5. SQL returned at least 1 row
         execute_sql_states = [
             p for p in pipeline_states if p.get("stage") == "sql_query_agent"
         ]
         row_counts = [p.get("row_count", 0) for p in execute_sql_states]
-        assert any(
-            rc > 0 for rc in row_counts
-        ), f"SQL query returned no rows; row_counts={row_counts}"
+        assert any(rc > 0 for rc in row_counts), (
+            f"SQL query returned no rows; row_counts={row_counts}"
+        )
 
         # 6. Final answer is non-trivial
         assert len(final_answer) > 80, (

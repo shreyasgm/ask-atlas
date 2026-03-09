@@ -20,9 +20,9 @@ _EVAL_DIR = Path(__file__).resolve().parents[2] / "evaluation"
 if str(_EVAL_DIR) not in sys.path:
     sys.path.insert(0, str(_EVAL_DIR))
 
-from run_eval import _select_balanced  # noqa: E402
-from report import _detect_pipeline, generate_report, report_to_markdown  # noqa: E402
 from html_report import generate_html_report  # noqa: E402
+from report import _detect_pipeline, generate_report, report_to_markdown  # noqa: E402
+from run_eval import _select_balanced  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Fixtures

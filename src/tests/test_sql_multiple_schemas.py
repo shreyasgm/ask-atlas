@@ -1,7 +1,8 @@
 import pytest
-from sqlalchemy import create_engine, MetaData
-from src.sql_multiple_schemas import SQLDatabaseWithSchemas
+from sqlalchemy import MetaData, create_engine
+
 from src.config import get_settings
+from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 
 # Load settings
 settings = get_settings()

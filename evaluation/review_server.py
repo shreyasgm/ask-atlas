@@ -18,11 +18,10 @@ from typing import Any
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
-
 from html_report import generate_review_html
 from judge import judge_answer
 from link_judge import judge_links
+from pydantic import BaseModel
 from utils import (
     EVALUATION_BASE_DIR,
     get_timestamp,

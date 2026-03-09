@@ -10,9 +10,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 EVALUATION_DIR = Path(__file__).resolve().parent
 EVAL_QUESTIONS_PATH = EVALUATION_DIR / "eval_questions.json"
@@ -42,7 +45,7 @@ def build_ground_truth(candidate: dict) -> dict:
     """Build a ground truth results.json scaffold for a promoted candidate."""
     return {
         "question_id": str(candidate["suggested_id"]),
-        "execution_timestamp": datetime.now(timezone.utc).isoformat(),
+        "execution_timestamp": datetime.now(UTC).isoformat(),
         "source": "user_feedback",
         "feedback_id": candidate["feedback_id"],
         "notes": (
@@ -116,8 +119,9 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
 
     if not CANDIDATES_PATH.exists():
-        print(
-            f"No candidates file found at {CANDIDATES_PATH}. Run feedback_to_eval.py first."
+        logger.error(
+            "No candidates file found at %s. Run feedback_to_eval.py first.",
+            CANDIDATES_PATH,
         )
         sys.exit(1)
 
@@ -130,34 +134,36 @@ def main(argv: list[str] | None = None) -> None:
     to_promote, skipped = select_candidates(candidates, args.ids, args.promote_all)
 
     for s in skipped:
-        print(
-            f"  Skipping feedback {s['feedback_id']}: duplicate of question {s['duplicate_of']}"
+        logger.info(
+            "  Skipping feedback %s: duplicate of question %s",
+            s["feedback_id"],
+            s["duplicate_of"],
         )
 
     # Filter out ID conflicts
     conflicts = validate_no_id_conflict(to_promote, existing_ids)
     for w in conflicts:
-        print(f"  WARNING: {w}")
+        logger.warning("  %s", w)
     conflict_ids = {c["suggested_id"] for c in to_promote} & existing_ids
     to_promote = [c for c in to_promote if c["suggested_id"] not in conflict_ids]
 
     if not to_promote:
-        print("Nothing to promote.")
+        logger.info("Nothing to promote.")
         return
 
-    print(f"\nWill promote {len(to_promote)} candidate(s):")
+    logger.info("Will promote %s candidate(s):", len(to_promote))
     for c in to_promote:
-        print(f"  [{c['suggested_id']}] {c['suggested_question'][:80]}")
+        logger.info("  [%s] %s", c["suggested_id"], c["suggested_question"][:80])
 
     if args.dry_run:
-        print("\n(dry run — no files modified)")
+        logger.info("(dry run — no files modified)")
         return
 
     # 1. Add to eval_questions.json
     for c in to_promote:
         eval_data["questions"].append(build_eval_question(c))
     EVAL_QUESTIONS_PATH.write_text(json.dumps(eval_data, indent=2) + "\n")
-    print(f"\nUpdated {EVAL_QUESTIONS_PATH}")
+    logger.info("Updated %s", EVAL_QUESTIONS_PATH)
 
     # 2. Create ground truth scaffolds
     for c in to_promote:
@@ -165,7 +171,7 @@ def main(argv: list[str] | None = None) -> None:
         gt_dir.mkdir(parents=True, exist_ok=True)
         gt_path = gt_dir / "results.json"
         gt_path.write_text(json.dumps(build_ground_truth(c), indent=2) + "\n")
-        print(f"  Created {gt_path}")
+        logger.info("  Created %s", gt_path)
 
     # 3. Remove promoted entries from candidates file
     promoted_feedback_ids = {c["feedback_id"] for c in to_promote}
@@ -173,8 +179,11 @@ def main(argv: list[str] | None = None) -> None:
     candidates_data["candidates"] = remaining
     candidates_data["candidate_count"] = len(remaining)
     CANDIDATES_PATH.write_text(json.dumps(candidates_data, indent=2) + "\n")
-    print(f"  Removed {len(to_promote)} promoted entry(ies) from {CANDIDATES_PATH}")
+    logger.info(
+        "  Removed %s promoted entry(ies) from %s", len(to_promote), CANDIDATES_PATH
+    )
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     main()

@@ -127,9 +127,9 @@ class TestDocsPipelineE2E:
         # --- Verify final answer references ECI docs (from test 4) ---
         assert answer, "Agent returned an empty answer"
         answer_lower = answer.lower()
-        assert (
-            "eci" in answer_lower or "economic complexity" in answer_lower
-        ), f"Answer does not mention ECI: {answer[:300]}"
+        assert "eci" in answer_lower or "economic complexity" in answer_lower, (
+            f"Answer does not mention ECI: {answer[:300]}"
+        )
 
     async def test_pipeline_events_and_tool_output(self, atlas_agent):
         """Pipeline nodes fire in order, state events carry correct data, tool output is substantive.
@@ -190,12 +190,12 @@ class TestDocsPipelineE2E:
 
         # At least metrics_glossary.md should be among selected files
         selected = select_state["selected_files"]
-        assert (
-            "metrics_glossary.md" in selected
-        ), f"Expected metrics_glossary.md in selected files, got: {selected}"
+        assert "metrics_glossary.md" in selected, (
+            f"Expected metrics_glossary.md in selected files, got: {selected}"
+        )
 
         # --- Verify tool_output is substantive (from test 5) ---
         assert tool_output, "No tool_output content found"
-        assert (
-            len(tool_output) > 50
-        ), f"Tool output seems too short to be a real synthesis: {tool_output[:200]}"
+        assert len(tool_output) > 50, (
+            f"Tool output seems too short to be a real synthesis: {tool_output[:200]}"
+        )

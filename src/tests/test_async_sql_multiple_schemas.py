@@ -461,9 +461,9 @@ class TestAsyncNullTypeFiltering:
             # "embedding NULL,"  — column name followed by NULL as the type
             if "embedding" in stripped.lower():
                 # If the column appears, it should not have NULL as its type
-                assert (
-                    "NULL" not in stripped.split("embedding")[-1].split(",")[0]
-                ), f"NullType column found in DDL: {stripped}"
+                assert "NULL" not in stripped.split("embedding")[-1].split(",")[0], (
+                    f"NullType column found in DDL: {stripped}"
+                )
 
 
 @pytest.mark.db
@@ -689,9 +689,8 @@ class TestAsyncGetTableInfoForSchemasCache:
     @pytest.mark.asyncio
     async def test_aget_table_info_for_schemas_uses_cache(self):
         """Second call should hit cache — db.aget_table_info not called again."""
-        from src.sql_pipeline import aget_table_info_for_schemas
-
         from src.cache import table_info_cache
+        from src.sql_pipeline import aget_table_info_for_schemas
 
         table_info_cache.clear()
 

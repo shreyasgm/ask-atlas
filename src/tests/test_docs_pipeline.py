@@ -11,10 +11,10 @@ import pytest
 from langchain_core.messages import AIMessage, ToolMessage
 
 from src.docs_pipeline import (
+    _DOCS_STATE_DEFAULTS,
     DEFAULT_MAX_DOCS,
     DocEntry,
     DocsSelection,
-    _DOCS_STATE_DEFAULTS,
     _extract_body,
     _format_manifest_for_prompt,
     _make_docs_selection_model,

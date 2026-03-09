@@ -15,7 +15,6 @@ Run::
 
 from __future__ import annotations
 
-
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
@@ -118,9 +117,9 @@ class TestGraphqlSqlModeRouting:
         tool_name = _extract_tool_call_name(response)
 
         assert tool_name is not None, "Agent did not call any tool"
-        assert (
-            tool_name == "atlas_graphql"
-        ), f"Expected atlas_graphql for a country profile question, got {tool_name}"
+        assert tool_name == "atlas_graphql", (
+            f"Expected atlas_graphql for a country profile question, got {tool_name}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -150,9 +149,9 @@ class TestSqlOnlyModeRouting:
         tool_name = _extract_tool_call_name(response)
 
         assert tool_name is not None, "Agent did not call any tool"
-        assert (
-            tool_name == "query_tool"
-        ), f"Expected query_tool in SQL_ONLY mode, got {tool_name}"
+        assert tool_name == "query_tool", (
+            f"Expected query_tool in SQL_ONLY mode, got {tool_name}"
+        )
 
     async def test_atlas_graphql_not_available_in_sql_only(self, frontier_llm):
         """In SQL_ONLY mode, atlas_graphql should not be offered even for a
@@ -277,7 +276,9 @@ class TestDocsToolRouting:
         assert tool_name in (
             "docs_tool",
             "query_tool",
-        ), f"Expected docs_tool or query_tool for a methodology question, got {tool_name}"
+        ), (
+            f"Expected docs_tool or query_tool for a methodology question, got {tool_name}"
+        )
 
     async def test_methodology_question_routes_to_docs_tool_in_graphql_sql(
         self, frontier_llm

@@ -11,6 +11,7 @@ Usage:
 """
 
 import json
+import logging
 import math
 import os
 import sys
@@ -18,9 +19,10 @@ from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 
+import psycopg2
 from dotenv import load_dotenv
 
-import psycopg2
+logger = logging.getLogger(__name__)
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
@@ -56,9 +58,7 @@ load_dotenv(BASE_DIR / ".env")
 
 PROD_DB_URL = os.environ.get("ATLAS_DB_URL")
 if not PROD_DB_URL:
-    print(
-        "ERROR: ATLAS_DB_URL not set. Add it to .env or set env var.", file=sys.stderr
-    )
+    logger.error("ATLAS_DB_URL not set. Add it to .env or set env var.")
     sys.exit(1)
 
 
@@ -247,7 +247,7 @@ def extract_data(
     if where:
         cur.execute(f"SELECT {col_sql} FROM {qualified} WHERE {where}")
     else:
-        print(f"  WARNING: no filter for {qualified}, doing full copy", file=sys.stderr)
+        logger.warning("No filter for %s, doing full copy", qualified)
         cur.execute(f"SELECT {col_sql} FROM {qualified}")
     return cur.fetchall()
 
@@ -266,7 +266,7 @@ def generate() -> tuple[str, list[tuple[str, str, int]]]:
 
     with psycopg2.connect(PROD_DB_URL) as conn:
         with conn.cursor() as cur:
-            print("Discovering schema structure...")
+            logger.info("Discovering schema structure...")
             enums = extract_enums(cur)
 
             # Resolve sample country_ids
@@ -278,7 +278,7 @@ def generate() -> tuple[str, list[tuple[str, str, int]]]:
             )
             country_ids = [r[0] for r in cur.fetchall()]
             cid_list = ",".join(str(c) for c in country_ids)
-            print(f"  Sample country_ids: {country_ids}")
+            logger.info("Sample country_ids: %s", country_ids)
 
             # ── 1. Header ─────────────────────────────────────────
             w(
@@ -324,8 +324,8 @@ def generate() -> tuple[str, list[tuple[str, str, int]]]:
                 for table in all_tables[schema]:
                     cols = extract_columns(cur, schema, table)
                     if not cols:
-                        print(
-                            f"  WARNING: no columns found for {schema}.{table}, skipping DDL"
+                        logger.warning(
+                            "No columns found for %s.%s, skipping DDL", schema, table
                         )
                         continue
                     qualified = f"{schema}.{table}" if schema != "public" else table
@@ -360,10 +360,10 @@ def generate() -> tuple[str, list[tuple[str, str, int]]]:
                         stats.append((schema, table, 0))
                         continue
 
-                    print(f"  Extracting {qualified}...", end=" ", flush=True)
+                    logger.info("Extracting %s...", qualified)
                     rows = extract_data(cur, schema, table, col_names, cid_list)
                     stats.append((schema, table, len(rows)))
-                    print(f"{len(rows)} rows")
+                    logger.info("Extracted %s rows from %s", len(rows), qualified)
 
                     if rows:
                         w(f"-- {qualified} ({len(rows)} rows)")
@@ -375,22 +375,22 @@ def generate() -> tuple[str, list[tuple[str, str, int]]]:
 
 
 if __name__ == "__main__":
-    print("Connecting to production DB and extracting data...")
+    print("Connecting to production DB and extracting data...")  # noqa: T201
     sql, stats = generate()
 
     OUTPUT_FILE.write_text(sql)
     total_bytes = len(sql.encode())
 
     # Print summary
-    print(f"\n{'Schema':<25} {'Table':<40} {'Rows':>8}")
-    print("-" * 75)
+    print(f"\n{'Schema':<25} {'Table':<40} {'Rows':>8}")  # noqa: T201
+    print("-" * 75)  # noqa: T201
     total_rows = 0
     for schema, table, count in stats:
         label = "DDL only" if count == 0 else f"{count:>8,}"
-        print(f"{schema:<25} {table:<40} {label}")
+        print(f"{schema:<25} {table:<40} {label}")  # noqa: T201
         total_rows += count
-    print("-" * 75)
-    print(f"{'TOTAL':<65} {total_rows:>8,}")
-    print(
+    print("-" * 75)  # noqa: T201
+    print(f"{'TOTAL':<65} {total_rows:>8,}")  # noqa: T201
+    print(  # noqa: T201
         f"\nWritten to {OUTPUT_FILE} ({total_bytes:,} bytes, {total_bytes / 1024 / 1024:.1f} MB)"
     )

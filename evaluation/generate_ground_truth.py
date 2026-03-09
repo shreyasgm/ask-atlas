@@ -16,13 +16,13 @@ import decimal
 from typing import Any
 
 import asyncpg
-
 from utils import (
     EVALUATION_BASE_DIR,
-    save_json_file,
     get_timestamp,
     logging,
+    save_json_file,
 )
+
 from src.config import get_settings
 
 settings = get_settings()

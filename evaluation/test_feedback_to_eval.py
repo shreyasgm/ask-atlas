@@ -8,7 +8,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-
 from evaluation.feedback_to_eval import (
     build_candidate,
     build_expected_behavior,

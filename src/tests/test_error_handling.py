@@ -4,12 +4,13 @@ Tests real tenacity retry behavior (no mocks of the retry decorator itself).
 No external dependencies required.
 """
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 from sqlalchemy.exc import OperationalError
 from tenacity import RetryError, wait_none
 
-from src.error_handling import execute_with_retry, QueryExecutionError
+from src.error_handling import QueryExecutionError, execute_with_retry
 
 # Read max attempts from the actual retry config so tests stay in sync
 MAX_ATTEMPTS = execute_with_retry.retry.stop.max_attempt_number

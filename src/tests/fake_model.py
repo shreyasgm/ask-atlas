@@ -1,6 +1,6 @@
 """Fake chat model for testing agent trajectories without a real LLM."""
 
-from typing import Any, List, Optional
+from typing import Any
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage
@@ -15,13 +15,13 @@ class FakeToolCallingModel(BaseChatModel):
     ``bind_tools`` is a no-op that returns ``self``.
     """
 
-    responses: List[AIMessage]
+    responses: list[AIMessage]
     index: int = 0
 
     def _generate(
         self,
-        messages: List[BaseMessage],
-        stop: Optional[List[str]] = None,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
         run_manager: Any = None,
         **kwargs: Any,
     ) -> ChatResult:

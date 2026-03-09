@@ -475,8 +475,9 @@ class TestPipelineNodesReturnStepTiming:
 
     def test_extract_tool_question_returns_timing(self):
         """extract_tool_question should include step_timing in its result."""
-        from src.sql_pipeline import extract_tool_question
         from langchain_core.messages import AIMessage
+
+        from src.sql_pipeline import extract_tool_question
 
         state = {
             "messages": [
@@ -504,6 +505,7 @@ class TestPipelineNodesReturnStepTiming:
     def test_format_results_returns_timing(self):
         """format_results_node should include step_timing in its result."""
         from langchain_core.messages import AIMessage
+
         from src.sql_pipeline import format_results_node
 
         state = {

@@ -15,11 +15,14 @@ Usage:
 import argparse
 import asyncio
 import json
+import logging
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -28,7 +31,7 @@ import httpx
 ENDPOINT = "https://atlas.hks.harvard.edu/api/graphql"
 BASE_DIR = Path(__file__).resolve().parent
 RESULTS_DIR = BASE_DIR / "results"
-TIMESTAMP = datetime.now(timezone.utc).isoformat()
+TIMESTAMP = datetime.now(UTC).isoformat()
 
 # Countries — integer IDs used by the Explore API
 COUNTRIES: dict[str, int] = {
@@ -570,14 +573,17 @@ async def resolve_catalogs(client: httpx.AsyncClient) -> None:
     # Verify target groups
     for api_name in TARGET_GROUPS:
         if api_name not in GROUP_MAP:
-            print(
-                f"  WARNING: Group '{api_name}' not found. Available: "
-                f"{sorted(GROUP_MAP.keys())}"
+            logger.warning(
+                "  Group '%s' not found. Available: %s",
+                api_name,
+                sorted(GROUP_MAP.keys()),
             )
 
-    print(
-        f"  Products: {len(PRODUCT_MAP)}, Countries: {len(COUNTRY_NAMES)}, "
-        f"Groups: {len(GROUP_MAP)}"
+    logger.info(
+        "  Products: %s, Countries: %s, Groups: %s",
+        len(PRODUCT_MAP),
+        len(COUNTRY_NAMES),
+        len(GROUP_MAP),
     )
 
 
@@ -600,8 +606,10 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
             },
         )
         country_product_data[country] = data["countryProductYear"]
-        print(
-            f"    country products: {country} ({len(data['countryProductYear'])} rows)"
+        logger.info(
+            "    country products: %s (%s rows)",
+            country,
+            len(data["countryProductYear"]),
         )
 
     async def fetch_exporters(code: str) -> None:
@@ -615,8 +623,10 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
             },
         )
         product_exporters[code] = data["countryProductYear"]
-        print(
-            f"    top exporters: {code} ({len(data['countryProductYear'])} countries)"
+        logger.info(
+            "    top exporters: %s (%s countries)",
+            code,
+            len(data["countryProductYear"]),
         )
 
     async def fetch_all_product_year() -> None:
@@ -630,7 +640,7 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
         )
         for row in data["productYear"]:
             all_product_year[row["productId"]] = row
-        print(f"    product year: {len(all_product_year)} products")
+        logger.info("    product year: %s products", len(all_product_year))
 
     async def fetch_bilateral(pair: tuple[str, str]) -> None:
         exp, imp = pair
@@ -646,7 +656,7 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
         )
         rows = data["countryCountryYear"]
         bilateral_total[pair] = rows[0] if rows else {}
-        print(f"    bilateral: {exp} -> {imp}")
+        logger.info("    bilateral: %s -> %s", exp, imp)
 
     async def fetch_bilateral_prods(pair: tuple[str, str]) -> None:
         exp, imp = pair
@@ -661,8 +671,11 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
             },
         )
         bilateral_products[pair] = data["countryCountryProductYear"]
-        print(
-            f"    bilateral products: {exp} -> {imp} ({len(data['countryCountryProductYear'])} products)"
+        logger.info(
+            "    bilateral products: %s -> %s (%s products)",
+            exp,
+            imp,
+            len(data["countryCountryProductYear"]),
         )
 
     async def fetch_ts(country: str) -> None:
@@ -676,7 +689,7 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
             },
         )
         time_series[country] = sorted(data["countryYear"], key=lambda x: x["year"])
-        print(f"    time series: {country} ({len(data['countryYear'])} years)")
+        logger.info("    time series: %s (%s years)", country, len(data["countryYear"]))
 
     async def fetch_conversion() -> None:
         try:
@@ -690,14 +703,14 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
                 },
             )
             conversion_result.extend(data.get("conversionPath", []))
-            print(f"    conversion: {len(conversion_result)} mappings")
+            logger.info("    conversion: %s mappings", len(conversion_result))
         except Exception as e:
-            print(f"    WARNING: conversion query failed: {e}")
+            logger.warning("    conversion query failed: %s", e)
 
     async def fetch_group_yr(api_name: str) -> None:
         g = GROUP_MAP.get(api_name)
         if not g:
-            print(f"    WARNING: group '{api_name}' not in catalog, skipping")
+            logger.warning("    group '%s' not in catalog, skipping", api_name)
             return
         gid = parse_group_id(g["groupId"])
         data = await gql(
@@ -710,7 +723,7 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
             },
         )
         group_year_data[api_name] = sorted(data["groupYear"], key=lambda x: x["year"])
-        print(f"    group year: {api_name} ({len(data['groupYear'])} years)")
+        logger.info("    group year: %s (%s years)", api_name, len(data["groupYear"]))
 
     async def fetch_import_src(country: str, hs_code: str) -> None:
         try:
@@ -725,11 +738,14 @@ async def fetch_phase2(client: httpx.AsyncClient) -> None:
                 },
             )
             import_sources[(country, hs_code)] = data["countryCountryProductYear"]
-            print(
-                f"    import sources: {country} x {hs_code} ({len(data['countryCountryProductYear'])} partners)"
+            logger.info(
+                "    import sources: %s x %s (%s partners)",
+                country,
+                hs_code,
+                len(data["countryCountryProductYear"]),
             )
         except Exception as e:
-            print(f"    WARNING: import sources query failed: {e}")
+            logger.warning("    import sources query failed: %s", e)
 
     await asyncio.gather(
         # Country product data (5)
@@ -1891,14 +1907,14 @@ async def main() -> None:
 
     SEM = asyncio.Semaphore(2)
 
-    print("Phase 1: Resolving catalogs...")
+    logger.info("Phase 1: Resolving catalogs...")
     async with httpx.AsyncClient() as client:
         await resolve_catalogs(client)
 
-        print("\nPhase 2: Fetching targeted data...")
+        logger.info("Phase 2: Fetching targeted data...")
         await fetch_phase2(client)
 
-    print(f"\nGenerating questions (starting at ID {QID[0]})...\n")
+    logger.info("Generating questions (starting at ID %s)...", QID[0])
 
     gen_product_complexity()
     gen_global_product_stats()
@@ -1909,7 +1925,7 @@ async def main() -> None:
     gen_regional_aggregates()
     gen_product_metadata()
 
-    print(f"Generated {len(ALL_QUESTIONS)} questions (IDs 170-{QID[0] - 1})")
+    logger.info("Generated %s questions (IDs 170-%s)", len(ALL_QUESTIONS), QID[0] - 1)
 
     # Write integration file
     new_categories = [
@@ -1961,14 +1977,15 @@ async def main() -> None:
         "new_questions": ALL_QUESTIONS,
     }
     out_path.write_text(json.dumps(output, indent=2) + "\n")
-    print(f"\nWrote integration file: {out_path}")
+    logger.info("Wrote integration file: %s", out_path)
 
     # Category breakdown
     cats = Counter(q["category_id"] for q in ALL_QUESTIONS)
-    print("\nQuestions by category:")
+    logger.info("Questions by category:")
     for cat_id, count in cats.most_common():
-        print(f"  {cat_id}: {count}")
+        logger.info("  %s: %s", cat_id, count)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     asyncio.run(main())

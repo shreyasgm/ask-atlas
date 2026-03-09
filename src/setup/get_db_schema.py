@@ -1,6 +1,7 @@
-import psycopg2
-from pathlib import Path
 import json
+from pathlib import Path
+
+import psycopg2
 
 BASE_DIR = Path(__file__).parents[2]
 
@@ -112,11 +113,11 @@ def get_db_schema(db_url):
     return schema_tables
 
 
-print("Fetching schema...")
+print("Fetching schema...")  # noqa: T201
 schema_tables = get_db_schema(settings.atlas_db_url)
 
 # Save to JSON
 json_file_path = BASE_DIR / "src" / "schema" / "db_table_structure.json"
 with open(json_file_path, "w") as json_file:
     json.dump(schema_tables, json_file, indent=2)
-print(f"Schema saved to {json_file_path}")
+print(f"Schema saved to {json_file_path}")  # noqa: T201

@@ -10,18 +10,19 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, Dict, List, Literal, Optional, Sequence, Union
+import warnings
+from collections.abc import Sequence
+from typing import Any, Literal
 
 import sqlalchemy
-import warnings
-from sqlalchemy import MetaData, create_engine, inspect, Table, select, text
+from langchain_community.utilities import SQLDatabase
+from sqlalchemy import MetaData, Table, create_engine, inspect, select, text
 from sqlalchemy.engine import Engine, Result
 from sqlalchemy.exc import ProgrammingError, SAWarning
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.schema import CreateTable
 from sqlalchemy.sql.expression import Executable
 from sqlalchemy.types import NullType
-from langchain_community.utilities import SQLDatabase
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +30,8 @@ logger = logging.getLogger(__name__)
 def _format_index(index: sqlalchemy.engine.interfaces.ReflectedIndex) -> str:
     """Format index information with schema awareness."""
     return (
-        f'Name: {index["name"]}, Unique: {index["unique"]}, '
-        f'Columns: {str(index["column_names"])}'
+        f"Name: {index['name']}, Unique: {index['unique']}, "
+        f"Columns: {str(index['column_names'])}"
     )
 
 
@@ -40,13 +41,13 @@ class SQLDatabaseWithSchemas(SQLDatabase):
     def __init__(
         self,
         engine: Engine,
-        schemas: Optional[List[str]] = None,
-        metadata: Optional[MetaData] = None,
-        ignore_tables: Optional[List[str]] = None,
-        include_tables: Optional[List[str]] = None,
+        schemas: list[str] | None = None,
+        metadata: MetaData | None = None,
+        ignore_tables: list[str] | None = None,
+        include_tables: list[str] | None = None,
         sample_rows_in_table_info: int = 3,
         indexes_in_table_info: bool = False,
-        custom_table_info: Optional[dict] = None,
+        custom_table_info: dict | None = None,
         view_support: bool = False,
         max_string_length: int = 300,
     ):
@@ -83,7 +84,7 @@ class SQLDatabaseWithSchemas(SQLDatabase):
         )
 
     def _initialize_tables(
-        self, ignore_tables: Optional[List[str]], include_tables: Optional[List[str]]
+        self, ignore_tables: list[str] | None, include_tables: list[str] | None
     ) -> None:
         """Initialize table-related attributes."""
         self._all_tables_per_schema = {}
@@ -131,7 +132,7 @@ class SQLDatabaseWithSchemas(SQLDatabase):
         )
 
     def _initialize_metadata(
-        self, metadata: Optional[MetaData], view_support: bool
+        self, metadata: MetaData | None, view_support: bool
     ) -> None:
         """Initialize metadata for all schemas."""
         self._metadata = metadata or MetaData()
@@ -158,7 +159,7 @@ class SQLDatabaseWithSchemas(SQLDatabase):
         self,
         sample_rows_in_table_info: int,
         indexes_in_table_info: bool,
-        custom_table_info: Optional[dict],
+        custom_table_info: dict | None,
         max_string_length: int,
     ) -> None:
         """Initialize other settings."""
@@ -184,12 +185,12 @@ class SQLDatabaseWithSchemas(SQLDatabase):
 
     def _execute(
         self,
-        command: Union[str, Executable],
+        command: str | Executable,
         fetch: Literal["all", "one", "cursor"] = "all",
         *,
-        parameters: Optional[Dict[str, Any]] = None,
-        execution_options: Optional[Dict[str, Any]] = None,
-    ) -> Union[Sequence[Dict[str, Any]], Result]:
+        parameters: dict[str, Any] | None = None,
+        execution_options: dict[str, Any] | None = None,
+    ) -> Sequence[dict[str, Any]] | Result:
         """Execute SQL command with schema support."""
         parameters = parameters or {}
         execution_options = execution_options or {}
@@ -248,15 +249,15 @@ class SQLDatabaseWithSchemas(SQLDatabase):
     def from_uri(
         cls,
         database_uri: str,
-        schemas: Optional[List[str]] = None,
-        engine_args: Optional[dict] = None,
+        schemas: list[str] | None = None,
+        engine_args: dict | None = None,
         **kwargs: Any,
-    ) -> "SQLDatabaseWithSchemas":
+    ) -> SQLDatabaseWithSchemas:
         """Construct a SQLAlchemy engine from URI with support for multiple schemas."""
         engine = create_engine(database_uri, **(engine_args or {}))
         return cls(engine, schemas=schemas, **kwargs)
 
-    def get_usable_table_names(self) -> List[str]:
+    def get_usable_table_names(self) -> list[str]:
         """Get names of tables available across multiple schemas."""
         if self._include_tables:
             return sorted(self._include_tables)
@@ -311,7 +312,7 @@ class SQLDatabaseWithSchemas(SQLDatabase):
 
     def get_table_info(
         self,
-        table_names: Optional[List[str]] = None,
+        table_names: list[str] | None = None,
         include_comments: bool = False,
         include_foreign_keys: bool = False,
         include_indexes: bool = False,
@@ -455,7 +456,7 @@ class SQLDatabaseWithSchemas(SQLDatabase):
         # Join all tables with double line breaks
         return "\n\n".join(tables)
 
-    def get_context(self) -> Dict[str, Any]:
+    def get_context(self) -> dict[str, Any]:
         """Return db context with schema-aware table information."""
         table_names = list(self.get_usable_table_names())
         table_info = self.get_table_info_no_throw()
@@ -496,15 +497,15 @@ class AsyncSQLDatabaseWithSchemas:
     async def create(
         cls,
         async_engine: AsyncEngine,
-        schemas: Optional[List[str]] = None,
-        ignore_tables: Optional[List[str]] = None,
-        include_tables: Optional[List[str]] = None,
+        schemas: list[str] | None = None,
+        ignore_tables: list[str] | None = None,
+        include_tables: list[str] | None = None,
         sample_rows_in_table_info: int = 3,
         indexes_in_table_info: bool = False,
-        custom_table_info: Optional[dict] = None,
+        custom_table_info: dict | None = None,
         view_support: bool = False,
         max_string_length: int = 300,
-    ) -> "AsyncSQLDatabaseWithSchemas":
+    ) -> AsyncSQLDatabaseWithSchemas:
         """Async factory: reflects metadata via ``conn.run_sync()``.
 
         Args:
@@ -554,7 +555,7 @@ class AsyncSQLDatabaseWithSchemas:
             # Discover tables per schema
             def _discover_tables(sync_conn):
                 insp = inspect(sync_conn)
-                all_tables_per_schema: Dict[str, set] = {}
+                all_tables_per_schema: dict[str, set] = {}
                 for schema in instance._schemas:
                     tables = set(insp.get_table_names(schema=schema))
                     if view_support:
@@ -639,7 +640,7 @@ class AsyncSQLDatabaseWithSchemas:
 
     # -- Sync, in-memory methods ----------------------------------------------
 
-    def get_usable_table_names(self) -> List[str]:
+    def get_usable_table_names(self) -> list[str]:
         """Get sorted list of schema-qualified usable table names."""
         if self._include_tables:
             return sorted(self._include_tables)
@@ -649,7 +650,7 @@ class AsyncSQLDatabaseWithSchemas:
 
     async def aget_table_info(
         self,
-        table_names: Optional[List[str]] = None,
+        table_names: list[str] | None = None,
         include_comments: bool = False,
         include_foreign_keys: bool = False,
         include_indexes: bool = False,
@@ -684,13 +685,13 @@ class AsyncSQLDatabaseWithSchemas:
 
         # For comments, foreign keys, indexes — we need the inspector via run_sync
         need_inspector = include_comments or include_foreign_keys or include_indexes
-        inspector_data: Dict[str, dict] = {}
+        inspector_data: dict[str, dict] = {}
         if need_inspector:
             async with self._async_engine.connect() as conn:
 
                 def _get_inspector_data(sync_conn):
                     insp = inspect(sync_conn)
-                    data: Dict[str, dict] = {}
+                    data: dict[str, dict] = {}
                     for table in meta_tables:
                         key = f"{table.schema}.{table.name}"
                         entry: dict = {}
@@ -836,7 +837,7 @@ class AsyncSQLDatabaseWithSchemas:
         )
 
     async def aget_table_info_no_throw(
-        self, table_names: Optional[List[str]] = None
+        self, table_names: list[str] | None = None
     ) -> str:
         """Exception-swallowing wrapper around aget_table_info."""
         try:
@@ -844,7 +845,7 @@ class AsyncSQLDatabaseWithSchemas:
         except ValueError as e:
             return f"Error: {e}"
 
-    async def aget_context(self) -> Dict[str, Any]:
+    async def aget_context(self) -> dict[str, Any]:
         """Return db context with schema-aware table information (async)."""
         table_names = list(self.get_usable_table_names())
         table_info = await self.aget_table_info_no_throw()
@@ -856,12 +857,12 @@ class AsyncSQLDatabaseWithSchemas:
 
     async def _aexecute(
         self,
-        command: Union[str, Executable],
+        command: str | Executable,
         fetch: Literal["all", "one"] = "all",
         *,
-        parameters: Optional[Dict[str, Any]] = None,
-        execution_options: Optional[Dict[str, Any]] = None,
-    ) -> list[Dict[str, Any]]:
+        parameters: dict[str, Any] | None = None,
+        execution_options: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
         """Execute SQL command asynchronously.
 
         Args:

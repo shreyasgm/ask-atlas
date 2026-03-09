@@ -9,11 +9,14 @@ Requires: ATLAS_DB_URL env var (real Atlas DB), LLM API keys.
 """
 
 import asyncio
+import logging
 import sys
 import time
 from pathlib import Path
 
 import pytest
+
+logger = logging.getLogger(__name__)
 
 # Add project root to path
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,13 +26,13 @@ pytestmark = pytest.mark.integration
 
 
 def banner(title: str) -> None:
-    print(f"\n{'=' * 65}")
-    print(f"  {title}")
-    print("=" * 65)
+    logger.info("=" * 65)
+    logger.info("  %s", title)
+    logger.info("=" * 65)
 
 
 def section(title: str) -> None:
-    print(f"\n  --- {title} ---")
+    logger.info("  --- %s ---", title)
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +70,7 @@ async def test_sql_pipeline() -> bool:
                 if stream_data.message_type == "node_start":
                     node = (stream_data.payload or {}).get("node", "?")
                     label = (stream_data.payload or {}).get("label", "?")
-                    print(f"    [node_start]      {node:30s} ({label})")
+                    logger.info("    [node_start]      %-30s (%s)", node, label)
                 elif stream_data.message_type == "pipeline_state":
                     stage = (stream_data.payload or {}).get("stage", "?")
                     pipeline_states.append(stream_data.payload or {})
@@ -76,23 +79,26 @@ async def test_sql_pipeline() -> bool:
                         exec_ms = (stream_data.payload or {}).get(
                             "execution_time_ms", 0
                         )
-                        print(
-                            f"    [pipeline_state]  {stage:30s} rows={row_count} ({exec_ms}ms)"
+                        logger.info(
+                            "    [pipeline_state]  %-30s rows=%s (%sms)",
+                            stage,
+                            row_count,
+                            exec_ms,
                         )
                     else:
-                        print(f"    [pipeline_state]  {stage:30s}")
+                        logger.info("    [pipeline_state]  %-30s", stage)
                 elif stream_data.message_type == "tool_call":
                     tool = stream_data.tool_call or "?"
-                    print(f"    [tool_call]       {tool}")
+                    logger.info("    [tool_call]       %s", tool)
                 elif stream_data.message_type == "agent_talk":
                     answer_chunks.append(stream_data.content or "")
                     if not printed_agent_talk:
-                        print("    [agent_talk]      (streaming...)")
+                        logger.info("    [agent_talk]      (streaming...)")
                         printed_agent_talk = True
 
             final_answer = "".join(answer_chunks)
             preview = final_answer[:150].replace("\n", " ")
-            print(f"    [answer]          {preview!r}...")
+            logger.info("    [answer]          %r...", preview)
 
             elapsed = int((time.monotonic() - t0) * 1000)
 
@@ -119,17 +125,17 @@ async def test_sql_pipeline() -> bool:
             ]
             for label, passed in checks:
                 mark = "✓" if passed else "✗"
-                print(f"    {mark} {label}")
+                logger.info("    %s %s", mark, label)
                 if not passed:
                     ok = False
 
-            print(f"\n    Total time: {elapsed}ms")
+            logger.info("    Total time: %sms", elapsed)
 
     except Exception as e:
-        print(f"  ERROR: {e}")
+        logger.error("  ERROR: %s", e)
         import traceback
 
-        traceback.print_exc()
+        logger.error("%s", traceback.format_exc())
         ok = False
 
     return ok
@@ -181,67 +187,82 @@ async def test_graphql_pipeline() -> bool:
             if stream_data.message_type == "node_start":
                 node = (stream_data.payload or {}).get("node", "?")
                 label = (stream_data.payload or {}).get("label", "?")
-                print(f"    [node_start]      {node:35s} ({label})")
+                logger.info("    [node_start]      %-35s (%s)", node, label)
 
             elif stream_data.message_type == "pipeline_state":
                 stage = (stream_data.payload or {}).get("stage", "?")
                 pipeline_states.append(stream_data.payload or {})
 
-                # Print interesting fields per stage
+                # Log interesting fields per stage
                 payload = stream_data.payload or {}
                 if stage == "classify_query":
                     qtype = payload.get("query_type", "?")
                     rejected = payload.get("is_rejected", False)
-                    print(
-                        f"    [pipeline_state]  {stage:35s} query_type={qtype} rejected={rejected}"
+                    logger.info(
+                        "    [pipeline_state]  %-35s query_type=%s rejected=%s",
+                        stage,
+                        qtype,
+                        rejected,
                     )
                 elif stage == "extract_entities":
                     entities = payload.get("entities", {})
-                    print(
-                        f"    [pipeline_state]  {stage:35s} entities={list(entities.keys())}"
+                    logger.info(
+                        "    [pipeline_state]  %-35s entities=%s",
+                        stage,
+                        list(entities.keys()),
                     )
                 elif stage == "resolve_ids":
                     resolved = payload.get("resolved_ids", {})
-                    print(
-                        f"    [pipeline_state]  {stage:35s} resolved_keys={list(resolved.keys())}"
+                    logger.info(
+                        "    [pipeline_state]  %-35s resolved_keys=%s",
+                        stage,
+                        list(resolved.keys()),
                     )
                 elif stage == "build_and_execute_graphql":
                     api_target = payload.get("api_target", "?")
                     success = payload.get("success", False)
                     exec_ms = payload.get("execution_time_ms", 0)
-                    print(
-                        f"    [pipeline_state]  {stage:35s} api_target={api_target} success={success} ({exec_ms}ms)"
+                    logger.info(
+                        "    [pipeline_state]  %-35s api_target=%s success=%s (%sms)",
+                        stage,
+                        api_target,
+                        success,
+                        exec_ms,
                     )
                 elif stage == "format_graphql_results":
                     links = payload.get("atlas_links", [])
                     atlas_links_found.extend(links)
-                    print(f"    [pipeline_state]  {stage:35s} atlas_links={len(links)}")
+                    logger.info(
+                        "    [pipeline_state]  %-35s atlas_links=%s", stage, len(links)
+                    )
                 else:
-                    print(f"    [pipeline_state]  {stage:35s}")
+                    logger.info("    [pipeline_state]  %-35s", stage)
 
             elif stream_data.message_type == "tool_call":
                 tool = stream_data.tool_call or "?"
-                print(f"    [tool_call]       {tool}")
+                logger.info("    [tool_call]       %s", tool)
 
             elif stream_data.message_type == "tool_output":
                 preview = (stream_data.content or "")[:100].replace("\n", " ")
-                print(f"    [tool_output]     {preview!r}")
+                logger.info("    [tool_output]     %r", preview)
 
             elif stream_data.message_type == "agent_talk":
                 answer_chunks.append(stream_data.content or "")
 
         final_answer = "".join(answer_chunks)
         preview = final_answer[:150].replace("\n", " ")
-        print(f"    [agent_talk]      {preview!r}...")
+        logger.info("    [agent_talk]      %r...", preview)
 
         elapsed = int((time.monotonic() - t0) * 1000)
 
-        # Print atlas links if found
+        # Log atlas links if found
         if atlas_links_found:
             section(f"Atlas links ({len(atlas_links_found)})")
             for link in atlas_links_found:
-                print(f"    [{link.get('link_type', '?')}] {link.get('label', '?')}")
-                print(f"      {link.get('url', '?')}")
+                logger.info(
+                    "    [%s] %s", link.get("link_type", "?"), link.get("label", "?")
+                )
+                logger.info("      %s", link.get("url", "?"))
 
         # Assertions
         section("Assertions")
@@ -277,20 +298,20 @@ async def test_graphql_pipeline() -> bool:
         ]
         for label, passed in checks:
             mark = "✓" if passed else "✗"
-            print(f"    {mark} {label}")
+            logger.info("    %s %s", mark, label)
             if not passed:
                 ok = False
 
-        print(f"\n    Total time: {elapsed}ms")
+        logger.info("    Total time: %sms", elapsed)
 
         # Cleanup
         await instance.aclose()
 
     except Exception as e:
-        print(f"  ERROR: {e}")
+        logger.error("  ERROR: %s", e)
         import traceback
 
-        traceback.print_exc()
+        logger.error("%s", traceback.format_exc())
         ok = False
 
     return ok
@@ -329,7 +350,7 @@ async def test_dual_tool_question() -> bool:
             if stream_data.message_type == "tool_call":
                 tool = stream_data.tool_call or "?"
                 tool_calls.append(tool)
-                print(f"    [tool_call]  {tool}")
+                logger.info("    [tool_call]  %s", tool)
             elif stream_data.message_type == "pipeline_state":
                 stage = (stream_data.payload or {}).get("stage", "")
                 if stage == "execute_sql":
@@ -351,30 +372,30 @@ async def test_dual_tool_question() -> bool:
             ("agent produced answer", len(final_answer) > 50),
         ]
         # These are soft checks — the agent may route differently than expected
-        print(f"    Tool calls made: {tool_calls}")
-        print(f"    Successful SQL queries: {sql_queries}")
-        print(f"    Successful GraphQL calls: {graphql_calls}")
+        logger.info("    Tool calls made: %s", tool_calls)
+        logger.info("    Successful SQL queries: %s", sql_queries)
+        logger.info("    Successful GraphQL calls: %s", graphql_calls)
 
         for label, passed in checks:
             mark = "✓" if passed else "✗"
-            print(f"    {mark} {label}")
+            logger.info("    %s %s", mark, label)
             if not passed:
                 ok = False
 
         if final_answer:
             preview = final_answer[:200].replace("\n", " ")
-            print(f"\n    Answer preview: {preview!r}...")
+            logger.info("    Answer preview: %r...", preview)
 
-        print(f"\n    Total time: {elapsed}ms")
+        logger.info("    Total time: %sms", elapsed)
 
         # Cleanup
         await instance.aclose()
 
     except Exception as e:
-        print(f"  ERROR: {e}")
+        logger.error("  ERROR: %s", e)
         import traceback
 
-        traceback.print_exc()
+        logger.error("%s", traceback.format_exc())
         ok = False
 
     return ok
@@ -389,8 +410,9 @@ async def diagnose_create_async() -> None:
     """Diagnose what create_async() wires up vs. what GraphQL needs."""
     banner("DIAGNOSIS: create_async() GraphQL wiring gaps")
 
-    from src.streaming import AtlasTextToSQL
     import inspect
+
+    from src.streaming import AtlasTextToSQL
 
     # Check create_async source
     src = inspect.getsource(AtlasTextToSQL.create_async)
@@ -406,14 +428,14 @@ async def diagnose_create_async() -> None:
     all_present = True
     for label, present in checks:
         mark = "✓" if present else "✗"
-        print(f"  {mark} {label}")
+        logger.info("  %s %s", mark, label)
         if not present:
             all_present = False
 
     if all_present:
-        print("\n  create_async() correctly wires all GraphQL components.")
+        logger.info("  create_async() correctly wires all GraphQL components.")
     else:
-        print("\n  GAPS detected — production API will not use GraphQL.")
+        logger.warning("  GAPS detected — production API will not use GraphQL.")
 
 
 # ---------------------------------------------------------------------------
@@ -439,16 +461,14 @@ async def main() -> None:
     all_passed = True
     for name, passed in results:
         mark = "✓" if passed else "✗"
-        print(f"  {mark} {name}")
+        logger.info("  %s %s", mark, name)
         if not passed:
             all_passed = False
 
-    print()
     if all_passed:
-        print("  All tests passed.")
+        logger.info("  All tests passed.")
     else:
-        print("  Some tests failed — see output above.")
-    print()
+        logger.warning("  Some tests failed — see output above.")
 
 
 if __name__ == "__main__":

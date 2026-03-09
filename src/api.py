@@ -6,18 +6,17 @@ import logging
 import os
 import time
 import uuid
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import AsyncGenerator
-
+from datetime import UTC, datetime
 from typing import Literal
 
 from fastapi import APIRouter, FastAPI, Request, Response
-from langgraph.errors import GraphRecursionError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langgraph.errors import GraphRecursionError
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
@@ -27,6 +26,7 @@ from src.conversations import (
     PostgresConversationStore,
     derive_title,
 )
+from src.docs_pipeline import DOCS_PIPELINE_NODES
 from src.feedback import (
     FeedbackStore,
     InMemoryFeedbackStore,
@@ -34,9 +34,8 @@ from src.feedback import (
     rating_from_str,
     rating_to_str,
 )
-from src.streaming import AtlasTextToSQL, _build_turn_summary
 from src.graphql_pipeline import GRAPHQL_PIPELINE_NODES
-from src.docs_pipeline import DOCS_PIPELINE_NODES
+from src.streaming import AtlasTextToSQL, _build_turn_summary
 
 
 def _classify_pipeline_node(node: str) -> str:
@@ -328,7 +327,7 @@ async def timeout_middleware(request: Request, call_next):
         return await asyncio.wait_for(
             call_next(request), timeout=REQUEST_TIMEOUT_SECONDS
         )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.warning(
             "⏱ %s %s  TIMEOUT after %.0fs",
             request.method,
@@ -346,16 +345,16 @@ async def timeout_middleware(request: Request, call_next):
 def _get_atlas_sql() -> AtlasTextToSQL:
     """Return the shared instance or raise 503."""
     if _state.atlas_sql is None:
-        raise _ServiceUnavailable()
+        raise _ServiceUnavailableError()
     return _state.atlas_sql
 
 
-class _ServiceUnavailable(Exception):
+class _ServiceUnavailableError(Exception):
     """Raised when AtlasTextToSQL is not initialised."""
 
 
-@app.exception_handler(_ServiceUnavailable)
-async def _service_unavailable_handler(request: Request, exc: _ServiceUnavailable):
+@app.exception_handler(_ServiceUnavailableError)
+async def _service_unavailable_handler(request: Request, exc: _ServiceUnavailableError):
     logger.warning(
         "503 Service Unavailable — AtlasTextToSQL not initialised  %s %s",
         request.method,
@@ -602,7 +601,7 @@ async def _snapshot_context(thread_id: str, turn_index: int) -> dict | None:
             "turns": context_turns,
             "flagged_turn": flagged_turn,
             "pipeline": pipeline,
-            "snapshot_at": datetime.now(timezone.utc).isoformat(),
+            "snapshot_at": datetime.now(UTC).isoformat(),
         }
     except Exception:
         logger.warning(

@@ -13,7 +13,7 @@ import logging
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +124,7 @@ class InMemoryConversationStore(ConversationStore):
     ) -> ConversationRow:
         if thread_id in self._data:
             return self._data[thread_id]
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         row = ConversationRow(
             id=thread_id,
             session_id=session_id,
@@ -149,7 +149,7 @@ class InMemoryConversationStore(ConversationStore):
     async def update_timestamp(self, thread_id: str) -> None:
         row = self._data.get(thread_id)
         if row is not None:
-            row.updated_at = datetime.now(timezone.utc)
+            row.updated_at = datetime.now(UTC)
 
 
 # ---------------------------------------------------------------------------

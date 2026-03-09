@@ -14,10 +14,13 @@ Usage:
 
 import asyncio
 import json
+import logging
 import sys
 import time
 import traceback
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # Per-query timeout in seconds
 QUERY_TIMEOUT = 120
@@ -109,7 +112,7 @@ async def run_single_query(atlas, question: str) -> dict:
             "validation_error": validation_error[:300] if validation_error else "",
         }
 
-    except asyncio.TimeoutError:
+    except TimeoutError:
         elapsed = time.monotonic() - start
         return {
             "question": question,
@@ -133,14 +136,14 @@ async def run_test():
     """Run all test queries and report results."""
     from src.streaming import AtlasTextToSQL
 
-    print("Creating AtlasTextToSQL instance (sql_only mode)...", flush=True)
+    logger.info("Creating AtlasTextToSQL instance (sql_only mode)...")
     atlas = await AtlasTextToSQL.create_async()
 
     results = []
     total = len(TEST_QUERIES)
 
     for i, question in enumerate(TEST_QUERIES, 1):
-        print(f"\n[{i}/{total}] {question}", flush=True)
+        logger.info("[%s/%s] %s", i, total, question)
 
         result = await run_single_query(atlas, question)
         results.append(result)
@@ -149,27 +152,32 @@ async def run_test():
         s = result["status"]
         t = result["elapsed_s"]
         if s == "SUCCESS":
-            print(
-                f"  -> {s} ({t}s, {result['total_rows']} rows, {result['num_queries']} queries)",
-                flush=True,
+            logger.info(
+                "  -> %s (%ss, %s rows, %s queries)",
+                s,
+                t,
+                result["total_rows"],
+                result["num_queries"],
             )
             for sql in result.get("sql", []):
-                print(f"     SQL: {sql[:140]}", flush=True)
+                logger.info("     SQL: %s", sql[:140])
         elif s == "VALIDATION_FAIL":
-            print(f"  -> {s} ({t}s): {result['validation_error'][:150]}", flush=True)
+            logger.warning("  -> %s (%ss): %s", s, t, result["validation_error"][:150])
         else:
-            print(
-                f"  -> {s} ({t}s): {result.get('error', result.get('answer_preview', ''))[:150]}",
-                flush=True,
+            logger.error(
+                "  -> %s (%ss): %s",
+                s,
+                t,
+                result.get("error", result.get("answer_preview", ""))[:150],
             )
 
         # Save after every query
         save_results(results)
 
     # Final report
-    print(f"\n{'='*70}", flush=True)
-    print("FINAL REPORT", flush=True)
-    print(f"{'='*70}", flush=True)
+    logger.info("=" * 70)
+    logger.info("FINAL REPORT")
+    logger.info("=" * 70)
 
     by_status = {}
     for r in results:
@@ -178,22 +186,24 @@ async def run_test():
     for status in ["SUCCESS", "VALIDATION_FAIL", "ERROR", "TIMEOUT", "EXCEPTION"]:
         items = by_status.get(status, [])
         if items or status == "SUCCESS":
-            print(f"  {status}: {len(items)}", flush=True)
+            logger.info("  %s: %s", status, len(items))
 
     success_count = len(by_status.get("SUCCESS", []))
-    print(
-        f"  Success Rate: {success_count}/{total} ({success_count/total*100:.0f}%)",
-        flush=True,
+    logger.info(
+        "  Success Rate: %s/%s (%s%%)",
+        success_count,
+        total,
+        f"{success_count / total * 100:.0f}",
     )
 
     val_fails = by_status.get("VALIDATION_FAIL", [])
     if val_fails:
-        print("\nVALIDATION FAILURES (likely false positives):", flush=True)
+        logger.warning("VALIDATION FAILURES (likely false positives):")
         for r in val_fails:
-            print(f"  - {r['question']}", flush=True)
-            print(f"    {r['validation_error'][:200]}", flush=True)
+            logger.warning("  - %s", r["question"])
+            logger.warning("    %s", r["validation_error"][:200])
 
-    print(f"\nResults saved to {OUTPUT_PATH}", flush=True)
+    logger.info("Results saved to %s", OUTPUT_PATH)
 
     await atlas.aclose()
     return len(val_fails) == 0

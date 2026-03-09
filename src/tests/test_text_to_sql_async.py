@@ -7,17 +7,17 @@ LangGraph graph with FakeToolCallingModel provides deterministic
 control over agent responses.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from langchain_core.messages import AIMessage, ToolMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
+from src.product_and_schema_lookup import ProductDetails, SchemasAndProductsFound
 from src.state import AtlasAgentState
-from src.text_to_sql import AnswerResult, AtlasTextToSQL, StreamData
 from src.tests.fake_model import FakeToolCallingModel
-from src.product_and_schema_lookup import SchemasAndProductsFound, ProductDetails
+from src.text_to_sql import AnswerResult, AtlasTextToSQL, StreamData
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -63,6 +63,7 @@ def _build_stub_instance(
                                           |-> no tool_calls  -> END
     """
     from langchain_core.tools import tool
+
     from src.sql_pipeline import QueryToolInput
 
     @tool("query_tool", args_schema=QueryToolInput)
@@ -440,12 +441,12 @@ class TestAAnswerQuestionStream:
         ):
             message_types.add(data.message_type)
 
-        assert (
-            "agent_talk" in message_types
-        ), "Expected 'agent_talk' message_type but got: " + str(message_types)
-        assert (
-            "tool_output" in message_types
-        ), "Expected 'tool_output' message_type but got: " + str(message_types)
+        assert "agent_talk" in message_types, (
+            "Expected 'agent_talk' message_type but got: " + str(message_types)
+        )
+        assert "tool_output" in message_types, (
+            "Expected 'tool_output' message_type but got: " + str(message_types)
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -530,6 +531,7 @@ def _build_pipeline_stub_instance(
         max_queries: Max queries before routing to max_queries_exceeded.
     """
     from langchain_core.tools import tool
+
     from src.sql_pipeline import QueryToolInput
 
     @tool("query_tool", args_schema=QueryToolInput)
@@ -918,9 +920,9 @@ class TestNoDuplicateAgentTalk:
 
         combined = "".join(d.content for d in agent_talks)
         # Content must appear exactly once, not doubled
-        assert (
-            combined.count("Hello world!") == 1
-        ), f"Expected 'Hello world!' exactly once but got: {combined!r}"
+        assert combined.count("Hello world!") == 1, (
+            f"Expected 'Hello world!' exactly once but got: {combined!r}"
+        )
 
     async def test_post_tool_answer_not_doubled(self):
         """After a tool call round-trip, the final answer should not be doubled."""
@@ -940,9 +942,9 @@ class TestNoDuplicateAgentTalk:
                 agent_talks.append(data)
 
         combined = "".join(d.content for d in agent_talks)
-        assert (
-            combined.count("Here are the results.") == 1
-        ), f"Expected answer exactly once but got: {combined!r}"
+        assert combined.count("Here are the results.") == 1, (
+            f"Expected answer exactly once but got: {combined!r}"
+        )
 
     async def test_aanswer_question_stream_not_doubled(self):
         """High-level streaming API should also not duplicate agent_talk."""
@@ -955,9 +957,9 @@ class TestNoDuplicateAgentTalk:
                 agent_talks.append(data)
 
         combined = "".join(d.content for d in agent_talks)
-        assert (
-            combined.count("No duplication please.") == 1
-        ), f"Expected content exactly once but got: {combined!r}"
+        assert combined.count("No duplication please.") == 1, (
+            f"Expected content exactly once but got: {combined!r}"
+        )
 
 
 # ---------------------------------------------------------------------------

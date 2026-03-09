@@ -9,7 +9,7 @@ Provides an ABC (``FeedbackStore``) with two implementations:
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +130,7 @@ class InMemoryFeedbackStore(FeedbackStore):
         context: dict | None = None,
     ) -> FeedbackRow:
         key = (thread_id, turn_index, session_id)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         existing_id = self._upsert_index.get(key)
         if existing_id is not None:
@@ -173,7 +173,7 @@ class InMemoryFeedbackStore(FeedbackStore):
         row.comment = comment
         if context is not None:
             row.context = context
-        row.updated_at = datetime.now(timezone.utc)
+        row.updated_at = datetime.now(UTC)
         return row
 
     async def get_by_thread(self, thread_id: str, session_id: str) -> list[FeedbackRow]:

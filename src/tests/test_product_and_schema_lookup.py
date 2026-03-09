@@ -2,15 +2,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.config import create_llm, get_settings
 from src.product_and_schema_lookup import (
     ProductAndSchemaLookup,
-    ProductDetails,
     ProductCodesMapping,
+    ProductDetails,
     ProductSearchResult,
     SchemasAndProductsFound,
     format_product_codes_for_prompt,
 )
-from src.config import get_settings, create_llm
 
 # Load settings
 settings = get_settings()
@@ -67,9 +67,9 @@ def test_extract_schemas_and_product_mentions(product_lookup, logger):
     logger.debug(f"Result 2: {result2}")
     assert not result2.products
     assert len(result2.products) == 0
-    assert (
-        not result2.requires_product_lookup
-    ), "Should not require product lookup - HS codes already provided"
+    assert not result2.requires_product_lookup, (
+        "Should not require product lookup - HS codes already provided"
+    )
 
     # Test question with no product mentions
     question3 = (
@@ -82,9 +82,9 @@ def test_extract_schemas_and_product_mentions(product_lookup, logger):
     logger.debug(f"Result 3: {result3}")
     assert not result3.products
     assert len(result3.products) == 0
-    assert (
-        not result3.requires_product_lookup
-    ), "Should not require product lookup - no product mentions"
+    assert not result3.requires_product_lookup, (
+        "Should not require product lookup - no product mentions"
+    )
 
 
 @pytest.mark.db
@@ -117,9 +117,9 @@ def test_get_official_product_details(product_lookup, logger):
         mixed_codes, classification_schema="hs12"
     )
     assert len(results3) > 0, f"Expected >0 results, got {len(results3)}: {results3}"
-    assert len(results3) < len(
-        mixed_codes
-    ), f"Expected <{len(mixed_codes)} results, got {len(results3)}: {results3}"
+    assert len(results3) < len(mixed_codes), (
+        f"Expected <{len(mixed_codes)} results, got {len(results3)}: {results3}"
+    )
 
     # TODO: Add test with services codes
 
@@ -309,9 +309,9 @@ def test_six_digit_product_code_pipeline():
         for s in candidates[0].llm_suggestions + candidates[0].db_suggestions
     ]
     assert "120720" in all_codes
-    assert all(
-        len(c) == 6 for c in all_codes
-    ), f"Expected all 6-digit codes, got: {all_codes}"
+    assert all(len(c) == 6 for c in all_codes), (
+        f"Expected all 6-digit codes, got: {all_codes}"
+    )
 
     # Verify DB methods were called with the right args
     mock_official.assert_called_once_with(

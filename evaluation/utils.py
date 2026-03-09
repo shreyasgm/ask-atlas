@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """Shared utility functions for evaluation scripts."""
 
+import datetime
 import json
 import logging
-import datetime
 from pathlib import Path
-from typing import Dict
 
 # Define BASE_DIR (project root, parent of evaluation/)
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -33,7 +32,7 @@ logging.basicConfig(
 def load_json_file(filepath: Path) -> dict:
     """Loads and returns JSON data from the given file path."""
     try:
-        with open(filepath, "r", encoding="utf-8") as f:
+        with open(filepath, encoding="utf-8") as f:
             return json.load(f)
     except Exception as e:
         logging.error(f"Error loading JSON file {filepath}: {str(e)}")
@@ -57,7 +56,7 @@ def get_timestamp() -> str:
     return datetime.datetime.now(datetime.UTC).isoformat() + "Z"
 
 
-def setup_directories(question_id: str) -> Dict[str, Path]:
+def setup_directories(question_id: str) -> dict[str, Path]:
     """Creates evaluation directory structure for a question."""
     dirs = {}
     try:

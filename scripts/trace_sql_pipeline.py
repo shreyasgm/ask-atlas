@@ -11,11 +11,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import time
 import uuid
 from pathlib import Path
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+
+logger = logging.getLogger(__name__)
 
 # Per-query timeout — aggressive to avoid burning time
 QUERY_TIMEOUT = 90
@@ -123,30 +126,39 @@ async def trace_single_query(atlas, question: str) -> dict:
                         entry["messages"] = [_msg_summary(msgs)]
 
                     # Capture final answer
-                    for m in (msgs if isinstance(msgs, list) else [msgs]):
+                    for m in msgs if isinstance(msgs, list) else [msgs]:
                         if isinstance(m, AIMessage) and not m.tool_calls and m.content:
                             final_answer = m.content
 
                 trace_log.append(entry)
 
-                # Print live
-                print(f"  [{elapsed:5.1f}s] {node_name}", end="", flush=True)
+                # Log live
                 if "error" in entry:
-                    print(f"  ERROR: {entry['error'][:100]}", flush=True)
+                    logger.error(
+                        "  [%5.1fs] %s  ERROR: %s",
+                        elapsed,
+                        node_name,
+                        entry["error"][:100],
+                    )
                 elif "sql" in entry:
-                    print(f"  SQL: {entry['sql'][:80]}...", flush=True)
+                    logger.info(
+                        "  [%5.1fs] %s  SQL: %s...",
+                        elapsed,
+                        node_name,
+                        entry["sql"][:80],
+                    )
                 elif "messages" in entry:
                     for m in entry["messages"]:
-                        print(f"  {m[:100]}", flush=True)
+                        logger.info("  [%5.1fs] %s  %s", elapsed, node_name, m[:100])
                 else:
-                    print(flush=True)
+                    logger.info("  [%5.1fs] %s", elapsed, node_name)
 
-    except asyncio.TimeoutError:
+    except TimeoutError:
         elapsed = round(time.monotonic() - t0, 1)
         trace_log.append(
             {"step": step_count + 1, "node": "TIMEOUT", "elapsed_s": elapsed}
         )
-        print(f"  [{elapsed:5.1f}s] TIMEOUT", flush=True)
+        logger.warning("  [%5.1fs] TIMEOUT", elapsed)
     except Exception as e:
         elapsed = round(time.monotonic() - t0, 1)
         trace_log.append(
@@ -157,7 +169,7 @@ async def trace_single_query(atlas, question: str) -> dict:
                 "error": f"{type(e).__name__}: {e}",
             }
         )
-        print(f"  [{elapsed:5.1f}s] EXCEPTION: {e}", flush=True)
+        logger.error("  [%5.1fs] EXCEPTION: %s", elapsed, e)
 
     total_elapsed = round(time.monotonic() - t0, 1)
 
@@ -193,7 +205,7 @@ async def trace_single_query(atlas, question: str) -> dict:
 async def main():
     from src.streaming import AtlasTextToSQL
 
-    print("Creating AtlasTextToSQL instance...", flush=True)
+    logger.info("Creating AtlasTextToSQL instance...")
     atlas = await AtlasTextToSQL.create_async()
 
     results = []
@@ -201,16 +213,16 @@ async def main():
 
     # Run queries concurrently in pairs
     async def run_one(i: int, question: str) -> dict:
-        print(f"\n{'='*70}", flush=True)
-        print(f"[{i}/{total}] {question}", flush=True)
-        print(f"{'='*70}", flush=True)
+        logger.info("=" * 70)
+        logger.info("[%s/%s] %s", i, total, question)
+        logger.info("=" * 70)
         try:
             return await asyncio.wait_for(
                 trace_single_query(atlas, question),
                 timeout=QUERY_TIMEOUT,
             )
-        except asyncio.TimeoutError:
-            print(f"  GLOBAL TIMEOUT after {QUERY_TIMEOUT}s", flush=True)
+        except TimeoutError:
+            logger.warning("  GLOBAL TIMEOUT after %ss", QUERY_TIMEOUT)
             return {
                 "question": question,
                 "total_elapsed_s": QUERY_TIMEOUT,
@@ -242,10 +254,10 @@ async def main():
         with open(OUTPUT_PATH, "w") as f:
             json.dump(results, f, indent=2, default=str)
 
-    # Print summary
-    print(f"\n\n{'='*70}", flush=True)
-    print("TRACE SUMMARY", flush=True)
-    print(f"{'='*70}", flush=True)
+    # Log summary
+    logger.info("=" * 70)
+    logger.info("TRACE SUMMARY")
+    logger.info("=" * 70)
 
     for r in results:
         q = r["question"][:60]
@@ -255,13 +267,18 @@ async def main():
         val_errs = r.get("validation_errors", "?")
         exec_errs = r.get("execution_errors", "?")
         agent_calls = r.get("agent_calls", "?")
-        print(
-            f"  {q:60s} | {t:5}s | steps={steps} agent={agent_calls} "
-            f"sql_gen={sql_gens} val_err={val_errs} exec_err={exec_errs}",
-            flush=True,
+        logger.info(
+            "  %-60s | %5ss | steps=%s agent=%s sql_gen=%s val_err=%s exec_err=%s",
+            q,
+            t,
+            steps,
+            agent_calls,
+            sql_gens,
+            val_errs,
+            exec_errs,
         )
 
-    print(f"\nFull traces saved to {OUTPUT_PATH}", flush=True)
+    logger.info("Full traces saved to %s", OUTPUT_PATH)
     await atlas.aclose()
 
 

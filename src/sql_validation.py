@@ -78,8 +78,7 @@ def validate_sql(sql: str) -> ValidationResult:
             return ValidationResult(
                 is_valid=False,
                 errors=[
-                    f"Write operations are not allowed. "
-                    f"Detected: {node_type.__name__}."
+                    f"Write operations are not allowed. Detected: {node_type.__name__}."
                 ],
                 sql=sql,
             )
@@ -91,8 +90,7 @@ def validate_sql(sql: str) -> ValidationResult:
             return ValidationResult(
                 is_valid=False,
                 errors=[
-                    f"Write operations are not allowed. "
-                    f"Detected: {prefix} statement."
+                    f"Write operations are not allowed. Detected: {prefix} statement."
                 ],
                 sql=sql,
             )

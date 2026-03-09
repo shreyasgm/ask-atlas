@@ -1,4 +1,6 @@
-from typing import List, Dict, Any, Optional, Union
+import logging
+import warnings
+from typing import Any
 
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -7,9 +9,6 @@ from pydantic import BaseModel, Field
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine
-
-import logging
-import warnings
 
 from src.prompts import PRODUCT_CODE_SELECTION_PROMPT, PRODUCT_EXTRACTION_PROMPT
 
@@ -50,7 +49,7 @@ class ProductDetails(BaseModel):
 class ProductCodesMapping(BaseModel):
     """Mapping between product names and their corresponding product codes."""
 
-    mappings: List[ProductDetails] = Field(
+    mappings: list[ProductDetails] = Field(
         description="List of product name to product code mappings"
     )
 
@@ -64,10 +63,10 @@ class ProductSearchResult(BaseModel):
     classification_schema: str = Field(
         description="Database schema used for the search"
     )
-    llm_suggestions: List[Dict[str, Any]] = Field(
+    llm_suggestions: list[dict[str, Any]] = Field(
         description="Products suggested by the LLM"
     )
-    db_suggestions: List[Dict[str, Any]] = Field(
+    db_suggestions: list[dict[str, Any]] = Field(
         description="Products found in database"
     )
 
@@ -75,16 +74,16 @@ class ProductSearchResult(BaseModel):
 class SchemasAndProductsFound(BaseModel):
     """Schemas, products, and countries found in a trade-related question."""
 
-    classification_schemas: List[str] = Field(
+    classification_schemas: list[str] = Field(
         description="List of relevant schema names from the db to use, based on the product classification systems implied in the user's question"
     )
-    products: List[ProductDetails] = Field(
+    products: list[ProductDetails] = Field(
         description="List of identified products and their codes"
     )
     requires_product_lookup: bool = Field(
         description="Whether the query mentions products without associated codes (those need to be looked up in the db)"
     )
-    countries: List[CountryDetails] = Field(
+    countries: list[CountryDetails] = Field(
         default_factory=list,
         description="List of countries mentioned in the user's question, with their ISO 3166-1 alpha-3 codes",
     )
@@ -107,9 +106,9 @@ class ProductAndSchemaLookup:
     def __init__(
         self,
         llm: BaseLanguageModel,
-        connection: Union[str, Engine],
-        engine_args: Dict[str, Any] = None,
-        async_engine: Optional[AsyncEngine] = None,
+        connection: str | Engine,
+        engine_args: dict[str, Any] = None,
+        async_engine: AsyncEngine | None = None,
     ):
         self.llm = llm
         if isinstance(connection, str):
@@ -117,7 +116,8 @@ class ProductAndSchemaLookup:
         else:
             if engine_args:
                 warnings.warn(
-                    "engine_args specified but connection is already an sqlalchemy Engine - these will be ignored"
+                    "engine_args specified but connection is already an sqlalchemy Engine - these will be ignored",
+                    stacklevel=2,
                 )
             self.engine = connection
         self.async_engine = async_engine
@@ -217,7 +217,7 @@ class ProductAndSchemaLookup:
     def select_final_codes_direct(
         self,
         question: str,
-        product_search_results: List[ProductSearchResult],
+        product_search_results: list[ProductSearchResult],
         context: str = "",
     ) -> ProductCodesMapping:
         """Select final product codes and return the result directly.
@@ -241,7 +241,7 @@ class ProductAndSchemaLookup:
     async def aselect_final_codes_direct(
         self,
         question: str,
-        product_search_results: List[ProductSearchResult],
+        product_search_results: list[ProductSearchResult],
         callbacks: list | None = None,
         context: str = "",
     ) -> ProductCodesMapping:
@@ -267,8 +267,8 @@ class ProductAndSchemaLookup:
 
     def select_final_codes(
         self,
-        product_search_results: List[ProductSearchResult],
-    ) -> Union[Runnable, ProductCodesMapping]:
+        product_search_results: list[ProductSearchResult],
+    ) -> Runnable | ProductCodesMapping:
         """
         Select the most appropriate product codes from both LLM and DB suggestions.
 
@@ -322,7 +322,7 @@ class ProductAndSchemaLookup:
 
     def get_candidate_codes(
         self, products_found: SchemasAndProductsFound
-    ) -> List[ProductSearchResult]:
+    ) -> list[ProductSearchResult]:
         """
         Get candidate codes for each product name.
 
@@ -336,7 +336,7 @@ class ProductAndSchemaLookup:
             return []
 
         # Process each product separately
-        search_results: List[ProductSearchResult] = []
+        search_results: list[ProductSearchResult] = []
 
         for product in products_found.products:
             # Get classification schema name from product classification string
@@ -362,8 +362,8 @@ class ProductAndSchemaLookup:
         return search_results
 
     def _get_official_product_details(
-        self, codes: List[str], classification_schema: str
-    ) -> List[Dict[str, Any]]:
+        self, codes: list[str], classification_schema: str
+    ) -> list[dict[str, Any]]:
         """
         Query the database to verify product codes and get their official names.
 
@@ -405,12 +405,12 @@ class ProductAndSchemaLookup:
                     for r in results
                 ]
         except SQLAlchemyError as e:
-            print(f"Database error during code verification: {e}")
+            logger.error("Database error during code verification: %s", e)
             return []
 
     def _direct_text_search(
         self, product_to_search: str, classification_schema: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Perform direct text search using PostgreSQL's full-text search capabilities.
         Uses tsvector/tsquery for primary search with trigram similarity as fallback.
@@ -492,7 +492,7 @@ class ProductAndSchemaLookup:
                 ]
 
         except SQLAlchemyError as e:
-            print(f"Database error during text search: {e}")
+            logger.error("Database error during text search: %s", e)
             return []
 
     # ------------------------------------------------------------------
@@ -500,8 +500,8 @@ class ProductAndSchemaLookup:
     # ------------------------------------------------------------------
 
     async def _aget_official_product_details(
-        self, codes: List[str], classification_schema: str
-    ) -> List[Dict[str, Any]]:
+        self, codes: list[str], classification_schema: str
+    ) -> list[dict[str, Any]]:
         """Async version: query database to verify product codes and get official names.
 
         Delegates to the cached function in src/cache for deduplication and TTL caching.
@@ -525,7 +525,7 @@ class ProductAndSchemaLookup:
 
     async def _adirect_text_search(
         self, product_to_search: str, classification_schema: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Async version: full-text search with trigram fallback.
 
         Delegates to the cached function in src/cache for deduplication and TTL caching.
@@ -545,12 +545,12 @@ class ProductAndSchemaLookup:
 
     async def aget_candidate_codes(
         self, products_found: SchemasAndProductsFound
-    ) -> List[ProductSearchResult]:
+    ) -> list[ProductSearchResult]:
         """Async version: get candidate codes for each product using async DB queries."""
         if not products_found.products:
             return []
 
-        search_results: List[ProductSearchResult] = []
+        search_results: list[ProductSearchResult] = []
 
         for product in products_found.products:
             verified_llm_suggestions = await self._aget_official_product_details(
@@ -573,9 +573,9 @@ class ProductAndSchemaLookup:
 
 def format_product_codes_for_prompt(analysis: ProductCodesMapping) -> str:
     """Format the analysis results for inclusion in the SQL generation prompt."""
-    assert isinstance(
-        analysis, ProductCodesMapping
-    ), "Input to format_product_codes_for_prompt must be a ProductCodesMapping object"
+    assert isinstance(analysis, ProductCodesMapping), (
+        "Input to format_product_codes_for_prompt must be a ProductCodesMapping object"
+    )
 
     if (not analysis) or (not analysis.mappings):
         return ""
@@ -594,7 +594,7 @@ def format_product_codes_for_prompt(analysis: ProductCodesMapping) -> str:
 
 # Usage example
 if __name__ == "__main__":
-    from src.config import get_settings, create_llm
+    from src.config import create_llm, get_settings
 
     settings = get_settings()
     llm = create_llm(
@@ -611,4 +611,4 @@ if __name__ == "__main__":
     question = "How much cotton and wheat did Brazil export in 2021?"
     analysis = analyzer.get_product_details().invoke({"question": question})
     prompt_addition = format_product_codes_for_prompt(analysis)
-    print(f"Adding to SQL generation prompt:\n{prompt_addition}")
+    print(f"Adding to SQL generation prompt:\n{prompt_addition}")  # noqa: T201

@@ -15,8 +15,9 @@ Usage::
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable, Literal
+from typing import Literal
 
 ATLAS_BASE_URL = "https://atlas.hks.harvard.edu"
 
@@ -557,9 +558,7 @@ def _handle_overtime_partners(params: dict) -> list[AtlasLink]:
                 country_id=cid,
                 view="markets",
             ),
-            label=(
-                f"{name} \u2014 Partners Over Time " f"({start_year}\u2013{end_year})"
-            ),
+            label=(f"{name} \u2014 Partners Over Time ({start_year}\u2013{end_year})"),
             link_type="explore_page",
             resolution_notes=notes,
         )
@@ -578,9 +577,7 @@ def _handle_marketshare(params: dict) -> list[AtlasLink]:
                 end_year=end_year,
                 country_id=cid,
             ),
-            label=(
-                f"{name} \u2014 Global Market Share " f"({start_year}\u2013{end_year})"
-            ),
+            label=(f"{name} \u2014 Global Market Share ({start_year}\u2013{end_year})"),
             link_type="explore_page",
             resolution_notes=notes,
         )

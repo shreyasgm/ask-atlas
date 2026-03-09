@@ -11,20 +11,19 @@ Covers:
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pydantic import ValidationError
-
 from langchain_core.messages import AIMessage, HumanMessage
+from pydantic import ValidationError
 
 from src.api import ChatRequest
 from src.graph import build_atlas_graph
+from src.product_and_schema_lookup import (
+    ProductDetails,
+    SchemasAndProductsFound,
+)
 from src.sql_pipeline import (
     create_query_generation_chain,
     extract_products_node,
     generate_sql_node,
-)
-from src.product_and_schema_lookup import (
-    ProductDetails,
-    SchemasAndProductsFound,
 )
 
 # ---------------------------------------------------------------------------

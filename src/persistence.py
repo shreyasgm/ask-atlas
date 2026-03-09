@@ -6,7 +6,6 @@ the application-owned ``conversations`` table alongside checkpoint tables.
 """
 
 import logging
-from typing import Optional
 
 import psycopg
 from langgraph.checkpoint.base import BaseCheckpointSaver
@@ -83,7 +82,7 @@ class CheckpointerManager:
     def __init__(self, db_url: str | None = None) -> None:
         settings = get_settings()
         self._db_url: str | None = db_url or settings.checkpoint_db_url
-        self._checkpointer: Optional[BaseCheckpointSaver] = None
+        self._checkpointer: BaseCheckpointSaver | None = None
         self._pg_conn = None  # holds the context-manager for PostgresSaver
 
     @property
@@ -141,7 +140,7 @@ class AsyncCheckpointerManager:
     def __init__(self, db_url: str | None = None) -> None:
         settings = get_settings()
         self._db_url: str | None = db_url or settings.checkpoint_db_url
-        self._checkpointer: Optional[BaseCheckpointSaver] = None
+        self._checkpointer: BaseCheckpointSaver | None = None
         self._async_conn = None  # holds the async context manager
 
     @property

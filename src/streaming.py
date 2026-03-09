@@ -1,29 +1,32 @@
-import uuid
-from typing import AsyncGenerator, Dict, Optional, Tuple
-from pathlib import Path
-import logging
 import datetime
 import json
-from sqlalchemy import create_engine, make_url
-from sqlalchemy.ext.asyncio import create_async_engine
-from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+import logging
+import uuid
 import warnings
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from decimal import Decimal
-from sqlalchemy import exc as sa_exc
+from pathlib import Path
+
 import sqlglot
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from sqlalchemy import create_engine, make_url
+from sqlalchemy import exc as sa_exc
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlglot import exp
+
+from src.config import AgentMode, create_llm, get_settings
+from src.docs_pipeline import DOCS_PIPELINE_NODES
+from src.graph import build_atlas_graph
+from src.graphql_pipeline import GRAPHQL_PIPELINE_NODES
+from src.persistence import AsyncCheckpointerManager
 from src.sql_multiple_schemas import AsyncSQLDatabaseWithSchemas, SQLDatabaseWithSchemas
 from src.sql_pipeline import (
-    load_example_queries,
     PIPELINE_NODES as SQL_PIPELINE_NODES,
 )
-from src.docs_pipeline import DOCS_PIPELINE_NODES
-from src.graphql_pipeline import GRAPHQL_PIPELINE_NODES
-from src.graph import build_atlas_graph
-from src.config import get_settings, create_llm, AgentMode
-
-from src.persistence import AsyncCheckpointerManager
+from src.sql_pipeline import (
+    load_example_queries,
+)
 
 ALL_PIPELINE_NODES = SQL_PIPELINE_NODES | GRAPHQL_PIPELINE_NODES | DOCS_PIPELINE_NODES
 
@@ -337,10 +340,10 @@ class StreamData:
     message_type: (
         str  # 'tool_call', 'tool_output', 'agent_talk', 'node_start', 'pipeline_state'
     )
-    name: Optional[str] = None  # name of the message if applicable
-    tool_call: Optional[str] = None  # Tool call name if applicable
-    message_id: Optional[str] = None  # ID of the original message for tracking
-    payload: Optional[Dict] = None  # Structured data for new event types
+    name: str | None = None  # name of the message if applicable
+    tool_call: str | None = None  # Tool call name if applicable
+    message_id: str | None = None  # ID of the original message for tracking
+    payload: dict | None = None  # Structured data for new event types
 
 
 def _build_turn_summary(
@@ -467,9 +470,9 @@ class AtlasTextToSQL:
         return str(content)
 
     @staticmethod
-    def _load_json_as_dict(file_path: str) -> Dict:
+    def _load_json_as_dict(file_path: str) -> dict:
         """Loads a JSON file as a dictionary."""
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             return json.load(f)
 
     async def aclose(self) -> None:
@@ -834,13 +837,13 @@ class AtlasTextToSQL:
     async def astream_agent_response(
         self,
         question: str,
-        config: Dict,
+        config: dict,
         *,
         override_schema: str | None = None,
         override_direction: str | None = None,
         override_mode: str | None = None,
         agent_mode: str | None = None,
-    ) -> AsyncGenerator[Tuple[str, StreamData], None]:
+    ) -> AsyncGenerator[tuple[str, StreamData], None]:
         """Async variant of ``stream_agent_response()``.
 
         Yields ``(stream_mode, StreamData)`` tuples. In addition to the
@@ -866,7 +869,7 @@ class AtlasTextToSQL:
         Yields:
             Tuples of (stream_mode, StreamData).
         """
-        tool_buffers: Dict[str, list[StreamData]] = {}
+        tool_buffers: dict[str, list[StreamData]] = {}
         current_tool_id: str | None = None
         in_tool_stream = False
 
@@ -975,18 +978,24 @@ class AtlasTextToSQL:
                                 pipeline_snapshot = {}
                                 pipeline_started = False
 
-                                yield stream_mode, StreamData(
-                                    source="agent",
-                                    content=msg.content or "",
-                                    message_type="tool_call",
-                                    tool_call=tool_calls[0].get("name"),
+                                yield (
+                                    stream_mode,
+                                    StreamData(
+                                        source="agent",
+                                        content=msg.content or "",
+                                        message_type="tool_call",
+                                        tool_call=tool_calls[0].get("name"),
+                                    ),
                                 )
                             elif msg.content:
                                 if not agent_talk_emitted_from_messages:
-                                    yield stream_mode, StreamData(
-                                        source="agent",
-                                        content=msg.content,
-                                        message_type="agent_talk",
+                                    yield (
+                                        stream_mode,
+                                        StreamData(
+                                            source="agent",
+                                            content=msg.content,
+                                            message_type="agent_talk",
+                                        ),
                                     )
                                 # Reset for next agent turn
                                 agent_talk_emitted_from_messages = False
@@ -1030,11 +1039,14 @@ class AtlasTextToSQL:
                             # Emit ToolMessages from this node (existing behavior)
                             for msg in node_update.get("messages", []):
                                 if isinstance(msg, ToolMessage) and msg.content:
-                                    yield stream_mode, StreamData(
-                                        source="tool",
-                                        content=msg.content,
-                                        message_type="tool_output",
-                                        name=msg.name,
+                                    yield (
+                                        stream_mode,
+                                        StreamData(
+                                            source="tool",
+                                            content=msg.content,
+                                            message_type="tool_output",
+                                            name=msg.name,
+                                        ),
                                     )
 
             elif stream_mode == "messages":
@@ -1055,10 +1067,13 @@ class AtlasTextToSQL:
                         current_tool_id = None
 
                     agent_talk_emitted_from_messages = True
-                    yield stream_mode, StreamData(
-                        source="agent",
-                        content=msg.content,
-                        message_type="agent_talk",
+                    yield (
+                        stream_mode,
+                        StreamData(
+                            source="agent",
+                            content=msg.content,
+                            message_type="agent_talk",
+                        ),
                     )
 
                 elif (
@@ -1074,12 +1089,15 @@ class AtlasTextToSQL:
 
                     if current_tool_id is None or current_tool_id == msg_id:
                         current_tool_id = msg_id
-                        yield stream_mode, StreamData(
-                            source="tool",
-                            content=msg.content,
-                            message_type="tool_output",
-                            name=getattr(msg, "name", None),
-                            message_id=msg_id,
+                        yield (
+                            stream_mode,
+                            StreamData(
+                                source="tool",
+                                content=msg.content,
+                                message_type="tool_output",
+                                name=getattr(msg, "name", None),
+                                message_id=msg_id,
+                            ),
                         )
                     else:
                         if msg_id not in tool_buffers:
@@ -1149,7 +1167,7 @@ if __name__ == "__main__":
             async for stream_mode, stream_data in atlas_sql.astream_agent_response(
                 question, config
             ):
-                print(
+                print(  # noqa: T201
                     f"[{stream_mode}] {stream_data.source}: {stream_data.content[:80]}"
                 )
 

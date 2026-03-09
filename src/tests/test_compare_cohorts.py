@@ -19,8 +19,8 @@ if str(_EVAL_DIR) not in sys.path:
     sys.path.insert(0, str(_EVAL_DIR))
 
 from compare_cohorts import (  # noqa: E402
-    _analyze_cohort,
     _aggregate_comparison,
+    _analyze_cohort,
     compare_cohorts,
 )
 

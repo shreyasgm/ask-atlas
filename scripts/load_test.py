@@ -24,6 +24,7 @@ Usage:
 import argparse
 import asyncio
 import json
+import logging
 import statistics
 import sys
 import time
@@ -31,6 +32,8 @@ import uuid
 from dataclasses import dataclass
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 # Representative questions spanning different query complexities
 QUESTIONS = [
@@ -240,11 +243,14 @@ async def simulate_user(
         send_fn = send_stream_request if streaming else send_chat_request
         result = await send_fn(client, base_url, question, user_id, qi, mode)
         results.append(result)
-        print(
-            f"  User {user_id:2d} Q{qi}: {result.elapsed_ms:6.0f}ms "
-            f"{'OK' if result.error is None else 'ERR'} "
-            f"{'[stream]' if streaming else '[chat]'} "
-            f"{question[:50]}"
+        logger.info(
+            "  User %2d Q%s: %6.0fms %s %s %s",
+            user_id,
+            qi,
+            result.elapsed_ms,
+            "OK" if result.error is None else "ERR",
+            "[stream]" if streaming else "[chat]",
+            question[:50],
         )
     return results
 
@@ -277,34 +283,34 @@ async def main(
     mode: str | None,
     stagger_ms: int,
 ):
-    print("Ask Atlas End-to-End Load Test")
-    print(f"  Target:          {base_url}")
-    print(f"  Users:           {users}")
-    print(f"  Questions/user:  {questions_per_user}")
-    print(f"  Total requests:  {users * questions_per_user}")
-    print(f"  Mode:            {mode or 'auto'}")
-    print(f"  Streaming:       {streaming}")
-    print(f"  Stagger:         {stagger_ms}ms between user starts")
-    print()
+    logger.info("Ask Atlas End-to-End Load Test")
+    logger.info("  Target:          %s", base_url)
+    logger.info("  Users:           %s", users)
+    logger.info("  Questions/user:  %s", questions_per_user)
+    logger.info("  Total requests:  %s", users * questions_per_user)
+    logger.info("  Mode:            %s", mode or "auto")
+    logger.info("  Streaming:       %s", streaming)
+    logger.info("  Stagger:         %sms between user starts", stagger_ms)
+    logger.info("")
 
     async with httpx.AsyncClient() as client:
         # Health check
-        print("Checking server health...")
+        logger.info("Checking server health...")
         if not await check_health(client, base_url):
-            print(f"ERROR: Server at {base_url} is not responding. Is it running?")
+            logger.error("Server at %s is not responding. Is it running?", base_url)
             sys.exit(1)
-        print("  Server is healthy.")
-        print()
+        logger.info("  Server is healthy.")
+        logger.info("")
 
         # Pool stats before
         pool_before = await fetch_pool_stats(client, base_url)
         if pool_before:
-            print("Pool stats (before):")
-            print(f"  {json.dumps(pool_before, indent=2)}")
-            print()
+            logger.info("Pool stats (before):")
+            logger.info("  %s", json.dumps(pool_before, indent=2))
+            logger.info("")
 
         # Launch concurrent users
-        print("Running load test...")
+        logger.info("Running load test...")
         overall_start = time.monotonic()
 
         user_tasks = [
@@ -322,42 +328,47 @@ async def main(
         pool_after = await fetch_pool_stats(client, base_url)
 
         # Report
-        print()
-        print("=" * 70)
-        print("RESULTS")
-        print("=" * 70)
+        logger.info("")
+        logger.info("%s", "=" * 70)
+        logger.info("RESULTS")
+        logger.info("%s", "=" * 70)
 
         successes = [r for r in all_results if r.error is None]
         failures = [r for r in all_results if r.error is not None]
 
-        print(f"  Total requests:   {len(all_results)}")
-        print(f"  Successes:        {len(successes)}")
-        print(f"  Failures:         {len(failures)}")
-        print(f"  Overall time:     {overall_elapsed:.0f}ms")
+        logger.info("  Total requests:   %s", len(all_results))
+        logger.info("  Successes:        %s", len(successes))
+        logger.info("  Failures:         %s", len(failures))
+        logger.info("  Overall time:     %sms", f"{overall_elapsed:.0f}")
         if successes:
-            print(
-                f"  Throughput:       "
-                f"{len(successes) / (overall_elapsed / 1000):.2f} req/sec"
+            logger.info(
+                "  Throughput:       %s req/sec",
+                f"{len(successes) / (overall_elapsed / 1000):.2f}",
             )
 
         if successes:
             timings = [r.elapsed_ms for r in successes]
-            print()
-            print("  Latency (ms) — successful requests:")
-            print(f"    avg:  {statistics.mean(timings):,.0f}")
-            print(f"    p50:  {statistics.median(timings):,.0f}")
+            logger.info("")
+            logger.info("  Latency (ms) — successful requests:")
+            logger.info("    avg:  %s", f"{statistics.mean(timings):,.0f}")
+            logger.info("    p50:  %s", f"{statistics.median(timings):,.0f}")
             if len(timings) >= 20:
-                print(f"    p95:  {sorted(timings)[int(len(timings) * 0.95)]:,.0f}")
-            print(f"    max:  {max(timings):,.0f}")
-            print(f"    min:  {min(timings):,.0f}")
+                logger.info(
+                    "    p95:  %s", f"{sorted(timings)[int(len(timings) * 0.95)]:,.0f}"
+                )
+            logger.info("    max:  %s", f"{max(timings):,.0f}")
+            logger.info("    min:  %s", f"{min(timings):,.0f}")
 
         if failures:
-            print()
-            print("  Failures:")
+            logger.info("")
+            logger.error("  Failures:")
             for r in failures[:10]:
-                print(
-                    f"    User {r.user_id} Q{r.question_index}: "
-                    f"status={r.status_code} error={r.error[:80]}"
+                logger.error(
+                    "    User %s Q%s: status=%s error=%s",
+                    r.user_id,
+                    r.question_index,
+                    r.status_code,
+                    r.error[:80],
                 )
 
         # Token usage summary
@@ -368,19 +379,19 @@ async def main(
                 total_tokens += r.token_usage.get("total_tokens", 0)
                 total_cost += r.token_usage.get("total_cost", 0.0)
         if total_tokens:
-            print()
-            print("  Token usage:")
-            print(f"    Total tokens: {total_tokens:,}")
-            print(f"    Total cost:   ${total_cost:.4f}")
+            logger.info("")
+            logger.info("  Token usage:")
+            logger.info("    Total tokens: %s", f"{total_tokens:,}")
+            logger.info("    Total cost:   $%s", f"{total_cost:.4f}")
 
         # Pool stats comparison
         if pool_after:
-            print()
-            print("  Pool stats (after):")
-            print(f"    {json.dumps(pool_after, indent=2)}")
+            logger.info("")
+            logger.info("  Pool stats (after):")
+            logger.info("    %s", json.dumps(pool_after, indent=2))
 
-        print()
-        print("Done.")
+        logger.info("")
+        logger.info("Done.")
 
 
 if __name__ == "__main__":
@@ -417,6 +428,11 @@ if __name__ == "__main__":
         help="Milliseconds between user start times (0 = thundering herd)",
     )
     args = parser.parse_args()
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(message)s",
+    )
 
     asyncio.run(
         main(

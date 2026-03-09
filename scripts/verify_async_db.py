@@ -47,42 +47,42 @@ engine_log: list[dict] = []
 
 
 def verify_engine_config(atlas: AtlasTextToSQL) -> None:
-    """Print engine configuration and verify driver names."""
-    print("\n" + "=" * 70)
-    print("  STEP 1: Engine Configuration Verification")
-    print("=" * 70)
+    """Log engine configuration and verify driver names."""
+    logger.info("=" * 70)
+    logger.info("  STEP 1: Engine Configuration Verification")
+    logger.info("=" * 70)
 
     # Sync engine
     sync_url = str(atlas.engine.url)
     sync_driver = atlas.engine.url.drivername
     sync_pool = atlas.engine.pool
-    print("\n  Sync engine:")
-    print(f"    Driver:    {sync_driver}")
-    print(f"    URL:       {sync_url[:60]}...")
-    print(f"    Pool size: {sync_pool.size()}")
-    print(f"    Overflow:  {sync_pool.overflow()}")
-    assert (
-        "psycopg2" in sync_driver or sync_driver == "postgresql"
-    ), f"Sync engine should use psycopg2, got {sync_driver}"
-    print("    ✓ Sync engine uses psycopg2 (default postgresql driver)")
+    logger.info("  Sync engine:")
+    logger.info("    Driver:    %s", sync_driver)
+    logger.info("    URL:       %s...", sync_url[:60])
+    logger.info("    Pool size: %s", sync_pool.size())
+    logger.info("    Overflow:  %s", sync_pool.overflow())
+    assert "psycopg2" in sync_driver or sync_driver == "postgresql", (
+        f"Sync engine should use psycopg2, got {sync_driver}"
+    )
+    logger.info("    ✓ Sync engine uses psycopg2 (default postgresql driver)")
 
     # Async engine
-    assert isinstance(
-        atlas.async_engine, AsyncEngine
-    ), f"Expected AsyncEngine, got {type(atlas.async_engine)}"
+    assert isinstance(atlas.async_engine, AsyncEngine), (
+        f"Expected AsyncEngine, got {type(atlas.async_engine)}"
+    )
     async_driver = atlas.async_engine.url.drivername
     async_pool = atlas.async_engine.pool
-    print("\n  Async engine:")
-    print(f"    Driver:    {async_driver}")
-    print(f"    Type:      {type(atlas.async_engine).__name__}")
-    print(f"    Pool size: {async_pool.size()}")
-    print(f"    Overflow:  {async_pool.overflow()}")
-    assert (
-        async_driver == "postgresql+psycopg"
-    ), f"Async engine should use postgresql+psycopg, got {async_driver}"
-    print("    ✓ Async engine uses postgresql+psycopg (psycopg3 async)")
+    logger.info("  Async engine:")
+    logger.info("    Driver:    %s", async_driver)
+    logger.info("    Type:      %s", type(atlas.async_engine).__name__)
+    logger.info("    Pool size: %s", async_pool.size())
+    logger.info("    Overflow:  %s", async_pool.overflow())
+    assert async_driver == "postgresql+psycopg", (
+        f"Async engine should use postgresql+psycopg, got {async_driver}"
+    )
+    logger.info("    ✓ Async engine uses postgresql+psycopg (psycopg3 async)")
 
-    print("\n  ✓ Both engines configured correctly\n")
+    logger.info("  ✓ Both engines configured correctly")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -92,9 +92,9 @@ def verify_engine_config(atlas: AtlasTextToSQL) -> None:
 
 def attach_engine_listeners(atlas: AtlasTextToSQL) -> None:
     """Add before_cursor_execute listeners to track which engine runs each query."""
-    print("=" * 70)
-    print("  STEP 2: Attaching SQL Event Listeners")
-    print("=" * 70)
+    logger.info("=" * 70)
+    logger.info("  STEP 2: Attaching SQL Event Listeners")
+    logger.info("=" * 70)
 
     def make_listener(label: str):
         def receive_before_cursor_execute(
@@ -103,7 +103,7 @@ def attach_engine_listeners(atlas: AtlasTextToSQL) -> None:
             snippet = statement.replace("\n", " ").strip()[:120]
             entry = {"engine": label, "sql": snippet, "time": time.time()}
             engine_log.append(entry)
-            logger.info(f"[{label}] {snippet}")
+            logger.info("[%s] %s", label, snippet)
 
         return receive_before_cursor_execute
 
@@ -119,7 +119,7 @@ def attach_engine_listeners(atlas: AtlasTextToSQL) -> None:
         make_listener("SYNC_ENGINE"),
     )
 
-    print("  ✓ Listeners attached to both engines\n")
+    logger.info("  ✓ Listeners attached to both engines")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -129,31 +129,31 @@ def attach_engine_listeners(atlas: AtlasTextToSQL) -> None:
 
 async def verify_connectivity(atlas: AtlasTextToSQL) -> None:
     """Run SELECT 1 on both engines to verify connectivity."""
-    print("=" * 70)
-    print("  STEP 3: Connectivity Test (SELECT 1)")
-    print("=" * 70)
+    logger.info("=" * 70)
+    logger.info("  STEP 3: Connectivity Test (SELECT 1)")
+    logger.info("=" * 70)
 
     # Sync engine
     engine_log.clear()
     with atlas.engine.connect() as conn:
         result = conn.execute(text("SELECT 1 AS sync_check"))
         row = result.fetchone()
-        print(f"\n  Sync engine:  SELECT 1 → {row[0]}")
+        logger.info("  Sync engine:  SELECT 1 → %s", row[0])
 
     sync_entries = [e for e in engine_log if e["engine"] == "SYNC_ENGINE"]
     assert len(sync_entries) >= 1, "Expected SYNC_ENGINE log entry"
-    print("  ✓ Sync engine connectivity confirmed (SYNC_ENGINE logged)")
+    logger.info("  ✓ Sync engine connectivity confirmed (SYNC_ENGINE logged)")
 
     # Async engine
     engine_log.clear()
     async with atlas.async_engine.connect() as conn:
         result = await conn.execute(text("SELECT 1 AS async_check"))
         row = result.fetchone()
-        print(f"  Async engine: SELECT 1 → {row[0]}")
+        logger.info("  Async engine: SELECT 1 → %s", row[0])
 
     async_entries = [e for e in engine_log if e["engine"] == "ASYNC_ENGINE"]
     assert len(async_entries) >= 1, "Expected ASYNC_ENGINE log entry"
-    print("  ✓ Async engine connectivity confirmed (ASYNC_ENGINE logged)\n")
+    logger.info("  ✓ Async engine connectivity confirmed (ASYNC_ENGINE logged)")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -165,10 +165,10 @@ async def run_e2e_query(
     atlas: AtlasTextToSQL, question: str, label: str
 ) -> tuple[str, float]:
     """Run a single question through the full pipeline, returning answer + time."""
-    print(f"\n  {'─' * 60}")
-    print(f"  Query: {label}")
-    print(f"  Question: {question}")
-    print(f"  {'─' * 60}")
+    logger.info("  %s", "─" * 60)
+    logger.info("  Query: %s", label)
+    logger.info("  Question: %s", question)
+    logger.info("  %s", "─" * 60)
 
     engine_log.clear()
     config = {"configurable": {"thread_id": str(uuid.uuid4())}}
@@ -186,7 +186,7 @@ async def run_e2e_query(
                     nodes_seen.append(node)
                 # Print tool output snippets
                 snippet = stream_data.content[:200].replace("\n", " ")
-                print(f"    [{node}] {snippet}")
+                logger.info("    [%s] %s", node, snippet)
             elif stream_data.message_type == "agent_talk":
                 final_answer = stream_data.content
         elif stream_mode == "messages":
@@ -198,30 +198,32 @@ async def run_e2e_query(
     # Summarize engine usage
     async_hits = [e for e in engine_log if e["engine"] == "ASYNC_ENGINE"]
     sync_hits = [e for e in engine_log if e["engine"] == "SYNC_ENGINE"]
-    print(
-        f"\n    Engine usage: {len(async_hits)} ASYNC_ENGINE, {len(sync_hits)} SYNC_ENGINE"
+    logger.info(
+        "    Engine usage: %s ASYNC_ENGINE, %s SYNC_ENGINE",
+        len(async_hits),
+        len(sync_hits),
     )
     if async_hits:
-        print("    ASYNC queries:")
+        logger.info("    ASYNC queries:")
         for h in async_hits:
-            print(f"      → {h['sql'][:100]}")
+            logger.info("      → %s", h["sql"][:100])
     if sync_hits:
-        print("    SYNC queries (metadata/table_info):")
+        logger.info("    SYNC queries (metadata/table_info):")
         for h in sync_hits:
-            print(f"      → {h['sql'][:100]}")
+            logger.info("      → %s", h["sql"][:100])
 
-    # Print answer
+    # Log answer
     answer_preview = final_answer[:500].replace("\n", "\n    ")
-    print(f"\n    Answer ({elapsed:.1f}s):\n    {answer_preview}")
+    logger.info("    Answer (%s):\n    %s", f"{elapsed:.1f}s", answer_preview)
 
     return final_answer, elapsed
 
 
 async def run_e2e_tests(atlas: AtlasTextToSQL) -> None:
     """Run multiple E2E queries through the full LangGraph pipeline."""
-    print("\n" + "=" * 70)
-    print("  STEP 4: Full E2E Pipeline Tests")
-    print("=" * 70)
+    logger.info("=" * 70)
+    logger.info("  STEP 4: Full E2E Pipeline Tests")
+    logger.info("=" * 70)
 
     queries = [
         ("Simple export query", "What were the top 5 exports of Germany in 2020?"),
@@ -242,13 +244,12 @@ async def run_e2e_tests(atlas: AtlasTextToSQL) -> None:
         results.append((label, elapsed, bool(answer.strip())))
 
     # Summary table
-    print(f"\n  {'─' * 60}")
-    print(f"  {'Query':<30} {'Time':>8} {'Got Answer':>12}")
-    print(f"  {'─' * 60}")
+    logger.info("  %s", "─" * 60)
+    logger.info("  %-30s %8s %12s", "Query", "Time", "Got Answer")
+    logger.info("  %s", "─" * 60)
     for label, elapsed, got_answer in results:
         status = "✓" if got_answer else "✗"
-        print(f"  {label:<30} {elapsed:>7.1f}s {status:>12}")
-    print()
+        logger.info("  %-30s %7.1fs %12s", label, elapsed, status)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -258,23 +259,23 @@ async def run_e2e_tests(atlas: AtlasTextToSQL) -> None:
 
 async def run_concurrency_test(atlas: AtlasTextToSQL) -> None:
     """Run 2 queries concurrently with asyncio.gather to prove async I/O."""
-    print("=" * 70)
-    print("  STEP 5: Concurrency Verification")
-    print("=" * 70)
+    logger.info("=" * 70)
+    logger.info("  STEP 5: Concurrency Verification")
+    logger.info("=" * 70)
 
     q1 = "What were the top 3 exports of South Korea in 2019?"
     q2 = "What were the top 3 exports of Mexico in 2019?"
 
     # Run sequentially first for baseline
-    print("\n  Running 2 queries sequentially (baseline)...")
+    logger.info("  Running 2 queries sequentially (baseline)...")
     seq_start = time.time()
     _, t1 = await run_e2e_query(atlas, q1, "Sequential #1")
     _, t2 = await run_e2e_query(atlas, q2, "Sequential #2")
     seq_total = time.time() - seq_start
-    print(f"\n  Sequential total: {seq_total:.1f}s (q1={t1:.1f}s + q2={t2:.1f}s)")
+    logger.info("  Sequential total: %.1fs (q1=%.1fs + q2=%.1fs)", seq_total, t1, t2)
 
     # Run concurrently
-    print("\n  Running 2 queries concurrently (asyncio.gather)...")
+    logger.info("  Running 2 queries concurrently (asyncio.gather)...")
     engine_log.clear()
     par_start = time.time()
 
@@ -296,21 +297,20 @@ async def run_concurrency_test(atlas: AtlasTextToSQL) -> None:
 
     for label, answer, elapsed in results:
         preview = answer[:200].replace("\n", " ")
-        print(f"    {label}: {elapsed:.1f}s — {preview}")
+        logger.info("    %s: %.1fs — %s", label, elapsed, preview)
 
-    print(f"\n  Concurrent total:  {par_total:.1f}s")
-    print(f"  Sequential total:  {seq_total:.1f}s")
+    logger.info("  Concurrent total:  %.1fs", par_total)
+    logger.info("  Sequential total:  %.1fs", seq_total)
     speedup = seq_total / par_total if par_total > 0 else 0
-    print(f"  Speedup:           {speedup:.2f}x")
+    logger.info("  Speedup:           %.2fx", speedup)
 
     if par_total < seq_total * 0.85:
-        print("  ✓ Concurrency confirmed — parallel is significantly faster")
+        logger.info("  ✓ Concurrency confirmed — parallel is significantly faster")
     else:
-        print(
-            "  ⚠ Parallel wall time is close to sequential — "
+        logger.warning(
+            "  Parallel wall time is close to sequential — "
             "async may be bottlenecked by LLM rate limits rather than DB I/O"
         )
-    print()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -319,9 +319,9 @@ async def run_concurrency_test(atlas: AtlasTextToSQL) -> None:
 
 
 async def main() -> None:
-    print("\n" + "╔" + "═" * 68 + "╗")
-    print("║" + "  Ask-Atlas: Async DB & E2E Verification".center(68) + "║")
-    print("╚" + "═" * 68 + "╝")
+    logger.info("╔" + "═" * 68 + "╗")
+    logger.info("║%s║", "  Ask-Atlas: Async DB & E2E Verification".center(68))
+    logger.info("╚" + "═" * 68 + "╝")
 
     async with await AtlasTextToSQL.create_async(
         table_descriptions_json=BASE_DIR
@@ -347,9 +347,9 @@ async def main() -> None:
         # Step 5: Concurrency
         await run_concurrency_test(atlas)
 
-    print("╔" + "═" * 68 + "╗")
-    print("║" + "  All verification steps complete!".center(68) + "║")
-    print("╚" + "═" * 68 + "╝\n")
+    logger.info("╔" + "═" * 68 + "╗")
+    logger.info("║%s║", "  All verification steps complete!".center(68))
+    logger.info("╚" + "═" * 68 + "╝")
 
 
 if __name__ == "__main__":

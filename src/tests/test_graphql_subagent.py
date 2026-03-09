@@ -5,14 +5,14 @@ serialization, and initial context building.
 """
 
 import json
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
-from unittest.mock import AsyncMock, MagicMock
 
 from src.graphql_pipeline import (
-    ResultAssessment,
     TECHFRONTIER_COUNTRIES,
+    ResultAssessment,
     _get_root_data_list,
     assess_graphql_result,
     route_after_assessment,

@@ -1,10 +1,11 @@
-from pathlib import Path
-from typing import List, Dict, Any
 import logging
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 from langchain_postgres import PGVector
-from langchain_core.documents import Document
 
 BASE_DIR = Path(__file__).parents[2]
 
@@ -67,7 +68,7 @@ class DatabaseReader:
 
     def get_products(
         self, classification: ProductClassification
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Retrieve products from the source classification table.
 
         Args:
@@ -130,7 +131,7 @@ class EmbeddingManager:
         )
 
     def process_products(
-        self, products: List[Dict[str, Any]], collection_name: str
+        self, products: list[dict[str, Any]], collection_name: str
     ) -> None:
         """Process products and store their embeddings using LangChain.
 

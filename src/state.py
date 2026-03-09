@@ -4,7 +4,7 @@ Provides a well-typed state schema used by the StateGraph that powers
 the Atlas agent and its inner query pipeline.
 """
 
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
@@ -224,7 +224,7 @@ class AtlasAgentState(TypedDict):
     # Pipeline intermediate state (populated during query execution)
     pipeline_question: str
     pipeline_context: str
-    pipeline_products: Optional[SchemasAndProductsFound]
+    pipeline_products: SchemasAndProductsFound | None
     pipeline_codes: str
     pipeline_table_info: str
     pipeline_sql: str
@@ -245,20 +245,20 @@ class AtlasAgentState(TypedDict):
     # Accumulated SQL sub-agent reasoning traces (one per SQL tool invocation)
     pipeline_reasoning_trace: Annotated[list[list[dict]], add_reasoning_traces]
     # Trade toggle overrides (None = auto-detect)
-    override_schema: Optional[str]
-    override_direction: Optional[str]
-    override_mode: Optional[str]
+    override_schema: str | None
+    override_direction: str | None
+    override_mode: str | None
     # Per-request agent mode override (auto/sql_only/graphql_sql); takes precedence over build-time config
-    override_agent_mode: Optional[str]
+    override_agent_mode: str | None
     # === GraphQL pipeline state (reset by extract_graphql_question at cycle start) ===
     graphql_question: str
     graphql_context: str
-    graphql_classification: Optional[dict]
-    graphql_entity_extraction: Optional[dict]
-    graphql_resolved_params: Optional[dict]
-    graphql_query: Optional[str]
+    graphql_classification: dict | None
+    graphql_entity_extraction: dict | None
+    graphql_resolved_params: dict | None
+    graphql_query: str | None
     graphql_api_target: Literal["explore", "country_pages"] | None
-    graphql_raw_response: Optional[dict]
+    graphql_raw_response: dict | None
     graphql_execution_time_ms: int
     graphql_atlas_links: Annotated[list[dict], add_graphql_atlas_links]
     # Accumulated per-call SQL pipeline snapshots (persisted across calls)

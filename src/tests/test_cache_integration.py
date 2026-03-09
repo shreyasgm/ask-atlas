@@ -8,7 +8,6 @@ prevent duplicate DB queries for identical lookups.
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
-
 from src.cache import (
     cached_product_details,
     cached_text_search,

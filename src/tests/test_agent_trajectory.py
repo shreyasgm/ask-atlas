@@ -1,11 +1,10 @@
 """Agent trajectory tests using FakeToolCallingModel — no LLM, no DB."""
 
 import pytest
-
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import tool
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import END, START, StateGraph
 
 from src.sql_pipeline import QueryToolInput
 from src.state import AtlasAgentState

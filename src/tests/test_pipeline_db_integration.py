@@ -14,13 +14,13 @@ import pytest
 from sqlalchemy import create_engine
 
 from src.config import get_settings
+from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 from src.sql_pipeline import (
     execute_sql_node,
-    get_table_info_node,
     get_table_info_for_schemas,
+    get_table_info_node,
     load_table_descriptions,
 )
-from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 
 settings = get_settings()
 

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.messages import AIMessage, SystemMessage, ToolMessage

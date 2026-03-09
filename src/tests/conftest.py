@@ -3,8 +3,8 @@ import logging
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
 import pytest
+from dotenv import load_dotenv
 
 # Define BASE_DIR
 BASE_DIR = Path(__file__).resolve().parents[2]

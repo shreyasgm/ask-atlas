@@ -16,6 +16,7 @@ Usage:
 from __future__ import annotations
 
 import asyncio
+import logging
 import sys
 import time
 import uuid
@@ -27,11 +28,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from src.streaming import (  # noqa: E402
-    AtlasTextToSQL,
-    PIPELINE_SEQUENCE,
-    GRAPHQL_PIPELINE_SEQUENCE,
     DOCS_PIPELINE_SEQUENCE,
+    GRAPHQL_PIPELINE_SEQUENCE,
+    PIPELINE_SEQUENCE,
+    AtlasTextToSQL,
 )
+
+logger = logging.getLogger(__name__)
 
 # ── ANSI colors ──────────────────────────────────────────────────────
 BOLD = "\033[1m"
@@ -201,27 +204,29 @@ def print_result(result: TestResult, idx: int) -> None:
     """Pretty-print a test result with node timing."""
     tc = result.test_case
     status = f"{GREEN}PASS{RESET}" if not result.error else f"{RED}FAIL{RESET}"
-    print(f"\n{'='*80}")
-    print(f"{BOLD}Test {idx}: {tc.name}{RESET}  [{status}]")
-    print(f"{DIM}{tc.description}{RESET}")
-    print(f"  Question:  {tc.question}")
-    print(f"  Mode:      {tc.agent_mode or 'auto'}")
-    print(f"  Expected:  {tc.expected_pipeline} pipeline")
-    print(f"  Actual:    {result.pipeline_used} pipeline")
-    print(f"  Total:     {BOLD}{result.total_time_ms:,.0f} ms{RESET}")
+    logger.info("\n%s", "=" * 80)
+    logger.info("%sTest %s: %s%s  [%s]", BOLD, idx, tc.name, RESET, status)
+    logger.info("%s%s%s", DIM, tc.description, RESET)
+    logger.info("  Question:  %s", tc.question)
+    logger.info("  Mode:      %s", tc.agent_mode or "auto")
+    logger.info("  Expected:  %s pipeline", tc.expected_pipeline)
+    logger.info("  Actual:    %s pipeline", result.pipeline_used)
+    logger.info("  Total:     %s%s ms%s", BOLD, f"{result.total_time_ms:,.0f}", RESET)
 
     if result.error:
-        print(f"  {RED}Error: {result.error}{RESET}")
+        logger.error("  %sError: %s%s", RED, result.error, RESET)
 
     # Tool calls
     if result.tool_calls:
-        print(f"\n  {CYAN}Tool calls ({len(result.tool_calls)}):{RESET}")
+        logger.info("\n  %sTool calls (%s):%s", CYAN, len(result.tool_calls), RESET)
         for i, tc_name in enumerate(result.tool_calls, 1):
-            print(f"    {i}. {tc_name}")
+            logger.info("    %s. %s", i, tc_name)
 
     # Node traces
     if result.node_traces:
-        print(f"\n  {YELLOW}Node trace ({len(result.node_traces)} nodes):{RESET}")
+        logger.info(
+            "\n  %sNode trace (%s nodes):%s", YELLOW, len(result.node_traces), RESET
+        )
         for trace in result.node_traces:
             dur = trace.duration_ms
             dur_str = f"{dur:>8,.0f} ms" if dur > 0 else "       N/A"
@@ -286,8 +291,18 @@ def print_result(result: TestResult, idx: int) -> None:
             elif trace.name == "select_docs" and p.get("selected_files"):
                 extra = f"  → files={p['selected_files']}"
 
-            print(
-                f"    {color}{dur_str}{RESET}  {trace.label:<26} {color}{bar}{RESET}{DIM}{extra}{RESET}"
+            logger.info(
+                "    %s%s%s  %-26s %s%s%s%s%s%s",
+                color,
+                dur_str,
+                RESET,
+                trace.label,
+                color,
+                bar,
+                RESET,
+                DIM,
+                extra,
+                RESET,
             )
 
     # Answer snippet
@@ -295,65 +310,83 @@ def print_result(result: TestResult, idx: int) -> None:
         snippet = result.final_answer[:300].replace("\n", " ")
         if len(result.final_answer) > 300:
             snippet += "..."
-        print(f"\n  {MAGENTA}Answer preview:{RESET}")
-        print(f"    {DIM}{snippet}{RESET}")
+        logger.info("\n  %sAnswer preview:%s", MAGENTA, RESET)
+        logger.info("    %s%s%s", DIM, snippet, RESET)
 
-    print()
+    logger.info("")
 
 
 async def main() -> None:
-    print(f"\n{BOLD}{'='*80}{RESET}")
-    print(f"{BOLD}  Atlas Backend E2E Observability Test{RESET}")
-    print(f"{BOLD}{'='*80}{RESET}")
-    print(f"\n  Running {len(TEST_CASES)} test cases against the live backend...")
-    print("  Each test creates a fresh thread and streams the full response.\n")
+    logger.info("\n%s%s%s", BOLD, "=" * 80, RESET)
+    logger.info("%s  Atlas Backend E2E Observability Test%s", BOLD, RESET)
+    logger.info("%s%s%s", BOLD, "=" * 80, RESET)
+    logger.info(
+        "\n  Running %s test cases against the live backend...", len(TEST_CASES)
+    )
+    logger.info("  Each test creates a fresh thread and streams the full response.\n")
 
     # Create the shared agent instance
-    print(
-        f"  {DIM}Initializing AtlasTextToSQL (connecting to DB, loading caches)...{RESET}"
+    logger.info(
+        "  %sInitializing AtlasTextToSQL (connecting to DB, loading caches)...%s",
+        DIM,
+        RESET,
     )
     t_init = time.perf_counter()
     async with await AtlasTextToSQL.create_async() as agent:
         init_ms = (time.perf_counter() - t_init) * 1000
-        print(f"  {GREEN}Agent initialized in {init_ms:,.0f} ms{RESET}\n")
+        logger.info(
+            "  %sAgent initialized in %s ms%s\n", GREEN, f"{init_ms:,.0f}", RESET
+        )
 
         results: list[TestResult] = []
         for i, tc in enumerate(TEST_CASES, 1):
-            print(
-                f"  {DIM}Running test {i}/{len(TEST_CASES)}: {tc.name}...{RESET}",
-                flush=True,
+            logger.info(
+                "  %sRunning test %s/%s: %s...%s",
+                DIM,
+                i,
+                len(TEST_CASES),
+                tc.name,
+                RESET,
             )
             result = await run_test(agent, tc)
             results.append(result)
             print_result(result, i)
 
     # ── Summary ──
-    print(f"\n{'='*80}")
-    print(f"{BOLD}  SUMMARY{RESET}")
-    print(f"{'='*80}")
+    logger.info("\n%s", "=" * 80)
+    logger.info("%s  SUMMARY%s", BOLD, RESET)
+    logger.info("%s", "=" * 80)
     total_time = sum(r.total_time_ms for r in results)
     passed = sum(1 for r in results if not r.error)
     failed = sum(1 for r in results if r.error)
-    print(f"  Total tests:  {len(results)}")
-    print(f"  Passed:       {GREEN}{passed}{RESET}")
+    logger.info("  Total tests:  %s", len(results))
+    logger.info("  Passed:       %s%s%s", GREEN, passed, RESET)
     if failed:
-        print(f"  Failed:       {RED}{failed}{RESET}")
-    print(f"  Total time:   {total_time:,.0f} ms ({total_time/1000:.1f}s)")
-    print()
+        logger.info("  Failed:       %s%s%s", RED, failed, RESET)
+    logger.info(
+        "  Total time:   %s ms (%ss)", f"{total_time:,.0f}", f"{total_time / 1000:.1f}"
+    )
+    logger.info("")
 
     # Timing table
-    print(f"  {'Test':<40} {'Time':>10} {'Pipeline':<20} {'Tools':>6}")
-    print(f"  {'─'*40} {'─'*10} {'─'*20} {'─'*6}")
+    logger.info("  %-40s %10s %-20s %6s", "Test", "Time", "Pipeline", "Tools")
+    logger.info("  %s %s %s %s", "─" * 40, "─" * 10, "─" * 20, "─" * 6)
     for r in results:
         status = "✓" if not r.error else "✗"
-        print(
-            f"  {status} {r.test_case.name:<38} "
-            f"{r.total_time_ms:>8,.0f}ms "
-            f"{r.pipeline_used:<20} "
-            f"{len(r.tool_calls):>5}"
+        logger.info(
+            "  %s %-38s %8sms %-20s %5s",
+            status,
+            r.test_case.name,
+            f"{r.total_time_ms:,.0f}",
+            r.pipeline_used,
+            len(r.tool_calls),
         )
-    print()
+    logger.info("")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(message)s",
+    )
     asyncio.run(main())

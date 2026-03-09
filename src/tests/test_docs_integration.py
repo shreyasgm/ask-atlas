@@ -20,8 +20,8 @@ import pytest
 
 from src.config import create_llm, get_settings
 from src.docs_pipeline import (
-    DocEntry,
     _DOCS_STATE_DEFAULTS,
+    DocEntry,
     load_docs_manifest,
     select_docs,
     synthesize_docs,
@@ -112,15 +112,15 @@ class TestDocsEciMethodology:
         assert result["docs_selected_files"], "No documentation files were selected"
 
         # metrics_glossary.md is the primary ECI reference — it should be selected
-        assert (
-            "metrics_glossary.md" in result["docs_selected_files"]
-        ), f"Expected metrics_glossary.md in selected files, got: {result['docs_selected_files']}"
+        assert "metrics_glossary.md" in result["docs_selected_files"], (
+            f"Expected metrics_glossary.md in selected files, got: {result['docs_selected_files']}"
+        )
 
         # Synthesis should mention ECI-related concepts
         synthesis = result["docs_synthesis"].lower()
-        assert (
-            "eci" in synthesis or "economic complexity" in synthesis
-        ), f"Synthesis does not mention ECI: {result['docs_synthesis'][:200]}"
+        assert "eci" in synthesis or "economic complexity" in synthesis, (
+            f"Synthesis does not mention ECI: {result['docs_synthesis'][:200]}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -147,7 +147,9 @@ class TestDocsClassificationSystems:
             "hs92" in synthesis
             or "hs12" in synthesis
             or "harmonized system" in synthesis
-        ), f"Synthesis does not mention classification systems: {result['docs_synthesis'][:200]}"
+        ), (
+            f"Synthesis does not mention classification systems: {result['docs_synthesis'][:200]}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -169,8 +171,8 @@ class TestDocsOutOfScope:
         )
 
         # The pipeline should not crash — it should produce some output
-        assert result[
-            "docs_synthesis"
-        ], "Pipeline returned empty synthesis for out-of-scope question"
+        assert result["docs_synthesis"], (
+            "Pipeline returned empty synthesis for out-of-scope question"
+        )
         # It may note that it can't answer, or may try to answer from whatever it has
         # Either way, it should not crash

@@ -440,9 +440,9 @@ class TestProductExtractionEscaping:
             "}}", ""
         )
         fields = _get_format_fields(collapsed)
-        assert (
-            fields == set()
-        ), f"Found unescaped format fields in PRODUCT_EXTRACTION_PROMPT: {fields}"
+        assert fields == set(), (
+            f"Found unescaped format fields in PRODUCT_EXTRACTION_PROMPT: {fields}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -458,7 +458,7 @@ class TestLeafDependency:
 
         # Collect source from __init__.py and every submodule.
         sources: dict[str, str] = {"__init__": inspect.getsource(prompts)}
-        for importer, modname, ispkg in pkgutil.walk_packages(
+        for _importer, modname, _ispkg in pkgutil.walk_packages(
             prompts.__path__, prefix=prompts.__name__ + "."
         ):
             mod = __import__(modname, fromlist=["__name__"])

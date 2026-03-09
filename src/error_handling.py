@@ -1,14 +1,15 @@
 # src/error_handling.py
 """Error handling utilities with retry logic for database operations."""
 
+import logging
+
+from sqlalchemy.exc import OperationalError, TimeoutError
 from tenacity import (
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
 )
-from sqlalchemy.exc import OperationalError, TimeoutError
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +67,7 @@ def execute_with_retry(execute_fn, *args, **kwargs):
         logger.error(f"Query execution failed with non-retryable error: {e}")
         raise QueryExecutionError(
             f"Failed to execute query: {str(e)}", original_error=e
-        )
+        ) from e
 
 
 @retry(
@@ -103,4 +104,4 @@ async def async_execute_with_retry(execute_fn, *args, **kwargs):
         logger.error(f"Query execution failed with non-retryable error: {e}")
         raise QueryExecutionError(
             f"Failed to execute query: {str(e)}", original_error=e
-        )
+        ) from e

@@ -7,14 +7,14 @@ Verifies:
 """
 
 import inspect
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
-from langchain_core.prompts import ChatPromptTemplate
 
 # judge.py lives in evaluation/, not src/, so adjust the import path
 import sys
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from langchain_core.prompts import ChatPromptTemplate
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "evaluation"))
 

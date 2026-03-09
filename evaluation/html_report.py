@@ -21,6 +21,8 @@ from typing import Any
 
 from utils import EVALUATION_BASE_DIR, load_json_file, logging
 
+logger = logging.getLogger(__name__)
+
 
 def _load_enriched_data(run_dir: Path) -> dict[str, Any]:
     """Merge report.json with per-question results and ground truth.
@@ -1805,14 +1807,15 @@ def generate_html_report(run_dir: Path) -> Path:
 
     html_path = run_dir / "report.html"
     html_path.write_text(html_content, encoding="utf-8")
-    logging.info(f"Saved HTML report: {html_path}")
+    logger.info("Saved HTML report: %s", html_path)
     return html_path
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     if len(sys.argv) < 2:
-        print("Usage: python html_report.py <run_dir>")
+        logger.error("Usage: python html_report.py <run_dir>")
         sys.exit(1)
     run_dir = Path(sys.argv[1])
     generate_html_report(run_dir)
-    print(f"HTML report generated: {run_dir / 'report.html'}")
+    logger.info("HTML report generated: %s", run_dir / "report.html")

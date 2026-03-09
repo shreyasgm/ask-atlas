@@ -12,10 +12,13 @@ Usage:
 
 import asyncio
 import json
-from datetime import datetime, timezone
+import logging
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -41,7 +44,7 @@ COUNTRIES: dict[str, dict] = {
     "Ethiopia": {"id": "location-231", "iso": 231},
 }
 
-TIMESTAMP = datetime.now(timezone.utc).isoformat()
+TIMESTAMP = datetime.now(UTC).isoformat()
 
 # ---------------------------------------------------------------------------
 # GraphQL queries
@@ -1052,7 +1055,7 @@ async def main() -> None:
     global SEM
     SEM = asyncio.Semaphore(2)
 
-    print("Fetching data from Atlas GraphQL API...")
+    logger.info("Fetching data from Atlas GraphQL API...")
 
     async with httpx.AsyncClient() as client:
         # Fetch all 8 countries in parallel
@@ -1063,9 +1066,9 @@ async def main() -> None:
         results = {}
         for name, task in tasks.items():
             results[name] = await task
-            print(f"  ✓ {name}")
+            logger.info("  Fetched %s", name)
 
-    print(f"\nGenerating questions (starting at ID {QID[0]})...\n")
+    logger.info("Generating questions (starting at ID %s)...", QID[0])
 
     # Generate questions per assignment
     for countries in ASSIGNMENTS["country_profile_overview"]:
@@ -1101,8 +1104,8 @@ async def main() -> None:
     for countries in ASSIGNMENTS["summary_crosscheck"]:
         gen_summary_crosscheck(results[countries])
 
-    # Print summary
-    print(f"Generated {len(ALL_QUESTIONS)} questions (IDs 61-{QID[0] - 1})")
+    # Log summary
+    logger.info("Generated %s questions (IDs 61-%s)", len(ALL_QUESTIONS), QID[0] - 1)
 
     # Write the questions list for later integration into eval_questions.json
     out_path = BASE_DIR / "new_country_page_questions.json"
@@ -1169,18 +1172,18 @@ async def main() -> None:
         "new_questions": ALL_QUESTIONS,
     }
     out_path.write_text(json.dumps(output, indent=2) + "\n")
-    print(f"\nWrote integration file: {out_path}")
+    logger.info("Wrote integration file: %s", out_path)
 
-    # Print category breakdown
+    # Log category breakdown
     from collections import Counter
 
     cats = Counter(q["category_id"] for q in ALL_QUESTIONS)
-    print("\nQuestions by category:")
+    logger.info("Questions by category:")
     for cat_id, count in cats.most_common():
-        print(f"  {cat_id}: {count}")
+        logger.info("  %s: %s", cat_id, count)
 
-    # Print browser-only questions summary (not generated here)
-    print("\n--- Browser-only questions (Layer 2, not generated) ---")
+    # Log browser-only questions summary (not generated here)
+    logger.info("--- Browser-only questions (Layer 2, not generated) ---")
     browser_templates = [
         "GDP per capita growth (5-year avg) — main page",
         "GDP growth vs regional average — main page",
@@ -1200,8 +1203,9 @@ async def main() -> None:
         "High-potential sectors — product-table",
     ]
     for t in browser_templates:
-        print(f"  • {t}")
+        logger.info("  %s", t)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     asyncio.run(main())

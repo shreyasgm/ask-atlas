@@ -14,10 +14,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
 from utils import EVALUATION_BASE_DIR
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Cohort definitions (question IDs from gt_regeneration_plan.md Step 5)
@@ -420,9 +423,9 @@ def compare_cohorts(
         f"| {failed_result.get('flipped_to_partial', 0)} |"
     )
     lines.append(
-        f"| Previously Failed | Still fail " f"| {failed_result.get('still_fail', 0)} |"
+        f"| Previously Failed | Still fail | {failed_result.get('still_fail', 0)} |"
     )
-    lines.append(f"| Regression ({total_reg_count}) | Held pass " f"| {total_reg} |")
+    lines.append(f"| Regression ({total_reg_count}) | Held pass | {total_reg} |")
     lines.append(
         f"| Regression | Regressed "
         f"| {orig_regression.get('regressed', 0) + add_regression.get('regressed', 0)} |"
@@ -572,13 +575,14 @@ def main() -> None:
     args = parser.parse_args()
 
     output = compare_cohorts(args.new_run, args.baseline)
-    print(output)
+    logger.info("%s", output)
 
     if args.save:
         out_path = EVALUATION_BASE_DIR / "runs" / args.new_run / "cohort_comparison.md"
         out_path.write_text(output)
-        print(f"\nSaved to {out_path}")
+        logger.info("Saved to %s", out_path)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     main()

@@ -316,9 +316,9 @@ class TestGraphQLStreamingEvents:
             for e in pipeline_state_events
             if e.get("stage") == "format_graphql_results"
         ]
-        assert (
-            format_events
-        ), "Expected at least one format_graphql_results pipeline_state event"
+        assert format_events, (
+            "Expected at least one format_graphql_results pipeline_state event"
+        )
         assert format_events[0].get("atlas_links"), "atlas_links should be non-empty"
 
 
@@ -377,20 +377,20 @@ async def test_api_chat_stream_emits_ordered_pipeline_events():
     events = _parse_sse(response.text)
     event_types = [e.get("event") for e in events]
 
-    assert (
-        event_types[0] == "thread_id"
-    ), f"First event must be thread_id, got: {event_types[:3]}"
-    assert (
-        event_types[-1] == "done"
-    ), f"Last event must be done, got: {event_types[-3:]}"
+    assert event_types[0] == "thread_id", (
+        f"First event must be thread_id, got: {event_types[:3]}"
+    )
+    assert event_types[-1] == "done", (
+        f"Last event must be done, got: {event_types[-3:]}"
+    )
     assert "node_start" in event_types, "Expected at least one node_start event"
     assert "pipeline_state" in event_types, "Expected at least one pipeline_state event"
 
     done_event = next(e for e in events if e.get("event") == "done")
     done_data = json.loads(done_event["data"])
-    assert (
-        done_data.get("total_time_ms", 0) > 0
-    ), "done event must include total_time_ms"
+    assert done_data.get("total_time_ms", 0) > 0, (
+        "done event must include total_time_ms"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -510,10 +510,10 @@ class TestGraphRecursionErrorSSE:
 
     async def test_graph_recursion_error_yields_error_event(self):
         """GraphRecursionError should produce an error SSE event, not a crash."""
-        import httpx
-        from httpx import ASGITransport
         from unittest.mock import AsyncMock
 
+        import httpx
+        from httpx import ASGITransport
         from langgraph.errors import GraphRecursionError
 
         from src.api import _state, app

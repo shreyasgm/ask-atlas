@@ -17,7 +17,8 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any, Callable, Literal, Optional
+from collections.abc import Callable
+from typing import Any, Literal
 
 from langchain_core.messages import ToolMessage
 from pydantic import BaseModel, Field
@@ -307,7 +308,7 @@ class GraphQLQueryClassification(BaseModel):
         "explore_data_availability",
         "reject",
     ] = Field(description=QUERY_TYPE_DESCRIPTION)
-    rejection_reason: Optional[str] = Field(
+    rejection_reason: str | None = Field(
         default=None,
         description="Why the query was rejected. Only set when query_type is 'reject'.",
     )
@@ -323,58 +324,58 @@ class GraphQLEntityExtraction(BaseModel):
     reasoning: str = Field(
         description="Step-by-step reasoning for entity extraction decisions (max 300 chars).",
     )
-    country_name: Optional[str] = Field(
+    country_name: str | None = Field(
         default=None, description="Primary country mentioned in the question."
     )
-    country_code_guess: Optional[str] = Field(
+    country_code_guess: str | None = Field(
         default=None, description="ISO 3166-1 alpha-3 code guess (e.g., 'KEN')."
     )
-    partner_name: Optional[str] = Field(
+    partner_name: str | None = Field(
         default=None, description="Partner/destination country for bilateral queries."
     )
-    partner_code_guess: Optional[str] = Field(
+    partner_code_guess: str | None = Field(
         default=None, description="ISO3 code guess for the partner country."
     )
-    product_name: Optional[str] = Field(
+    product_name: str | None = Field(
         default=None, description="Product or commodity mentioned."
     )
-    product_code_guess: Optional[str] = Field(
+    product_code_guess: str | None = Field(
         default=None, description="HS code guess (e.g., '0901' for coffee)."
     )
-    product_level: Optional[Literal["section", "twoDigit", "fourDigit", "sixDigit"]] = (
+    product_level: Literal["section", "twoDigit", "fourDigit", "sixDigit"] | None = (
         Field(
             default="fourDigit",
             description=PRODUCT_LEVEL_DESCRIPTION,
         )
     )
-    product_class: Optional[Literal["HS92", "HS12", "HS22", "SITC"]] = Field(
+    product_class: Literal["HS92", "HS12", "HS22", "SITC"] | None = Field(
         default=None,
         description=PRODUCT_CLASS_DESCRIPTION,
     )
-    year: Optional[int] = Field(
+    year: int | None = Field(
         default=None, description="Specific year mentioned (e.g., 2024)."
     )
-    year_min: Optional[int] = Field(
+    year_min: int | None = Field(
         default=None, description="Start of time range for overtime queries."
     )
-    year_max: Optional[int] = Field(
+    year_max: int | None = Field(
         default=None, description="End of time range for overtime queries."
     )
-    group_name: Optional[str] = Field(
+    group_name: str | None = Field(
         default=None,
         description="Country group name for the exporter side (e.g., 'ASEAN', 'EU'). "
         "Used for explore_group and group_bilateral query types.",
     )
-    group_type: Optional[str] = Field(
+    group_type: str | None = Field(
         default=None,
         description=GROUP_TYPE_DESCRIPTION,
     )
-    partner_group_name: Optional[str] = Field(
+    partner_group_name: str | None = Field(
         default=None,
         description="Partner group name for the importer/destination side (e.g., 'EU', 'Africa'). "
         "Used for group_products query type where a country exports TO a group.",
     )
-    partner_group_type: Optional[str] = Field(
+    partner_group_type: str | None = Field(
         default=None,
         description="Group type for the partner group (same options as group_type).",
     )
@@ -382,7 +383,7 @@ class GraphQLEntityExtraction(BaseModel):
         default=None,
         description="Lookback period in years for Country Pages growth dynamics (country_lookback query type).",
     )
-    services_class: Optional[Literal["unilateral", "bilateral"]] = Field(
+    services_class: Literal["unilateral", "bilateral"] | None = Field(
         default=None,
         description=(
             "Set to 'unilateral' when the question asks about total/all exports/products "
@@ -391,7 +392,7 @@ class GraphQLEntityExtraction(BaseModel):
             "names a specific goods product."
         ),
     )
-    trade_direction: Optional[Literal["exports", "imports"]] = Field(
+    trade_direction: Literal["exports", "imports"] | None = Field(
         default=None,
         description=(
             "Trade direction inferred from the question. Set to 'imports' when the question "
@@ -400,9 +401,9 @@ class GraphQLEntityExtraction(BaseModel):
             "Leave null when direction is ambiguous or not mentioned (defaults to exports)."
         ),
     )
-    strategy: Optional[
-        Literal["balanced", "low_hanging_fruit", "long_jumps", "custom"]
-    ] = Field(
+    strategy: (
+        Literal["balanced", "low_hanging_fruit", "long_jumps", "custom"] | None
+    ) = Field(
         default=None,
         description=(
             "Growth opportunity weighting strategy. Only set when the user explicitly "
@@ -412,20 +413,20 @@ class GraphQLEntityExtraction(BaseModel):
             "'custom' = user specifies their own weights. Leave null for the default."
         ),
     )
-    custom_weights_distance: Optional[float] = Field(
+    custom_weights_distance: float | None = Field(
         default=None,
         description=(
             "Custom weight for distance (0-1). Only set when strategy is 'custom' "
             "and the user specifies weights. Must sum to ~1.0 with pci and og weights."
         ),
     )
-    custom_weights_pci: Optional[float] = Field(
+    custom_weights_pci: float | None = Field(
         default=None,
         description=(
             "Custom weight for product complexity (0-1). Only set when strategy is 'custom'."
         ),
     )
-    custom_weights_og: Optional[float] = Field(
+    custom_weights_og: float | None = Field(
         default=None,
         description=(
             "Custom weight for opportunity gain (0-1). Only set when strategy is 'custom'."
@@ -479,7 +480,7 @@ class GraphQLQueryPlan(BaseModel):
         "explore_data_availability",
         "reject",
     ] = Field(description=QUERY_TYPE_DESCRIPTION)
-    rejection_reason: Optional[str] = Field(
+    rejection_reason: str | None = Field(
         default=None,
         description="Why the query was rejected. Only set when query_type is 'reject'.",
     )
@@ -489,58 +490,58 @@ class GraphQLQueryPlan(BaseModel):
     )
 
     # --- Entity extraction fields ---
-    country_name: Optional[str] = Field(
+    country_name: str | None = Field(
         default=None, description="Primary country mentioned in the question."
     )
-    country_code_guess: Optional[str] = Field(
+    country_code_guess: str | None = Field(
         default=None, description="ISO 3166-1 alpha-3 code guess (e.g., 'KEN')."
     )
-    partner_name: Optional[str] = Field(
+    partner_name: str | None = Field(
         default=None, description="Partner/destination country for bilateral queries."
     )
-    partner_code_guess: Optional[str] = Field(
+    partner_code_guess: str | None = Field(
         default=None, description="ISO3 code guess for the partner country."
     )
-    product_name: Optional[str] = Field(
+    product_name: str | None = Field(
         default=None, description="Product or commodity mentioned."
     )
-    product_code_guess: Optional[str] = Field(
+    product_code_guess: str | None = Field(
         default=None, description="HS code guess (e.g., '0901' for coffee)."
     )
-    product_level: Optional[Literal["section", "twoDigit", "fourDigit", "sixDigit"]] = (
+    product_level: Literal["section", "twoDigit", "fourDigit", "sixDigit"] | None = (
         Field(
             default="fourDigit",
             description=PRODUCT_LEVEL_DESCRIPTION,
         )
     )
-    product_class: Optional[Literal["HS92", "HS12", "HS22", "SITC"]] = Field(
+    product_class: Literal["HS92", "HS12", "HS22", "SITC"] | None = Field(
         default=None,
         description=PRODUCT_CLASS_DESCRIPTION,
     )
-    year: Optional[int] = Field(
+    year: int | None = Field(
         default=None, description="Specific year mentioned (e.g., 2024)."
     )
-    year_min: Optional[int] = Field(
+    year_min: int | None = Field(
         default=None, description="Start of time range for overtime queries."
     )
-    year_max: Optional[int] = Field(
+    year_max: int | None = Field(
         default=None, description="End of time range for overtime queries."
     )
-    group_name: Optional[str] = Field(
+    group_name: str | None = Field(
         default=None,
         description="Country group name for the exporter side (e.g., 'ASEAN', 'EU'). "
         "Used for explore_group and group_bilateral query types.",
     )
-    group_type: Optional[str] = Field(
+    group_type: str | None = Field(
         default=None,
         description=GROUP_TYPE_DESCRIPTION,
     )
-    partner_group_name: Optional[str] = Field(
+    partner_group_name: str | None = Field(
         default=None,
         description="Partner group name for the importer/destination side (e.g., 'EU', 'Africa'). "
         "Used for group_products query type where a country exports TO a group.",
     )
-    partner_group_type: Optional[str] = Field(
+    partner_group_type: str | None = Field(
         default=None,
         description="Group type for the partner group (same options as group_type).",
     )
@@ -548,7 +549,7 @@ class GraphQLQueryPlan(BaseModel):
         default=None,
         description="Lookback period in years for Country Pages growth dynamics (country_lookback query type).",
     )
-    services_class: Optional[Literal["unilateral", "bilateral"]] = Field(
+    services_class: Literal["unilateral", "bilateral"] | None = Field(
         default=None,
         description=(
             "Set to 'unilateral' when the question asks about total/all exports/products "
@@ -557,7 +558,7 @@ class GraphQLQueryPlan(BaseModel):
             "names a specific goods product."
         ),
     )
-    trade_direction: Optional[Literal["exports", "imports"]] = Field(
+    trade_direction: Literal["exports", "imports"] | None = Field(
         default=None,
         description=(
             "Trade direction inferred from the question. Set to 'imports' when the question "
@@ -566,9 +567,9 @@ class GraphQLQueryPlan(BaseModel):
             "Leave null when direction is ambiguous or not mentioned (defaults to exports)."
         ),
     )
-    strategy: Optional[
-        Literal["balanced", "low_hanging_fruit", "long_jumps", "custom"]
-    ] = Field(
+    strategy: (
+        Literal["balanced", "low_hanging_fruit", "long_jumps", "custom"] | None
+    ) = Field(
         default=None,
         description=(
             "Growth opportunity weighting strategy. Only set when the user explicitly "
@@ -578,20 +579,20 @@ class GraphQLQueryPlan(BaseModel):
             "'custom' = user specifies their own weights. Leave null for the default."
         ),
     )
-    custom_weights_distance: Optional[float] = Field(
+    custom_weights_distance: float | None = Field(
         default=None,
         description=(
             "Custom weight for distance (0-1). Only set when strategy is 'custom' "
             "and the user specifies weights. Must sum to ~1.0 with pci and og weights."
         ),
     )
-    custom_weights_pci: Optional[float] = Field(
+    custom_weights_pci: float | None = Field(
         default=None,
         description=(
             "Custom weight for product complexity (0-1). Only set when strategy is 'custom'."
         ),
     )
-    custom_weights_og: Optional[float] = Field(
+    custom_weights_og: float | None = Field(
         default=None,
         description=(
             "Custom weight for opportunity gain (0-1). Only set when strategy is 'custom'."
@@ -663,6 +664,7 @@ async def classify_query(state: AtlasAgentState, *, lightweight_model: Any) -> d
         Dict with ``graphql_classification`` and ``graphql_api_target``.
     """
     import time
+
     from langchain_core.callbacks import UsageMetadataCallbackHandler
 
     async with node_timer("classify_query", "atlas_graphql") as t:
@@ -726,6 +728,7 @@ async def extract_entities(state: AtlasAgentState, *, lightweight_model: Any) ->
         Dict with ``graphql_entity_extraction``.
     """
     import time
+
     from langchain_core.callbacks import UsageMetadataCallbackHandler
 
     async with node_timer("extract_entities", "atlas_graphql") as t:
@@ -778,6 +781,7 @@ async def plan_query(state: AtlasAgentState, *, lightweight_model: Any) -> dict:
         ``graphql_api_target``, ``token_usage``, and ``step_timing``.
     """
     import time
+
     from langchain_core.callbacks import UsageMetadataCallbackHandler
 
     async with node_timer("plan_query", "atlas_graphql") as t:
@@ -1190,7 +1194,7 @@ async def _resolve_entity(
     # Step C: LLM selects best from multiple candidates
     try:
         options = "\n".join(
-            f"{i+1}. {c.get(search_field, c.get('nameShortEn', 'unknown'))} "
+            f"{i + 1}. {c.get(search_field, c.get('nameShortEn', 'unknown'))} "
             f"(code: {c.get('code', c.get('iso3Code', 'N/A'))})"
             for i, c in enumerate(candidates)
         )
@@ -3539,7 +3543,7 @@ def route_after_assessment(
 
 
 async def execute_catalog_lookup(
-    state: "AtlasAgentState",
+    state: AtlasAgentState,
     *,
     product_caches: dict[str, CatalogCache] | None = None,
     country_cache: CatalogCache | None = None,

@@ -1,6 +1,7 @@
 import pytest
-from src.text_to_sql import AtlasTextToSQL, StreamData
+
 from src.config import get_settings
+from src.text_to_sql import AtlasTextToSQL, StreamData
 
 # Load settings
 settings = get_settings()
@@ -103,14 +104,14 @@ async def test_step_timing_in_answer_result(atlas_sql, logger):
     assert "slowest_node" in st
 
     # The agent node should always appear (it routes to a tool)
-    assert (
-        "agent" in st["by_node"]
-    ), f"'agent' missing from by_node: {list(st['by_node'].keys())}"
+    assert "agent" in st["by_node"], (
+        f"'agent' missing from by_node: {list(st['by_node'].keys())}"
+    )
 
     # Total wall time should be positive and plausible (> 1s for a real LLM call)
-    assert (
-        st["total"]["wall_time_ms"] > 1000
-    ), f"Total wall time {st['total']['wall_time_ms']}ms seems too low for a real LLM call"
+    assert st["total"]["wall_time_ms"] > 1000, (
+        f"Total wall time {st['total']['wall_time_ms']}ms seems too low for a real LLM call"
+    )
 
     # LLM time should be positive (agent node always makes an LLM call)
     assert st["total"]["llm_time_ms"] > 0, "LLM time should be positive"

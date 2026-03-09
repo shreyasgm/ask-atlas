@@ -17,11 +17,10 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
-
 from utils import EVALUATION_BASE_DIR, load_json_file, save_json_file
 
 # Load .env from project root so API keys are available
@@ -82,7 +81,7 @@ async def _research_openai(question: str, model: str) -> dict:
     response = await client.responses.create(
         model=model,
         tools=[{"type": "web_search"}],
-        input=(f"{_RESEARCH_SYSTEM_PROMPT}\n\n" f"Question to research:\n{question}"),
+        input=(f"{_RESEARCH_SYSTEM_PROMPT}\n\nQuestion to research:\n{question}"),
     )
     answer = response.output_text
 
@@ -115,8 +114,7 @@ async def _research_anthropic(question: str, model: str) -> dict:
             {
                 "role": "user",
                 "content": (
-                    f"{_RESEARCH_SYSTEM_PROMPT}\n\n"
-                    f"Question to research:\n{question}"
+                    f"{_RESEARCH_SYSTEM_PROMPT}\n\nQuestion to research:\n{question}"
                 ),
             }
         ],
@@ -213,7 +211,7 @@ async def _research_one(
                 "question_id": qid,
                 "provider": provider,
                 "model": model,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "research_answer": result["answer"],
                 "sources": result["sources"],
                 "confidence": confidence,

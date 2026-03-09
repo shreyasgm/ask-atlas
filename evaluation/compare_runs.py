@@ -12,8 +12,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 
 from utils import EVALUATION_BASE_DIR
+
+logger = logging.getLogger(__name__)
 
 
 def _load_report(run_id: str) -> dict | None:
@@ -271,9 +274,9 @@ def main() -> None:
     if args.list:
         runs = _list_runs()
         if not runs:
-            print("No runs found.")
+            logger.info("No runs found.")
             return
-        print("Available runs:")
+        logger.info("Available runs:")
         for run_id in runs:
             summary = _load_summary(run_id)
             report = _load_report(run_id)
@@ -281,7 +284,9 @@ def main() -> None:
             agg = report.get("aggregate", {}) if report else {}
             score = agg.get("avg_pass_count", agg.get("avg_weighted_score", "?"))
             model = summary.get("agent_model", "?") if summary else "?"
-            print(f"  {run_id}  ({qs} questions, avg={score}, model={model})")
+            logger.info(
+                "  %s  (%s questions, avg=%s, model=%s)", run_id, qs, score, model
+            )
         return
 
     if len(args.runs) != 2:
@@ -289,8 +294,9 @@ def main() -> None:
         return
 
     output = compare_runs(args.runs[0], args.runs[1])
-    print(output)
+    logger.info("%s", output)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     main()

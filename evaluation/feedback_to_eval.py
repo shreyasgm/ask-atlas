@@ -10,9 +10,12 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import datetime, timezone
+import logging
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.request import Request, urlopen
+
+logger = logging.getLogger(__name__)
 
 EVALUATION_DIR = Path(__file__).resolve().parent
 EVAL_QUESTIONS_PATH = EVALUATION_DIR / "eval_questions.json"
@@ -176,12 +179,11 @@ def main(argv: list[str] | None = None) -> None:
     entries = _fetch_negative_feedback(args.api_url)
 
     if args.since:
-        since = datetime.fromisoformat(args.since).replace(tzinfo=timezone.utc)
+        since = datetime.fromisoformat(args.since).replace(tzinfo=UTC)
         entries = [
             e
             for e in entries
-            if datetime.fromisoformat(e["created_at"]).replace(tzinfo=timezone.utc)
-            >= since
+            if datetime.fromisoformat(e["created_at"]).replace(tzinfo=UTC) >= since
         ]
 
     candidates = []
@@ -191,7 +193,7 @@ def main(argv: list[str] | None = None) -> None:
         next_id += 1
 
     output = {
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "source": "user_feedback_export",
         "candidate_count": len(candidates),
         "next_available_id": next_id,
@@ -199,8 +201,9 @@ def main(argv: list[str] | None = None) -> None:
     }
 
     CANDIDATES_PATH.write_text(json.dumps(output, indent=2) + "\n")
-    print(f"Wrote {len(candidates)} candidate(s) to {CANDIDATES_PATH}")
+    logger.info("Wrote %s candidate(s) to %s", len(candidates), CANDIDATES_PATH)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     main()
