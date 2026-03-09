@@ -89,27 +89,30 @@ A LangGraph StateGraph with an outer agent loop (the LLM decides which tool to c
 graph TD
     START([START]) --> agent
     agent -->|no tool_calls| END_NODE([END])
+    agent -->|no tool_calls, first time| tcn[tool_call_nudge]
+    tcn --> agent
     agent -->|queries exceeded?| mqe[max_queries_exceeded]
     agent -->|query_tool| etq[extract_tool_question]
     agent -->|atlas_graphql| egq[extract_graphql_question]
     agent -->|docs_tool| edq[extract_docs_question]
+    agent -->|lookup_catalog| ecl[execute_catalog_lookup]
+    ecl --> agent
 
     etq --> ep[extract_products]
     ep --> lc[lookup_codes]
     lc --> gti[get_table_info]
-    gti --> gs[generate_sql]
-    gs --> vs[validate_sql]
-    vs -->|valid| es[execute_sql]
-    vs -->|error| fr[format_results]
-    es --> fr
+    gti --> sqa[sql_query_agent]
+    sqa --> fr[format_results]
     fr --> agent
 
-    egq --> cq[classify_query]
-    cq -->|reject| fgr[format_graphql_results]
-    cq -->|ok| ee[extract_entities]
-    ee --> ri[resolve_ids]
+    egq --> pq[plan_query]
+    pq -->|reject| fgr[format_graphql_results]
+    pq -->|ok| ri[resolve_ids]
     ri --> beg[build_and_execute_graphql]
-    beg --> fgr
+    beg --> agr[assess_graphql_result]
+    agr -->|pass| fgr
+    agr -->|fail| gca[graphql_correction_agent]
+    gca --> fgr
     fgr --> agent
 
     edq --> sd[select_docs]
@@ -124,20 +127,21 @@ graph TD
     style ep fill:#e3f2fd,stroke:#1976D2
     style lc fill:#e3f2fd,stroke:#1976D2
     style gti fill:#e3f2fd,stroke:#1976D2
-    style gs fill:#e3f2fd,stroke:#1976D2
-    style vs fill:#fff3e0,stroke:#F57C00
-    style es fill:#e3f2fd,stroke:#1976D2
+    style sqa fill:#e3f2fd,stroke:#1976D2
     style fr fill:#e8f5e9,stroke:#388E3C
     style egq fill:#fff3e0,stroke:#F57C00
-    style cq fill:#fff3e0,stroke:#F57C00
-    style ee fill:#fff3e0,stroke:#F57C00
+    style pq fill:#fff3e0,stroke:#F57C00
     style ri fill:#fff3e0,stroke:#F57C00
     style beg fill:#fff3e0,stroke:#F57C00
+    style agr fill:#fff3e0,stroke:#F57C00
+    style gca fill:#fff3e0,stroke:#F57C00
     style fgr fill:#e8f5e9,stroke:#388E3C
     style edq fill:#f3e5f5,stroke:#7B1FA2
     style sd fill:#f3e5f5,stroke:#7B1FA2
     style syd fill:#f3e5f5,stroke:#7B1FA2
     style fdr fill:#e8f5e9,stroke:#388E3C
+    style tcn fill:#fff3e0,stroke:#E65100
+    style ecl fill:#e8f5e9,stroke:#388E3C
     style mqe fill:#ffebee,stroke:#c62828
 ```
 
@@ -226,15 +230,21 @@ PYTHONPATH=$(pwd) uv run pytest -m "integration" -v
 | `GET` | `/health` | Health check |
 | `POST` | `/api/threads` | Create a new conversation thread |
 | `GET` | `/api/threads` | List conversations for a session |
-| `GET` | `/api/threads/{thread_id}/messages` | Retrieve message history and trade overrides |
+| `GET` | `/api/threads/{thread_id}/messages` | Retrieve message history, trade overrides, and turn summaries |
 | `DELETE` | `/api/threads/{thread_id}` | Delete a conversation |
 | `POST` | `/api/chat` | Send a question, receive a complete response |
 | `POST` | `/api/chat/stream` | Send a question, receive SSE-streamed response |
+| `POST` | `/api/feedback` | Submit thumbs up/down feedback for a turn |
+| `GET` | `/api/feedback` | List feedback for a session |
+| `GET` | `/api/feedback/export` | Export all feedback with context |
+| `PUT` | `/api/feedback/{id}` | Update existing feedback |
 | `GET` | `/api/debug/caches` | Cache hit rate diagnostics |
+| `GET` | `/api/debug/pool` | Database connection pool health |
 
 ## Documentation
 
 - **[Technical Overview](docs/public/architecture.md)** — Comprehensive reference covering architecture, database schemas, pipeline nodes, frontend components, deployment, and evaluation system.
+- **[Backend Architecture](docs/public/backend_architecture.md)** — Deep dive into the hybrid GraphQL+SQL backend: graph topology, GraphQL pipeline detail, rate limiting, Atlas link generation, state schema, and evaluation strategy.
 
 ## Acknowledgments
 

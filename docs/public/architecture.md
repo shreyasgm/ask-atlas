@@ -35,13 +35,20 @@ ask-atlas/
 │   ├── graph.py                    # build_atlas_graph — LangGraph StateGraph assembly
 │   ├── agent_node.py               # make_agent_node — LLM agent with tool selection
 │   ├── state.py                    # AtlasAgentState TypedDict (SQL + GraphQL + Docs fields)
-│   ├── prompts.py                  # All LLM prompts (agent, SQL, GraphQL, docs)
+│   ├── prompts/                    # LLM prompts (agent, SQL, GraphQL, docs)
+│   │   ├── prompt_agent.py         # Agent system prompt (dual-tool + SQL-only variants)
+│   │   ├── prompt_sql.py           # SQL sub-agent prompt + few-shot examples
+│   │   ├── prompt_graphql.py       # GraphQL classification/extraction prompts
+│   │   ├── prompt_graphql_subagent.py  # GraphQL correction agent prompt
+│   │   ├── prompt_docs.py          # Doc selection + synthesis prompts
+│   │   └── _blocks.py              # Shared prompt blocks (metric definitions, etc.)
 │   ├── config.py                   # Pydantic Settings (loads from .env + model_config.py)
 │   ├── model_config.py             # Non-secret LLM settings (model names, prompt assignments)
 │   ├── sql_pipeline.py             # SQL pipeline nodes (extract → sql_query_agent → format)
 │   ├── sql_subagent.py             # Agentic SQL sub-agent (ReAct loop with 4 tools)
 │   ├── graphql_pipeline.py         # GraphQL pipeline nodes (classify → extract → resolve → execute)
 │   ├── graphql_client.py           # Async GraphQL HTTP client, circuit breaker, budget tracker
+│   ├── graphql_subagent.py         # GraphQL correction sub-agent (ReAct loop with 5 tools)
 │   ├── docs_pipeline.py            # Docs pipeline nodes (select → synthesize)
 │   ├── docs/                       # Markdown documentation files (YAML frontmatter, loaded at startup)
 │   ├── atlas_links.py              # Deterministic Atlas visualization URL builder
@@ -260,7 +267,7 @@ SQL pipeline (6 nodes):
 | 5 | `sql_query_agent` | Generating and executing SQL query |
 | 6 | `format_results` | Formatting results |
 
-GraphQL pipeline (5 nodes):
+GraphQL pipeline (7 nodes):
 
 | Order | Node Name | UI Label |
 |-------|-----------|----------|
@@ -268,7 +275,9 @@ GraphQL pipeline (5 nodes):
 | 2 | `plan_query` | Classifying and extracting entities |
 | 3 | `resolve_ids` | Resolving entity IDs |
 | 4 | `build_and_execute_graphql` | Querying Atlas API |
-| 5 | `format_graphql_results` | Formatting results |
+| 5 | `assess_graphql_result` | Assessing result quality |
+| 6 | `graphql_correction_agent` | Correcting query (conditional) |
+| 7 | `format_graphql_results` | Formatting results |
 
 Docs pipeline (4 nodes):
 
@@ -283,16 +292,17 @@ Docs pipeline (4 nodes):
 
 `build_atlas_graph()` builds a compiled `StateGraph[AtlasAgentState]` with an outer agent loop and three inner deterministic pipelines (SQL, GraphQL, Docs).
 
-**Agent tools**: The agent selects from three tools per turn:
+**Agent tools**: The agent selects from up to four tools per turn:
 - **`query_tool`** — Routes to the SQL pipeline for custom database queries
 - **`atlas_graphql`** — Routes to the GraphQL pipeline for Atlas visualization data and pre-computed metrics
 - **`docs_tool`** — Routes to the Docs pipeline for methodology/documentation questions (bypasses query budget)
+- **`lookup_catalog`** — Budget-free lookup against cached entity catalogs (countries, products, services, groups)
 
-**Agent mode** (`AgentMode` enum in `src/config.py`) controls which tools are available:
-- `AUTO` — All three tools; agent chooses dynamically. Falls back to SQL_ONLY if GraphQL budget exhausted.
-- `GRAPHQL_SQL` — `query_tool` + `atlas_graphql` + `docs_tool`
-- `SQL_ONLY` — `query_tool` + `docs_tool` only
-- `GRAPHQL_ONLY` — `atlas_graphql` + `docs_tool` only
+**Agent mode** (`AgentMode` enum in `src/config.py`) controls which data tools are available (`docs_tool` and `lookup_catalog` are always available):
+- `AUTO` — All tools; agent chooses dynamically. Falls back to SQL_ONLY if GraphQL budget exhausted.
+- `GRAPHQL_SQL` — `query_tool` + `atlas_graphql` + `docs_tool` + `lookup_catalog`
+- `SQL_ONLY` — `query_tool` + `docs_tool` + `lookup_catalog`
+- `GRAPHQL_ONLY` — `atlas_graphql` + `docs_tool` + `lookup_catalog`
 
 Set via `model_config.py` (default: `"auto"`) and overridable per-request via `override_agent_mode` in the `/api/chat/stream` request body.
 
@@ -308,6 +318,8 @@ graph TD
     agent -->|query_tool| etq[extract_tool_question]
     agent -->|atlas_graphql| egq[extract_graphql_question]
     agent -->|docs_tool| edq[extract_docs_question]
+    agent -->|lookup_catalog| ecl[execute_catalog_lookup]
+    ecl --> agent
 
     etq --> ep[extract_products]
     ep --> lc[lookup_codes]
@@ -320,7 +332,10 @@ graph TD
     pq -->|reject| fgr[format_graphql_results]
     pq -->|ok| ri[resolve_ids]
     ri --> beg[build_and_execute_graphql]
-    beg --> fgr
+    beg --> agr[assess_graphql_result]
+    agr -->|pass| fgr
+    agr -->|fail| gca[graphql_correction_agent]
+    gca --> fgr
     fgr --> agent
 
     edq --> sd[select_docs]
@@ -341,12 +356,15 @@ graph TD
     style pq fill:#fff3e0,stroke:#F57C00
     style ri fill:#fff3e0,stroke:#F57C00
     style beg fill:#fff3e0,stroke:#F57C00
+    style agr fill:#fff3e0,stroke:#F57C00
+    style gca fill:#fff3e0,stroke:#F57C00
     style fgr fill:#e8f5e9,stroke:#388E3C
     style edq fill:#f3e5f5,stroke:#7B1FA2
     style sd fill:#f3e5f5,stroke:#7B1FA2
     style syd fill:#f3e5f5,stroke:#7B1FA2
     style fdr fill:#e8f5e9,stroke:#388E3C
     style tcn fill:#fff3e0,stroke:#E65100
+    style ecl fill:#e8f5e9,stroke:#388E3C
     style mqe fill:#ffebee,stroke:#c62828
 ```
 
@@ -367,6 +385,10 @@ graph TD
 7. **Structured output conventions.** All structured output schemas in the GraphQL pipeline use: (a) description constants for Literal fields (module-level strings with `- value : explanation`), (b) a `reasoning: str` field placed first for chain-of-thought, (c) `with_structured_output(Model, include_raw=True)` for provider-agnostic constrained generation.
 
 8. **Token usage and cost tracking.** Every LLM call records input/output token counts to `token_usage` state via a custom reducer. At stream end, per-model cost is estimated using `MODEL_PRICING` in `src/model_config.py` and returned in the `done` SSE event.
+
+9. **GraphQL assessment gate.** After `build_and_execute_graphql`, `assess_graphql_result` uses the lightweight LLM to evaluate the API response quality. If the assessment fails (data looks wrong, incomplete, or suspicious), a `graphql_correction_agent` sub-agent (`src/graphql_subagent.py`) can re-classify, re-resolve IDs, or re-query the API with corrections. The correction sub-agent has 5 tools: `execute_graphql_template`, `execute_graphql_freeform`, `explore_catalog`, `introspect_schema`, and `report_results`.
+
+10. **Budget-free catalog lookup.** The `lookup_catalog` tool lets the agent query the cached country/product/services catalogs directly without consuming a query budget token. This is useful when the agent needs to verify entity names or codes before committing to a full pipeline call.
 
 **Cross-pipeline verification**: The agent naturally cross-verifies results between SQL and GraphQL when results seem implausible. No special mechanism is needed — the ReAct loop supports multi-turn tool calls. The agent's system prompt includes verification guidance: "If a result seems implausible, verify by querying the other data source."
 
@@ -403,7 +425,11 @@ graph TD
 
 4. **`build_and_execute_graphql`** — Constructs the GraphQL query from resolved params, executes against the Explore or Country Pages API via `AtlasGraphQLClient`. Catches all errors and writes them to state (never raises). Consumes one budget token on success.
 
-5. **`format_graphql_results`** — Formats API response as readable text, attaches Atlas visualization links to state, returns a `ToolMessage` with answer text + links. On rejection or API failure, returns an informative error message.
+5. **`assess_graphql_result`** — Lightweight LLM evaluates the API response quality. Outputs a verdict (`pass` or `fail|<reason>`) and `surface_to_agent` flag. If the verdict is `pass`, routes directly to `format_graphql_results`. If `fail`, routes to `graphql_correction_agent`.
+
+6. **`graphql_correction_agent`** (`src/graphql_subagent.py`) — A compiled ReAct sub-agent (similar to the SQL sub-agent) that can re-classify the query, re-resolve entity IDs, re-query the GraphQL API, or inspect the schema. Has 5 tools: `execute_graphql_template` (re-run with template), `execute_graphql_freeform` (arbitrary GraphQL), `explore_catalog` (search entity catalogs), `introspect_schema` (inspect API schema), and `report_results` (forced assessment). The reasoning trace is captured and streamed to the frontend.
+
+7. **`format_graphql_results`** — Formats API response as readable text, attaches Atlas visualization links to state, returns a `ToolMessage` with answer text + links. On rejection or API failure, returns an informative error message. When `graphql_surface_to_agent` is true, prepends the assessment to the tool message.
 
 **Docs pipeline node details** (`src/docs_pipeline.py`):
 
@@ -461,7 +487,10 @@ graph TD
 | `graphql_api_target` | `Literal["explore", "country_pages"] \| None` | Target API identifier |
 | `graphql_raw_response` | `Optional[dict]` | Raw response from GraphQL API |
 | `graphql_execution_time_ms` | `int` | GraphQL query execution time |
+| `graphql_assessment` | `str` | Assessment verdict from `assess_graphql_result` (e.g., `"pass"` or `"fail\|reason"`) |
+| `graphql_surface_to_agent` | `bool` | Whether assessment should be surfaced to parent agent |
 | `graphql_atlas_links` | `Annotated[list[dict], add_graphql_atlas_links]` | Generated Atlas visualization links (reducer: append) |
+| `graphql_reasoning_trace` | `Annotated[list[list[dict]], add_reasoning_traces]` | Correction agent reasoning traces (one list per invocation, reducer: append) |
 | `sql_call_history` | `Annotated[list[dict], add_sql_call_history]` | Per-call SQL pipeline snapshots (reducer: append) |
 | `graphql_call_history` | `Annotated[list[dict], add_graphql_call_history]` | Per-call GraphQL pipeline snapshots (reducer: append) |
 | **Docs pipeline** | | Reset by `extract_docs_question` at cycle start |
@@ -520,21 +549,21 @@ PROMPT_MODEL_ASSIGNMENTS = {         # Maps each prompt to "frontier" or "lightw
 
 **`get_prompt_model(prompt_key)`** — Looks up the model tier for a prompt key in `prompt_model_assignments` and returns the corresponding frontier or lightweight LLM instance.
 
-### Prompts (`src/prompts.py`)
+### Prompts (`src/prompts/`)
 
-Central registry for all LLM prompts. Zero imports from other `src/` modules (prevents circular dependencies). Each prompt is assigned to either the frontier or lightweight model tier via `PROMPT_MODEL_ASSIGNMENTS`.
+LLM prompts organized as a Python package with one module per pipeline. Zero imports from other `src/` modules (prevents circular dependencies). Each prompt is assigned to either the frontier or lightweight model tier via `PROMPT_MODEL_ASSIGNMENTS`.
 
 | Prompt Key | Model Tier | Purpose |
 |------------|-----------|---------|
-| `agent_system_prompt` | Frontier | Agent orchestration: tool selection, budget status, verification guidance, trade data schema |
-| `sql_generation` | Frontier | SQL sub-agent system prompt (`SQL_SUBAGENT_PROMPT` from `src/prompts/prompt_sql.py`) with few-shot examples, table DDL, domain rules |
-| `graphql_classification` | Lightweight | Classify user question into ~20 GraphQL query types or reject |
-| `graphql_entity_extraction` | Lightweight | Extract structured entities (countries, products, years) given classified query type |
-| `id_resolution_selection` | Lightweight | Select best entity IDs from dual-source candidates |
-| `product_extraction` | Lightweight | Identify products and classification schemas in user question |
-| `product_code_selection` | Lightweight | Select final product codes from LLM + DB candidates |
-| `document_selection` | Lightweight | Select relevant docs from manifest based on user question |
-| `documentation_synthesis` | Lightweight | Synthesize response from selected documentation files |
+| `agent_system_prompt` | Frontier | Agent orchestration: tool selection, budget status, verification guidance, trade data schema (`src/prompts/prompt_agent.py`) |
+| `sql_generation` | Frontier | SQL sub-agent system prompt with few-shot examples, table DDL, domain rules (`src/prompts/prompt_sql.py`) |
+| `graphql_classification` | Lightweight | Classify user question into ~20 GraphQL query types or reject (`src/prompts/prompt_graphql.py`) |
+| `graphql_entity_extraction` | Lightweight | Extract structured entities (countries, products, years) given classified query type (`src/prompts/prompt_graphql.py`) |
+| `id_resolution_selection` | Lightweight | Select best entity IDs from dual-source candidates (`src/prompts/prompt_graphql.py`) |
+| `product_extraction` | Lightweight | Identify products and classification schemas in user question (`src/product_and_schema_lookup.py`) |
+| `product_code_selection` | Lightweight | Select final product codes from LLM + DB candidates (`src/product_and_schema_lookup.py`) |
+| `document_selection` | Lightweight | Select relevant docs from manifest based on user question (`src/prompts/prompt_docs.py`) |
+| `documentation_synthesis` | Lightweight | Synthesize response from selected documentation files (`src/prompts/prompt_docs.py`) |
 
 ---
 
@@ -670,6 +699,8 @@ The `/api/chat/stream` endpoint returns `text/event-stream`. Events are sent in 
 - **GraphQL pipeline:**
   - **`plan_query`**: `{ "stage": "plan_query", "query_type": "...", "api_target": "...", "country": "...", "product": "...", "year": "..." }`
   - **`resolve_ids`**: `{ "stage": "resolve_ids", "resolved_params": {...} }`
+  - **`assess_graphql_result`**: `{ "stage": "assess_graphql_result", "assessment": "pass|fail|reason", "surface_to_agent": bool }`
+  - **`graphql_correction_agent`**: `{ "stage": "graphql_correction_agent", "reasoning_trace": [...] }`
   - **`format_graphql_results`**: `{ "stage": "format_graphql_results", "atlas_links": [...], "execution_time_ms": N }`
 - **Docs pipeline:**
   - **`select_docs`**: `{ "stage": "select_docs", "selected_files": [...] }`
@@ -768,7 +799,7 @@ Catalogs are lazy-loaded on first access and refreshed via TTL.
 | 4 | `SELECT *` usage | Warning (logged) |
 | 5 | Leading `LIKE` wildcard (`LIKE '%...'`) | Warning (logged) |
 
-On validation failure, `validate_sql_node` sets `state["last_error"]` which causes the graph to skip `execute_sql` and go directly to `format_results` with the error message.
+Validation is invoked internally by the SQL sub-agent's `execute_sql` tool before running any query. On failure, the sub-agent sees the validation errors and can iterate — generating corrected SQL and retrying.
 
 ---
 
@@ -918,15 +949,15 @@ sequenceDiagram
     participant API as POST /api/chat/stream
     participant State as AtlasAgentState
     participant EP as extract_products
-    participant GS as generate_sql
+    participant SQA as sql_query_agent
     participant DB as App DB
 
     UI->>Hook: User selects Goods + HS92
     Hook->>API: { override_mode: "goods", override_schema: "hs92" }
     API->>State: _turn_input() sets override fields
     State->>EP: override_schema limits classification_schemas
-    EP->>GS: Filtered schemas + resolved product codes
-    GS->>GS: Injects direction/mode constraints into prompt
+    EP->>SQA: Filtered schemas + resolved product codes
+    SQA->>SQA: Injects direction/mode constraints into prompt
     API->>DB: Overrides persisted in checkpoint state
 
     Note over UI,DB: On thread reload
@@ -998,7 +1029,7 @@ graph LR
     subgraph CI["CI Workflow (push / PR)"]
         direction TB
         CI_T["Trigger:<br/>push to any branch<br/>or PR to main"]
-        CI_T --> BL["backend-lint<br/>ruff check + black"]
+        CI_T --> BL["backend-lint<br/>ruff check + ruff format"]
         CI_T --> BU["backend-unit-tests<br/>pytest (unit only)"]
         CI_T --> FC["frontend-checks<br/>pnpm check + test"]
     end
@@ -1023,7 +1054,7 @@ graph LR
 
 | Job | Steps |
 |-----|-------|
-| `backend-lint` | `uv run ruff check .` + `uv run black --check .` |
+| `backend-lint` | `uv run ruff check .` + `uv run ruff format --check .` |
 | `backend-unit-tests` | `pytest -m "not db and not integration and not eval"` |
 | `frontend-checks` | `pnpm install --frozen-lockfile` + `pnpm check` + `pnpm test` |
 
@@ -1061,8 +1092,9 @@ Authentication uses Workload Identity Federation — no service account keys sto
 | `test_graph.py` | Graph assembly and multi-pipeline routing |
 | `test_graph_wiring.py` | Graph edge routing |
 | `test_sql_pipeline.py` | SQL pipeline nodes |
-| `test_graphql_pipeline.py` | GraphQL pipeline (classify, extract, resolve, execute) |
+| `test_graphql_pipeline.py` | GraphQL pipeline (classify, extract, resolve, execute, assess) |
 | `test_graphql_client.py` | GraphQL HTTP client, circuit breaker, budget tracker |
+| `test_sql_subagent.py` | SQL sub-agent ReAct loop and tool behavior |
 | `test_docs_pipeline.py` | Docs pipeline (select, synthesize) |
 | `test_atlas_links.py` | Atlas visualization URL generation |
 | `test_sql_validation.py` | SQL validation rules |
