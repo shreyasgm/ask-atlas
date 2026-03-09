@@ -18,6 +18,7 @@ from sqlalchemy.exc import ProgrammingError, SAWarning
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy.schema import CreateTable
 from sqlalchemy.sql.expression import Executable
+from sqlalchemy.types import NullType
 from langchain_community.utilities import SQLDatabase
 
 
@@ -347,6 +348,12 @@ class SQLDatabaseWithSchemas(SQLDatabase):
                 tables.append(self._custom_table_info[schema_qualified_name])
                 continue
 
+            # Filter out columns with NullType (unrecognized DB types like
+            # vector/geometry) to avoid confusing LLMs with "COLUMN NULL" DDL.
+            for col in list(table.columns):
+                if isinstance(col.type, NullType):
+                    table._columns.remove(col)
+
             # Start with the CREATE TABLE statement
             create_table = str(CreateTable(table).compile(self._engine))
             table_info = [create_table.rstrip()]
@@ -498,7 +505,7 @@ class AsyncSQLDatabaseWithSchemas:
         if include_tables and ignore_tables:
             raise ValueError("Cannot specify both include_tables and ignore_tables")
 
-        # Use run_sync to get schema/table info via the inspector
+        # Use a single connection for all run_sync reflection calls
         async with async_engine.connect() as conn:
 
             def _reflect_schemas(sync_conn):
@@ -508,21 +515,19 @@ class AsyncSQLDatabaseWithSchemas:
 
             existing_schemas = await conn.run_sync(_reflect_schemas)
 
-        # Validate schemas
-        if schemas:
-            instance._schemas = list(schemas)
-            missing = set(schemas) - existing_schemas
-            if missing:
-                raise ValueError(
-                    f"The following schemas were not found in the database: {missing}\n"
-                    f"Existing schemas: {', '.join(sorted(existing_schemas))}"
-                )
-        else:
-            instance._schemas = list(existing_schemas)
+            # Validate schemas
+            if schemas:
+                instance._schemas = list(schemas)
+                missing = set(schemas) - existing_schemas
+                if missing:
+                    raise ValueError(
+                        f"The following schemas were not found in the database: {missing}\n"
+                        f"Existing schemas: {', '.join(sorted(existing_schemas))}"
+                    )
+            else:
+                instance._schemas = list(existing_schemas)
 
-        # Discover tables per schema via run_sync
-        async with async_engine.connect() as conn:
-
+            # Discover tables per schema
             def _discover_tables(sync_conn):
                 insp = inspect(sync_conn)
                 all_tables_per_schema: Dict[str, set] = {}
@@ -535,38 +540,37 @@ class AsyncSQLDatabaseWithSchemas:
 
             instance._all_tables_per_schema = await conn.run_sync(_discover_tables)
 
-        instance._all_tables = set(
-            f"{schema}.{table}"
-            for schema, tables in instance._all_tables_per_schema.items()
-            for table in tables
-        )
+            instance._all_tables = set(
+                f"{schema}.{table}"
+                for schema, tables in instance._all_tables_per_schema.items()
+                for table in tables
+            )
 
-        # Apply include/ignore filters
-        instance._include_tables = set(include_tables) if include_tables else set()
-        if instance._include_tables:
-            missing_tables = instance._include_tables - instance._all_tables
-            if missing_tables:
-                raise ValueError(
-                    f"include_tables {missing_tables} not found in database."
-                )
+            # Apply include/ignore filters
+            instance._include_tables = set(include_tables) if include_tables else set()
+            if instance._include_tables:
+                missing_tables = instance._include_tables - instance._all_tables
+                if missing_tables:
+                    raise ValueError(
+                        f"include_tables {missing_tables} not found in database."
+                    )
 
-        instance._ignore_tables = set(ignore_tables) if ignore_tables else set()
-        if instance._ignore_tables:
-            missing_tables = instance._ignore_tables - instance._all_tables
-            if missing_tables:
-                raise ValueError(
-                    f"ignore_tables {missing_tables} not found in database"
-                )
+            instance._ignore_tables = set(ignore_tables) if ignore_tables else set()
+            if instance._ignore_tables:
+                missing_tables = instance._ignore_tables - instance._all_tables
+                if missing_tables:
+                    raise ValueError(
+                        f"ignore_tables {missing_tables} not found in database"
+                    )
 
-        instance._usable_tables = (
-            instance._include_tables
-            if instance._include_tables
-            else instance._all_tables - instance._ignore_tables
-        )
+            instance._usable_tables = (
+                instance._include_tables
+                if instance._include_tables
+                else instance._all_tables - instance._ignore_tables
+            )
 
-        # Reflect metadata via run_sync
-        instance._metadata = MetaData()
-        async with async_engine.connect() as conn:
+            # Reflect metadata
+            instance._metadata = MetaData()
 
             def _reflect_metadata(sync_conn):
                 for schema in instance._schemas:
@@ -701,6 +705,12 @@ class AsyncSQLDatabaseWithSchemas:
                 tables.append(self._custom_table_info[schema_qualified_name])
                 continue
 
+            # Filter out columns with NullType (unrecognized DB types like
+            # vector/geometry) to avoid confusing LLMs with "COLUMN NULL" DDL.
+            for col in list(table.columns):
+                if isinstance(col.type, NullType):
+                    table._columns.remove(col)
+
             # DDL via dialect (no I/O)
             create_table = str(
                 CreateTable(table).compile(dialect=self._async_engine.dialect)
@@ -801,12 +811,32 @@ class AsyncSQLDatabaseWithSchemas:
             f"{sample_rows_str}"
         )
 
+    async def aget_table_info_no_throw(
+        self, table_names: Optional[List[str]] = None
+    ) -> str:
+        """Exception-swallowing wrapper around aget_table_info."""
+        try:
+            return await self.aget_table_info(table_names)
+        except ValueError as e:
+            return f"Error: {e}"
+
+    async def aget_context(self) -> Dict[str, Any]:
+        """Return db context with schema-aware table information (async)."""
+        table_names = list(self.get_usable_table_names())
+        table_info = await self.aget_table_info_no_throw()
+        return {
+            "table_info": table_info,
+            "table_names": ", ".join(table_names),
+            "schemas": ", ".join(self._schemas),
+        }
+
     async def _aexecute(
         self,
         command: Union[str, Executable],
         fetch: Literal["all", "one"] = "all",
         *,
         parameters: Optional[Dict[str, Any]] = None,
+        execution_options: Optional[Dict[str, Any]] = None,
     ) -> list[Dict[str, Any]]:
         """Execute SQL command asynchronously.
 
@@ -814,17 +844,21 @@ class AsyncSQLDatabaseWithSchemas:
             command: SQL string or executable.
             fetch: "all" returns all rows, "one" returns first row only.
             parameters: Optional query parameters.
+            execution_options: Optional execution options passed to connection.execute().
 
         Returns:
             List of dicts (column_name -> value).
         """
         parameters = parameters or {}
+        execution_options = execution_options or {}
 
         async with self._async_engine.begin() as connection:
             if isinstance(command, str):
                 command = text(command)
 
-            cursor = await connection.execute(command, parameters)
+            cursor = await connection.execute(
+                command, parameters, execution_options=execution_options
+            )
 
             if cursor.returns_rows:
                 keys = list(cursor.keys())

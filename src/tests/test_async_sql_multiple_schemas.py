@@ -244,6 +244,97 @@ class TestAsyncGetTableInfoErrors:
             await db.aget_table_info(table_names=["nonexistent.table"])
 
 
+class TestAsyncGetTableInfoNoThrow:
+    """Tests for aget_table_info_no_throw."""
+
+    @pytest.mark.asyncio
+    async def test_returns_error_string_for_unknown_table(self):
+        """Should return 'Error: ...' string instead of raising."""
+        from src.sql_multiple_schemas import AsyncSQLDatabaseWithSchemas
+
+        mock_engine = _make_mock_async_engine()
+        db = await AsyncSQLDatabaseWithSchemas.create(mock_engine, schemas=["hs92"])
+        result = await db.aget_table_info_no_throw(table_names=["nonexistent.table"])
+        assert result.startswith("Error:")
+        assert "not found" in result
+
+    @pytest.mark.asyncio
+    async def test_returns_normal_info_on_success(self):
+        """Should return normal table info when no error occurs."""
+        from src.sql_multiple_schemas import AsyncSQLDatabaseWithSchemas
+
+        mock_engine = _make_mock_async_engine()
+        db = await AsyncSQLDatabaseWithSchemas.create(mock_engine, schemas=["hs92"])
+        # With mocked metadata (no real tables reflected), this returns empty string
+        result = await db.aget_table_info_no_throw()
+        assert not result.startswith("Error:")
+
+
+class TestAsyncGetContext:
+    """Tests for aget_context."""
+
+    @pytest.mark.asyncio
+    async def test_returns_expected_keys(self):
+        """aget_context() must return dict with table_info, table_names, schemas."""
+        from src.sql_multiple_schemas import AsyncSQLDatabaseWithSchemas
+
+        mock_engine = _make_mock_async_engine()
+        db = await AsyncSQLDatabaseWithSchemas.create(mock_engine, schemas=["hs92"])
+        ctx = await db.aget_context()
+        assert "table_info" in ctx
+        assert "table_names" in ctx
+        assert "schemas" in ctx
+        assert "hs92" in ctx["schemas"]
+
+    @pytest.mark.asyncio
+    async def test_table_names_are_comma_separated(self):
+        """table_names value should be a comma-separated string."""
+        from src.sql_multiple_schemas import AsyncSQLDatabaseWithSchemas
+
+        tables = {"s1": ["a_table", "b_table"]}
+        mock_engine = _make_mock_async_engine(schemas={"s1"}, tables_per_schema=tables)
+        db = await AsyncSQLDatabaseWithSchemas.create(mock_engine, schemas=["s1"])
+        ctx = await db.aget_context()
+        assert "s1.a_table" in ctx["table_names"]
+        assert "s1.b_table" in ctx["table_names"]
+        assert ", " in ctx["table_names"]
+
+
+class TestAsyncExecuteOptions:
+    """Tests for execution_options parameter in _aexecute."""
+
+    @pytest.mark.asyncio
+    async def test_aexecute_accepts_execution_options(self):
+        """_aexecute should accept execution_options without error."""
+        from src.sql_multiple_schemas import AsyncSQLDatabaseWithSchemas
+
+        mock_engine = _make_mock_async_engine()
+        db = await AsyncSQLDatabaseWithSchemas.create(mock_engine, schemas=["hs92"])
+
+        # Mock the begin() context manager for _aexecute
+        mock_cursor = MagicMock()
+        mock_cursor.returns_rows = True
+        mock_cursor.keys.return_value = ["col1"]
+        mock_cursor.fetchall.return_value = [("val1",)]
+
+        mock_conn = AsyncMock()
+        mock_conn.execute = AsyncMock(return_value=mock_cursor)
+        mock_conn.__aenter__ = AsyncMock(return_value=mock_conn)
+        mock_conn.__aexit__ = AsyncMock(return_value=False)
+        mock_engine.begin = MagicMock(return_value=mock_conn)
+
+        result = await db._aexecute(
+            "SELECT 1 AS col1",
+            execution_options={"postgresql_readonly": True},
+        )
+        assert result == [{"col1": "val1"}]
+        # Verify execution_options was passed through
+        call_kwargs = mock_conn.execute.call_args
+        assert call_kwargs.kwargs.get("execution_options") == {
+            "postgresql_readonly": True
+        }
+
+
 # ===================================================================
 # B. Integration Tests (real Docker DB) — @pytest.mark.db
 # ===================================================================
@@ -342,6 +433,65 @@ class TestAsyncMatchesSync:
         )
 
         assert sync_info == async_info
+
+
+@pytest.mark.db
+class TestAsyncNullTypeFiltering:
+    """Test NullType column filtering in DDL output."""
+
+    @pytest.mark.asyncio
+    async def test_nulltype_columns_excluded_from_ddl(self, async_db_engine):
+        """Columns with NullType should not appear as 'NULL' type in DDL.
+
+        The Atlas DB has a 'vector' column (embedding) on some tables that
+        SQLAlchemy doesn't recognize, producing NullType. Our filtering should
+        strip these from DDL output.
+        """
+        from src.sql_multiple_schemas import AsyncSQLDatabaseWithSchemas
+
+        db = await AsyncSQLDatabaseWithSchemas.create(
+            async_db_engine, schemas=["hs92", "classification"]
+        )
+        ddl = await db.aget_table_info()
+        # NullType columns render as "column_name NULL" in DDL — this pattern
+        # should not appear for the embedding column specifically
+        for line in ddl.split("\n"):
+            stripped = line.strip()
+            # A NullType column renders as e.g. "embedding NULL" or
+            # "embedding NULL,"  — column name followed by NULL as the type
+            if "embedding" in stripped.lower():
+                # If the column appears, it should not have NULL as its type
+                assert (
+                    "NULL" not in stripped.split("embedding")[-1].split(",")[0]
+                ), f"NullType column found in DDL: {stripped}"
+
+
+@pytest.mark.db
+class TestAsyncContextMatchesSync:
+    """Test aget_context matches sync get_context."""
+
+    @pytest.mark.asyncio
+    async def test_aget_context_matches_sync(self, sync_db_engine, async_db_engine):
+        """Async aget_context() should match sync get_context()."""
+        from src.sql_multiple_schemas import (
+            AsyncSQLDatabaseWithSchemas,
+            SQLDatabaseWithSchemas,
+        )
+
+        schemas = ["hs92", "classification"]
+        sync_db = SQLDatabaseWithSchemas(engine=sync_db_engine, schemas=schemas)
+        async_db = await AsyncSQLDatabaseWithSchemas.create(
+            async_db_engine, schemas=schemas
+        )
+
+        sync_ctx = sync_db.get_context()
+        async_ctx = await async_db.aget_context()
+
+        assert async_ctx["table_names"] == sync_ctx["table_names"]
+        assert async_ctx["table_info"] == sync_ctx["table_info"]
+        assert set(async_ctx["schemas"].split(", ")) == set(
+            sync_ctx["schemas"].split(", ")
+        )
 
 
 @pytest.mark.db
