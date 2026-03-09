@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 
 from src.agent_node import make_agent_node, resolve_effective_mode
 from src.config import AgentMode
@@ -327,3 +327,148 @@ class TestAgentNodeGraphqlOnly:
         assert "atlas_graphql" in tool_names
         assert "docs_tool" in tool_names
         assert "query_tool" not in tool_names
+
+
+# ---------------------------------------------------------------------------
+# Tests: orphan tool call repair
+# ---------------------------------------------------------------------------
+
+
+class TestOrphanToolCallRepair:
+    """Verify that agent_node self-heals orphan tool_calls from cancelled requests."""
+
+    async def test_orphan_tool_call_repaired_before_llm_call(self):
+        """When messages contain an AIMessage with tool_calls but no matching
+        ToolMessages, agent_node should inject stubs so the LLM call succeeds."""
+        captured_messages = []
+        mock_bound = MagicMock()
+
+        async def _capture(messages):
+            captured_messages.extend(messages)
+            return AIMessage(content="recovered answer")
+
+        mock_bound.ainvoke = _capture
+        mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value = mock_bound
+
+        node = make_agent_node(
+            llm=mock_llm,
+            agent_mode=AgentMode.SQL_ONLY,
+            max_uses=3,
+            top_k_per_query=15,
+        )
+
+        # Simulate orphan: AIMessage has tool_calls but no ToolMessage follows
+        orphan_ai = AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "id": "call_ORPHAN_123",
+                    "name": "query_tool",
+                    "args": {"question": "test"},
+                }
+            ],
+        )
+        state = _base_state(
+            messages=[
+                HumanMessage(content="What did Brazil export?"),
+                orphan_ai,
+            ]
+        )
+
+        result = await node(state)
+
+        # The repaired stub should appear in messages sent to LLM
+        tool_msgs = [m for m in captured_messages if isinstance(m, ToolMessage)]
+        assert any(m.tool_call_id == "call_ORPHAN_123" for m in tool_msgs)
+
+        # The stub should also be in the returned state update so it persists
+        returned_msgs = result["messages"]
+        stubs = [m for m in returned_msgs if isinstance(m, ToolMessage)]
+        assert any(m.tool_call_id == "call_ORPHAN_123" for m in stubs)
+
+    async def test_no_repair_when_tool_calls_are_matched(self):
+        """When all tool_calls have matching ToolMessages, no stubs are added."""
+        captured_messages = []
+        mock_bound = MagicMock()
+
+        async def _capture(messages):
+            captured_messages.extend(messages)
+            return AIMessage(content="normal answer")
+
+        mock_bound.ainvoke = _capture
+        mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value = mock_bound
+
+        node = make_agent_node(
+            llm=mock_llm,
+            agent_mode=AgentMode.SQL_ONLY,
+            max_uses=3,
+            top_k_per_query=15,
+        )
+
+        matched_ai = AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "id": "call_MATCHED",
+                    "name": "query_tool",
+                    "args": {"question": "test"},
+                }
+            ],
+        )
+        matched_tool = ToolMessage(content="result data", tool_call_id="call_MATCHED")
+
+        state = _base_state(
+            messages=[
+                HumanMessage(content="What did Brazil export?"),
+                matched_ai,
+                matched_tool,
+            ]
+        )
+
+        result = await node(state)
+
+        # Only the LLM response should be returned — no stubs
+        returned_msgs = result["messages"]
+        assert len(returned_msgs) == 1
+        assert isinstance(returned_msgs[0], AIMessage)
+
+    async def test_multiple_orphan_tool_calls_all_repaired(self):
+        """When an AIMessage has multiple orphan tool_calls, all get stubs."""
+        captured_messages = []
+        mock_bound = MagicMock()
+
+        async def _capture(messages):
+            captured_messages.extend(messages)
+            return AIMessage(content="recovered")
+
+        mock_bound.ainvoke = _capture
+        mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value = mock_bound
+
+        node = make_agent_node(
+            llm=mock_llm,
+            agent_mode=AgentMode.SQL_ONLY,
+            max_uses=3,
+            top_k_per_query=15,
+        )
+
+        orphan_ai = AIMessage(
+            content="",
+            tool_calls=[
+                {"id": "call_A", "name": "query_tool", "args": {"question": "q1"}},
+                {
+                    "id": "call_B",
+                    "name": "atlas_graphql",
+                    "args": {"question": "q2"},
+                },
+            ],
+        )
+        state = _base_state(messages=[HumanMessage(content="test"), orphan_ai])
+
+        result = await node(state)
+
+        returned_stubs = [m for m in result["messages"] if isinstance(m, ToolMessage)]
+        stub_ids = {m.tool_call_id for m in returned_stubs}
+        assert stub_ids == {"call_A", "call_B"}

@@ -8,11 +8,12 @@ Provides:
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import Awaitable, Callable
 
 from langchain_core.language_models import BaseLanguageModel
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field
 
@@ -27,6 +28,8 @@ from src.prompts import (
 from src.sql_pipeline import _query_tool_schema
 from src.state import AtlasAgentState
 from src.token_usage import make_usage_record_from_msg, node_timer
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # atlas_graphql tool schema (schema-only; execution routes through graph nodes)
@@ -146,6 +149,32 @@ def make_agent_node(
 
     async def agent_node(state: AtlasAgentState) -> dict:
         async with node_timer("agent", "agent") as t:
+            # Repair orphan tool calls left by a prior cancelled/crashed request.
+            # OpenAI requires every tool_call to have a matching ToolMessage.
+            # If a previous stream was killed mid-pipeline, the AIMessage with
+            # tool_calls may be checkpointed without its ToolMessage responses.
+            messages = list(state["messages"])
+            orphan_stubs: list[ToolMessage] = []
+            pending_tool_ids: set[str] = set()
+            for msg in messages:
+                if isinstance(msg, AIMessage) and msg.tool_calls:
+                    for tc in msg.tool_calls:
+                        pending_tool_ids.add(tc["id"])
+                elif isinstance(msg, ToolMessage):
+                    pending_tool_ids.discard(msg.tool_call_id)
+            if pending_tool_ids:
+                logger.warning(
+                    "Repairing %d orphan tool_call(s) from prior cancelled request",
+                    len(pending_tool_ids),
+                )
+                for tc_id in pending_tool_ids:
+                    stub = ToolMessage(
+                        content="[Request was cancelled before this tool finished]",
+                        tool_call_id=tc_id,
+                    )
+                    orphan_stubs.append(stub)
+                    messages.append(stub)
+
             # Per-request override takes precedence over construction-time config
             state_mode = state.get("override_agent_mode")
             effective_config_mode = AgentMode(state_mode) if state_mode else agent_mode
@@ -202,13 +231,13 @@ def make_agent_node(
             model_with_tools = llm.bind_tools(tools)
             llm_start = time.monotonic()
             response = await model_with_tools.ainvoke(
-                [SystemMessage(content=prompt_text)] + state["messages"]
+                [SystemMessage(content=prompt_text)] + messages
             )
             t.mark_llm(llm_start, time.monotonic())
 
         usage_record = make_usage_record_from_msg("agent", "agent", response)
         return {
-            "messages": [response],
+            "messages": orphan_stubs + [response],
             "token_usage": [usage_record],
             "step_timing": [t.record],
         }

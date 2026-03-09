@@ -846,10 +846,11 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                         "stage", (stream_data.payload or {}).get("node", "?")
                     )
                     logger.info(
-                        "  SSE #%d  event=%-16s  stage=%s",
+                        "  SSE #%d  event=%-16s  stage=%s  thread=%s",
                         event_count,
                         stream_data.message_type,
                         stage,
+                        thread_id,
                     )
                     # New event types: emit payload directly (no wrapper)
                     yield {
@@ -1166,6 +1167,29 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
             total_rows,
             total_time_ms,
         )
+
+        # Log per-node timing breakdown for production diagnostics
+        if step_timing_data:
+            by_node = step_timing_data.get("by_node", {})
+            if by_node:
+                parts = []
+                for node_name, stats in sorted(
+                    by_node.items(),
+                    key=lambda kv: kv[1].get("wall_time_ms", 0),
+                    reverse=True,
+                ):
+                    wall = int(stats.get("wall_time_ms", 0))
+                    llm = int(stats.get("llm_time_ms", 0))
+                    count = int(stats.get("call_count", 1))
+                    if count > 1:
+                        parts.append(f"{node_name}={wall}ms(llm={llm}ms,x{count})")
+                    else:
+                        parts.append(f"{node_name}={wall}ms(llm={llm}ms)")
+                logger.info(
+                    "  TIMING  thread=%s  %s",
+                    thread_id,
+                    "  ".join(parts),
+                )
         done_payload = {
             "thread_id": thread_id,
             "total_queries": total_queries,
