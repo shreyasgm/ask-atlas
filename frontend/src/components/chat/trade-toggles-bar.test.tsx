@@ -30,9 +30,9 @@ function renderBar(
 describe('TradeTogglesBar', () => {
   it('renders mode and classification groups by default', () => {
     renderBar();
-    // 2 Auto buttons + Goods, Services, HS92, HS12, SITC = 7 buttons
+    // 2 Auto buttons + Goods, Services, HS92, HS12, HS22, SITC = 8 buttons
     const buttons = screen.getAllByRole('button');
-    expect(buttons).toHaveLength(7);
+    expect(buttons).toHaveLength(8);
   });
 
   it('Auto buttons are pressed by default when all overrides null', () => {

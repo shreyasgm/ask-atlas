@@ -7,9 +7,12 @@ Run with:
 """
 
 import uuid
+from collections.abc import AsyncGenerator
 
 import psycopg
 import pytest
+from psycopg.rows import dict_row
+from psycopg_pool import AsyncConnectionPool
 
 from src.conversations import PostgresConversationStore
 from src.persistence import CONVERSATIONS_DDL
@@ -42,8 +45,20 @@ def _ensure_table_and_clean(db_url: str):
 
 
 @pytest.fixture()
-def store(db_url: str) -> PostgresConversationStore:
-    return PostgresConversationStore(db_url)
+async def store(db_url: str) -> AsyncGenerator[PostgresConversationStore, None]:
+    """Create a real AsyncConnectionPool and pass it to the store."""
+    pool = AsyncConnectionPool(
+        db_url,
+        min_size=1,
+        max_size=2,
+        open=False,
+        kwargs={"autocommit": True, "row_factory": dict_row},
+    )
+    await pool.open()
+    try:
+        yield PostgresConversationStore(pool)
+    finally:
+        await pool.close()
 
 
 @pytest.mark.db

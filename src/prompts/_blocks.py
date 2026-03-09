@@ -12,7 +12,7 @@ Design rule: **zero imports from other ``src/`` modules**.
 # Update these when the SQL data refresh lands or GraphQL coverage changes.
 # =========================================================================
 
-SQL_DATA_MAX_YEAR: int = 2022
+SQL_DATA_MAX_YEAR: int = 2024
 """Latest year available in the SQL (postgres) trade-data tables."""
 
 GRAPHQL_DATA_MAX_YEAR: int = 2024

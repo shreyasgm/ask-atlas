@@ -73,17 +73,17 @@ class TestAsyncPersistenceIntegration:
             await manager.close()
 
     async def test_async_close_resets_state(self, checkpoint_db_url):
-        """With real Postgres, close() resets _checkpointer and _async_conn to None."""
+        """With real Postgres, close() resets _checkpointer and _pool to None."""
         manager = AsyncCheckpointerManager(db_url=checkpoint_db_url)
         try:
             await manager.get_checkpointer()
             assert manager._checkpointer is not None
-            assert manager._async_conn is not None
+            assert manager.pool is not None
         finally:
             await manager.close()
 
         assert manager._checkpointer is None
-        assert manager._async_conn is None
+        assert manager.pool is None
 
     async def test_async_checkpointer_also_creates_conversations(
         self, checkpoint_db_url

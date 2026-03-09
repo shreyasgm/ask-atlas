@@ -46,11 +46,9 @@ related_docs:
 |---|---|---|---|---|---|---|
 | **HS92** | Harmonized System 1992 | 1995–2024 | ~1,200 | Yes (default) | Yes (`HS92`) | Yes (as `HS`) |
 | **HS12** | Harmonized System 2012 | 2012–2024 | ~1,200 | Yes | Yes (`HS12`) | No |
-| **HS22** | Harmonized System 2022 | 2022–2024 | ~1,200 | **No — Explore API only** | Yes (`HS22`) | No |
+| **HS22** | Harmonized System 2022 | 2022–2024 | ~1,200 | Yes | Yes (`HS22`) | No |
 | **SITC** | Standard International Trade Classification Rev. 2 | 1962–2024 | ~700 | Yes | Yes (`SITC`) | Yes (as `SITC`) |
-| **Services** | IMF DOTS services trade | 1980–2024 | ~12–15 categories | Yes (`services_unilateral`, `services_bilateral` schemas) | Yes (`servicesClass: unilateral`) | Yes (bundled) |
-
-**Critical note on HS22:** HS22 data exists only in the Explore GraphQL API (`/api/graphql`). There is no `hs22` schema in the SQL database and no HS22 support in the Country Pages API. Any SQL query requesting HS22 data will fail. Redirect HS22 requests to the GraphQL pipeline.
+| **Services** | IMF DOTS services trade | 1980–2024 | ~12–15 categories | Yes (`services_unilateral`, `services_bilateral` schemas; **note:** `services_bilateral` tables are currently empty) | Yes (`servicesClass: unilateral`) | Yes (bundled) |
 
 **Critical note on 6-digit products:** 6-digit product granularity is supported in the Explore API (`productLevel: 6`) but complexity metrics (ECI, PCI, RCA, COG, distance) are not available at the 6-digit level in either API or SQL. The SQL test seed skips 6-digit tables entirely because they are extremely large.
 
@@ -119,14 +117,13 @@ The Atlas SQL database contains these top-level schemas:
 | Schema | Contents |
 |---|---|
 | `public` | `data_flags`, `year` (deflators) |
-| `classification` | `location_country`, `product_hs92`, `product_hs12`, `product_sitc`, `product_services_unilateral`, `product_services_bilateral`, `product_hs92_ps_clusters`, `product_hs92_ps_edges` |
+| `classification` | `location_country`, `product_hs92`, `product_hs12`, `product_hs22`, `product_sitc`, `product_services_unilateral`, `product_services_bilateral`, `product_hs92_ps_clusters`, `product_hs92_ps_edges` |
 | `hs92` | HS 1992 trade tables (country_product_year, country_country_product_year, etc.) at 1/2/4-digit levels |
 | `hs12` | HS 2012 trade tables at 1/2/4-digit levels |
+| `hs22` | HS 2022 trade tables at 1/2/4-digit levels |
 | `sitc` | SITC trade tables at 1/2/4-digit levels |
 | `services_unilateral` | Unilateral services trade |
 | `services_bilateral` | Bilateral services trade |
-
-**No `hs22` schema exists in the SQL database.**
 
 Table naming convention: `{schema}.{facet}_{digit_level}` — e.g., `hs92.country_product_year_4` = HS92, country × product × year, 4-digit level.
 
@@ -136,7 +133,7 @@ Table naming convention: `{schema}.{facet}_{digit_level}` — e.g., `hs92.countr
 |---|---|---|---|
 | HS92 trade (1995–2024) | Yes | Yes | Yes (generic `HS`) |
 | HS12 trade (2012–2024) | Yes | Yes | No |
-| HS22 trade (2022–2024) | **No** | Yes | No |
+| HS22 trade (2022–2024) | Yes | Yes | No |
 | SITC trade (1962–2024) | Yes | Yes | Yes |
 | Services trade (1980–2024) | Yes | Yes | Yes |
 | 6-digit product detail | Yes (large tables) | Yes | No |
@@ -180,9 +177,9 @@ All trade values are in **current USD** (nominal). Constant-dollar values use th
 | User Question | Answer |
 |---|---|
 | "Does Atlas have data from 1960?" | No. Earliest is SITC at 1962; HS92 starts 1995. |
-| "Can I get HS22 data from SQL?" | No. HS22 is Explore API (GraphQL) only. |
+| "Can I get HS22 data from SQL?" | Yes. The `hs22` SQL schema has data from 2022-2024. |
 | "Why is [small country] missing from rankings?" | Must meet population ≥ 1M and avg. trade ≥ $1B thresholds. Check `data_flags.in_rankings`. |
 | "Why does my Products mode total differ from Locations mode?" | Products mode includes services; Locations (bilateral) mode is goods only. |
 | "Is 2024 data available?" | Yes, for HS92/HS12/HS22/SITC in the Explore API. Annual release typically April–June 2026. |
 | "Can I get product complexity at 6-digit level?" | No. Complexity metrics stop at 4-digit. |
-| "Does Atlas cover services bilateral trade?" | Partially. `services_bilateral` schema exists in SQL. Explore API Locations mode does not include services. |
+| "Does Atlas cover services bilateral trade?" | The `services_bilateral` schema exists in SQL but is **currently empty** (zero rows, Dec 2025 refresh). Use `services_unilateral` for services trade queries, or the GraphQL API for bilateral services data. Explore API Locations mode does not include services. |

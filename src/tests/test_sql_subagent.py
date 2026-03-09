@@ -762,6 +762,7 @@ class TestExploreSchemaSync:
         for schema in [
             "hs92",
             "hs12",
+            "hs22",
             "sitc",
             "services_unilateral",
             "services_bilateral",

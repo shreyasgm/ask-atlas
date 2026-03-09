@@ -597,7 +597,7 @@ Both are plotted on the same vertical axis.
 
 ### HS22 Availability
 
-HS22 (`productClass: HS22`) is supported in the Explore GraphQL API but is **not available** in the SQL database or the Country Pages API. Restricts to 2022–2024 data only.
+HS22 (`productClass: HS22`) is supported in the Explore GraphQL API and the SQL database (`hs22` schema) but is **not available** in the Country Pages API. Restricts to 2022–2024 data only.
 
 ### Canvas vs. DOM Rendering
 

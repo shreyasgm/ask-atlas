@@ -56,7 +56,7 @@ The Atlas exposes **two independent GraphQL APIs** with different schemas, diffe
 
 ### Use Explore API when the question involves:
 - **Raw trade data** with full field set (22 fields on `CountryProductYear`, including `exportRca`, `distance`, `cog`, `normalizedPci`, etc.)
-- **HS22 data** (2022–2024 only; not available in Country Pages API or SQL)
+- **HS22 data** (2022–2024 only; not available in the Country Pages API)
 - **6-digit product detail** (`productLevel: 6`)
 - **Bilateral trade by product** (`countryCountryProductYear`, `countryCountryYear`)
 - **Product-to-product relatedness** (`productProduct` — edges for product space network)
@@ -159,7 +159,7 @@ All queries verified via introspection, February 2026.
 |----------------|------------|-------|
 | HS92 | 1995–2024 | Default; most commonly used |
 | HS12 | 2012–2024 | Updated product categories |
-| HS22 | 2022–2024 | Explore API only — not in SQL or Country Pages API |
+| HS22 | 2022–2024 | Also in SQL (`hs22` schema) — not in Country Pages API |
 | SITC | 1962–2024 | Longest history; use for pre-1995 analysis |
 
 ---
@@ -476,7 +476,6 @@ Use when asked about RCA, distance, complexity of specific products, or for cust
 ### Explore API only (not in Country Pages or SQL)
 
 - `productProduct` — product-to-product relatedness strengths (product space edges)
-- HS22 classification (`productHs22`, `productClass: HS22`)
 - 6-digit product level (`productLevel: 6`)
 - `conversionPath` / `conversionSources` / `conversionWeights` — cross-classification code conversion
 - `dataFlags` — detailed per-country eligibility and data quality booleans
@@ -484,6 +483,10 @@ Use when asked about RCA, distance, complexity of specific products, or for cust
 - `countryCountryProductYear` — bilateral trade broken down by product
 - Group/regional queries (`groupYear`, `groupGroupProductYear`, etc.)
 - `locationGroup` with full CAGR statistics
+
+### Explore API and SQL (not in Country Pages)
+
+- HS22 classification (`productHs22`, `productClass: HS22` in GraphQL; `hs22` schema in SQL)
 
 ### SQL DB only (not available via either API)
 
@@ -576,7 +579,7 @@ Any query that returns "all products" (~1,200 items) produces 40–350 KB respon
 - **Usage warning:** The Atlas API is "best used to access data for stand-alone economic analysis, not to support other software applications" (official docs). The Growth Lab reserves the right to restrict access for abusive usage.
 - **Rankings eligibility criteria:** Population ≥ 1,000,000 AND average 3-year exports ≥ $1,000,000,000, plus complexity and IMF data coverage. Check via `dataFlags` query.
 - **Country Pages API**: Not officially documented. Schema may change without warning. Verify with introspection if behavior is unexpected.
-- **HS22 caveat**: Only 2022–2024 data. Not available in the SQL database or the Country Pages API.
+- **HS22 caveat**: Only 2022–2024 data. Not available in the Country Pages API.
 - **Services exportValue caveat:** `countryYear.exportValue` returns the same total (goods + services combined) regardless of whether `productClass` or `servicesClass` is specified. The classification parameter has no effect on aggregate export values. Do NOT sum `countryYear(productClass: HS92).exportValue + countryYear(servicesClass: unilateral).exportValue` — this will double-count. To compute services share: use `countryProductYear` to get per-product export values, then identify services products by their non-numeric product codes (services categories like "Business", "Transport", "Travel & tourism"). Sum services product values and divide by the total.
 - **ECI classification caveat:** ECI values differ by product classification. The **entire Country Profiles frontend uses SITC ECI as its default** (`defaultECIProductClass = ProductClass.SITC` in the source code), not just the growth dynamics chart. The `countryProfile.latestEci` field returns HS12 ECI. Use `countryYear(eciProductClass: SITC)` on the Country Pages API to get the Country Profiles-displayed value. On the Explore API, pass `productClass: SITC` to `countryYear` for SITC ECI, or `productClass: HS92` for HS92 ECI. The Explore API defaults to HS92 when `productClass` is omitted.
 - **ECI computation method:** ECI/PCI are computed using the **eigenvalue method** via the `py-ecomplexity` package (branch `continuous_eci`). They are computed over a **reliable set of ~123 countries** (with hardcoded overrides), then extended to all ~207 countries using a continuous MCP sigmoid: `mcp = rca / (rca + 1)`. ECI for non-reliable countries: `ECI_c = Σ(mcp × PCI) / Σ(mcp) / √(λ₂)`, then z-score standardized.

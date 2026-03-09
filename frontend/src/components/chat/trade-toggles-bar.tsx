@@ -23,6 +23,7 @@ const SCHEMA_OPTIONS: Array<ToggleOption<ClassificationSchema>> = [
   { label: 'Auto', value: null },
   { label: 'HS92', value: 'hs92' },
   { label: 'HS12', value: 'hs12' },
+  { label: 'HS22', value: 'hs22' },
   { label: 'SITC', value: 'sitc' },
 ];
 

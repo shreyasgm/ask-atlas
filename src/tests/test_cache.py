@@ -41,8 +41,8 @@ class TestKeyNormalization:
 
     def test_table_info_schema_order_does_not_matter(self):
         """Pipeline may list schemas in any order."""
-        k1 = table_info_key(["hs92", "services_bilateral"])
-        k2 = table_info_key(["services_bilateral", "hs92"])
+        k1 = table_info_key(["hs92", "hs22"])
+        k2 = table_info_key(["hs22", "hs92"])
         assert k1 == k2
 
 

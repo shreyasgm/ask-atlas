@@ -32,6 +32,8 @@ related_docs:
   - trade_methodology.md
 ---
 
+**WARNING (Dec 2025 refresh):** The `services_bilateral` schema tables are currently empty (zero rows) in the SQL database. All services bilateral queries will return no data. Use `services_unilateral` for services trade queries, or the GraphQL API for bilateral services data.
+
 ## Two Services Schemas
 
 The Atlas stores services trade data in two separate PostgreSQL schemas.
@@ -43,7 +45,7 @@ The Atlas stores services trade data in two separate PostgreSQL schemas.
 
 **Which schema to use:**
 - For questions about one country's total or category-level service exports/imports → `services_unilateral`
-- For questions about services traded between two specific countries → `services_bilateral`
+- For questions about services traded between two specific countries → `services_bilateral` is **currently empty** (Dec 2025 refresh). Use the GraphQL API instead.
 - `services_bilateral` data is sparser than goods bilateral data; many country pairs have no records
 
 ---

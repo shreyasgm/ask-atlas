@@ -25,13 +25,13 @@ related_docs: [data_coverage.md]
 |---|---|---|---|---|
 | **HS92** | Harmonized System 1992 | 1995–2024 | ~1,200 | Yes — use when unspecified |
 | **HS12** | Harmonized System 2012 | 2012–2024 | ~1,200 | No |
-| **HS22** | Harmonized System 2022 | 2022–2024 | ~1,200 | No — **Explore API / GraphQL only** |
+| **HS22** | Harmonized System 2022 | 2022–2024 | ~1,200 | No |
 | **SITC** | Standard International Trade Classification Rev. 2 | 1962–2024 | ~780 | No — use for pre-1995 queries |
 
 **Key guidance:**
 - **HS92** — default for all goods queries; longest HS time series; most commonly studied.
 - **HS12** — use when the user explicitly requests HS 2012, or when analysis starts from 2012 onward and updated product categories matter.
-- **HS22** — available **only via the Explore API GraphQL endpoint** (`https://atlas.hks.harvard.edu/api/graphql`). It is **NOT in the SQL database** and cannot be queried via SQL. Do not attempt SQL queries against an `hs22` schema — it does not exist in the Atlas database.
+- **HS22** — available in both the SQL database (`hs22` schema, 2022-2024) and the Explore API GraphQL endpoint. For periods before 2022, use hs12 or hs92.
 - **SITC** — use when the user needs pre-1995 data (goes back to 1962); covers ~780 products at 4-digit level; based on SITC Revision 2. Does not capture products introduced after 1962 (e.g., smartphones).
 
 **When classification is ambiguous:** If the user does not specify, use HS92.
@@ -44,11 +44,9 @@ related_docs: [data_coverage.md]
 |---|---|---|---|---|
 | HS92 | `hs92.*` | `HS92` | `HS` | 1995–2024 |
 | HS12 | `hs12.*` | `HS12` | Not supported | 2012–2024 |
-| HS22 | **None — no SQL schema** | `HS22` | Not supported | 2022–2024 |
+| HS22 | `hs22.*` | `HS22` | Not supported | 2022–2024 |
 | SITC | `sitc.*` | `SITC` | `SITC` | 1962–2024 |
 | Services | `services_unilateral.*`, `services_bilateral.*` | `servicesClass: unilateral` | Bundled | 1980–2024 |
-
-**Note:** HS22 does not exist in the PostgreSQL database. Any SQL query for HS22 will fail. Route HS22 requests to the Explore API GraphQL pipeline.
 
 ---
 
@@ -100,11 +98,10 @@ The Atlas SQL database uses PostgreSQL schemas to separate classifications. The 
 |---|---|
 | `hs92` | Harmonized System 1992 |
 | `hs12` | Harmonized System 2012 |
+| `hs22` | Harmonized System 2022 |
 | `sitc` | Standard International Trade Classification Rev. 2 |
 | `services_unilateral` | Services trade, unilateral (exporter-product-year) |
 | `services_bilateral` | Services trade, bilateral (exporter-importer-product-year) |
-
-**No `hs22` schema exists in the SQL database.** HS22 is Explore API / GraphQL only.
 
 ### Table Naming Pattern
 
@@ -138,7 +135,7 @@ Examples:
 | `classification.location_country` | Country reference (ISO codes, income level, rankings eligibility) |
 | `classification.location_group` | Country group reference (continents, regions, trade blocs, etc.) |
 
-The `classification` schema does not contain a `product_hs22` table. HS22 catalog lookup must use the `productHs22` GraphQL query.
+The `classification` schema also includes `product_hs22` for HS22 product catalog lookup.
 
 ### Typical SQL JOIN Pattern
 
@@ -349,7 +346,7 @@ The `conversionWeights` type includes 19 fields covering the chain: `sitc1962 �
 |---|---|---|---|
 | HS92 | Yes, 1995–2024 | Yes, 1995–2024 | Yes (`productClass: HS`) |
 | HS12 | Yes, 2012–2024 | Yes, 2012–2024 | No |
-| HS22 | **No** | Yes, 2022–2024 | No |
+| HS22 | Yes, 2022–2024 | Yes, 2022–2024 | No |
 | SITC | Yes, 1962–2024 | Yes, 1962–2024 | Yes (`productClass: SITC`) |
 | Services unilateral | Yes, 1980–2024 | Yes (via `servicesClass`) | Yes |
 | Services bilateral | Yes, 1980–2024 | Yes (via `servicesClass`) | Limited |

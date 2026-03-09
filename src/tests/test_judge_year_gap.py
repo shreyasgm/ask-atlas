@@ -148,28 +148,31 @@ class TestYearGapCaveatApplication:
         ):
             return await judge_answer(**kwargs)
 
-    # -- Ground truth path: caveat applied --
+    # -- Ground truth path: caveat NOT applied when no year gap --
+    # SQL and GraphQL both cover through 2024, so the year gap caveat
+    # is dormant (condition: _SQL_DATA_MAX_YEAR < _GRAPHQL_DATA_MAX_YEAR).
 
     @pytest.mark.asyncio
-    async def test_caveat_applied_when_query_tool_used(self):
+    async def test_caveat_not_applied_when_no_year_gap_query_tool(self):
+        """No caveat when SQL and GraphQL cover the same max year."""
         result = await self._call_judge(
             question="test",
             agent_answer="answer",
             ground_truth_data=[{"col": "val"}],
             tools_used=["query_tool"],
         )
-        assert result.get("year_gap_caveat_applied") is True
+        assert "year_gap_caveat_applied" not in result
 
     @pytest.mark.asyncio
-    async def test_caveat_applied_when_both_tools_used(self):
-        """Caveat triggers if query_tool appears anywhere in the list."""
+    async def test_caveat_not_applied_when_no_year_gap_both_tools(self):
+        """No caveat when SQL and GraphQL cover the same max year."""
         result = await self._call_judge(
             question="test",
             agent_answer="answer",
             ground_truth_data=[{"col": "val"}],
             tools_used=["atlas_graphql", "query_tool"],
         )
-        assert result.get("year_gap_caveat_applied") is True
+        assert "year_gap_caveat_applied" not in result
 
     # -- Ground truth path: caveat NOT applied --
 

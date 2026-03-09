@@ -100,7 +100,7 @@ export interface QueryAggregateStats {
   totalTimeMs: number;
 }
 
-export type ClassificationSchema = 'hs12' | 'hs92' | 'sitc';
+export type ClassificationSchema = 'hs12' | 'hs22' | 'hs92' | 'sitc';
 export type TradeDirection = 'exports' | 'imports';
 export type TradeMode = 'goods' | 'services';
 

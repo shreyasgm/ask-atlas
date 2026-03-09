@@ -572,9 +572,9 @@ def wire_catalog_fetchers(explore_client: AtlasGraphQLClient) -> None:
 SCHEMA_TO_PRODUCTS_TABLE_MAP: dict[str, str] = {
     "hs92": "classification.product_hs92",
     "hs12": "classification.product_hs12",
+    "hs22": "classification.product_hs22",
     "sitc": "classification.product_sitc",
     "services_unilateral": "classification.product_services_unilateral",
-    "services_bilateral": "classification.product_services_bilateral",
 }
 
 

@@ -15,9 +15,9 @@ export interface DataCoverageCard {
 
 export const QUICK_START_TILES: Array<QuickStartTile> = [
   {
-    description: "What were Brazil's top 5 exports in 2022?",
+    description: "What were Brazil's top 5 exports in 2024?",
     icon: TrendingUp,
-    query: "What were Brazil's top 5 exports in 2022?",
+    query: "What were Brazil's top 5 exports in 2024?",
     title: 'Top Exports',
   },
   {
@@ -60,6 +60,10 @@ export const DATA_COVERAGE_CARDS: Array<DataCoverageCard> = [
   {
     description: 'Harmonized System 2012',
     title: 'HS 2012',
+  },
+  {
+    description: 'Harmonized System 2022',
+    title: 'HS 2022',
   },
   {
     description: 'Standard International Trade Classification',

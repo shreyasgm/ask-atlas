@@ -37,10 +37,10 @@ SAMPLE_COUNTRIES = [
     "GBR",
     "NGA",  # Nigeria — needed for eval question 2 (crude oil exports)
 ]
-YEAR_MIN, YEAR_MAX = 2019, 2021
+YEAR_MIN, YEAR_MAX = 2019, 2024
 
 FULL_COPY_SCHEMAS = ["public", "classification"]
-TRADE_SCHEMAS = ["hs92", "hs12", "sitc", "services_unilateral", "services_bilateral"]
+TRADE_SCHEMAS = ["hs92", "hs12", "hs22", "sitc", "services_unilateral"]
 ALL_SCHEMAS = FULL_COPY_SCHEMAS + TRADE_SCHEMAS
 
 # Only extract bilateral 4-digit data for these schemas (keeps file size down)

@@ -493,7 +493,7 @@ def _explore_schema_sync(query: str, db: SQLDatabaseWithSchemas, engine: Engine)
         schema_name = _extract_schema_name(query)
         if schema_name:
             return _list_tables_in_schema(schema_name, engine)
-        return "Could not determine which schema. Available: hs92, hs12, sitc, services_unilateral, services_bilateral, classification."
+        return "Could not determine which schema. Available: hs92, hs12, hs22, sitc, services_unilateral, services_bilateral, classification."
 
     if "columns" in query or "show columns" in query or "ddl" in query:
         table_name = _extract_table_name(query)
@@ -513,7 +513,7 @@ def _explore_schema_sync(query: str, db: SQLDatabaseWithSchemas, engine: Engine)
             return f"Error: {e}"
 
     return (
-        "Available schemas: hs92, hs12, sitc, services_unilateral, services_bilateral, classification.\n"
+        "Available schemas: hs92, hs12, hs22, sitc, services_unilateral, services_bilateral, classification.\n"
         "Try: 'List tables in hs92', 'Show columns in hs92.country_year', "
         "'Show 5 sample rows from hs92.country_product_year_4'"
     )
@@ -525,7 +525,7 @@ def _extract_table_name(query: str) -> str | None:
 
     # Match patterns like "schema.table_name"
     match = re.search(
-        r"\b(hs92|hs12|sitc|services_unilateral|services_bilateral|classification)\."
+        r"\b(hs92|hs12|hs22|sitc|services_unilateral|services_bilateral|classification)\."
         r"([a-z_0-9]+)\b",
         query,
     )
@@ -539,6 +539,7 @@ def _extract_schema_name(query: str) -> str | None:
     schemas = [
         "hs92",
         "hs12",
+        "hs22",
         "sitc",
         "services_unilateral",
         "services_bilateral",
@@ -556,9 +557,10 @@ def _list_schemas(engine: Engine) -> str:
         "Available schemas:\n"
         "- hs92: Goods (HS 1992 classification), data from 1995\n"
         "- hs12: Goods (HS 2012 classification), data from 2012\n"
+        "- hs22: Goods (HS 2022 classification), data from 2022\n"
         "- sitc: Goods (SITC classification), data from 1962\n"
         "- services_unilateral: Services (single country), data from 1980\n"
-        "- services_bilateral: Services (bilateral), data from 1980\n"
+        "- services_bilateral: Services (bilateral) — CURRENTLY EMPTY (no data)\n"
         "- classification: Lookup tables (countries, products, groups)"
     )
 

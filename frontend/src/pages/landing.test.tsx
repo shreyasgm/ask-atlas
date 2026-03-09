@@ -139,7 +139,7 @@ describe('Data Coverage Section', () => {
     expect(screen.getByText('TRADE CLASSIFICATIONS')).toBeInTheDocument();
   });
 
-  it('renders all 4 data coverage card titles', () => {
+  it('renders all 5 data coverage card titles', () => {
     renderLanding();
     for (const card of DATA_COVERAGE_CARDS) {
       expect(screen.getByText(card.title)).toBeInTheDocument();

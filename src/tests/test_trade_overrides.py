@@ -166,7 +166,7 @@ class TestExtractProductsNodeOverrides:
         """When mode=goods, services schemas should be removed from the
         LLM result while goods schemas are preserved."""
         canned = SchemasAndProductsFound(
-            classification_schemas=["hs92", "services_bilateral"],
+            classification_schemas=["hs92", "services_unilateral"],
             products=[],
             requires_product_lookup=False,
         )
@@ -181,13 +181,13 @@ class TestExtractProductsNodeOverrides:
 
         schemas = result["pipeline_products"].classification_schemas
         assert schemas == ["hs92"]
-        assert "services_bilateral" not in schemas
+        assert "services_unilateral" not in schemas
 
     async def test_mode_goods_defaults_to_hs92_when_only_services_detected(self):
         """Edge case: LLM only detected services schemas but user wants goods.
         Should fall back to hs92 rather than leaving schemas empty."""
         canned = SchemasAndProductsFound(
-            classification_schemas=["services_unilateral", "services_bilateral"],
+            classification_schemas=["services_unilateral"],
             products=[],
             requires_product_lookup=False,
         )
@@ -204,7 +204,7 @@ class TestExtractProductsNodeOverrides:
         """When mode=services, goods schemas (hs92/hs12/sitc) should be
         removed and only services_ schemas preserved."""
         canned = SchemasAndProductsFound(
-            classification_schemas=["hs92", "services_bilateral"],
+            classification_schemas=["hs92", "services_unilateral"],
             products=[],
             requires_product_lookup=False,
         )
@@ -218,7 +218,7 @@ class TestExtractProductsNodeOverrides:
             )
 
         schemas = result["pipeline_products"].classification_schemas
-        assert schemas == ["services_bilateral"]
+        assert schemas == ["services_unilateral"]
         assert "hs92" not in schemas
 
     async def test_mode_services_defaults_when_no_services_detected(self):
@@ -266,7 +266,7 @@ class TestExtractProductsNodeOverrides:
     async def test_no_overrides_preserves_llm_output(self):
         """Without overrides, the LLM's detection result passes through unchanged."""
         canned = SchemasAndProductsFound(
-            classification_schemas=["hs92", "services_bilateral"],
+            classification_schemas=["hs92", "services_unilateral"],
             products=[
                 ProductDetails(
                     name="coffee", classification_schema="hs92", codes=["0901"]
@@ -282,7 +282,7 @@ class TestExtractProductsNodeOverrides:
             )
 
         products = result["pipeline_products"]
-        assert products.classification_schemas == ["hs92", "services_bilateral"]
+        assert products.classification_schemas == ["hs92", "services_unilateral"]
         assert products.products[0].classification_schema == "hs92"
         assert products.products[0].name == "coffee"
 

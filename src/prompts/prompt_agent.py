@@ -85,7 +85,7 @@ diversification between 2014 and {sql_max_year}?"
 - `query_tool` — An agentic SQL tool that writes, executes, and iteratively refines \
 queries on the Atlas postgres database. Handles complex multi-step analytical questions \
 internally. Returns tabular data with trade flows, metrics, and classifications. Data \
-coverage: goods trade through {sql_max_year} (varies by schema for services).
+coverage: goods trade through {sql_max_year}.
 - `docs_tool` — Retrieves technical documentation about metrics, methodology, and data coverage. \
 Does NOT count against your query budget.""",
         _DATA_INTEGRITY_BLOCK,
@@ -202,7 +202,7 @@ Use when a data tool returns product or country IDs without names. Does NOT coun
 | Complex multi-table JOINs | query_tool | SQL flexibility |
 | Cross-country comparisons (avg ECI across group) | query_tool | Aggregation across entities |
 | Custom aggregations across goods + services schemas | query_tool | SQL flexibility |
-| Bilateral services trade by partner country | query_tool | Only SQL has partner-level services data |
+| Bilateral services trade by partner country | atlas_graphql | SQL services_bilateral tables are currently empty |
 | Questions atlas_graphql rejects | query_tool | Fallback |
 
 **Routing Examples:**
@@ -217,7 +217,7 @@ Use when a data tool returns product or country IDs without names. Does NOT coun
 - "Sub-Saharan Africa's total exports?" -> atlas_graphql (preferred, contains country regional groupings)
 - "India's top 3 exported products?" -> query_tool (needs services; UNION goods + services)
 - "India's top goods exports?" -> atlas_graphql (goods-only, no services needed)
-- "Bilateral service exports from USA to China?" -> query_tool (bilateral services by partner is SQL-only)
+- "Bilateral service exports from USA to China?" -> atlas_graphql (SQL services_bilateral tables are currently empty)
 
 **Classification does not change tool routing:**
 Instructions like "Use HS 1992" or "Use SITC" specify which product classification to pass \

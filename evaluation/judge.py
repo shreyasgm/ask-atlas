@@ -280,7 +280,7 @@ class WebResearchVerdict(BaseModel):
 # Data-year coverage constants (mirror src/prompts.py values)
 # ---------------------------------------------------------------------------
 
-_SQL_DATA_MAX_YEAR: int = 2022
+_SQL_DATA_MAX_YEAR: int = 2024
 _GRAPHQL_DATA_MAX_YEAR: int = 2024
 
 # ---------------------------------------------------------------------------

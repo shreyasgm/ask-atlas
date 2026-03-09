@@ -25,7 +25,7 @@ Notes on these tables:
 - For most queries, apply LIMIT {top_k} unless the user specifies a different number.
 - For enumeration queries (e.g. "list all", "which countries belong to", "how many", "members of") — do NOT apply LIMIT. Return all matching rows.
 - If a time period is not specified, assume the latest available year in the database ({sql_max_year} for goods, usually {sql_max_year} for services).
-- Schema year coverage: hs12 data starts from 2012, hs92 from 1995, sitc from 1962, services_unilateral from 1980, services_bilateral from 1980. Use the appropriate schema for the time range requested.
+- Schema year coverage: hs12 data starts from 2012, hs92 from 1995, hs22 from 2022, sitc from 1962, services_unilateral from 1980. Use the appropriate schema for the time range requested. services_bilateral tables exist but are currently empty — do not query them.
 - Never use the `location_level` or `partner_level` columns.
 - `product_id` and `country_id` are internal IDs for joins only. In WHERE clauses, always filter on `product_code` and `iso3_code` respectively — never on `product_id` or `country_id`.
 
@@ -74,7 +74,7 @@ Query planning:
 **Common Mistakes to Avoid:**
 - Never filter on `product_id` in a WHERE clause — always use `product_code`.
 - Never filter on `country_id` in a WHERE clause — always use `iso3_code`.
-- Services tables (`services_unilateral`, `services_bilateral`) have different schemas than goods tables (`hs12`, `hs92`, `sitc`). Combine via UNION ALL, never JOIN.
+- Services tables (`services_unilateral`) have different schemas than goods tables (`hs12`, `hs92`, `hs22`, `sitc`). Combine via UNION ALL, never JOIN. Note: `services_bilateral` tables exist but are currently empty — do not query them.
 - "Total exports" without qualification requires BOTH goods and services tables.
 
 Based on your analysis, generate a SQL query that answers the user's question. Just return the SQL query, nothing else.
@@ -142,11 +142,11 @@ Analyze the user's question to determine which database schemas are needed and w
 Available schemas:
 - hs92: Goods, HS 1992 classification
 - hs12: Goods, HS 2012 classification
+- hs22: Goods, HS 2022 classification (2022-2024 only)
 - sitc: Goods, SITC classification
 - services_unilateral: Services, exporter-product-year data (single country)
-- services_bilateral: Services, exporter-importer-product-year data (two countries)
 
-**Important:** HS 2022 (HS22) is NOT available. Default to hs12 if "latest HS classification" is requested.
+**Important:** HS22 has data from 2022-2024 only. For earlier periods, use hs12 or hs92. services_bilateral tables exist but are currently empty — do not route queries there.
 
 **Schema selection decision tree:**
 1. Explicitly says "goods" or names a goods product (e.g., "cars", "coffee")? → Goods schema only (default: hs12). Do NOT include services.
@@ -204,21 +204,21 @@ Reason: Products mentioned without codes — need lookup. Default to hs12.
 
 Question: "What services did India export to the US in 2021?"
 Response: {{
-    "classification_schemas": ["services_bilateral"],
+    "classification_schemas": ["services_unilateral"],
     "products": [],
     "requires_product_lookup": false,
     "countries": [{{"name": "India", "iso3_code": "IND"}}, {{"name": "United States", "iso3_code": "USA"}}]
 }}
-Reason: Services trade between two countries → services_bilateral.
+Reason: Services trade query → services_unilateral (services_bilateral tables are currently empty).
 
 Question: "Show me trade in both goods and services between US and China in HS 2012."
 Response: {{
-    "classification_schemas": ["hs12", "services_bilateral"],
+    "classification_schemas": ["hs12", "services_unilateral"],
     "products": [],
     "requires_product_lookup": false,
     "countries": [{{"name": "United States", "iso3_code": "USA"}}, {{"name": "China", "iso3_code": "CHN"}}]
 }}
-Reason: Both classifications mentioned, two countries → hs12 + services_bilateral.
+Reason: Both classifications mentioned, two countries → hs12 + services_unilateral (services_bilateral is currently empty).
 
 Question: "Which country is the world's biggest exporter of fruits and vegetables?"
 Response: {{
@@ -386,13 +386,13 @@ WITH yearly AS (
   JOIN classification.location_group_member lgm ON cy.country_id = lgm.country_id
   WHERE lgm.group_name = 'Sub-Saharan Africa'
     AND lgm.group_type = 'wdi_region'
-    AND cy.year IN (2017, 2022)
+    AND cy.year IN (2019, 2024)
   GROUP BY cy.year
 )
 SELECT
   (POWER(
-    MAX(CASE WHEN year = 2022 THEN total_exports END)
-    / NULLIF(MAX(CASE WHEN year = 2017 THEN total_exports END), 0),
+    MAX(CASE WHEN year = 2024 THEN total_exports END)
+    / NULLIF(MAX(CASE WHEN year = 2019 THEN total_exports END), 0),
     1.0 / 5
   ) - 1) * 100 AS cagr_pct
 FROM yearly;
@@ -442,13 +442,13 @@ and why, especially after errors.
   - CAGR: POWER(end_value / NULLIF(start_value, 0), 1.0 / n_years) - 1) * 100. Default 5-year window. Do NOT use lookback tables (they are empty).
 
 ### Services vs Goods
-- Services schemas: `services_unilateral`, `services_bilateral`. Goods schemas: `hs92`, `hs12`, `sitc`.
+- Services schema: `services_unilateral`. Goods schemas: `hs92`, `hs12`, `hs22`, `sitc`. Note: `services_bilateral` tables exist but are currently empty — do not query them.
 - Combine goods + services via UNION ALL, never JOIN.
 - Services product levels: `_1` has only aggregate row (`product_code='services'`). `_2`, `_4`, `_6` all contain the same 5 categories — always use `_2` for disaggregated service queries.
 - "Total exports" without qualification requires BOTH goods and services tables.
 
 ### Schema Year Coverage
-- hs12 data starts from 2012, hs92 from 1995, sitc from 1962, services from 1980.
+- hs12 data starts from 2012, hs92 from 1995, hs22 from 2022, sitc from 1962, services from 1980.
 - If a time period is not specified, assume the latest available year ({sql_max_year}).
 
 ### LIMIT Rules

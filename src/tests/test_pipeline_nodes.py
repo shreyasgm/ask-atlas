@@ -260,7 +260,7 @@ class TestExtractProductsNode:
 
     async def test_multiple_schemas(self):
         canned = SchemasAndProductsFound(
-            classification_schemas=["hs92", "services_bilateral"],
+            classification_schemas=["hs92", "services_unilateral"],
             products=[],
             requires_product_lookup=False,
         )
@@ -284,7 +284,7 @@ class TestExtractProductsNode:
 
         assert result["pipeline_products"].classification_schemas == [
             "hs92",
-            "services_bilateral",
+            "services_unilateral",
         ]
 
     async def test_context_passed_to_extraction(self):
@@ -569,7 +569,7 @@ class TestGetTableInfoNode:
 
     async def test_multiple_schemas(self):
         products_found = SchemasAndProductsFound(
-            classification_schemas=["hs92", "services_bilateral"],
+            classification_schemas=["hs92", "services_unilateral"],
             products=[],
             requires_product_lookup=False,
         )
@@ -587,7 +587,7 @@ class TestGetTableInfoNode:
         mock_get.assert_called_once_with(
             db=mock_db,
             table_descriptions=mock_table_desc,
-            classification_schemas=["hs92", "services_bilateral"],
+            classification_schemas=["hs92", "services_unilateral"],
             requires_group_tables=False,
         )
         assert result["pipeline_table_info"] == "table info for both schemas"

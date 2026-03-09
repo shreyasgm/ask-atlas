@@ -152,75 +152,75 @@
     "services_bilateral": [
         {
             "table_name": "country_product_year_4",
-            "context_str": "Country-level trade data in the exporter-product-year format at the 4-digit Services product level."
+            "context_str": "NOTE: Currently empty (no data available). Country-level trade data in the exporter-product-year format at the 4-digit Services product level."
         },
         {
             "table_name": "country_product_year_6",
-            "context_str": "Country-level trade data in the exporter-product-year format at the 6-digit Services product level."
+            "context_str": "NOTE: Currently empty (no data available). Country-level trade data in the exporter-product-year format at the 6-digit Services product level."
         },
         {
             "table_name": "country_year",
-            "context_str": "Country-level trade data including export/import values, classified by Services."
+            "context_str": "NOTE: Currently empty (no data available). Country-level trade data including export/import values, classified by Services."
         },
         {
             "table_name": "product_year_1",
-            "context_str": "Services product-level trade data in the product-year format at the 1-digit level."
+            "context_str": "NOTE: Currently empty (no data available). Services product-level trade data in the product-year format at the 1-digit level."
         },
         {
             "table_name": "product_year_2",
-            "context_str": "Services product-level trade data in the product-year format at the 2-digit level."
+            "context_str": "NOTE: Currently empty (no data available). Services product-level trade data in the product-year format at the 2-digit level."
         },
         {
             "table_name": "product_year_4",
-            "context_str": "Services product-level trade data in the product-year format at the 4-digit level."
+            "context_str": "NOTE: Currently empty (no data available). Services product-level trade data in the product-year format at the 4-digit level."
         },
         {
             "table_name": "product_year_6",
-            "context_str": "Services product-level trade data in the product-year format at the 6-digit level."
+            "context_str": "NOTE: Currently empty (no data available). Services product-level trade data in the product-year format at the 6-digit level."
         },
         {
             "table_name": "country_country_year",
-            "context_str": "Country to country relatedness metrics from the country space"
+            "context_str": "NOTE: Currently empty (no data available). Country to country relatedness metrics from the country space"
         },
         {
             "table_name": "country_product_year_1",
-            "context_str": "Country-level trade data in the exporter-product-year format at the 1-digit Services product level."
+            "context_str": "NOTE: Currently empty (no data available). Country-level trade data in the exporter-product-year format at the 1-digit Services product level."
         },
         {
             "table_name": "country_product_year_2",
-            "context_str": "Country-level trade data in the exporter-product-year format at the 2-digit Services product level."
+            "context_str": "NOTE: Currently empty (no data available). Country-level trade data in the exporter-product-year format at the 2-digit Services product level."
         },
         {
             "table_name": "group_group_product_year_1",
-            "context_str": "Trade data between groups of countries in the exporter-importer-product-year format at the Services 1-digit product level."
+            "context_str": "NOTE: Currently empty (no data available). Trade data between groups of countries in the exporter-importer-product-year format at the Services 1-digit product level."
         },
         {
             "table_name": "group_group_product_year_2",
-            "context_str": "Trade data between groups of countries in the exporter-importer-product-year format at the Services 2-digit product level."
+            "context_str": "NOTE: Currently empty (no data available). Trade data between groups of countries in the exporter-importer-product-year format at the Services 2-digit product level."
         },
         {
             "table_name": "country_country_product_year_6",
-            "context_str": "Exporter to importer bilateral trade data by product and year (Services, 6-digit level)."
+            "context_str": "NOTE: Currently empty (no data available). Exporter to importer bilateral trade data by product and year (Services, 6-digit level)."
         },
         {
             "table_name": "group_group_product_year_4",
-            "context_str": "Trade data between groups of countries in the exporter-importer-product-year format at the Services 4-digit product level."
+            "context_str": "NOTE: Currently empty (no data available). Trade data between groups of countries in the exporter-importer-product-year format at the Services 4-digit product level."
         },
         {
             "table_name": "group_group_product_year_6",
-            "context_str": "Trade data between groups of countries in the exporter-importer-product-year format at the Services 6-digit product level."
+            "context_str": "NOTE: Currently empty (no data available). Trade data between groups of countries in the exporter-importer-product-year format at the Services 6-digit product level."
         },
         {
             "table_name": "country_country_product_year_1",
-            "context_str": "Exporter to importer bilateral trade data by product and year (Services, 1-digit level)."
+            "context_str": "NOTE: Currently empty (no data available). Exporter to importer bilateral trade data by product and year (Services, 1-digit level)."
         },
         {
             "table_name": "country_country_product_year_2",
-            "context_str": "Exporter to importer bilateral trade data by product and year (Services, 2-digit level)."
+            "context_str": "NOTE: Currently empty (no data available). Exporter to importer bilateral trade data by product and year (Services, 2-digit level)."
         },
         {
             "table_name": "country_country_product_year_4",
-            "context_str": "Exporter to importer bilateral trade data by product and year (Services, 4-digit level)."
+            "context_str": "NOTE: Currently empty (no data available). Exporter to importer bilateral trade data by product and year (Services, 4-digit level)."
         }
     ],
     "hs92": [
@@ -439,6 +439,92 @@
         {
             "table_name": "product_services_bilateral",
             "context_str": "Classification of products in bilateral service trade. Includes services-type product codes, names, and descriptions. Use this for bilateral (country to country level) service trade data."
+        },
+        {
+            "table_name": "product_hs22",
+            "context_str": "HS 2022 product classification data with hierarchical relationships. Includes product codes, names, and descriptions."
+        }
+    ],
+    "hs22": [
+        {
+            "table_name": "country_country_year",
+            "context_str": "Country to country relatedness metrics from the country space"
+        },
+        {
+            "table_name": "product_product_4",
+            "context_str": "Product to product relatedness (product proximity) metrics from the product space"
+        },
+        {
+            "table_name": "country_year",
+            "context_str": "Country-level trade data including export/import values, classified by HS 2022."
+        },
+        {
+            "table_name": "country_country_product_year_4",
+            "context_str": "Country to country bilateral trade data by country and product (HS 2022, 4-digit level)."
+        },
+        {
+            "table_name": "country_country_product_year_6",
+            "context_str": "Exporter to importer bilateral trade data by product and year (HS 2022, 6-digit level)."
+        },
+        {
+            "table_name": "country_product_year_1",
+            "context_str": "Country-level trade data in the exporter-product-year format at the 1-digit HS 2022 product level."
+        },
+        {
+            "table_name": "country_product_year_2",
+            "context_str": "Country-level trade data in the exporter-product-year format at the 2-digit HS 2022 product level."
+        },
+        {
+            "table_name": "country_product_year_4",
+            "context_str": "Country-level trade data in the exporter-product-year format at the 4-digit HS 2022 product level."
+        },
+        {
+            "table_name": "country_product_year_6",
+            "context_str": "Country-level trade data in the exporter-product-year format at the 6-digit HS 2022 product level."
+        },
+        {
+            "table_name": "group_group_product_year_4",
+            "context_str": "Trade data between groups of countries in the exporter-importer-product-year format at the HS 2022 4-digit product level."
+        },
+        {
+            "table_name": "group_group_product_year_6",
+            "context_str": "Trade data between groups of countries in the exporter-importer-product-year format at the HS 2022 6-digit product level."
+        },
+        {
+            "table_name": "country_country_product_year_1",
+            "context_str": "Exporter to importer bilateral trade data by product and year (HS 2022, 1-digit level)."
+        },
+        {
+            "table_name": "country_country_product_year_2",
+            "context_str": "Exporter to importer bilateral trade data by product and year (HS 2022, 2-digit level)."
+        },
+        {
+            "table_name": "country_year_thresholds",
+            "context_str": "Ignore this table."
+        },
+        {
+            "table_name": "group_group_product_year_1",
+            "context_str": "Trade data between groups of countries in the exporter-importer-product-year format at the HS 2022 1-digit product level."
+        },
+        {
+            "table_name": "group_group_product_year_2",
+            "context_str": "Trade data between groups of countries in the exporter-importer-product-year format at the HS 2022 2-digit product level."
+        },
+        {
+            "table_name": "product_year_1",
+            "context_str": "HS 2022 product-level trade data in the product-year format at the 1-digit level."
+        },
+        {
+            "table_name": "product_year_2",
+            "context_str": "HS 2022 product-level trade data in the product-year format at the 2-digit level."
+        },
+        {
+            "table_name": "product_year_4",
+            "context_str": "HS 2022 product-level trade data in the product-year format at the 4-digit level."
+        },
+        {
+            "table_name": "product_year_6",
+            "context_str": "HS 2022 product-level trade data in the product-year format at the 6-digit level."
         }
     ]
 }

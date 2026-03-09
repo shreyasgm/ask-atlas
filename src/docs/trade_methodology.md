@@ -213,7 +213,7 @@ subject to:  β_{k,s} ≥ 0  for all k, s
 |---|---|---|---|
 | **HS92** (Harmonized System 1992) | 1995–2024 | 1-, 2-, 4-, 6-digit | Default for Atlas Country Pages and most SQL queries |
 | **HS12** (Harmonized System 2012) | 2012–2024 | 1-, 2-, 4-, 6-digit | Captures newer product categories |
-| **HS22** (Harmonized System 2022) | 2022–2024 | 1-, 2-, 4-, 6-digit | Available via GraphQL Explore API only; not in SQL DB or Country Pages API |
+| **HS22** (Harmonized System 2022) | 2022–2024 | 1-, 2-, 4-, 6-digit | Available in SQL (`hs22` schema) and GraphQL Explore API; not in Country Pages API |
 | **SITC Rev. 2** | 1962–2024 | 1-, 2-, 4-digit | Longest historical series; ~700 products at 4-digit level; use for pre-1995 analysis |
 | **Services** | 1980–2024 | ~12–15 categories | IMF DOTS source; separate from goods classifications |
 
@@ -275,7 +275,7 @@ The Atlas compares its recovered trade values against IMF Balance of Payments (B
 | Services data granularity | Services trade (~12–15 categories) is far less granular than goods trade (~5,000 six-digit HS codes). |
 | Bilateral services limits | Bilateral services data is more limited than bilateral goods data. Services are excluded from Explore page "Locations" mode totals (only bilateral goods data is available there). |
 | Re-export hubs | Singapore, Hong Kong, Netherlands, and similar re-export hubs may have inflated apparent export complexity if re-exports are not fully netted. |
-| HS22 scope | HS22 data (2022–2024) is available only through the GraphQL Explore API, not in the SQL database or Country Pages API. |
+| HS22 scope | HS22 data (2022–2024) is available in the SQL database (`hs22` schema) and the GraphQL Explore API, but not in the Country Pages API. |
 | Historical data quality | Earlier years (pre-1995 in HS, pre-1980 in SITC) have thinner country coverage and greater reporting gaps. |
 
 ---
