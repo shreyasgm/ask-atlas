@@ -590,7 +590,7 @@ PRODUCT_TEST_CASES = [
         },
     },
     {
-        "question": "What goods did India export in 2022?",
+        "question": "What goods did India export in 2024?",
         "expected": {
             "classification_schemas": ["hs12"],
             "requires_product_lookup": False,

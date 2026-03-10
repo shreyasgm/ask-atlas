@@ -42,7 +42,7 @@ TEST_QUERIES = [
         "check": "should use product_code = 'travel', NOT ILIKE '%Travel%'",
     },
     {
-        "question": "What were the top service exports from Germany in 2022?",
+        "question": "What were the top service exports from Germany in 2024?",
         "check": "should query services_unilateral._2 with exact codes, no ILIKE",
     },
     {
@@ -50,7 +50,7 @@ TEST_QUERIES = [
         "check": "should use product_code = 'transport', NOT ILIKE '%Transport%'",
     },
     {
-        "question": "What is the total value of all service exports from the UK in 2022?",
+        "question": "What is the total value of all service exports from the UK in 2024?",
         "check": "should use services_unilateral tables, possibly _1 with code='services'",
     },
 ]

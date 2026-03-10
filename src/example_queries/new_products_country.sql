@@ -1,4 +1,4 @@
--- New products for Russia over the window 2009-2022 (using HS92)
+-- New products for Russia over the window 2009-2024 (using HS92)
 -- A product is "new" if start-period RCA < 0.5 AND end-period RCA >= 1.0
 -- RCA is recomputed from 3-year averaged export values at each end of the window
 -- All 4-digit products are eligible (no filters applied)
@@ -43,7 +43,7 @@ end_avg AS (
         product_id,
         AVG(export_value) AS avg_export
     FROM hs92.country_product_year_4
-    WHERE year BETWEEN 2020 AND 2022
+    WHERE year BETWEEN 2022 AND 2024
     GROUP BY country_id, product_id
 ),
 end_country_total AS (

@@ -18,7 +18,7 @@ WITH ssa_imports AS (
     JOIN classification.location_group_member gm
         ON gm.country_id = cpy.country_id
         AND gm.group_id = 947
-    WHERE cpy.year = 2022
+    WHERE cpy.year = 2024
     GROUP BY cpy.product_id
 ),
 african_competitive_products AS (
@@ -27,7 +27,7 @@ african_competitive_products AS (
     JOIN classification.location_group_member gm
         ON gm.country_id = cpy.country_id
         AND gm.group_id = 2
-    WHERE cpy.year = 2022
+    WHERE cpy.year = 2024
       AND cpy.export_rca >= 1
 )
 SELECT

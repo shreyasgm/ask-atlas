@@ -28,7 +28,7 @@ TRACE_QUERIES = [
     # These timed out in the stress test — likely looping
     "Which countries belong to the European Union group according to the Atlas?",
     "Which country had the highest ECI in 2020?",
-    "List the top 10 countries by total export value in 2022, ranked from highest to lowest.",
+    "List the top 10 countries by total export value in 2024, ranked from highest to lowest.",
     # These succeeded but slowly (multiple queries) — worth tracing
     "How many products does Kenya export with a revealed comparative advantage (RCA > 1)?",
     # A clean fast one for comparison

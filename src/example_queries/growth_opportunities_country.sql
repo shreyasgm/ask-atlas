@@ -1,12 +1,12 @@
 -- Growth Opportunities: Strategy-Aware Two-Query Approach
--- Example: Kenya in 2022
+-- Example: Kenya in 2024
 
 -- QUERY 1: Determine country policy for Kenya
 SELECT cy.coi, cy.eci
 FROM hs92.country_year cy
 JOIN classification.location_country loc ON cy.country_id = loc.country_id
 WHERE loc.iso3_code = 'KEN'
-  AND cy.year = 2022;
+  AND cy.year = 2024;
 -- Result: COI < 0 → StrategicBets policy → weights: 0.50/0.15/0.35
 
 -- QUERY 2: Top growth opportunities using StrategicBets weights
@@ -25,7 +25,7 @@ FROM hs92.country_product_year_4 cpy
 JOIN classification.location_country loc ON cpy.country_id = loc.country_id
 JOIN classification.product_hs92 p ON cpy.product_id = p.product_id
 WHERE loc.iso3_code = 'KEN'
-  AND cpy.year = 2022
+  AND cpy.year = 2024
   AND cpy.export_rca < 1
   AND cpy.normalized_distance IS NOT NULL
 ORDER BY composite_score DESC

@@ -65,7 +65,7 @@ TEST_CASES = [
     # 1. SQL pipeline — straightforward trade data query
     TestCase(
         name="SQL: Kenya coffee exports",
-        question="What was Kenya's total coffee export value in 2022?",
+        question="What was Kenya's total coffee export value in 2024?",
         agent_mode="sql_only",
         expected_pipeline="sql",
         description="Forces SQL-only mode; should fire the full SQL pipeline.",
@@ -81,7 +81,7 @@ TEST_CASES = [
     # 3. GraphQL pipeline — treemap products (Explore API)
     TestCase(
         name="GraphQL: Brazil export composition",
-        question="What are Brazil's top exported products in 2022?",
+        question="What are Brazil's top exported products in 2024?",
         agent_mode="graphql_only",
         expected_pipeline="graphql",
         description="Forces GraphQL-only; expects treemap_products classification → Explore API.",

@@ -15,7 +15,7 @@ JOIN classification.location_country loc_imp
     AND loc_imp.iso3_code = 'MAR'
 JOIN classification.product_hs92 p
     ON ccpy.product_id = p.product_id
-WHERE ccpy.year BETWEEN 2010 AND 2022
+WHERE ccpy.year BETWEEN 2010 AND 2024
     AND ccpy.export_value > 0
 GROUP BY
     p.code,
@@ -45,7 +45,7 @@ JOIN classification.location_country loc_imp
     AND loc_imp.iso3_code = 'MAR'
 JOIN classification.product_services_bilateral p
     ON ccpy.product_id = p.product_id
-WHERE ccpy.year BETWEEN 2010 AND 2022
+WHERE ccpy.year BETWEEN 2010 AND 2024
     AND ccpy.export_value > 0
 GROUP BY
     p.code,

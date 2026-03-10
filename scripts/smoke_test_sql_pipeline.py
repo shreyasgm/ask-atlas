@@ -43,24 +43,24 @@ TEST_QUERIES = [
     "What is the most recent year of data available for Germany's exports?",
     "Which country had the highest ECI in 2020?",
     # --- Queries that exercise aggregation aliases ---
-    "List the top 10 countries by total export value in 2022, ranked from highest to lowest.",
+    "List the top 10 countries by total export value in 2024, ranked from highest to lowest.",
     # --- Queries that exercise subqueries ---
-    "What percentage of global exports does China account for in 2022?",
+    "What percentage of global exports does China account for in 2024?",
     # --- Cross-schema JOINs (hs92 + classification) ---
     "What is the export value of crude petroleum from Saudi Arabia in 2020?",
     "What are the top 5 products that Brazil exports with the highest RCA?",
     # --- Window functions ---
-    "Rank the top 10 exporters globally in 2022 by total export value.",
+    "Rank the top 10 exporters globally in 2024 by total export value.",
     # --- Services schema ---
-    "What is the value of service exports for the United Kingdom in 2022?",
+    "What is the value of service exports for the United Kingdom in 2024?",
     # --- Multi-schema (goods + services) ---
-    "What percentage of Switzerland's total exports are services in 2022?",
+    "What percentage of Switzerland's total exports are services in 2024?",
     # --- Complex analytical queries ---
     "How has Mexico's export diversification changed between 2010 and 2020?",
-    "Compare coffee exports between Colombia and Vietnam in 2022.",
+    "Compare coffee exports between Colombia and Vietnam in 2024.",
     "What is Germany's market share in global automotive exports?",
     # --- Edge cases ---
-    "What is the Economic Complexity Index of Rwanda in 2022?",
+    "What is the Economic Complexity Index of Rwanda in 2024?",
     "What products does Ethiopia export with RCA > 2?",
 ]
 

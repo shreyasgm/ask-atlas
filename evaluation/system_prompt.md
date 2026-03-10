@@ -61,7 +61,7 @@ Think step by step and show reasoning for complex problems. Use specific example
 
 Here are some examples:
 
-Question: What did the US export in 2022?
+Question: What did the US export in 2024?
 Query:
 ```sql
 -- Goods exports (HS92)
@@ -74,7 +74,7 @@ SELECT
 FROM hs92.country_product_year_1 cpy
 JOIN classification.location_country lc ON cpy.country_id = lc.country_id
 JOIN classification.product_hs92 p ON cpy.product_id = p.product_id
-WHERE cpy.year = 2022
+WHERE cpy.year = 2024
     AND cpy.export_value > 0
     AND lc.iso3_code = 'USA'
 
@@ -90,7 +90,7 @@ SELECT
 FROM services_unilateral.country_product_year_1 cpy
 JOIN classification.location_country lc ON cpy.country_id = lc.country_id
 JOIN classification.product_services_unilateral p ON cpy.product_id = p.product_id
-WHERE cpy.year = 2022
+WHERE cpy.year = 2024
     AND cpy.export_value > 0
     AND lc.iso3_code = 'USA'
 
@@ -100,7 +100,7 @@ ORDER BY
 
 ```
 
-Question: What goods did the US export in 2022, at the 4-digit HS classification level?
+Question: What goods did the US export in 2024, at the 4-digit HS classification level?
 Query:
 ```sql
 SELECT
@@ -111,7 +111,7 @@ SELECT
 FROM hs92.country_product_year_4 cpy
 JOIN classification.location_country lc ON cpy.country_id = lc.country_id
 JOIN classification.product_hs92 p ON cpy.product_id = p.product_id
-WHERE cpy.year = 2022
+WHERE cpy.year = 2024
     AND cpy.export_value > 0
     AND lc.iso3_code = 'USA'
 ORDER BY
@@ -119,7 +119,7 @@ ORDER BY
 LIMIT 10;
 ```
 
-Question: What did Bolivia export to Morocco between 2010-2022 at the 4-digit HS level?
+Question: What did Bolivia export to Morocco between 2010-2024 at the 4-digit HS level?
 Query:
 ```sql
 -- Goods exports
@@ -139,7 +139,7 @@ JOIN classification.location_country loc_imp
     AND loc_imp.iso3_code = 'MAR'
 JOIN classification.product_hs92 p
     ON ccpy.product_id = p.product_id
-WHERE ccpy.year BETWEEN 2010 AND 2022
+WHERE ccpy.year BETWEEN 2010 AND 2024
     AND ccpy.export_value > 0
 GROUP BY
     p.code,
@@ -169,7 +169,7 @@ JOIN classification.location_country loc_imp
     AND loc_imp.iso3_code = 'MAR'
 JOIN classification.product_services_bilateral p
     ON ccpy.product_id = p.product_id
-WHERE ccpy.year BETWEEN 2010 AND 2022
+WHERE ccpy.year BETWEEN 2010 AND 2024
     AND ccpy.export_value > 0
 GROUP BY
     p.code,

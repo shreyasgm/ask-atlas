@@ -55,7 +55,7 @@ async def test_sql_pipeline() -> bool:
     try:
         async with await AtlasTextToSQL.create_async() as atlas:
             section(
-                "Streaming events for: 'What were US top-5 exports to China in 2022?'"
+                "Streaming events for: 'What were US top-5 exports to China in 2024?'"
             )
 
             event_types: list[str] = []
@@ -64,7 +64,7 @@ async def test_sql_pipeline() -> bool:
             printed_agent_talk = False
 
             async for stream_data in atlas.aanswer_question_stream(
-                "What were the top 5 products exported by the United States to China in 2022?"
+                "What were the top 5 products exported by the United States to China in 2024?"
             ):
                 event_types.append(stream_data.message_type)
                 if stream_data.message_type == "node_start":

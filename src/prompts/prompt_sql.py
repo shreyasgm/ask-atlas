@@ -106,7 +106,7 @@ SELECT p.code AS product_code, p.name_short_en AS product_name,
 FROM hs92.country_product_year_4 cpy
 JOIN classification.location_country loc ON cpy.country_id = loc.country_id
 JOIN classification.product_hs92 p ON cpy.product_id = p.product_id
-WHERE loc.iso3_code = 'KEN' AND cpy.year = 2022
+WHERE loc.iso3_code = 'KEN' AND cpy.year = 2024
   AND cpy.export_rca < 1 AND cpy.normalized_distance IS NOT NULL
 ORDER BY composite_score DESC
 LIMIT 20;
@@ -305,7 +305,7 @@ Response: {{
 }}
 Reason: "Export basket" without "goods" → both goods and services.
 
-Question: "What goods did India export in 2022?"
+Question: "What goods did India export in 2024?"
 Response: {{
     "classification_schemas": ["hs12"],
     "products": [],
@@ -582,7 +582,7 @@ SELECT p.code AS product_code, p.name_short_en AS product_name,
 FROM hs92.country_product_year_4 cpy
 JOIN classification.location_country loc ON cpy.country_id = loc.country_id
 JOIN classification.product_hs92 p ON cpy.product_id = p.product_id
-WHERE loc.iso3_code = 'KEN' AND cpy.year = 2022
+WHERE loc.iso3_code = 'KEN' AND cpy.year = 2024
   AND cpy.export_rca < 1 AND cpy.normalized_distance IS NOT NULL
 ORDER BY composite_score DESC
 LIMIT 20;
