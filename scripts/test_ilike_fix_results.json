@@ -1,0 +1,80 @@
+[
+  {
+    "question": "What is the value of Business services exports from the United States in 2020?",
+    "check": "should use product_code = 'ict', NOT ILIKE '%Business%'",
+    "status": "SUCCESS",
+    "elapsed_s": 29.4,
+    "sql": [
+      "SELECT\n    lc.iso3_code,\n    lc.name_short_en AS country_name,\n    cpy.year,\n    p.code AS product_code,\n    p.name_short_en AS product_name,\n    cpy.export_value\nFROM services_unilateral.country_product_year_2 cpy\nJOIN classification.location_country lc\n    ON cpy.country_id = lc.country_id\nJOIN classification.product_services_unilateral p\n    ON cpy.product_id = p.product_id\nWHERE lc.iso3_code = 'USA'\n  AND cpy.year = 2020\n  AND p.code = 'ict';"
+    ],
+    "total_rows": 1,
+    "num_queries": 1,
+    "answer_preview": "In 2020, the United States exported **$282.32 billion** in Business services.",
+    "ilike_issues": []
+  },
+  {
+    "question": "How much did the US export in Insurance and finance services in 2020?",
+    "check": "should use product_code = 'financial', NOT ILIKE '%Insurance%'",
+    "status": "SUCCESS",
+    "elapsed_s": 20.7,
+    "sql": [
+      "\nSELECT\n    p.code AS product_code,\n    p.name_short_en AS product_name,\n    cpy.export_value,\n    cpy.export_rca,\n    cpy.global_market_share\nFROM services_unilateral.country_product_year_2 cpy\nJOIN classification.location_country loc ON cpy.country_id = loc.country_id\nJOIN classification.product_services_unilateral p ON cpy.product_id = p.product_id\nWHERE loc.iso3_code = 'USA'\n  AND cpy.year = 2020\n  AND p.code = 'financial';\n"
+    ],
+    "total_rows": 1,
+    "num_queries": 1,
+    "answer_preview": "In 2020, the United States exported approximately **\\$170.9 billion** in Insurance & Finance services, capturing roughly **14.4%** of the global market for that category.",
+    "ilike_issues": []
+  },
+  {
+    "question": "What is the value of Travel and tourism services exports from India in 2020?",
+    "check": "should use product_code = 'travel', NOT ILIKE '%Travel%'",
+    "status": "SUCCESS",
+    "elapsed_s": 23.2,
+    "sql": [
+      "\nSELECT\n    p.code AS product_code,\n    p.name_short_en AS product_name,\n    cpy.export_value,\n    cpy.year\nFROM services_unilateral.country_product_year_2 cpy\nJOIN classification.location_country loc ON cpy.country_id = loc.country_id\nJOIN classification.product_services_unilateral p ON cpy.product_id = p.product_id\nWHERE loc.iso3_code = 'IND'\n  AND cpy.year = 2020\n  AND p.code = 'travel';\n"
+    ],
+    "total_rows": 1,
+    "num_queries": 1,
+    "answer_preview": "India's **Travel & Tourism** services exports in 2020 were approximately **\\$13.04 billion**.\n\nThis figure reflects the significant impact of the COVID-19 pandemic on India's tourism sector, as international travel was severely disrupted globally in 2020.",
+    "ilike_issues": []
+  },
+  {
+    "question": "What were the top service exports from Germany in 2022?",
+    "check": "should query services_unilateral._2 with exact codes, no ILIKE",
+    "status": "SUCCESS",
+    "elapsed_s": 17.6,
+    "sql": [
+      "SELECT\n    p.code AS service_code,\n    p.name_short_en AS service_category,\n    cpy.export_value\nFROM services_unilateral.country_product_year_2 cpy\nJOIN classification.location_country lc\n    ON cpy.country_id = lc.country_id\nJOIN classification.product_services_unilateral p\n    ON cpy.product_id = p.product_id\nWHERE lc.iso3_code = 'DEU'\n  AND cpy.year = 2022\n  AND cpy.export_value > 0\nORDER BY cpy.export_value DESC\nLIMIT 15;"
+    ],
+    "total_rows": 5,
+    "num_queries": 1,
+    "answer_preview": "In 2022, Germany's top service exports were concentrated in business services, transport, and finance. The leading categories were:\n\n*   **Business services:** \\$179.54 billion\n*   **Transport:** \\$113.00 billion\n*   **Unspecified services:** \\$65.33 billion\n*   **Insurance & finance:** \\$51.72 billion\n*   **Travel & tourism:** \\$31.56 billion",
+    "ilike_issues": []
+  },
+  {
+    "question": "How much did Brazil export in Transport services in 2020?",
+    "check": "should use product_code = 'transport', NOT ILIKE '%Transport%'",
+    "status": "SUCCESS",
+    "elapsed_s": 15.4,
+    "sql": [
+      "SELECT\n  p.name_short_en AS product_name,\n  cpy.export_value\nFROM services_unilateral.country_product_year_2 AS cpy\nJOIN classification.location_country AS loc\n  ON cpy.country_id = loc.country_id\nJOIN classification.product_services_unilateral AS p\n  ON cpy.product_id = p.product_id\nWHERE\n  loc.iso3_code = 'BRA' AND p.code = 'transport' AND cpy.year = 2020;"
+    ],
+    "total_rows": 1,
+    "num_queries": 1,
+    "answer_preview": "Brazil exported **\\$4.00 billion** in **Transport services** in **2020**.\n\nMore precisely: **\\$3,997,426,929**.",
+    "ilike_issues": []
+  },
+  {
+    "question": "What is the total value of all service exports from the UK in 2022?",
+    "check": "should use services_unilateral tables, possibly _1 with code='services'",
+    "status": "SUCCESS",
+    "elapsed_s": 18.5,
+    "sql": [
+      "\nSELECT\n    cy.year,\n    loc.name_short_en AS country_name,\n    cy.export_value AS total_service_exports\nFROM services_unilateral.country_year cy\nJOIN classification.location_country loc\n    ON cy.country_id = loc.country_id\n    AND loc.iso3_code = 'GBR'\nWHERE cy.year = 2022;\n"
+    ],
+    "total_rows": 1,
+    "num_queries": 1,
+    "answer_preview": "The UK\u2019s total **service exports** in **2022** were **\\$508.6 billion** (current USD).\n\nMore precisely: \\$508,559,432,782.",
+    "ilike_issues": []
+  }
+]
