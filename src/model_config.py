@@ -11,24 +11,23 @@ Supported providers: "openai", "anthropic", "google-genai"
 Model aliases (short names that work in each provider's API):
 
   OpenAI (provider: "openai")
-    Frontier:   gpt-5.2              — flagship reasoning model
+    Frontier:   gpt-5.4              — flagship, 1M context window (Mar 2026)
+    Previous:   gpt-5.2              — prior flagship, 400K context
     Fast:       gpt-5-mini           — cheaper/faster GPT-5
     Tiny:       gpt-5-nano           — fastest/cheapest GPT-5
     Coding:     gpt-5.3-codex        — best for code (Feb 2026)
-    Legacy:     gpt-4.1, gpt-4.1-mini, gpt-4.1-nano
+    Legacy:     gpt-4.1, gpt-4.1-mini, gpt-4.1-nano (don't use)
 
   Anthropic (provider: "anthropic")
     Frontier:   claude-opus-4-6      — most capable (Feb 2026)
     Balanced:   claude-sonnet-4-6    — speed + intelligence (Feb 2026)
     Fast:       claude-haiku-4-5     — fastest, near-frontier
-    Legacy:     claude-sonnet-4-5, claude-opus-4-5
+    Legacy:     claude-sonnet-4-5, claude-opus-4-5 (don't use)
 
   Google Gemini (provider: "google-genai")
     Frontier:   gemini-3-pro-preview   — most intelligent (preview)
-    Fast:       gemini-3-flash-preview — pro-level at flash speed (preview)
-    Stable:     gemini-2.5-pro         — best stable/GA model
-    Balanced:   gemini-2.5-flash       — stable, fast, cheap
-    Tiny:       gemini-2.5-flash-lite  — cheapest
+    Fast:       gemini-3-flash-preview — lighter, cheaper (preview)
+    Legacy:     gemini-2.5-flash, gemini-2.5-flash-lite  — don't use
 """
 
 from dataclasses import dataclass
@@ -50,7 +49,8 @@ FRONTIER_FALLBACK_MODELS: list[dict] = [
         "model_name": "frontier",
         "litellm_params": {"model": "anthropic/claude-sonnet-4-6"},
     },
-    {"model_name": "frontier", "litellm_params": {"model": "gemini/gemini-2.5-pro"}},
+    # Gemini available as option but not active fallback
+    # {"model_name": "frontier", "litellm_params": {"model": "gemini/gemini-3-pro-preview"}},
 ]
 
 LIGHTWEIGHT_FALLBACK_MODELS: list[dict] = [
@@ -61,8 +61,9 @@ LIGHTWEIGHT_FALLBACK_MODELS: list[dict] = [
     },
     {
         "model_name": "lightweight",
-        "litellm_params": {"model": "gemini/gemini-2.5-flash"},
+        "litellm_params": {"model": "gemini/gemini-3-flash-preview"},
     },
+    {"model_name": "lightweight", "litellm_params": {"model": "openai/gpt-5-nano"}},
 ]
 
 LITELLM_ROUTING_STRATEGY = "latency-based-routing"
@@ -117,23 +118,32 @@ MODEL_PRICING: dict[str, ModelPricing] = {
     "claude-sonnet-4-6-20260217": ModelPricing(
         3.00, 15.00, cache_read=0.30, cache_creation=3.75
     ),
+    "claude-sonnet-4-6": ModelPricing(
+        3.00, 15.00, cache_read=0.30, cache_creation=3.75
+    ),
     "claude-sonnet-4-20250514": ModelPricing(
         3.00, 15.00, cache_read=0.30, cache_creation=3.75
     ),
     "claude-haiku-4-5-20251001": ModelPricing(
         1.00, 5.00, cache_read=0.10, cache_creation=1.25
     ),
+    "claude-haiku-4-5": ModelPricing(
+        1.00, 5.00, cache_read=0.10, cache_creation=1.25
+    ),
     # ── OpenAI ── cache_read ≈ 10% of input, cache_creation = same as input
+    "gpt-5.4": ModelPricing(2.50, 15.00, cache_read=0.25, cache_creation=2.50),
     "gpt-5.3-codex": ModelPricing(1.75, 14.00, cache_read=0.175, cache_creation=1.75),
     "gpt-5.2": ModelPricing(1.75, 14.00, cache_read=0.175, cache_creation=1.75),
     "gpt-5": ModelPricing(1.25, 10.00, cache_read=0.125, cache_creation=1.25),
     "gpt-5-mini": ModelPricing(0.25, 2.00, cache_read=0.025, cache_creation=0.25),
+    "gpt-5-nano": ModelPricing(0.05, 0.40, cache_read=0.005, cache_creation=0.05),
     "gpt-4.1": ModelPricing(2.00, 8.00, cache_read=0.50, cache_creation=2.00),
     "gpt-4.1-mini": ModelPricing(0.40, 1.60, cache_read=0.10, cache_creation=0.40),
     # ── Google ── cache_read ≈ 10% of input, cache_creation = same as input
-    "gemini-3.1-pro": ModelPricing(2.00, 12.00, cache_read=0.20, cache_creation=2.00),
-    "gemini-2.5-pro": ModelPricing(1.25, 10.00, cache_read=0.125, cache_creation=1.25),
+    "gemini-3-pro-preview": ModelPricing(2.00, 12.00, cache_read=0.20, cache_creation=2.00),
+    "gemini-3-flash-preview": ModelPricing(0.50, 3.00, cache_read=0.05, cache_creation=0.50),
     "gemini-3-flash": ModelPricing(0.50, 3.00, cache_read=0.05, cache_creation=0.50),
+    "gemini-2.5-pro": ModelPricing(1.25, 10.00, cache_read=0.125, cache_creation=1.25),
     "gemini-2.5-flash": ModelPricing(0.30, 2.50, cache_read=0.03, cache_creation=0.30),
 }
 
