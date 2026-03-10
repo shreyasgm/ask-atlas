@@ -310,10 +310,15 @@ def get_table_info_for_schemas(
     tables = [table for table in tables if "group_group_" not in table["table_name"]]
     table_info = ""
     for table in tables:
+        try:
+            ddl = db.get_table_info(table_names=[table["table_name"]])
+        except Exception as e:
+            logger.warning("Skipping table %s: %s", table["table_name"], e)
+            continue
         table_info += (
             f"Table: {table['table_name']}\nDescription: {table['context_str']}\n"
         )
-        table_info += db.get_table_info(table_names=[table["table_name"]])
+        table_info += ddl
         table_info += "\n\n"
 
     table_info_cache[key] = table_info
@@ -364,10 +369,15 @@ async def aget_table_info_for_schemas(
 
     table_info = ""
     for table in tables:
+        try:
+            ddl = await db.aget_table_info(table_names=[table["table_name"]])
+        except Exception as e:
+            logger.warning("Skipping table %s: %s", table["table_name"], e)
+            continue
         table_info += (
             f"Table: {table['table_name']}\nDescription: {table['context_str']}\n"
         )
-        table_info += await db.aget_table_info(table_names=[table["table_name"]])
+        table_info += ddl
         table_info += "\n\n"
 
     table_info_cache[key] = table_info
@@ -404,49 +414,56 @@ async def extract_products_node(
     from langchain_core.callbacks import UsageMetadataCallbackHandler
 
     async with node_timer("extract_products", "query_tool") as t:
-        usage_handler = UsageMetadataCallbackHandler()
-        lookup = ProductAndSchemaLookup(llm=llm, connection=engine)
-        llm_start = time.monotonic()
-        products = await lookup.aextract_schemas_and_product_mentions_direct(
-            state["pipeline_question"],
-            callbacks=[usage_handler],
-            context=state.get("pipeline_context", ""),
-        )
-        t.mark_llm(llm_start, time.monotonic())
-
-        override_schema = state.get("override_schema")
-        override_mode = state.get("override_mode")
-
-        if override_schema:
-            # Schema override: force classification_schemas and rebind products
-            products = SchemasAndProductsFound(
-                classification_schemas=[override_schema],
-                products=[
-                    ProductDetails(
-                        name=p.name,
-                        classification_schema=override_schema,
-                        codes=p.codes,
-                    )
-                    for p in (products.products or [])
-                ],
-                requires_product_lookup=products.requires_product_lookup,
+        try:
+            usage_handler = UsageMetadataCallbackHandler()
+            lookup = ProductAndSchemaLookup(llm=llm, connection=engine)
+            llm_start = time.monotonic()
+            products = await lookup.aextract_schemas_and_product_mentions_direct(
+                state["pipeline_question"],
+                callbacks=[usage_handler],
+                context=state.get("pipeline_context", ""),
             )
-        elif override_mode:
-            # Mode override (only when no schema override): filter schemas
-            schemas = products.classification_schemas
-            if override_mode == "goods":
-                schemas = [s for s in schemas if not s.startswith("services_")]
-                if not schemas:
-                    schemas = ["hs92"]
-            elif override_mode == "services":
-                schemas = [s for s in schemas if s.startswith("services_")]
-                if not schemas:
-                    schemas = ["services_unilateral"]
-            products = SchemasAndProductsFound(
-                classification_schemas=schemas,
-                products=products.products,
-                requires_product_lookup=products.requires_product_lookup,
-            )
+            t.mark_llm(llm_start, time.monotonic())
+
+            override_schema = state.get("override_schema")
+            override_mode = state.get("override_mode")
+
+            if override_schema:
+                # Schema override: force classification_schemas and rebind products
+                products = SchemasAndProductsFound(
+                    classification_schemas=[override_schema],
+                    products=[
+                        ProductDetails(
+                            name=p.name,
+                            classification_schema=override_schema,
+                            codes=p.codes,
+                        )
+                        for p in (products.products or [])
+                    ],
+                    requires_product_lookup=products.requires_product_lookup,
+                )
+            elif override_mode:
+                # Mode override (only when no schema override): filter schemas
+                schemas = products.classification_schemas
+                if override_mode == "goods":
+                    schemas = [s for s in schemas if not s.startswith("services_")]
+                    if not schemas:
+                        schemas = ["hs92"]
+                elif override_mode == "services":
+                    schemas = [s for s in schemas if s.startswith("services_")]
+                    if not schemas:
+                        schemas = ["services_unilateral"]
+                products = SchemasAndProductsFound(
+                    classification_schemas=schemas,
+                    products=products.products,
+                    requires_product_lookup=products.requires_product_lookup,
+                )
+        except Exception as e:
+            logger.error("extract_products_node failed: %s", e, exc_info=True)
+            return {
+                "last_error": f"Failed to extract products: {e}",
+                "step_timing": [t.record],
+            }
 
     usage_record = make_usage_record_from_callback(
         "extract_products", "query_tool", usage_handler
@@ -469,29 +486,39 @@ async def lookup_codes_node(
     from langchain_core.callbacks import UsageMetadataCallbackHandler
 
     async with node_timer("lookup_codes", "query_tool") as t:
-        products = state.get("pipeline_products")
-        if not products or not products.products:
-            return {"pipeline_codes": "", "step_timing": [t.record]}
+        try:
+            products = state.get("pipeline_products")
+            if not products or not products.products:
+                return {"pipeline_codes": "", "step_timing": [t.record]}
 
-        lookup = ProductAndSchemaLookup(
-            llm=llm, connection=engine, async_engine=async_engine
-        )
-        io_start = time.monotonic()
-        if async_engine is not None:
-            candidates = await lookup.aget_candidate_codes(products)
-        else:
-            candidates = await asyncio.to_thread(lookup.get_candidate_codes, products)
-        t.mark_io(io_start, time.monotonic())
+            lookup = ProductAndSchemaLookup(
+                llm=llm, connection=engine, async_engine=async_engine
+            )
+            io_start = time.monotonic()
+            if async_engine is not None:
+                candidates = await lookup.aget_candidate_codes(products)
+            else:
+                candidates = await asyncio.to_thread(
+                    lookup.get_candidate_codes, products
+                )
+            t.mark_io(io_start, time.monotonic())
 
-        usage_handler = UsageMetadataCallbackHandler()
-        llm_start = time.monotonic()
-        codes = await lookup.aselect_final_codes_direct(
-            state["pipeline_question"],
-            candidates,
-            callbacks=[usage_handler],
-            context=state.get("pipeline_context", ""),
-        )
-        t.mark_llm(llm_start, time.monotonic())
+            usage_handler = UsageMetadataCallbackHandler()
+            llm_start = time.monotonic()
+            codes = await lookup.aselect_final_codes_direct(
+                state["pipeline_question"],
+                candidates,
+                callbacks=[usage_handler],
+                context=state.get("pipeline_context", ""),
+            )
+            t.mark_llm(llm_start, time.monotonic())
+        except Exception as e:
+            logger.error("lookup_codes_node failed: %s", e, exc_info=True)
+            return {
+                "pipeline_codes": "",
+                "last_error": f"Failed to look up product codes: {e}",
+                "step_timing": [t.record],
+            }
 
     usage_record = make_usage_record_from_callback(
         "lookup_codes", "query_tool", usage_handler
@@ -516,28 +543,36 @@ async def get_table_info_node(
     to asyncio.to_thread with sync db otherwise.
     """
     async with node_timer("get_table_info", "query_tool") as t:
-        products = state.get("pipeline_products")
-        schemas = products.classification_schemas if products else []
-        requires_group = (
-            getattr(products, "requires_group_tables", False) if products else False
-        )
-        io_start = time.monotonic()
-        if async_db is not None:
-            info = await aget_table_info_for_schemas(
-                db=async_db,
-                table_descriptions=table_descriptions,
-                classification_schemas=schemas,
-                requires_group_tables=requires_group,
+        try:
+            products = state.get("pipeline_products")
+            schemas = products.classification_schemas if products else []
+            requires_group = (
+                getattr(products, "requires_group_tables", False) if products else False
             )
-        else:
-            info = await asyncio.to_thread(
-                get_table_info_for_schemas,
-                db=db,
-                table_descriptions=table_descriptions,
-                classification_schemas=schemas,
-                requires_group_tables=requires_group,
-            )
-        t.mark_io(io_start, time.monotonic())
+            io_start = time.monotonic()
+            if async_db is not None:
+                info = await aget_table_info_for_schemas(
+                    db=async_db,
+                    table_descriptions=table_descriptions,
+                    classification_schemas=schemas,
+                    requires_group_tables=requires_group,
+                )
+            else:
+                info = await asyncio.to_thread(
+                    get_table_info_for_schemas,
+                    db=db,
+                    table_descriptions=table_descriptions,
+                    classification_schemas=schemas,
+                    requires_group_tables=requires_group,
+                )
+            t.mark_io(io_start, time.monotonic())
+        except Exception as e:
+            logger.error("get_table_info_node failed: %s", e, exc_info=True)
+            return {
+                "pipeline_table_info": "",
+                "last_error": f"Failed to load table info: {e}",
+                "step_timing": [t.record],
+            }
     return {"pipeline_table_info": info, "step_timing": [t.record]}
 
 

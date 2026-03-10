@@ -75,10 +75,20 @@ Do NOT prescribe database internals (column names, table names, SQL syntax) — 
 has full knowledge of the database schema. Focus on clarifying WHAT the user wants, not \
 HOW to query it.
 
-Example: "Which countries improved ECI ranking most while increasing diversification?"
+Example 1: "Which countries improved ECI ranking most while increasing diversification?"
 → Call query_tool: "Which countries improved ECI ranking most while also increasing \
 diversification between 2014 and {sql_max_year}?"
-(One call — query_tool handles the cross-referencing internally.)""",
+(One call — query_tool handles the cross-referencing internally.)
+
+Example 2: "What share of Sub-Saharan African imports could be sourced from within Africa?"
+→ This seems simple but requires multi-step analytical logic: (1) aggregate all products \
+imported by Sub-Saharan African countries, (2) identify which of those products are \
+competitively exported (RCA ≥ 1) by any African country, (3) calculate the share. This \
+is a cross-country custom aggregation — send it directly to query_tool in a single call. \
+Do NOT try to break this into multiple tool calls.
+→ Call query_tool: "What share of Sub-Saharan African imports could be sourced from \
+within Africa? A product is sourceable if at least one African country has RCA >= 1 \
+in it. Report both the share of import value and the share of product count.""",
         # --- SQL-only tools ---
         """\
 **Your Tools:**
@@ -158,6 +168,17 @@ increasing diversification?"
 diversification between 2014 and {sql_max_year}?"
 (One call — query_tool handles the cross-referencing internally.)
 
+Example 1b — multi-step SQL: "What share of Sub-Saharan African imports could be \
+sourced from within Africa?"
+→ This seems simple but requires multi-step analytical logic: (1) aggregate all products \
+imported by Sub-Saharan African countries, (2) identify which of those products are \
+competitively exported (RCA ≥ 1) by any African country, (3) calculate the share by value \
+and by product count. This is a cross-country custom aggregation — send it to query_tool \
+in a single call. Do NOT decompose into multiple calls.
+→ Call query_tool: "What share of Sub-Saharan African imports could be sourced from \
+within Africa? A product is sourceable if at least one African country has RCA >= 1 \
+in it. Report both the share of import value and the share of product count."
+
 Example 2 — cross-tool: "Compare Brazil's diversification grade with the average \
 ECI of its top 5 trading partners."
 → Call 1 (atlas_graphql): "What is Brazil's diversification grade and ECI?"
@@ -215,6 +236,7 @@ Use when a data tool returns product or country IDs without names. Does NOT coun
 - "Growth opportunities for Germany?" -> docs_tool first, then atlas_graphql (growth_opportunities)
 - "Kenya's top growth opportunity products?" -> docs_tool first, then atlas_graphql (growth_opportunities)
 - "Sub-Saharan Africa's total exports?" -> atlas_graphql (preferred, contains country regional groupings)
+- "What share of SSA imports could be sourced from within Africa?" -> query_tool (multi-step: aggregate SSA imports, find African RCA ≥ 1 products, compute share)
 - "India's top 3 exported products?" -> query_tool (needs services; UNION goods + services)
 - "India's top goods exports?" -> atlas_graphql (goods-only, no services needed)
 - "Bilateral service exports from USA to China?" -> atlas_graphql (SQL services_bilateral tables are currently empty)

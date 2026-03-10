@@ -1100,42 +1100,83 @@ async def sql_query_agent_node(
 ) -> dict:
     """Invoke the SQL sub-agent and map results back to parent state."""
     async with node_timer("sql_query_agent", "query_tool") as t:
-        initial_msg = _build_initial_message(
-            question=state["pipeline_question"],
-            context=state.get("pipeline_context", ""),
-            codes=state.get("pipeline_codes", ""),
-            table_info=state.get("pipeline_table_info", ""),
-            override_direction=state.get("override_direction"),
-            override_mode=state.get("override_mode"),
-            example_queries=example_queries,
-        )
+        # If an upstream node already set last_error, skip the subagent
+        upstream_error = state.get("last_error", "")
+        if upstream_error:
+            logger.warning(
+                "sql_query_agent_node: skipping subagent due to upstream error: %s",
+                upstream_error,
+            )
+            return {
+                "pipeline_sql": "",
+                "pipeline_result": "",
+                "pipeline_result_columns": [],
+                "pipeline_result_rows": [],
+                "pipeline_execution_time_ms": 0,
+                "last_error": upstream_error,
+                "retry_count": 0,
+                "pipeline_sql_history": [],
+                "pipeline_reasoning_trace": [],
+                "pipeline_assessment": "",
+                "pipeline_surface_to_agent": False,
+                "token_usage": [],
+                "step_timing": [t.record],
+            }
 
-        sub_input = {
-            "question": state["pipeline_question"],
-            "context": state.get("pipeline_context", ""),
-            "products": state.get("pipeline_products"),
-            "codes": state.get("pipeline_codes", ""),
-            "table_info": state.get("pipeline_table_info", ""),
-            "override_direction": state.get("override_direction"),
-            "override_mode": state.get("override_mode"),
-            "messages": [initial_msg],
-            "sql": "",
-            "result": "",
-            "result_columns": [],
-            "result_rows": [],
-            "execution_time_ms": 0,
-            "last_error": "",
-            "iteration_count": 0,
-            "attempt_history": [],
-            "_top_k": top_k,
-        }
+        try:
+            initial_msg = _build_initial_message(
+                question=state["pipeline_question"],
+                context=state.get("pipeline_context", ""),
+                codes=state.get("pipeline_codes", ""),
+                table_info=state.get("pipeline_table_info", ""),
+                override_direction=state.get("override_direction"),
+                override_mode=state.get("override_mode"),
+                example_queries=example_queries,
+            )
 
-        llm_start = time.monotonic()
-        result = await subagent.ainvoke(
-            sub_input,
-            config={"recursion_limit": 50},
-        )
-        t.mark_llm(llm_start, time.monotonic())
+            sub_input = {
+                "question": state["pipeline_question"],
+                "context": state.get("pipeline_context", ""),
+                "products": state.get("pipeline_products"),
+                "codes": state.get("pipeline_codes", ""),
+                "table_info": state.get("pipeline_table_info", ""),
+                "override_direction": state.get("override_direction"),
+                "override_mode": state.get("override_mode"),
+                "messages": [initial_msg],
+                "sql": "",
+                "result": "",
+                "result_columns": [],
+                "result_rows": [],
+                "execution_time_ms": 0,
+                "last_error": "",
+                "iteration_count": 0,
+                "attempt_history": [],
+                "_top_k": top_k,
+            }
+
+            llm_start = time.monotonic()
+            result = await subagent.ainvoke(
+                sub_input,
+                config={"recursion_limit": 50},
+            )
+            t.mark_llm(llm_start, time.monotonic())
+        except Exception as e:
+            logger.error("sql_query_agent_node failed: %s", e, exc_info=True)
+            return {
+                "pipeline_sql": "",
+                "pipeline_result": "",
+                "pipeline_result_columns": [],
+                "pipeline_result_rows": [],
+                "pipeline_execution_time_ms": 0,
+                "last_error": f"SQL sub-agent failed: {e}",
+                "retry_count": 0,
+                "pipeline_sql_history": [],
+                "pipeline_reasoning_trace": [],
+                "pipeline_assessment": "",
+                "pipeline_surface_to_agent": False,
+                "token_usage": [],
+                "step_timing": [t.record],
+            }
 
     # Collect token usage from all AI messages in the sub-agent trace
     token_records = []

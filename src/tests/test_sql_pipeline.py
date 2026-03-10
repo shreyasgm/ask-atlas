@@ -1,14 +1,16 @@
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
 from src.sql_pipeline import (
     _classification_tables_for_schemas,
+    aget_table_info_for_schemas,
     get_table_info_for_schemas,
+    get_table_info_node,
     get_tables_in_schemas,
     load_example_queries,
     load_table_descriptions,
@@ -333,3 +335,91 @@ class TestGetTableInfoForSchemas:
 
         assert "classification.location_country" in table_info
         assert "classification.product_hs92" in table_info
+
+
+class TestErrorHandling:
+    """Tests for error handling in pipeline nodes."""
+
+    TABLE_DESCRIPTIONS = {
+        "hs92": [
+            {"table_name": "country_year", "context_str": "Year-level HS92 data"},
+        ],
+        "classification": [
+            {"table_name": "location_country", "context_str": "Countries"},
+            {"table_name": "product_hs92", "context_str": "HS92 products"},
+        ],
+    }
+
+    def test_sync_get_table_info_skips_missing_table(self):
+        """get_table_info_for_schemas skips tables that raise ValueError."""
+        mock_db = Mock(spec=SQLDatabaseWithSchemas)
+        call_count = 0
+
+        def _side_effect(table_names):
+            nonlocal call_count
+            call_count += 1
+            name = table_names[0]
+            if name == "hs92.country_year":
+                raise ValueError(f"table {name} not found in database")
+            return "CREATE TABLE placeholder (id integer);\n"
+
+        mock_db.get_table_info.side_effect = _side_effect
+
+        result = get_table_info_for_schemas(
+            db=mock_db,
+            table_descriptions=self.TABLE_DESCRIPTIONS,
+            classification_schemas=["hs92"],
+        )
+
+        # The missing table should be skipped — no crash
+        assert "hs92.country_year" not in result
+        # Other tables should still be present
+        assert "classification.location_country" in result
+
+    @pytest.mark.asyncio
+    async def test_async_get_table_info_skips_missing_table(self):
+        """aget_table_info_for_schemas skips tables that raise ValueError."""
+        mock_db = AsyncMock()
+
+        async def _side_effect(table_names):
+            name = table_names[0]
+            if name == "hs92.country_year":
+                raise ValueError(f"table {name} not found in database")
+            return "CREATE TABLE placeholder (id integer);\n"
+
+        mock_db.aget_table_info.side_effect = _side_effect
+
+        result = await aget_table_info_for_schemas(
+            db=mock_db,
+            table_descriptions=self.TABLE_DESCRIPTIONS,
+            classification_schemas=["hs92"],
+        )
+
+        assert "hs92.country_year" not in result
+        assert "classification.location_country" in result
+
+    @pytest.mark.asyncio
+    async def test_get_table_info_node_returns_last_error_on_failure(self):
+        """get_table_info_node returns last_error instead of crashing."""
+        # Use a products object whose .classification_schemas raises,
+        # simulating an unexpected failure inside the node.
+        bad_products = Mock()
+        bad_products.classification_schemas = property(
+            lambda self: (_ for _ in ()).throw(RuntimeError("boom"))
+        )
+        type(bad_products).classification_schemas = property(
+            lambda self: (_ for _ in ()).throw(RuntimeError("boom"))
+        )
+
+        state = {"pipeline_products": bad_products}
+
+        result = await get_table_info_node(
+            state,
+            db=Mock(),
+            table_descriptions=self.TABLE_DESCRIPTIONS,
+            async_db=AsyncMock(),
+        )
+
+        assert result["last_error"].startswith("Failed to load table info:")
+        assert result["pipeline_table_info"] == ""
+        assert "step_timing" in result

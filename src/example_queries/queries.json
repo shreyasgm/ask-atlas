@@ -54,5 +54,9 @@
     {
         "question": "What new products has Russia developed comparative advantage in over the period 2009-2022?",
         "file": "new_products_country.sql"
+    },
+    {
+        "question": "What share of Sub-Saharan African imports could be sourced from within Africa?",
+        "file": "ssa_imports_sourced_from_africa.sql"
     }
 ]

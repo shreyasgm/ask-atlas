@@ -1064,7 +1064,15 @@ async def chat_stream(body: ChatRequest, request: Request) -> EventSourceRespons
                 thread_id,
                 event_count,
             )
-            raise
+            yield {
+                "event": "error",
+                "data": json.dumps(
+                    {
+                        "message": "An unexpected error occurred while processing your request. "
+                        "Please try again or rephrase your question."
+                    }
+                ),
+            }
 
         # Persist turn summary and (on cancel) repair orphan tool calls.
         # After CancelledError, any ``await`` re-raises CancelledError, so
