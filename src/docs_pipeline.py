@@ -173,9 +173,7 @@ def load_docs_manifest(docs_dir: Path) -> list[DocEntry]:
             )
         )
 
-    logger.info(
-        "load_docs_manifest: built %d entries from %s", len(entries), docs_dir
-    )
+    logger.info("load_docs_manifest: built %d entries from %s", len(entries), docs_dir)
     return entries
 
 
