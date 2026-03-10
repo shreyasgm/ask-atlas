@@ -39,13 +39,14 @@ frontend
 docs
 evaluation
 *.pen
-*.md
+# Exclude top-level and misc markdown, but keep src/docs/ (runtime) and build files
+# NOTE: *.md is intentionally NOT used here because Docker BuildKit in Cloud Build
+# does not reliably honour !src/docs/*.md negations. Instead we list specific patterns.
+RELEASE_STRATEGY.md
+CHANGELOG.md
+CONTRIBUTING.md
 # Allow files referenced by pyproject.toml (hatchling needs them to build)
-!README.md
-!LICENSE
-# Docs pipeline markdown files (needed at runtime)
-!src/docs/
-!src/docs/*.md
+# README.md and LICENSE are kept by default (not excluded)
 
 # Data / logs
 data
