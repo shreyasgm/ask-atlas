@@ -61,7 +61,9 @@ def check_sql_for_ilike_on_name(sql_list: list[str]) -> list[str]:
     issues = []
     for sql in sql_list:
         sql_upper = sql.upper()
-        if "NAME_SHORT_EN" in sql_upper and ("ILIKE" in sql_upper or "LIKE" in sql_upper):
+        if "NAME_SHORT_EN" in sql_upper and (
+            "ILIKE" in sql_upper or "LIKE" in sql_upper
+        ):
             issues.append(f"ILIKE/LIKE on name_short_en detected in SQL: {sql[:200]}")
     return issues
 
@@ -180,7 +182,9 @@ async def main():
     )
 
     if ilike_failures:
-        logger.error("FAILED: %s queries still used ILIKE on name_short_en!", ilike_failures)
+        logger.error(
+            "FAILED: %s queries still used ILIKE on name_short_en!", ilike_failures
+        )
 
     # Save results
     out_path = "scripts/test_ilike_fix_results.json"

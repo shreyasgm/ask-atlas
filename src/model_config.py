@@ -66,7 +66,9 @@ LIGHTWEIGHT_FALLBACK_MODELS: list[dict] = [
     {"model_name": "lightweight", "litellm_params": {"model": "openai/gpt-5-nano"}},
 ]
 
-LITELLM_ROUTING_STRATEGY = "simple-shuffle"  # low overhead; latency-based only helps with long-lived singleton
+LITELLM_ROUTING_STRATEGY = (
+    "simple-shuffle"  # low overhead; latency-based only helps with long-lived singleton
+)
 LITELLM_COOLDOWN_TIME = 5  # seconds to skip a failing provider (LiteLLM default)
 LITELLM_ALLOWED_FAILS = 2  # failures before cooldown triggers
 LITELLM_NUM_RETRIES = 2  # retries per request before fallback
@@ -127,9 +129,7 @@ MODEL_PRICING: dict[str, ModelPricing] = {
     "claude-haiku-4-5-20251001": ModelPricing(
         1.00, 5.00, cache_read=0.10, cache_creation=1.25
     ),
-    "claude-haiku-4-5": ModelPricing(
-        1.00, 5.00, cache_read=0.10, cache_creation=1.25
-    ),
+    "claude-haiku-4-5": ModelPricing(1.00, 5.00, cache_read=0.10, cache_creation=1.25),
     # ── OpenAI ── cache_read ≈ 10% of input, cache_creation = same as input
     "gpt-5.4": ModelPricing(2.50, 15.00, cache_read=0.25, cache_creation=2.50),
     "gpt-5.3-codex": ModelPricing(1.75, 14.00, cache_read=0.175, cache_creation=1.75),
@@ -140,8 +140,12 @@ MODEL_PRICING: dict[str, ModelPricing] = {
     "gpt-4.1": ModelPricing(2.00, 8.00, cache_read=0.50, cache_creation=2.00),
     "gpt-4.1-mini": ModelPricing(0.40, 1.60, cache_read=0.10, cache_creation=0.40),
     # ── Google ── cache_read ≈ 10% of input, cache_creation = same as input
-    "gemini-3-pro-preview": ModelPricing(2.00, 12.00, cache_read=0.20, cache_creation=2.00),
-    "gemini-3-flash-preview": ModelPricing(0.50, 3.00, cache_read=0.05, cache_creation=0.50),
+    "gemini-3-pro-preview": ModelPricing(
+        2.00, 12.00, cache_read=0.20, cache_creation=2.00
+    ),
+    "gemini-3-flash-preview": ModelPricing(
+        0.50, 3.00, cache_read=0.05, cache_creation=0.50
+    ),
     "gemini-3-flash": ModelPricing(0.50, 3.00, cache_read=0.05, cache_creation=0.50),
     "gemini-2.5-pro": ModelPricing(1.25, 10.00, cache_read=0.125, cache_creation=1.25),
     "gemini-2.5-flash": ModelPricing(0.30, 2.50, cache_read=0.03, cache_creation=0.30),

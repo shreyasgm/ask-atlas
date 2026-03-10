@@ -165,8 +165,7 @@ class TestValidateSql:
 
     def test_like_on_product_code_no_name_warning(self):
         sql = (
-            "SELECT code FROM classification.product_hs12 "
-            "WHERE product_code LIKE '52%'"
+            "SELECT code FROM classification.product_hs12 WHERE product_code LIKE '52%'"
         )
         result = validate_sql(sql)
         assert result.is_valid is True
