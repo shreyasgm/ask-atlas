@@ -55,12 +55,8 @@ logs
 chroma_db
 archive
 
-# Docker meta
-Dockerfile
+# Docker meta (keep Dockerfile, .dockerignore, cloudbuild.yaml — Cloud Build needs them)
 docker-compose*.yml
-.dockerignore
-.gcloudignore
-cloudbuild.yaml
 
 # Secrets
 .env
