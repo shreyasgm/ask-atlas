@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "ask-atlas"
 version = "0.1.0"
 description = "Ask-Atlas is a chatbot that allows users to ask questions about the Atlas database and receive answers."
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.14"
 authors = [{name="Shreyas Gadgin Matha", email="heavier.flume.9g@icloud.com"}]
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -50,7 +50,7 @@ Repository = "https://github.com/shreyasgm/ask-atlas.git"
 dev = [
     "asyncpg>=0.30.0",
     "backoff>=2.2.1",
-    "psycopg2==2.9.10",
+    "psycopg2-binary>=2.9.10",
     "beautifulsoup4>=4.12.3",
     "faiss-cpu>=1.9.0",
     "nest-asyncio>=1.6.0",
