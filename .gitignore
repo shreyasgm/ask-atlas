@@ -253,9 +253,14 @@ messages.json
 requirements_uv.txt
 
 # Project tracking docs (not for public repo)
-docs/*
-!docs/public/
-!src/docs/
+# NOTE: "docs/*" breaks gcloud builds submit — gcloud's gitignore parser
+# incorrectly matches src/docs/ against the "docs/*" pattern, even with
+# "!src/docs/" negation. Using per-subdir ignores instead.
+docs/atlas/
+docs/private/
+docs/resources/
+docs/media/
+docs/brainstorming_architecture.md
 
 # Generated test seed data (regenerate with: uv run python src/tests/fixtures/generate_seed_sql.py)
 src/tests/fixtures/seed.sql

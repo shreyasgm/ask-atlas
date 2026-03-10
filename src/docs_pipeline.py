@@ -133,13 +133,35 @@ def load_docs_manifest(docs_dir: Path) -> list[DocEntry]:
         List of DocEntry instances, sorted by filename for deterministic ordering.
     """
     entries: list[DocEntry] = []
+    logger.info(
+        "load_docs_manifest: docs_dir=%s  exists=%s  is_dir=%s",
+        docs_dir,
+        docs_dir.exists(),
+        docs_dir.is_dir(),
+    )
     if not docs_dir.is_dir():
-        logger.warning("Docs directory does not exist: %s", docs_dir)
+        # List parent contents to diagnose missing directory
+        parent = docs_dir.parent
+        try:
+            siblings = [p.name for p in parent.iterdir()] if parent.is_dir() else []
+        except OSError:
+            siblings = ["<error listing parent>"]
+        logger.warning(
+            "Docs directory does not exist: %s  (parent %s contains: %s)",
+            docs_dir,
+            parent,
+            siblings,
+        )
         return entries
 
-    md_files = sorted(docs_dir.glob("*.md"))
+    all_files = sorted(docs_dir.iterdir())
+    md_files = [f for f in all_files if f.suffix == ".md"]
     logger.info(
-        "load_docs_manifest: docs_dir=%s  found %d .md files", docs_dir, len(md_files)
+        "load_docs_manifest: docs_dir=%s  total_entries=%d  md_files=%d  names=%s",
+        docs_dir,
+        len(all_files),
+        len(md_files),
+        [f.name for f in all_files[:20]],
     )
     for md_file in md_files:
         try:
