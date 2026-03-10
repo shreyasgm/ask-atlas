@@ -362,7 +362,7 @@ async def select_docs(
 
             selection_model = _make_docs_selection_model(max_docs)
             selection_llm = lightweight_model.with_structured_output(
-                selection_model, method="json_schema"
+                selection_model, method="function_calling"
             )
             selection_handler = UsageMetadataCallbackHandler()
             llm_start = _time.monotonic()

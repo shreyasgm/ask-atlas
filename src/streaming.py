@@ -14,7 +14,7 @@ from sqlalchemy import exc as sa_exc
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlglot import exp
 
-from src.config import AgentMode, create_llm, get_settings
+from src.config import AgentMode, create_router_llm, get_settings
 from src.docs_pipeline import DOCS_PIPELINE_NODES
 from src.graph import build_atlas_graph
 from src.graphql_pipeline import GRAPHQL_PIPELINE_NODES
@@ -582,16 +582,8 @@ class AtlasTextToSQL:
         instance.example_queries = load_example_queries(
             queries_json, example_queries_dir
         )
-        instance.metadata_llm = create_llm(
-            _settings.lightweight_model,
-            _settings.lightweight_model_provider,
-            temperature=0,
-        )
-        instance.query_llm = create_llm(
-            _settings.frontier_model,
-            _settings.frontier_model_provider,
-            temperature=0,
-        )
+        instance.metadata_llm = create_router_llm("lightweight", temperature=0)
+        instance.query_llm = create_router_llm("frontier", temperature=0)
         instance.max_results = max_results
         instance.max_queries = max_queries
 

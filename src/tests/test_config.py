@@ -6,11 +6,11 @@ Integration tests verify that API keys are set for the configured providers.
 """
 
 import os
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.config import get_settings
+from src.config import _MODEL_DEFAULTS, create_router_llm, get_settings
 
 # Minimal env for tests that construct Settings without a real .env file.
 _MIN_ENV = {"ATLAS_DB_URL": "postgresql://test:5432/testdb"}
@@ -224,32 +224,26 @@ class TestGetPromptModel:
     """get_prompt_model() returns the correct LLM for a given prompt key."""
 
     def test_frontier_prompt_returns_frontier_model(self):
-        """A prompt assigned to 'frontier' should use the frontier model config."""
+        """A prompt assigned to 'frontier' should call create_router_llm('frontier')."""
         from src.config import get_prompt_model
 
-        with patch("src.config.create_llm") as mock_create:
+        with patch("src.config.create_router_llm") as mock_create:
             mock_create.return_value = "mock-llm"
             result = get_prompt_model("sql_generation")
 
             assert result == "mock-llm"
-            call_args = mock_create.call_args
-            settings = get_settings()
-            assert call_args[0][0] == settings.frontier_model
-            assert call_args[0][1] == settings.frontier_model_provider
+            mock_create.assert_called_once_with("frontier")
 
     def test_lightweight_prompt_returns_lightweight_model(self):
-        """A prompt assigned to 'lightweight' should use the lightweight model config."""
+        """A prompt assigned to 'lightweight' should call create_router_llm('lightweight')."""
         from src.config import get_prompt_model
 
-        with patch("src.config.create_llm") as mock_create:
+        with patch("src.config.create_router_llm") as mock_create:
             mock_create.return_value = "mock-llm"
             result = get_prompt_model("product_extraction")
 
             assert result == "mock-llm"
-            call_args = mock_create.call_args
-            settings = get_settings()
-            assert call_args[0][0] == settings.lightweight_model
-            assert call_args[0][1] == settings.lightweight_model_provider
+            mock_create.assert_called_once_with("lightweight")
 
     def test_unknown_prompt_raises_key_error(self):
         """Requesting an unregistered prompt key should raise KeyError."""
@@ -263,11 +257,119 @@ class TestGetPromptModel:
         from src.config import get_prompt_model
 
         settings = get_settings()
-        with patch("src.config.create_llm") as mock_create:
+        with patch("src.config.create_router_llm") as mock_create:
             mock_create.return_value = "mock-llm"
             for key in settings.prompt_model_assignments:
                 result = get_prompt_model(key)
                 assert result == "mock-llm"
+
+
+# ---------------------------------------------------------------------------
+# Router LLM tests
+# ---------------------------------------------------------------------------
+
+
+class TestCreateRouterLlm:
+    """Tests for create_router_llm() multi-provider load balancing."""
+
+    @staticmethod
+    def _mock_settings(**overrides):
+        """Build a mock Settings with controlled API key values."""
+        defaults = {
+            "atlas_db_url": "postgresql://x",
+            "openai_api_key": None,
+            "anthropic_api_key": None,
+            "google_api_key": None,
+            "frontier_fallback_models": list(
+                _MODEL_DEFAULTS["frontier_fallback_models"]
+            ),
+            "lightweight_fallback_models": list(
+                _MODEL_DEFAULTS["lightweight_fallback_models"]
+            ),
+            "litellm_routing_strategy": "latency-based-routing",
+            "litellm_cooldown_time": 60,
+            "litellm_allowed_fails": 2,
+            "litellm_num_retries": 2,
+        }
+        defaults.update(overrides)
+        mock = MagicMock()
+        for k, v in defaults.items():
+            setattr(mock, k, v)
+        return mock
+
+    def test_filters_by_available_keys_openai_only(self):
+        """Only OpenAI key set → Router model_list has only OpenAI entry."""
+        mock_settings = self._mock_settings(openai_api_key="sk-test")
+        with (
+            patch("src.config.get_settings", return_value=mock_settings),
+            patch("litellm.Router") as mock_router_cls,
+            patch("langchain_litellm.ChatLiteLLMRouter") as mock_chat,
+        ):
+            mock_chat.return_value = "mock-router-llm"
+            result = create_router_llm("frontier")
+
+            call_kwargs = mock_router_cls.call_args[1]
+            model_list = call_kwargs["model_list"]
+            assert len(model_list) == 1
+            assert "openai/" in model_list[0]["litellm_params"]["model"]
+            assert result == "mock-router-llm"
+
+    def test_no_keys_raises(self):
+        """No API keys → clear ValueError."""
+        mock_settings = self._mock_settings()
+        with patch("src.config.get_settings", return_value=mock_settings):
+            with pytest.raises(ValueError, match="No API keys configured"):
+                create_router_llm("frontier")
+
+    def test_all_keys_includes_all_models(self):
+        """All 3 API keys set → all 3 models in Router list."""
+        mock_settings = self._mock_settings(
+            openai_api_key="sk-test",
+            anthropic_api_key="sk-ant-test",
+            google_api_key="goog-test",
+        )
+        with (
+            patch("src.config.get_settings", return_value=mock_settings),
+            patch("litellm.Router") as mock_router_cls,
+            patch("langchain_litellm.ChatLiteLLMRouter") as mock_chat,
+        ):
+            mock_chat.return_value = "mock-router-llm"
+            create_router_llm("frontier")
+
+            call_kwargs = mock_router_cls.call_args[1]
+            model_list = call_kwargs["model_list"]
+            assert len(model_list) == 3
+            providers = {e["litellm_params"]["model"].split("/")[0] for e in model_list}
+            assert providers == {"openai", "anthropic", "gemini"}
+
+    def test_returns_base_chat_model(self):
+        """Return type should be a BaseChatModel (or mock standing in for one)."""
+        mock_settings = self._mock_settings(openai_api_key="sk-test")
+        with (
+            patch("src.config.get_settings", return_value=mock_settings),
+            patch("litellm.Router"),
+            patch("langchain_litellm.ChatLiteLLMRouter") as mock_chat,
+        ):
+            sentinel = MagicMock()
+            mock_chat.return_value = sentinel
+            result = create_router_llm("lightweight", temperature=0)
+            assert result is sentinel
+            # Verify kwargs forwarded
+            assert mock_chat.call_args[1]["temperature"] == 0
+
+    def test_invalid_tier_raises(self):
+        """Unknown tier string → ValueError."""
+        with pytest.raises(ValueError, match="Unknown tier"):
+            create_router_llm("nonexistent")
+
+    def test_create_llm_still_works(self):
+        """Old create_llm factory should still work (regression guard)."""
+        from src.config import create_llm
+
+        with patch("langchain_openai.ChatOpenAI") as mock_cls:
+            mock_cls.return_value = "direct-llm"
+            result = create_llm("gpt-5-mini", "openai", temperature=0)
+            assert result == "direct-llm"
 
 
 # ---------------------------------------------------------------------------

@@ -747,7 +747,9 @@ async def reasoning_node(
         max_year=GRAPHQL_DATA_MAX_YEAR,
     )
 
-    model = llm.bind_tools(TOOL_SCHEMAS, parallel_tool_calls=False, tool_choice="any")
+    model = llm.bind_tools(
+        TOOL_SCHEMAS, parallel_tool_calls=False, tool_choice="required"
+    )
     response = await model.ainvoke(
         [SystemMessage(content=system_prompt)] + state["messages"]
     )

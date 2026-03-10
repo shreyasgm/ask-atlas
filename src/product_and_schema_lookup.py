@@ -168,7 +168,7 @@ class ProductAndSchemaLookup:
 
         # Create initial chain to identify product and schema mentions
         llm = self.llm.with_structured_output(
-            SchemasAndProductsFound, method="json_schema"
+            SchemasAndProductsFound, method="function_calling"
         )
         mentions_chain = prompt | llm
         return mentions_chain
@@ -315,7 +315,9 @@ class ProductAndSchemaLookup:
         # Partially format prompt template using search results
         prompt = prompt.partial(product_search_results=results_str)
 
-        llm = self.llm.with_structured_output(ProductCodesMapping, method="json_schema")
+        llm = self.llm.with_structured_output(
+            ProductCodesMapping, method="function_calling"
+        )
         chain = prompt | llm
 
         return chain

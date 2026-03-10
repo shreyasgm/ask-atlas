@@ -41,6 +41,35 @@ FRONTIER_MODEL_PROVIDER = "openai"
 LIGHTWEIGHT_MODEL = "gpt-5-mini"
 LIGHTWEIGHT_MODEL_PROVIDER = "openai"
 
+# --- Fallback model lists for LiteLLM Router (latency-based routing + auto-fallback) ---
+# Primary model listed first. Models are tried in order during initial calibration.
+# Only models whose provider API key is configured will be used at runtime.
+FRONTIER_FALLBACK_MODELS: list[dict] = [
+    {"model_name": "frontier", "litellm_params": {"model": "openai/gpt-5.4"}},
+    {
+        "model_name": "frontier",
+        "litellm_params": {"model": "anthropic/claude-sonnet-4-6"},
+    },
+    {"model_name": "frontier", "litellm_params": {"model": "gemini/gemini-2.5-pro"}},
+]
+
+LIGHTWEIGHT_FALLBACK_MODELS: list[dict] = [
+    {"model_name": "lightweight", "litellm_params": {"model": "openai/gpt-5-mini"}},
+    {
+        "model_name": "lightweight",
+        "litellm_params": {"model": "anthropic/claude-haiku-4-5"},
+    },
+    {
+        "model_name": "lightweight",
+        "litellm_params": {"model": "gemini/gemini-2.5-flash"},
+    },
+]
+
+LITELLM_ROUTING_STRATEGY = "latency-based-routing"
+LITELLM_COOLDOWN_TIME = 60  # seconds to skip a failing provider
+LITELLM_ALLOWED_FAILS = 2  # failures before cooldown triggers
+LITELLM_NUM_RETRIES = 2  # retries per request before fallback
+
 # --- Docs pipeline ---
 # Maximum documents the docs tool can select per invocation.
 MAX_DOCS_PER_SELECTION = 3

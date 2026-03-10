@@ -55,6 +55,14 @@ _MODEL_DEFAULTS = {
     "agent_mode": getattr(_mod, "AGENT_MODE", "auto"),
     "prompt_model_assignments": getattr(_mod, "PROMPT_MODEL_ASSIGNMENTS", {}),
     "max_docs_per_selection": getattr(_mod, "MAX_DOCS_PER_SELECTION", 2),
+    "frontier_fallback_models": getattr(_mod, "FRONTIER_FALLBACK_MODELS", []),
+    "lightweight_fallback_models": getattr(_mod, "LIGHTWEIGHT_FALLBACK_MODELS", []),
+    "litellm_routing_strategy": getattr(
+        _mod, "LITELLM_ROUTING_STRATEGY", "latency-based-routing"
+    ),
+    "litellm_cooldown_time": getattr(_mod, "LITELLM_COOLDOWN_TIME", 60),
+    "litellm_allowed_fails": getattr(_mod, "LITELLM_ALLOWED_FAILS", 2),
+    "litellm_num_retries": getattr(_mod, "LITELLM_NUM_RETRIES", 2),
 }
 
 
@@ -136,6 +144,32 @@ class Settings(BaseSettings):
             "lightweight_model_provider",
         ),
         description="Provider for the lightweight model ('openai', 'anthropic', or 'google-genai')",
+    )
+
+    # LiteLLM Router — multi-provider load balancing
+    frontier_fallback_models: list[dict] = Field(
+        default_factory=lambda: list(_MODEL_DEFAULTS["frontier_fallback_models"]),
+        description="Fallback model list for the frontier tier (LiteLLM Router format)",
+    )
+    lightweight_fallback_models: list[dict] = Field(
+        default_factory=lambda: list(_MODEL_DEFAULTS["lightweight_fallback_models"]),
+        description="Fallback model list for the lightweight tier (LiteLLM Router format)",
+    )
+    litellm_routing_strategy: str = Field(
+        _MODEL_DEFAULTS["litellm_routing_strategy"],
+        description="LiteLLM Router routing strategy",
+    )
+    litellm_cooldown_time: int = Field(
+        _MODEL_DEFAULTS["litellm_cooldown_time"],
+        description="Seconds to skip a failing provider",
+    )
+    litellm_allowed_fails: int = Field(
+        _MODEL_DEFAULTS["litellm_allowed_fails"],
+        description="Failures before cooldown triggers",
+    )
+    litellm_num_retries: int = Field(
+        _MODEL_DEFAULTS["litellm_num_retries"],
+        description="Retries per request before fallback",
     )
 
     # GraphQL API endpoints (public Atlas APIs — override only in tests or staging)
@@ -274,6 +308,76 @@ def create_llm(model: str, provider: str, **kwargs) -> BaseChatModel:
         )
 
 
+# ---------------------------------------------------------------------------
+# Provider-prefix → Settings API-key field mapping
+# ---------------------------------------------------------------------------
+_PROVIDER_PREFIX_TO_KEY_FIELD: dict[str, str] = {
+    "openai": "openai_api_key",
+    "anthropic": "anthropic_api_key",
+    "gemini": "google_api_key",
+}
+
+
+def create_router_llm(tier: str, **kwargs) -> BaseChatModel:
+    """Create a LiteLLM Router-backed chat model for a given tier.
+
+    Filters the fallback model list to only include models whose provider
+    API key is configured, then wraps them in a ``ChatLiteLLMRouter``.
+
+    Args:
+        tier: ``"frontier"`` or ``"lightweight"``.
+        **kwargs: Extra keyword arguments forwarded to ``ChatLiteLLMRouter``.
+
+    Returns:
+        A LangChain ``BaseChatModel`` backed by LiteLLM Router.
+
+    Raises:
+        ValueError: If no models remain after filtering (missing API keys).
+    """
+    import litellm
+    from langchain_litellm import ChatLiteLLMRouter
+
+    # Silently drop params that a specific provider doesn't support
+    # (e.g. temperature=0 for GPT-5 reasoning models) rather than erroring.
+    litellm.drop_params = True
+
+    settings = get_settings()
+
+    if tier == "frontier":
+        raw_models = settings.frontier_fallback_models
+    elif tier == "lightweight":
+        raw_models = settings.lightweight_fallback_models
+    else:
+        raise ValueError(f"Unknown tier: {tier!r}. Use 'frontier' or 'lightweight'.")
+
+    # Filter to models whose provider API key is available
+    filtered: list[dict] = []
+    for entry in raw_models:
+        model_str = entry["litellm_params"]["model"]
+        provider_prefix = model_str.split("/")[0]
+        key_field = _PROVIDER_PREFIX_TO_KEY_FIELD.get(provider_prefix)
+        if key_field and getattr(settings, key_field, None):
+            filtered.append(entry)
+
+    if not filtered:
+        configured = [e["litellm_params"]["model"] for e in raw_models]
+        raise ValueError(
+            f"No API keys configured for any {tier} fallback models. "
+            f"Models checked: {configured}. "
+            "Set at least one of OPENAI_API_KEY, ANTHROPIC_API_KEY, or GOOGLE_API_KEY."
+        )
+
+    router = litellm.Router(
+        model_list=filtered,
+        routing_strategy=settings.litellm_routing_strategy,
+        allowed_fails=settings.litellm_allowed_fails,
+        cooldown_time=settings.litellm_cooldown_time,
+        num_retries=settings.litellm_num_retries,
+    )
+
+    return ChatLiteLLMRouter(router=router, model_name=tier, **kwargs)
+
+
 def get_prompt_model(prompt_key: str) -> BaseChatModel:
     """Get the LLM instance for a specific prompt.
 
@@ -297,9 +401,4 @@ def get_prompt_model(prompt_key: str) -> BaseChatModel:
             f"Available keys: {sorted(assignments.keys())}"
         )
     tier = assignments[prompt_key]
-    if tier == "frontier":
-        return create_llm(settings.frontier_model, settings.frontier_model_provider)
-    else:
-        return create_llm(
-            settings.lightweight_model, settings.lightweight_model_provider
-        )
+    return create_router_llm(tier)

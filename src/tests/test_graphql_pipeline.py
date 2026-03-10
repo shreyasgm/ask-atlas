@@ -403,9 +403,9 @@ class TestClassifyQuery:
             result["graphql_classification"]["reasoning"] == "Country profile question"
         )
         assert result["graphql_api_target"] == "country_pages"
-        # Verify with_structured_output was called with json_schema method
+        # Verify with_structured_output was called with function_calling method
         mock_llm.with_structured_output.assert_called_once_with(
-            GraphQLQueryClassification, method="json_schema"
+            GraphQLQueryClassification, method="function_calling"
         )
 
     async def test_llm_error_propagates_for_retry(self):
@@ -510,9 +510,9 @@ class TestExtractEntities:
         assert ext["country_code_guess"] == "KEN"
         assert ext["product_code_guess"] == "0901"
         assert ext["year"] == 2024
-        # Verify json_schema method is used
+        # Verify with_structured_output was called with function_calling method
         mock_llm.with_structured_output.assert_called_once_with(
-            GraphQLEntityExtraction, method="json_schema"
+            GraphQLEntityExtraction, method="function_calling"
         )
 
     async def test_skips_when_rejected(self):

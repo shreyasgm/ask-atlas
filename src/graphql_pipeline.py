@@ -672,7 +672,7 @@ async def classify_query(state: AtlasAgentState, *, lightweight_model: Any) -> d
         context = state.get("graphql_context", "")
 
         chain = lightweight_model.with_structured_output(
-            GraphQLQueryClassification, method="json_schema"
+            GraphQLQueryClassification, method="function_calling"
         )
         prompt = build_classification_prompt(question, context)
         usage_handler = UsageMetadataCallbackHandler()
@@ -741,7 +741,7 @@ async def extract_entities(state: AtlasAgentState, *, lightweight_model: Any) ->
         query_type = classification.get("query_type", "") if classification else ""
 
         chain = lightweight_model.with_structured_output(
-            GraphQLEntityExtraction, method="json_schema"
+            GraphQLEntityExtraction, method="function_calling"
         )
         prompt = build_extraction_prompt(question, query_type, context)
         usage_handler = UsageMetadataCallbackHandler()
@@ -789,7 +789,7 @@ async def plan_query(state: AtlasAgentState, *, lightweight_model: Any) -> dict:
         context = state.get("graphql_context", "")
 
         chain = lightweight_model.with_structured_output(
-            GraphQLQueryPlan, method="json_schema"
+            GraphQLQueryPlan, method="function_calling"
         )
         prompt = build_query_plan_prompt(question, context)
         usage_handler = UsageMetadataCallbackHandler()
@@ -3497,7 +3497,7 @@ async def assess_graphql_result(
         handler = UsageMetadataCallbackHandler()
         try:
             llm = lightweight_model.with_structured_output(
-                ResultAssessment, method="json_schema"
+                ResultAssessment, method="function_calling"
             )
             llm_start = time.monotonic()
             result: ResultAssessment = await llm.ainvoke(

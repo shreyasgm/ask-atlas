@@ -887,7 +887,9 @@ async def reasoning_node(
         sql_max_year=SQL_DATA_MAX_YEAR,
     )
 
-    model = llm.bind_tools(TOOL_SCHEMAS, parallel_tool_calls=False, tool_choice="any")
+    model = llm.bind_tools(
+        TOOL_SCHEMAS, parallel_tool_calls=False, tool_choice="required"
+    )
     response = await model.ainvoke(
         [SystemMessage(content=system_prompt)] + state["messages"]
     )
@@ -907,7 +909,7 @@ def route_after_reasoning(state: SQLSubAgentState) -> str:
     """Dispatch to tool or end based on the last AI message."""
     last_msg = state["messages"][-1]
     if not hasattr(last_msg, "tool_calls") or not last_msg.tool_calls:
-        # With tool_choice="any" this shouldn't happen, but handle gracefully
+        # With tool_choice="required" this shouldn't happen, but handle gracefully
         return END
 
     tool_name = last_msg.tool_calls[0]["name"]
