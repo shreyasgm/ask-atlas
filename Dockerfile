@@ -29,6 +29,7 @@ COPY --from=builder /app/pyproject.toml /app/
 RUN mkdir -p /app/logs && chown -R atlas:atlas /app
 
 ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONUNBUFFERED=1
 USER atlas
 EXPOSE 8000
 

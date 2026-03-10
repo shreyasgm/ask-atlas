@@ -19,7 +19,9 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.errors import GraphRecursionError
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
+from starlette.types import ASGIApp, Receive, Scope, Send
 
+from src.config import get_settings
 from src.conversations import (
     ConversationStore,
     InMemoryConversationStore,
@@ -35,6 +37,7 @@ from src.feedback import (
     rating_to_str,
 )
 from src.graphql_pipeline import GRAPHQL_PIPELINE_NODES
+from src.logging_config import configure_logging, set_request_id
 from src.streaming import AtlasTextToSQL, _build_turn_summary
 
 
@@ -47,15 +50,6 @@ def _classify_pipeline_node(node: str) -> str:
     return "sql"
 
 
-# ---------------------------------------------------------------------------
-# Logging setup — always show timestamps, level, and logger name
-# ---------------------------------------------------------------------------
-logging.basicConfig(
-    format="%(asctime)s %(levelname)-8s [%(name)s] %(message)s",
-    datefmt="%H:%M:%S",
-    level=logging.INFO,
-    force=True,
-)
 logger = logging.getLogger(__name__)
 
 REQUEST_TIMEOUT_SECONDS: float = 120.0
@@ -220,6 +214,11 @@ _state = _AppState()
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Create AtlasTextToSQL and ConversationStore at startup; tear down on shutdown."""
+    settings = get_settings()
+    configure_logging(
+        json_format=settings.log_format == "json",
+        log_level=settings.log_level,
+    )
     pid = os.getpid()
     logger.info("=" * 60)
     logger.info("Ask-Atlas API starting  (pid=%d)", pid)
@@ -285,6 +284,45 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 # Middleware
 # ---------------------------------------------------------------------------
+
+
+class RequestIdMiddleware:
+    """ASGI middleware that assigns a unique request ID to every request.
+
+    - Reads ``X-Request-ID`` from the incoming headers (if present), otherwise
+      generates a UUID4.
+    - Sets the ID into the ``contextvars.ContextVar`` from ``src.logging_config``
+      so that all log records emitted during the request include it.
+    - Adds ``X-Request-ID`` to the response headers.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] not in ("http", "websocket"):
+            await self.app(scope, receive, send)
+            return
+
+        # Extract or generate request ID
+        headers = dict(scope.get("headers", []))
+        request_id = headers.get(b"x-request-id", b"").decode() or str(uuid.uuid4())
+        set_request_id(request_id)
+
+        async def send_with_request_id(message):
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                headers.append((b"x-request-id", request_id.encode()))
+                message["headers"] = headers
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_with_request_id)
+        finally:
+            set_request_id(None)
+
+
+app.add_middleware(RequestIdMiddleware)
 
 
 @app.middleware("http")

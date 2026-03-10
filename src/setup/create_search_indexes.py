@@ -4,10 +4,9 @@ from pathlib import Path
 
 import psycopg
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+from src.logging_config import configure_logging
+
+configure_logging(json_format=False, log_level="INFO")
 logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).parents[2]

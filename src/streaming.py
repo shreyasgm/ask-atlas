@@ -1,6 +1,5 @@
 import datetime
 import json
-import logging
 import uuid
 import warnings
 from collections.abc import AsyncGenerator
@@ -32,20 +31,6 @@ ALL_PIPELINE_NODES = SQL_PIPELINE_NODES | GRAPHQL_PIPELINE_NODES | DOCS_PIPELINE
 
 # Define BASE_DIR
 BASE_DIR = Path(__file__).resolve().parents[1]
-
-# Create logs directory if it doesn't exist
-log_dir = BASE_DIR / "logs"
-log_dir.mkdir(exist_ok=True)
-
-# Set up logging to file with timestamp
-log_file = (
-    log_dir / f"atlas_sql_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-)
-logging.basicConfig(
-    filename=log_file,
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
 
 # Suppress SQLAlchemy warning about vector type
 warnings.filterwarnings(

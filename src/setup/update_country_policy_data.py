@@ -28,7 +28,9 @@ import time
 import urllib.request
 from pathlib import Path
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+from src.logging_config import configure_logging
+
+configure_logging(json_format=False, log_level="INFO")
 logger = logging.getLogger(__name__)
 
 COUNTRY_PAGES_URL = "https://atlas.hks.harvard.edu/api/countries/graphql"

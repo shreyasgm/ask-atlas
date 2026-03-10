@@ -7,6 +7,8 @@ from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 from langchain_postgres import PGVector
 
+from src.logging_config import configure_logging
+
 BASE_DIR = Path(__file__).parents[2]
 
 from src.config import get_settings  # noqa: E402
@@ -14,10 +16,7 @@ from src.config import get_settings  # noqa: E402
 # Load settings (replaces load_dotenv)
 settings = get_settings()
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+configure_logging(json_format=False, log_level="INFO")
 logger = logging.getLogger(__name__)
 
 # Log base directory

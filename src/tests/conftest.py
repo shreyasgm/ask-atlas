@@ -6,6 +6,8 @@ from pathlib import Path
 import pytest
 from dotenv import load_dotenv
 
+from src.logging_config import configure_logging
+
 # Define BASE_DIR
 BASE_DIR = Path(__file__).resolve().parents[2]
 load_dotenv(BASE_DIR / ".env")
@@ -25,12 +27,7 @@ def pytest_configure(config):
         "eval: marks eval-based integration tests (real LLM + production DB + LLM-as-judge)",
     )
 
-    # Set up logging configuration for stdout only
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[logging.StreamHandler()],  # This prints to stdout
-    )
+    configure_logging(json_format=False, log_level="INFO")
 
 
 # ---------------------------------------------------------------------------

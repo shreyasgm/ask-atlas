@@ -186,6 +186,18 @@ class Settings(BaseSettings):
         description="Maximum rows returned per SQL query",
     )
 
+    # Logging
+    log_level: str = Field(
+        "INFO",
+        validation_alias=AliasChoices("LOG_LEVEL", "log_level"),
+        description="Python log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
+    )
+    log_format: str = Field(
+        "text",
+        validation_alias=AliasChoices("LOG_FORMAT", "log_format"),
+        description="Log output format: 'json' for structured Cloud Run logs, 'text' for local dev",
+    )
+
     # CORS
     cors_origins: str = Field(
         "",

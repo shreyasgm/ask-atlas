@@ -1,14 +1,13 @@
 import json
 import logging
-import sys
 import uuid
 
 import httpx
 import streamlit as st
 
-# Set up logging
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-logging.getLogger().addHandler(logging.StreamHandler(stream=sys.stdout))
+from src.logging_config import configure_logging
+
+configure_logging(json_format=False, log_level="INFO")
 
 # API base URL — configurable via Streamlit secrets or env
 API_BASE_URL = st.secrets.get("API_BASE_URL", "http://localhost:8000")

@@ -16,6 +16,7 @@ import logging
 import psycopg
 
 from src.config import get_settings
+from src.logging_config import configure_logging
 
 logger = logging.getLogger(__name__)
 
@@ -94,12 +95,7 @@ def terminate_idle_connections(
 
 
 def _configure_logging() -> None:
-    logging.basicConfig(
-        format="%(asctime)s %(levelname)-8s [%(name)s] %(message)s",
-        datefmt="%H:%M:%S",
-        level=logging.INFO,
-        force=True,
-    )
+    configure_logging(json_format=False, log_level="INFO")
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
