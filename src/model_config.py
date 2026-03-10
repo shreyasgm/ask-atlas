@@ -66,8 +66,8 @@ LIGHTWEIGHT_FALLBACK_MODELS: list[dict] = [
     {"model_name": "lightweight", "litellm_params": {"model": "openai/gpt-5-nano"}},
 ]
 
-LITELLM_ROUTING_STRATEGY = "latency-based-routing"
-LITELLM_COOLDOWN_TIME = 60  # seconds to skip a failing provider
+LITELLM_ROUTING_STRATEGY = "simple-shuffle"  # low overhead; latency-based only helps with long-lived singleton
+LITELLM_COOLDOWN_TIME = 5  # seconds to skip a failing provider (LiteLLM default)
 LITELLM_ALLOWED_FAILS = 2  # failures before cooldown triggers
 LITELLM_NUM_RETRIES = 2  # retries per request before fallback
 

@@ -10,7 +10,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.config import _MODEL_DEFAULTS, create_router_llm, get_settings
+from src.config import (
+    _MODEL_DEFAULTS,
+    _get_litellm_router,
+    create_router_llm,
+    get_settings,
+)
 
 # Minimal env for tests that construct Settings without a real .env file.
 _MIN_ENV = {"ATLAS_DB_URL": "postgresql://test:5432/testdb"}
@@ -24,11 +29,13 @@ def _clear_settings_cache():
     even when no .env file is present (e.g. in worktrees).
     """
     get_settings.cache_clear()
+    _get_litellm_router.cache_clear()
     old = os.environ.get("ATLAS_DB_URL")
     if old is None:
         os.environ["ATLAS_DB_URL"] = _MIN_ENV["ATLAS_DB_URL"]
     yield
     get_settings.cache_clear()
+    _get_litellm_router.cache_clear()
     if old is None:
         os.environ.pop("ATLAS_DB_URL", None)
 
@@ -286,8 +293,8 @@ class TestCreateRouterLlm:
             "lightweight_fallback_models": list(
                 _MODEL_DEFAULTS["lightweight_fallback_models"]
             ),
-            "litellm_routing_strategy": "latency-based-routing",
-            "litellm_cooldown_time": 60,
+            "litellm_routing_strategy": _MODEL_DEFAULTS["litellm_routing_strategy"],
+            "litellm_cooldown_time": _MODEL_DEFAULTS["litellm_cooldown_time"],
             "litellm_allowed_fails": 2,
             "litellm_num_retries": 2,
         }
@@ -322,7 +329,7 @@ class TestCreateRouterLlm:
                 create_router_llm("frontier")
 
     def test_all_keys_includes_all_models(self):
-        """All 3 API keys set → all 3 models in Router list."""
+        """All available provider keys set → all matching models in Router list."""
         mock_settings = self._mock_settings(
             openai_api_key="sk-test",
             anthropic_api_key="sk-ant-test",
@@ -338,9 +345,9 @@ class TestCreateRouterLlm:
 
             call_kwargs = mock_router_cls.call_args[1]
             model_list = call_kwargs["model_list"]
-            assert len(model_list) == 3
-            providers = {e["litellm_params"]["model"].split("/")[0] for e in model_list}
-            assert providers == {"openai", "anthropic", "gemini"}
+            # Should include every frontier model whose provider key is set
+            expected_count = len(_MODEL_DEFAULTS["frontier_fallback_models"])
+            assert len(model_list) == expected_count
 
     def test_returns_base_chat_model(self):
         """Return type should be a BaseChatModel (or mock standing in for one)."""

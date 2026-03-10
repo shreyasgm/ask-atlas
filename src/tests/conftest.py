@@ -29,6 +29,10 @@ def pytest_configure(config):
 
     configure_logging(json_format=False, log_level="INFO")
 
+    # Disable LiteLLM Router cooldowns in tests so transient failures don't
+    # cause cascading "No deployments available" errors.
+    os.environ.setdefault("LITELLM_COOLDOWN_TIME", "0")
+
 
 # ---------------------------------------------------------------------------
 # LLM cost tracking — fires for any real API call, zero per-test setup

@@ -324,24 +324,25 @@ _PROVIDER_PREFIX_TO_KEY_FIELD: dict[str, str] = {
 }
 
 
-def create_router_llm(tier: str, **kwargs) -> BaseChatModel:
-    """Create a LiteLLM Router-backed chat model for a given tier.
+@lru_cache
+def _get_litellm_router(tier: str):
+    """Return a cached ``litellm.Router`` for the given tier.
 
-    Filters the fallback model list to only include models whose provider
-    API key is configured, then wraps them in a ``ChatLiteLLMRouter``.
+    The Router holds internal state (latency cache, cooldown tracking) that
+    only works correctly when the instance persists across requests.  Caching
+    with ``@lru_cache`` ensures a single Router per tier for the lifetime of
+    the process.
 
     Args:
         tier: ``"frontier"`` or ``"lightweight"``.
-        **kwargs: Extra keyword arguments forwarded to ``ChatLiteLLMRouter``.
 
     Returns:
-        A LangChain ``BaseChatModel`` backed by LiteLLM Router.
+        A configured ``litellm.Router`` instance.
 
     Raises:
-        ValueError: If no models remain after filtering (missing API keys).
+        ValueError: If *tier* is unknown or no API keys are configured.
     """
     import litellm
-    from langchain_litellm import ChatLiteLLMRouter
 
     # Silently drop params that a specific provider doesn't support
     # (e.g. temperature=0 for GPT-5 reasoning models) rather than erroring.
@@ -373,7 +374,7 @@ def create_router_llm(tier: str, **kwargs) -> BaseChatModel:
             "Set at least one of OPENAI_API_KEY, ANTHROPIC_API_KEY, or GOOGLE_API_KEY."
         )
 
-    router = litellm.Router(
+    return litellm.Router(
         model_list=filtered,
         routing_strategy=settings.litellm_routing_strategy,
         allowed_fails=settings.litellm_allowed_fails,
@@ -381,6 +382,26 @@ def create_router_llm(tier: str, **kwargs) -> BaseChatModel:
         num_retries=settings.litellm_num_retries,
     )
 
+
+def create_router_llm(tier: str, **kwargs) -> BaseChatModel:
+    """Create a LiteLLM Router-backed chat model for a given tier.
+
+    Uses a cached Router instance per tier so latency tracking and cooldown
+    state persist across calls.
+
+    Args:
+        tier: ``"frontier"`` or ``"lightweight"``.
+        **kwargs: Extra keyword arguments forwarded to ``ChatLiteLLMRouter``.
+
+    Returns:
+        A LangChain ``BaseChatModel`` backed by LiteLLM Router.
+
+    Raises:
+        ValueError: If no models remain after filtering (missing API keys).
+    """
+    from langchain_litellm import ChatLiteLLMRouter
+
+    router = _get_litellm_router(tier)
     return ChatLiteLLMRouter(router=router, model_name=tier, **kwargs)
 
 
