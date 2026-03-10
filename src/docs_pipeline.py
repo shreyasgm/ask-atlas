@@ -137,7 +137,11 @@ def load_docs_manifest(docs_dir: Path) -> list[DocEntry]:
         logger.warning("Docs directory does not exist: %s", docs_dir)
         return entries
 
-    for md_file in sorted(docs_dir.glob("*.md")):
+    md_files = sorted(docs_dir.glob("*.md"))
+    logger.info(
+        "load_docs_manifest: docs_dir=%s  found %d .md files", docs_dir, len(md_files)
+    )
+    for md_file in md_files:
         try:
             text = md_file.read_text(encoding="utf-8")
         except OSError:
@@ -169,6 +173,9 @@ def load_docs_manifest(docs_dir: Path) -> list[DocEntry]:
             )
         )
 
+    logger.info(
+        "load_docs_manifest: built %d entries from %s", len(entries), docs_dir
+    )
     return entries
 
 
@@ -348,6 +355,12 @@ async def select_docs(
 
         selected_entries: list[DocEntry] = []
         usage_records: list[dict] = []
+
+        logger.info(
+            "select_docs: manifest has %d entries, question=%r",
+            len(manifest),
+            question[:80],
+        )
 
         try:
             from langchain_core.callbacks import UsageMetadataCallbackHandler
