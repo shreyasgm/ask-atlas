@@ -46,9 +46,17 @@ Table selection guide:
 - `product_year_N`: Global product-level data (world export value, PCI, ubiquity). No country dimension.
 - `country_product_year_N`: Country-product metrics (export value, RCA, COG, distance). Main table for "what does country X export?".
 - `country_country_year`: Bilateral aggregate trade. For "total trade between A and B" or trade balance.
-- `country_country_product_year_N`: Bilateral trade by product. For "what does A export to B?" with product breakdown.
-- Table suffixes (_1, _2, _4, _6) indicate product digit level.
+- `country_country_product_year_N`: Bilateral trade by product. For "what does A export to B?" with product breakdown. Note: services_unilateral does NOT have real bilateral data. For bilateral services trade between two specific countries, the data is not available.
+- Table suffixes (_1, _2, _4, _6) indicate product digit level. Exception: SITC tables only go up to _4 (no 6-digit SITC tables exist).
 - Services product levels: _1 has only the aggregate row (product_code='services'). _2, _4, and _6 all contain the same 5 service categories — no finer granularity at higher digits. Always use _2 for disaggregated service queries.
+- Services product codes (use exact codes, never ILIKE on names):
+    'services'    → aggregate (level 1 only, in _1 tables)
+    'ict'         → Business (level 2)
+    'financial'   → Insurance & finance (level 2)
+    'transport'   → Transport (level 2)
+    'travel'      → Travel & tourism (level 2)
+    'unspecified' → Unspecified (level 2)
+  Always query services_unilateral._2 tables for disaggregated service categories.
 
 Query planning:
 1. Identify the main elements of the question:
@@ -111,6 +119,7 @@ TechFrontier countries (no growth opportunity analysis): Austria, Canada, China,
 **Common Mistakes to Avoid:**
 - Never filter on `product_id` in a WHERE clause — always use `product_code`.
 - Never filter on `country_id` in a WHERE clause — always use `iso3_code`.
+- Never use LIKE or ILIKE on product name columns (`name_short_en`). Always filter on `product_code` with exact match or IN clause. Name-based filtering matches products at multiple hierarchy levels, causing double-counted totals.
 - Services tables (`services_unilateral`) have different schemas than goods tables (`hs12`, `hs92`, `hs22`, `sitc`). Combine via UNION ALL, never JOIN. Note: `services_bilateral` tables exist but are currently empty — do not query them.
 - "Total exports" without qualification requires BOTH goods and services tables.
 
@@ -128,7 +137,7 @@ Few-shot examples follow this prompt.
 SQL_CODES_BLOCK = """
 Product codes for reference:
 {codes}
-Always use these product codes provided, and do not try to search for products based on their names from the database."""
+Always use these exact product codes. Never fall back to LIKE/ILIKE on product names — this causes double-counting across hierarchy levels."""
 
 # --- SQL_DIRECTION_BLOCK ---
 # Appended when a trade direction override is active.
@@ -187,7 +196,7 @@ Available schemas:
 
 **Schema selection decision tree:**
 1. Explicitly says "goods" or names a goods product (e.g., "cars", "coffee")? → Goods schema only (default: hs12). Do NOT include services.
-2. Explicitly says "services" or names a service category (e.g., "tourism", "transport")? → Services schema (services_unilateral for one country, services_bilateral for two).
+2. Explicitly says "services" or names a service category (e.g., "tourism", "transport")? → services_unilateral. Note: bilateral services trade data (between two specific countries) is not available in the SQL database.
 3. Asks about "total exports/imports", "all exports", "top products", "export basket", "biggest exports", "market share in global trade", "trade balance", "overall exports/imports", "export destinations", "trading partners", or aggregate trade? → BOTH goods (default: hs12) AND services.
 4. Specifies a classification (e.g., "HS 2012", "SITC")? → That specific schema.
 5. Otherwise → default to hs12.
@@ -246,7 +255,7 @@ Response: {{
     "requires_product_lookup": false,
     "countries": [{{"name": "India", "iso3_code": "IND"}}, {{"name": "United States", "iso3_code": "USA"}}]
 }}
-Reason: Services trade query → services_unilateral (services_bilateral tables are currently empty).
+Reason: Bilateral services data (country-to-country) is not available — only unilateral (country-to-world) totals exist. We will need to say this to the user, but for product identification purposes, we can still use services_unilateral.
 
 Question: "Show me trade in both goods and services between US and China in HS 2012."
 Response: {{
@@ -255,7 +264,7 @@ Response: {{
     "requires_product_lookup": false,
     "countries": [{{"name": "United States", "iso3_code": "USA"}}, {{"name": "China", "iso3_code": "CHN"}}]
 }}
-Reason: Both classifications mentioned, two countries → hs12 + services_unilateral (services_bilateral is currently empty).
+Reason: Bilateral services data is not available, but goods data is available.
 
 Question: "Which country is the world's biggest exporter of fruits and vegetables?"
 Response: {{
@@ -339,8 +348,11 @@ question and the candidate codes.
 Choose the most accurate match based on the specific context. Include only products with clear \
 matches. If a product name is too ambiguous or has no good matches, exclude it from the mapping.
 
-When multiple digit levels match (e.g., 2-digit vs 4-digit), prefer the most specific (highest \
-digit) level that still accurately represents the product asked about.
+**Important: select codes at a single hierarchy level per product.** Mixing levels (e.g., 2-digit \
+and 4-digit codes for the same product) causes double-counting because higher-level codes are \
+aggregates of lower-level codes. When multiple digit levels match, prefer the most specific \
+(highest digit) level that still accurately represents the product asked about. Default to \
+level 4 for goods, level 2 for services.
 
 If no candidates are relevant to the product mentioned, return an empty mapping for that product.
 """
@@ -461,8 +473,8 @@ and why, especially after errors.
 - `product_year_N`: Global product-level data (world export value, PCI, ubiquity). No country dimension.
 - `country_product_year_N`: Country-product metrics (export value, RCA, COG, distance). Main table for "what does country X export?".
 - `country_country_year`: Bilateral aggregate trade. For "total trade between A and B" or trade balance.
-- `country_country_product_year_N`: Bilateral trade by product. For "what does A export to B?" with product breakdown.
-- Table suffixes (_1, _2, _4, _6) indicate product digit level.
+- `country_country_product_year_N`: Bilateral trade by product. For "what does A export to B?" with product breakdown. Note: services_unilateral does NOT have real bilateral data — its country_country_* tables only contain country-to-world aggregates, not actual country-to-country flows. For bilateral services trade between two specific countries, the data is not available.
+- Table suffixes (_1, _2, _4, _6) indicate product digit level. Exception: SITC tables only go up to _4 (no 6-digit SITC tables exist).
 
 ### Column Naming Rules
 - Use `export_value`, NOT `export_value_usd`.
@@ -482,6 +494,14 @@ and why, especially after errors.
 - Services schema: `services_unilateral`. Goods schemas: `hs92`, `hs12`, `hs22`, `sitc`. Note: `services_bilateral` tables exist but are currently empty — do not query them.
 - Combine goods + services via UNION ALL, never JOIN.
 - Services product levels: `_1` has only aggregate row (`product_code='services'`). `_2`, `_4`, `_6` all contain the same 5 categories — always use `_2` for disaggregated service queries.
+- Services product codes (use exact codes, never ILIKE on names):
+    'services'    → aggregate (level 1 only, in _1 tables)
+    'ict'         → Business (level 2)
+    'financial'   → Insurance & finance (level 2)
+    'transport'   → Transport (level 2)
+    'travel'      → Travel & tourism (level 2)
+    'unspecified' → Unspecified (level 2)
+  Always query services_unilateral._2 tables for disaggregated service categories.
 - "Total exports" without qualification requires BOTH goods and services tables.
 
 ### Schema Year Coverage
@@ -494,6 +514,7 @@ and why, especially after errors.
 
 ### Common Mistakes to Avoid
 - Never filter on `product_id` or `country_id` in WHERE — always use `product_code` or `iso3_code`.
+- Never use LIKE or ILIKE on product name columns (`name_short_en`). Always filter on `product_code` with exact match or IN clause. Name-based filtering matches products at multiple hierarchy levels, causing double-counted totals.
 - Services tables have different schemas than goods tables. Combine via UNION ALL, never JOIN.
 - "Total exports" without "goods" requires BOTH goods and services tables.
 - Ensure correct table suffixes (_1, _2, _4, _6) matching the product digit level.
