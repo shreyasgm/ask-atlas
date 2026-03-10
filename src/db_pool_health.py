@@ -107,13 +107,24 @@ class _MetricsStore:
             "max_s": round(max(values), 3),
         }
 
-    def recent_slow_queries(self, threshold_ms: float = 5000, limit: int = 5) -> list:
-        """Return the most recent queries above a latency threshold."""
+    def recent_slow_queries(
+        self,
+        threshold_ms: float = 5000,
+        limit: int = 5,
+        include_sql: bool = True,
+    ) -> list:
+        """Return the most recent queries above a latency threshold.
+
+        Args:
+            threshold_ms: Minimum query duration to include.
+            limit: Maximum number of entries to return.
+            include_sql: If False, redact the sql_preview field.
+        """
         slow = [q for q in self.queries if q.elapsed_ms >= threshold_ms]
         return [
             {
                 "elapsed_ms": round(q.elapsed_ms, 1),
-                "sql_preview": q.sql_preview,
+                "sql_preview": q.sql_preview if include_sql else "<redacted>",
                 "engine_type": q.engine_type,
             }
             for q in list(slow)[-limit:]
@@ -217,12 +228,14 @@ def _pool_stats(pool: Pool) -> dict:
 def get_pool_stats(
     sync_engine: Any | None = None,
     async_engine: Any | None = None,
+    include_sql: bool = True,
 ) -> dict:
     """Build a dict of pool stats for the debug endpoint.
 
     Args:
         sync_engine: The synchronous SQLAlchemy Engine (optional).
         async_engine: The asynchronous SQLAlchemy AsyncEngine (optional).
+        include_sql: If False, redact SQL previews from the response.
 
     Returns:
         Dict with pool snapshots, query latency summary, connection hold
@@ -244,6 +257,6 @@ def get_pool_stats(
     # Rolling metrics
     result["query_latency"] = metrics.query_latency_summary()
     result["connection_hold"] = metrics.connection_hold_summary()
-    result["recent_slow_queries"] = metrics.recent_slow_queries()
+    result["recent_slow_queries"] = metrics.recent_slow_queries(include_sql=include_sql)
 
     return result

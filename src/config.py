@@ -222,7 +222,7 @@ class Settings(BaseSettings):
 
     # Logging
     log_level: str = Field(
-        "INFO",
+        "DEBUG",
         validation_alias=AliasChoices("LOG_LEVEL", "log_level"),
         description="Python log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)",
     )
@@ -230,6 +230,12 @@ class Settings(BaseSettings):
         "text",
         validation_alias=AliasChoices("LOG_FORMAT", "log_format"),
         description="Log output format: 'json' for structured Cloud Run logs, 'text' for local dev",
+    )
+    log_sql_queries: bool = Field(
+        True,
+        validation_alias=AliasChoices("LOG_SQL_QUERIES", "log_sql_queries"),
+        description="Include SQL query text in logs and debug endpoints. "
+        "Set to false to redact SQL for privacy.",
     )
 
     # CORS
