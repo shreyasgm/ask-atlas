@@ -583,7 +583,9 @@ class AtlasTextToSQL:
             queries_json, example_queries_dir
         )
         instance.metadata_llm = create_router_llm("lightweight", temperature=0)
-        instance.query_llm = create_router_llm("frontier", temperature=0)
+        instance.query_llm = create_router_llm(
+            "frontier", temperature=0, streaming=True
+        )
         instance.max_results = max_results
         instance.max_queries = max_queries
 
