@@ -306,7 +306,7 @@ class ProductAndSchemaLookup:
             f"Product classification system to use: {result.classification_schema}"
             f"Candidate matches:\n"
             + "\n".join(
-                f"- {s['product_code']}: {s['product_name']}"
+                f"- {s['product_code']}: {s['product_name']} (level: {s['product_level']})"
                 for s in (result.llm_suggestions + result.db_suggestions)
             )
             for result in product_search_results
