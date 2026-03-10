@@ -26,6 +26,17 @@ from sqlalchemy.types import NullType
 
 logger = logging.getLogger(__name__)
 
+_REDACTED = "<redacted>"
+
+
+def _sql_preview(command: Any) -> str:
+    """Return a loggable SQL preview, respecting the log_sql_queries setting."""
+    from src.config import get_settings
+
+    if not get_settings().log_sql_queries:
+        return _REDACTED
+    return str(command)[:200] if command else ""
+
 
 def _format_index(index: sqlalchemy.engine.interfaces.ReflectedIndex) -> str:
     """Format index information with schema awareness."""
@@ -195,7 +206,7 @@ class SQLDatabaseWithSchemas(SQLDatabase):
         parameters = parameters or {}
         execution_options = execution_options or {}
 
-        sql_preview = str(command)[:200] if command else ""
+        sql_preview = _sql_preview(command)
         t_start = time.monotonic()
 
         with self._engine.begin() as connection:
@@ -878,7 +889,7 @@ class AsyncSQLDatabaseWithSchemas:
         execution_options = execution_options or {}
 
         # Capture SQL preview for logging (before text() wrapping)
-        sql_preview = str(command)[:200] if command else ""
+        sql_preview = _sql_preview(command)
         t_start = time.monotonic()
 
         async with self._async_engine.begin() as connection:
