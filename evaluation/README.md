@@ -175,13 +175,44 @@ PYTHONPATH=$(pwd) uv run python evaluation/review_server.py --run {timestamp} --
 
 This serves a web UI to classify questions, correct data/URLs, and re-judge individual questions with an audit trail.
 
-## Feedback Loop
+## Pulling User Feedback from Production
+
+User feedback (thumbs up/down + optional comments) is stored in the `message_feedback` table in the App DB (`CHECKPOINT_DB_URL`). Each row includes the rating, user comment, and a JSONB `context` snapshot of the conversation and pipeline state at feedback time. The table is defined in `src/persistence.py`.
+
+The production backend exposes a public export endpoint — no auth required:
+
+```bash
+# Quick summary of all feedback (requires CLOUD_RUN_URL in .env)
+source .env
+curl -s "$CLOUD_RUN_URL/api/feedback/export?limit=100" | python3 -m json.tool
+
+# Filter by rating
+curl -s "$CLOUD_RUN_URL/api/feedback/export?rating=down&limit=100" | python3 -m json.tool
+curl -s "$CLOUD_RUN_URL/api/feedback/export?rating=up&limit=100" | python3 -m json.tool
+
+# Compact summary (one-liner per entry)
+curl -s "$CLOUD_RUN_URL/api/feedback/export?limit=100" | python3 -c "
+import json, sys
+for e in json.load(sys.stdin):
+    ctx = e.get('context') or {}
+    flagged = ctx.get('flagged_turn') or {}
+    turns = ctx.get('turns') or []
+    q = flagged.get('user_question') or (turns[0]['content'] if turns else '?')
+    print(f'#{e[\"id\"]} [{e[\"rating\"]}] {e[\"created_at\"][:10]}  Q: {q[:100]}')
+    if e.get('comment'): print(f'   Comment: {e[\"comment\"][:150]}')
+"
+```
+
+The export endpoint returns: `id`, `thread_id`, `turn_index`, `rating` (up/down), `comment`, `session_id`, `context` (with `turns`, `flagged_turn`, `pipeline`, `snapshot_at`), `created_at`, `updated_at`.
+
+## Feedback → Eval Questions
 
 User feedback from the production app can be converted into eval questions:
 
 ```bash
 # Pull negative feedback and generate candidate eval questions
-uv run python evaluation/feedback_to_eval.py
+source .env
+uv run python evaluation/feedback_to_eval.py --api-url "$CLOUD_RUN_URL"
 
 # Review candidates in feedback_candidates.json, then promote approved ones
 uv run python evaluation/promote_feedback.py --ids 42 43 55

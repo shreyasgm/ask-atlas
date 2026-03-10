@@ -991,6 +991,23 @@ class TestFormatGraphQLResults:
         content = result["messages"][0].content
         assert "philosophy" in content.lower()
 
+    async def test_rejection_instructs_sql_fallback(self):
+        """Rejection message must tell the agent to call query_tool as fallback."""
+        state = _base_graphql_state(
+            graphql_classification=_rejection_classification(
+                rejection_reason="Requires custom aggregation across regions"
+            ),
+            graphql_raw_response=None,
+            last_error="",
+        )
+
+        result = await format_graphql_results(state)
+
+        content = result["messages"][0].content
+        assert "query_tool" in content, (
+            "Rejection message must direct the agent to fall back to query_tool"
+        )
+
     async def test_handles_parallel_tool_calls_with_stubs(self):
         msg = _make_multi_graphql_tool_call_message(
             questions=["Q1", "Q2"],

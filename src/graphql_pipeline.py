@@ -1485,7 +1485,8 @@ async def format_graphql_results(
             reason = classification.get("rejection_reason", "Question not supported")
             content = (
                 f"This question could not be answered via the Atlas GraphQL API. "
-                f"Rejection reason: {reason}"
+                f"Rejection reason: {reason}\n\n"
+                f"ACTION REQUIRED: Call query_tool to answer this question using SQL instead."
             )
         elif query_type != "reject" and entity_extraction is None and classification:
             content = (
