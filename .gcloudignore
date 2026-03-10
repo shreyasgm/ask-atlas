@@ -1,0 +1,78 @@
+# .gcloudignore — controls what gcloud builds submit uploads to Cloud Build.
+# Without this file, gcloud falls back to .gitignore, which can mishandle
+# negation patterns and exclude src/docs/*.md (needed at runtime).
+
+# Include .gitignore rules as a base
+#!include:.gitignore
+
+# VCS
+.git
+
+# Python artifacts
+__pycache__
+*.py[cod]
+*.egg-info
+.eggs
+dist
+build
+
+# Virtual environments
+.venv
+venv
+env
+
+# Tests (not needed in production image)
+src/tests
+src/setup
+.pytest_cache
+.coverage
+htmlcov
+
+# Frontend (deployed separately via Firebase)
+frontend
+
+# IDE / editor
+.vscode
+.idea
+
+# macOS
+.DS_Store
+._*
+
+# Top-level docs (not needed at runtime — but src/docs/ IS needed)
+docs
+evaluation
+*.pen
+RELEASE_STRATEGY.md
+CHANGELOG.md
+CONTRIBUTING.md
+
+# Data / logs
+data
+logs
+*.csv
+*.parquet
+chroma_db
+archive
+
+# Docker meta
+Dockerfile
+docker-compose*.yml
+.dockerignore
+.gcloudignore
+cloudbuild.yaml
+
+# Secrets
+.env
+.env.*
+
+# Streamlit legacy
+.streamlit
+app.py
+
+# Caches & config
+.ruff_cache
+.mypy_cache
+.claude
+.agents
+experiments
