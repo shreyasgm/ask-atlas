@@ -418,6 +418,14 @@ async def execute_sql_tool_node(
             ],
         }
 
+    # Prepend any validation warnings so the sub-agent LLM sees them
+    warning_prefix = ""
+    if validation.warnings:
+        warning_lines = "; ".join(validation.warnings)
+        warning_prefix = (
+            f"\u26a0\ufe0f Warning (query executed successfully): {warning_lines}\n\n"
+        )
+
     # Format result for the agent
     row_count = len(rows)
     if row_count == 0:
@@ -439,7 +447,7 @@ async def execute_sql_tool_node(
     return {
         "messages": [
             ToolMessage(
-                content=display,
+                content=warning_prefix + display,
                 tool_call_id=tool_call["id"],
                 name="execute_sql",
             )

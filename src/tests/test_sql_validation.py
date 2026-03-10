@@ -143,6 +143,53 @@ class TestValidateSql:
         result = validate_sql(sql)
         assert result.is_valid is True
 
+    # --- LIKE/ILIKE on name_short_en (double-counting risk) ---
+
+    def test_ilike_on_name_short_en_warns(self):
+        sql = (
+            "SELECT p.code FROM classification.product_services_unilateral p "
+            "WHERE p.name_short_en ILIKE '%Business%'"
+        )
+        result = validate_sql(sql)
+        assert result.is_valid is True
+        assert any("name_short_en" in w for w in result.warnings)
+
+    def test_like_on_name_short_en_warns(self):
+        sql = (
+            "SELECT code FROM classification.product_hs12 "
+            "WHERE name_short_en LIKE '%cotton%'"
+        )
+        result = validate_sql(sql)
+        assert result.is_valid is True
+        assert any("name_short_en" in w for w in result.warnings)
+
+    def test_like_on_product_code_no_name_warning(self):
+        sql = (
+            "SELECT code FROM classification.product_hs12 "
+            "WHERE product_code LIKE '52%'"
+        )
+        result = validate_sql(sql)
+        assert result.is_valid is True
+        assert not any("name_short_en" in w for w in result.warnings)
+
+    def test_like_on_iso3_code_no_name_warning(self):
+        sql = (
+            "SELECT country_id FROM classification.location_country "
+            "WHERE iso3_code LIKE 'US%'"
+        )
+        result = validate_sql(sql)
+        assert result.is_valid is True
+        assert not any("name_short_en" in w for w in result.warnings)
+
+    def test_valid_after_name_warning(self):
+        """LIKE on name_short_en should warn but not block."""
+        sql = (
+            "SELECT code FROM classification.product_hs12 "
+            "WHERE name_short_en LIKE '%cotton%'"
+        )
+        result = validate_sql(sql)
+        assert result.is_valid is True
+
     def test_window_function_valid(self):
         """Window function queries should pass validation."""
         sql = (

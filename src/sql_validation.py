@@ -115,6 +115,20 @@ def validate_sql(sql: str) -> ValidationResult:
                     "this prevents index usage and may be slow."
                 )
 
+    # 6. LIKE/ILIKE on name_short_en warning (double-counting risk)
+    for like_node in parsed.find_all(exp.Like, exp.ILike):
+        col_expr = like_node.this
+        col_name = None
+        if isinstance(col_expr, exp.Column):
+            col_name = col_expr.name
+        if col_name and col_name.lower() == "name_short_en":
+            warnings.append(
+                "LIKE/ILIKE on column 'name_short_en' risks double-counting "
+                "across product hierarchy levels. Use product_code with exact "
+                "match instead."
+            )
+            break  # one warning is enough
+
     if warnings:
         for w in warnings:
             logger.warning("SQL validation warning: %s", w)
