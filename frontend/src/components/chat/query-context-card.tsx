@@ -35,9 +35,9 @@ export default memo(function QueryContextCard({ entitiesData, queryStats }: Quer
 
   if (expanded) {
     return (
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-border dark:bg-card">
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
         <div className="flex">
-          <div className="w-1 shrink-0 rounded-l-lg bg-blue-500" />
+          <div className="w-1 shrink-0 rounded-l-lg bg-primary" />
           <div className="flex flex-1 flex-col gap-2.5 px-4 py-3">
             {/* Header */}
             <button
@@ -47,19 +47,19 @@ export default memo(function QueryContextCard({ entitiesData, queryStats }: Quer
               type="button"
             >
               <span className="flex items-center gap-1.5">
-                <Database className="h-3.5 w-3.5 text-blue-500" />
+                <Database className="h-3.5 w-3.5 text-primary" />
                 <span className="text-xs font-semibold text-foreground">Query Context</span>
               </span>
-              <ChevronUp className="h-3.5 w-3.5 text-slate-400" />
+              <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
             </button>
 
             {/* Country row */}
             {countries.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                <span className="font-medium text-slate-600 dark:text-slate-400">Countries:</span>
+                <span className="font-medium text-muted-foreground">Countries:</span>
                 {countries.map((c) => (
                   <span
-                    className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:bg-green-950 dark:text-green-300"
+                    className="rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-medium text-success"
                     key={c.iso3Code}
                   >
                     {c.name}
@@ -69,19 +69,17 @@ export default memo(function QueryContextCard({ entitiesData, queryStats }: Quer
             )}
 
             {/* Schema */}
-            {schema && (
-              <p className="text-xs text-slate-600 dark:text-slate-400">Schema: {schema}</p>
-            )}
+            {schema && <p className="text-xs text-muted-foreground">Schema: {schema}</p>}
 
             {/* Products */}
             {entitiesData.products.length > 0 && (
               <div className="flex items-center gap-1.5 text-xs">
-                <span className="font-medium text-slate-600 dark:text-slate-400">Products:</span>
+                <span className="font-medium text-muted-foreground">Products:</span>
                 <div className="flex flex-wrap gap-1.5">
                   {entitiesData.products.map((product) =>
                     product.codes.map((code) => (
                       <span
-                        className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                        className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
                         key={code}
                       >
                         {product.name} ({code})
@@ -94,29 +92,29 @@ export default memo(function QueryContextCard({ entitiesData, queryStats }: Quer
 
             {/* Divider before GraphQL */}
             {hasGraphql && (countries.length > 0 || schema || entitiesData.products.length > 0) && (
-              <div className="h-px bg-slate-200 dark:bg-border" />
+              <div className="h-px bg-border" />
             )}
 
             {/* GraphQL Classification */}
             {hasGraphql && entitiesData.graphqlClassification && (
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-1.5">
-                  <div className="h-2 w-2 shrink-0 rounded-full bg-violet-500" />
-                  <span className="text-xs font-semibold text-violet-500">GraphQL</span>
+                  <div className="h-2 w-2 shrink-0 rounded-full bg-info" />
+                  <span className="text-xs font-semibold text-info">GraphQL</span>
                 </div>
                 <div className="flex items-center gap-2 pl-4 text-xs">
-                  <span className="rounded-full bg-violet-100 px-2 py-0.5 font-mono text-[10px] font-medium text-violet-700 dark:bg-violet-950 dark:text-violet-300">
+                  <span className="rounded-full bg-info/15 px-2 py-0.5 font-mono text-[10px] font-medium text-info">
                     {entitiesData.graphqlClassification.queryType}
                   </span>
                   {entitiesData.graphqlClassification.apiTarget && (
-                    <span className="text-[11px] text-slate-500">
+                    <span className="text-[11px] text-muted-foreground">
                       {entitiesData.graphqlClassification.apiTarget}
                     </span>
                   )}
                 </div>
                 {validGraphqlEntities.length > 0 && (
                   <div className="flex items-center gap-1.5 pl-4 text-xs">
-                    <span className="text-[11px] font-medium text-slate-500">Entities:</span>
+                    <span className="text-[11px] font-medium text-muted-foreground">Entities:</span>
                     <div className="flex flex-wrap gap-1.5">
                       {validGraphqlEntities.map(([key, val]) => (
                         <span
@@ -136,20 +134,16 @@ export default memo(function QueryContextCard({ entitiesData, queryStats }: Quer
             )}
 
             {/* Divider before Resolution */}
-            {entitiesData.resolutionNotes.length > 0 && (
-              <div className="h-px bg-slate-200 dark:bg-border" />
-            )}
+            {entitiesData.resolutionNotes.length > 0 && <div className="h-px bg-border" />}
 
             {/* Resolution notes */}
             {entitiesData.resolutionNotes.length > 0 && (
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
-                  Resolution Notes
-                </span>
+                <span className="text-xs font-semibold text-warning">Resolution Notes</span>
                 {entitiesData.resolutionNotes.map((note) => (
                   <div className="flex gap-1.5 pl-2 text-[11px]" key={note}>
-                    <span className="text-amber-600">•</span>
-                    <span className="leading-[1.4] text-amber-900 dark:text-amber-400">{note}</span>
+                    <span className="text-warning">&bull;</span>
+                    <span className="leading-[1.4] text-warning">{note}</span>
                   </div>
                 ))}
               </div>
@@ -158,31 +152,31 @@ export default memo(function QueryContextCard({ entitiesData, queryStats }: Quer
             {/* Legacy resolution (lookup_codes) */}
             {entitiesData.resolutionNotes.length === 0 && entitiesData.lookupCodes && (
               <div className="flex items-center gap-2 text-[11px]">
-                <span className="text-slate-600 dark:text-slate-400">
+                <span className="text-muted-foreground">
                   Resolution: {entitiesData.lookupCodes}
                 </span>
-                <span className="rounded bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800 dark:bg-green-950 dark:text-green-300">
+                <span className="rounded bg-success/15 px-2 py-0.5 text-[10px] font-semibold text-success">
                   Confident
                 </span>
               </div>
             )}
 
             {/* Divider before Docs */}
-            {hasDocs && <div className="h-px bg-slate-200 dark:bg-border" />}
+            {hasDocs && <div className="h-px bg-border" />}
 
             {/* Docs consulted */}
             {hasDocs && (
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center gap-1.5">
-                  <BookOpen className="h-3 w-3 text-amber-600" />
-                  <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
+                  <BookOpen className="h-3 w-3 text-warning" />
+                  <span className="text-xs font-semibold text-warning">
                     Documentation Consulted
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1.5 pl-2">
                   {entitiesData.docsConsulted.map((file) => (
                     <span
-                      className="rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 font-mono text-[10px] text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                      className="rounded-md border border-warning/25 bg-warning/10 px-2 py-0.5 font-mono text-[10px] text-warning"
                       key={file}
                     >
                       {file}
@@ -193,11 +187,11 @@ export default memo(function QueryContextCard({ entitiesData, queryStats }: Quer
             )}
 
             {/* Divider before Stats */}
-            {queryStats && <div className="h-px bg-slate-200 dark:bg-border" />}
+            {queryStats && <div className="h-px bg-border" />}
 
             {/* Stats */}
             {queryStats && (
-              <p className="font-mono text-[10px] text-slate-400">
+              <p className="font-mono text-[10px] text-muted-foreground">
                 {queryStats.totalQueries > 0 && (
                   <>
                     {queryStats.totalQueries.toLocaleString()} SQL{' '}
@@ -228,7 +222,7 @@ export default memo(function QueryContextCard({ entitiesData, queryStats }: Quer
   return (
     <button
       aria-label="Expand query context"
-      className="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-2.5 transition-colors hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none dark:border-border dark:bg-card dark:hover:bg-card/80"
+      className="flex w-full items-center justify-between rounded-lg border border-border bg-card px-4 py-2.5 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       onClick={() => setExpanded(true)}
       type="button"
     >
@@ -236,13 +230,11 @@ export default memo(function QueryContextCard({ entitiesData, queryStats }: Quer
         {/* Country row */}
         {countries.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5">
-            <Database className="h-3.5 w-3.5 text-blue-500" />
-            <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
-              Countries:
-            </span>
+            <Database className="h-3.5 w-3.5 text-primary" />
+            <span className="text-xs font-medium text-muted-foreground">Countries:</span>
             {countries.map((c) => (
               <span
-                className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:bg-green-950 dark:text-green-300"
+                className="rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-medium text-success"
                 key={c.iso3Code}
               >
                 {c.name}
@@ -253,15 +245,13 @@ export default memo(function QueryContextCard({ entitiesData, queryStats }: Quer
         {/* Products row */}
         {allCodes.length > 0 && (
           <div className={cn('flex items-center gap-1.5', countries.length > 0 && 'pl-5')}>
-            {countries.length === 0 && <Database className="h-3.5 w-3.5 text-blue-500" />}
-            <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
-              Products ({schema}):
-            </span>
+            {countries.length === 0 && <Database className="h-3.5 w-3.5 text-primary" />}
+            <span className="text-xs font-medium text-muted-foreground">Products ({schema}):</span>
             <div className="flex flex-wrap gap-1.5">
               {entitiesData.products.map((product) =>
                 product.codes.map((code) => (
                   <span
-                    className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                    className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary"
                     key={code}
                   >
                     {product.name} ({code})
@@ -280,20 +270,20 @@ export default memo(function QueryContextCard({ entitiesData, queryStats }: Quer
             )}
           >
             {countries.length === 0 && allCodes.length === 0 && (
-              <Database className="h-3.5 w-3.5 text-blue-500" />
+              <Database className="h-3.5 w-3.5 text-primary" />
             )}
             {hasGraphql && entitiesData.graphqlClassification && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 dark:bg-violet-950">
-                <div className="h-1.5 w-1.5 rounded-full bg-violet-500" />
-                <span className="font-mono text-[10px] font-medium text-violet-700 dark:text-violet-300">
+              <span className="inline-flex items-center gap-1 rounded-full bg-info/15 px-2 py-0.5">
+                <div className="h-1.5 w-1.5 rounded-full bg-info" />
+                <span className="font-mono text-[10px] font-medium text-info">
                   {entitiesData.graphqlClassification.queryType}
                 </span>
               </span>
             )}
             {hasDocs && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 dark:bg-amber-950">
-                <BookOpen className="h-2.5 w-2.5 text-amber-600" />
-                <span className="text-[10px] font-medium text-amber-600 dark:text-amber-300">
+              <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5">
+                <BookOpen className="h-2.5 w-2.5 text-warning" />
+                <span className="text-[10px] font-medium text-warning">
                   {entitiesData.docsConsulted.length} docs
                 </span>
               </span>
@@ -303,12 +293,12 @@ export default memo(function QueryContextCard({ entitiesData, queryStats }: Quer
         {/* Fallback: only schema */}
         {countries.length === 0 && allCodes.length === 0 && !hasGraphql && !hasDocs && (
           <div className="flex items-center gap-1.5">
-            <Database className="h-3.5 w-3.5 text-blue-500" />
-            <span className="text-xs font-medium text-slate-600 dark:text-slate-400">{schema}</span>
+            <Database className="h-3.5 w-3.5 text-primary" />
+            <span className="text-xs font-medium text-muted-foreground">{schema}</span>
           </div>
         )}
       </div>
-      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
     </button>
   );
 });

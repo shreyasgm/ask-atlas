@@ -24,7 +24,7 @@ export default memo(function CopyButton({ content }: CopyButtonProps) {
     <button
       aria-label={copied ? 'Copied' : 'Copy response as Markdown'}
       className={`rounded p-1 transition-colors ${
-        copied ? 'text-green-600' : 'text-muted-foreground/40 hover:text-muted-foreground'
+        copied ? 'text-success' : 'text-muted-foreground/40 hover:text-muted-foreground'
       }`}
       onClick={handleCopy}
       title="Copy as Markdown"

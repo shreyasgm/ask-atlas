@@ -69,12 +69,12 @@ export default memo(function AssistantMessage({ message, pipelineStarted }: Assi
       {(message.content || isLoading || message.interrupted) && (
         <>
           <div className="flex items-center gap-2">
-            <Bot className="h-4 w-4 text-blue-500" />
-            <span className="text-xs font-semibold text-blue-500">Ask-Atlas Assistant</span>
+            <Bot className="h-4 w-4 text-primary" />
+            <span className="text-xs font-semibold text-primary">Ask-Atlas Assistant</span>
           </div>
           {isLoading ? (
             <div className="flex items-center gap-2">
-              <Loader className="h-3.5 w-3.5 animate-spin text-blue-500" />
+              <Loader className="h-3.5 w-3.5 animate-spin text-primary" />
               <span className="text-sm text-muted-foreground">
                 {!backendReady && showColdStartHint
                   ? 'Starting up the backend — this can take up to 15 seconds on first use'

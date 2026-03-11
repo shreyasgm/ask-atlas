@@ -22,18 +22,18 @@ export default function GraphqlSummaryBlock({ summary }: GraphqlSummaryBlockProp
     <div className="flex flex-col gap-2">
       <Collapsible onOpenChange={setOpen} open={open}>
         <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-          <Globe className="h-3.5 w-3.5 text-violet-500" />
+          <Globe className="h-3.5 w-3.5 text-info" />
           <span>Atlas API Query</span>
           <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', open && 'rotate-90')} />
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="mt-2 flex flex-col gap-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-violet-100 px-2 py-0.5 font-mono text-[11px] font-semibold text-violet-800 dark:bg-violet-950 dark:text-violet-300">
+              <span className="rounded-full bg-info/15 px-2 py-0.5 font-mono text-[11px] font-semibold text-info">
                 {classification.queryType}
               </span>
               {classification.isRejected && (
-                <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-800 dark:bg-red-950 dark:text-red-300">
+                <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive">
                   Rejected
                 </span>
               )}
@@ -42,18 +42,14 @@ export default function GraphqlSummaryBlock({ summary }: GraphqlSummaryBlockProp
               )}
             </div>
             {classification.isRejected && classification.rejectionReason && (
-              <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-950">
-                <TriangleAlert className="h-4 w-4 shrink-0 text-red-500" />
-                <p className="text-xs text-red-700 dark:text-red-300">
-                  {classification.rejectionReason}
-                </p>
+              <div className="flex items-start gap-2 rounded-lg border border-destructive/25 bg-destructive/10 p-3">
+                <TriangleAlert className="h-4 w-4 shrink-0 text-destructive" />
+                <p className="text-xs text-destructive">{classification.rejectionReason}</p>
               </div>
             )}
             {validEntities.length > 0 && (
               <div className="flex flex-col gap-1.5">
-                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                  Entities:
-                </span>
+                <span className="text-[11px] font-medium text-muted-foreground">Entities:</span>
                 <div className="flex flex-wrap gap-1.5">
                   {validEntities.map(([key, val]) => (
                     <span
@@ -71,7 +67,7 @@ export default function GraphqlSummaryBlock({ summary }: GraphqlSummaryBlockProp
             )}
             {summary.resolvedParams && Object.keys(summary.resolvedParams).length > 0 && (
               <div className="flex flex-col gap-1.5">
-                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                <span className="text-[11px] font-medium text-muted-foreground">
                   Resolved params:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
@@ -79,7 +75,7 @@ export default function GraphqlSummaryBlock({ summary }: GraphqlSummaryBlockProp
                     .filter(([, v]) => v != null && v !== '')
                     .map(([key, val]) => (
                       <span
-                        className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[11px] font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                        className="rounded border border-border bg-muted px-2 py-0.5 font-mono text-[11px] font-medium text-muted-foreground"
                         key={key}
                       >
                         {key}: {String(val)}
@@ -95,7 +91,7 @@ export default function GraphqlSummaryBlock({ summary }: GraphqlSummaryBlockProp
                   <span>GraphQL query</span>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <pre className="mt-1 max-h-48 overflow-auto rounded border border-slate-200 bg-slate-50 p-2 font-mono text-[10px] text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                  <pre className="mt-1 max-h-48 overflow-auto rounded border border-border bg-muted p-2 font-mono text-[10px] text-muted-foreground">
                     {summary.query}
                   </pre>
                 </CollapsibleContent>

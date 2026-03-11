@@ -89,7 +89,7 @@ export default memo(function FeedbackButtons({
           aria-label="Thumbs up"
           className={`rounded p-1 transition-colors ${
             feedback?.rating === 'up'
-              ? 'text-green-600'
+              ? 'text-success'
               : 'text-muted-foreground/40 hover:text-muted-foreground'
           }`}
           onClick={handleThumbsUp}
@@ -104,7 +104,7 @@ export default memo(function FeedbackButtons({
           aria-label="Thumbs down"
           className={`rounded p-1 transition-colors ${
             feedback?.rating === 'down'
-              ? 'text-red-500'
+              ? 'text-destructive'
               : 'text-muted-foreground/40 hover:text-muted-foreground'
           }`}
           onClick={handleThumbsDown}
@@ -137,7 +137,7 @@ export default memo(function FeedbackButtons({
         </div>
       )}
       {showConfirmation && !showCommentInput && (
-        <div className="flex items-center gap-1 text-xs text-green-600">
+        <div className="flex items-center gap-1 text-xs text-success">
           <Check className="h-3 w-3" />
           <span>Feedback sent</span>
         </div>

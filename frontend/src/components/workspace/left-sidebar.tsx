@@ -197,7 +197,7 @@ function ConversationItem({
         <MessageSquare
           className={cn(
             'mt-0.5 h-3.5 w-3.5 shrink-0',
-            active ? 'text-blue-500' : 'text-muted-foreground',
+            active ? 'text-primary' : 'text-muted-foreground',
           )}
         />
         <div className="min-w-0 flex-1">

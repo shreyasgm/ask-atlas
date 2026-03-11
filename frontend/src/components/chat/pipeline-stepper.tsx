@@ -23,22 +23,22 @@ const PIPELINE_COLORS: Record<
   { dot: string; iconColor: string; label: string; text: string }
 > = {
   docs: {
-    dot: 'bg-amber-500',
-    iconColor: 'text-amber-500',
+    dot: 'bg-warning',
+    iconColor: 'text-warning',
     label: 'Docs',
-    text: 'text-amber-700 dark:text-amber-400',
+    text: 'text-warning',
   },
   graphql: {
-    dot: 'bg-violet-500',
-    iconColor: 'text-violet-500',
+    dot: 'bg-info',
+    iconColor: 'text-info',
     label: 'Atlas API',
-    text: 'text-violet-700 dark:text-violet-400',
+    text: 'text-info',
   },
   sql: {
-    dot: 'bg-blue-500',
-    iconColor: 'text-blue-500',
+    dot: 'bg-primary',
+    iconColor: 'text-primary',
     label: 'SQL',
-    text: 'text-blue-700 dark:text-blue-400',
+    text: 'text-primary',
   },
 };
 
@@ -86,7 +86,7 @@ export default memo(function PipelineStepper({ steps }: PipelineStepperProps) {
   }
 
   return (
-    <div className="rounded-[10px] border border-slate-200 bg-slate-50 px-4 py-3 dark:border-border dark:bg-card">
+    <div className="rounded-[10px] border border-border bg-card px-4 py-3">
       {groups.map((group, gi) => {
         const colors = PIPELINE_COLORS[group.type];
         const allCompleted = group.steps.every((s) => s.status === 'completed');
@@ -95,11 +95,11 @@ export default memo(function PipelineStepper({ steps }: PipelineStepperProps) {
 
         return (
           <div key={`group-${gi}`}>
-            {gi > 0 && <div className="my-0.5 h-px bg-slate-200 dark:bg-border" />}
+            {gi > 0 && <div className="my-0.5 h-px bg-border" />}
             {!isExpanded && allCompleted ? (
               /* Collapsed summary row */
               <button
-                className="flex w-full items-center gap-2.5 rounded py-1.5 transition-colors hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none dark:hover:bg-white/5"
+                className="flex w-full items-center gap-2.5 rounded py-1.5 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 onClick={() => toggleGroup(gi)}
                 type="button"
               >
@@ -107,19 +107,19 @@ export default memo(function PipelineStepper({ steps }: PipelineStepperProps) {
                 <span className={cn('text-xs font-medium', colors.text)}>
                   {group.label}: {completedCount} steps completed
                 </span>
-                <Check className="h-3 w-3 text-green-500" />
-                <ChevronRight className="h-3 w-3 text-slate-400" />
+                <Check className="h-3 w-3 text-success" />
+                <ChevronRight className="h-3 w-3 text-muted-foreground" />
               </button>
             ) : (
               /* Expanded step rows */
               <div className="flex min-w-0 flex-col">
                 <button
-                  className="flex w-full items-center gap-2 rounded py-1.5 transition-colors hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none dark:hover:bg-white/5"
+                  className="flex w-full items-center gap-2 rounded py-1.5 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                   onClick={() => toggleGroup(gi)}
                   type="button"
                 >
                   <span className={cn('text-xs font-semibold', colors.text)}>{group.label}</span>
-                  {allCompleted && <ChevronDown className="h-3 w-3 text-slate-400" />}
+                  {allCompleted && <ChevronDown className="h-3 w-3 text-muted-foreground" />}
                 </button>
                 {group.steps.map((step, si) => {
                   const detail =
@@ -136,16 +136,14 @@ export default memo(function PipelineStepper({ steps }: PipelineStepperProps) {
                           className={cn(
                             'min-w-0 truncate text-xs',
                             step.status === 'completed'
-                              ? 'text-slate-500 dark:text-slate-400'
+                              ? 'text-muted-foreground'
                               : cn('font-semibold', colors.text),
                           )}
                         >
                           {step.label}
                           {step.status === 'active' && '...'}
                         </span>
-                        {step.status === 'completed' && (
-                          <Check className="h-3 w-3 text-green-500" />
-                        )}
+                        {step.status === 'completed' && <Check className="h-3 w-3 text-success" />}
                         {step.status === 'active' && (
                           <Loader className={cn('h-3 w-3 animate-spin', colors.iconColor)} />
                         )}
@@ -155,10 +153,10 @@ export default memo(function PipelineStepper({ steps }: PipelineStepperProps) {
                           className={cn(
                             'line-clamp-5 w-full min-w-0 pl-[18px] text-[11px] leading-tight',
                             assessVerdict === 'fail'
-                              ? 'text-red-600 dark:text-red-400'
+                              ? 'text-destructive'
                               : assessVerdict === 'suspicious'
-                                ? 'text-amber-600 dark:text-amber-400'
-                                : 'text-slate-400 dark:text-slate-500',
+                                ? 'text-warning'
+                                : 'text-muted-foreground',
                           )}
                         >
                           {detail}

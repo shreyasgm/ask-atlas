@@ -16,7 +16,7 @@ export default function DocsBlock({ files }: DocsBlockProps) {
 
   return (
     <Collapsible onOpenChange={setOpen} open={open}>
-      <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-amber-700 hover:text-foreground dark:text-amber-300">
+      <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-warning hover:text-foreground">
         <BookOpen className="h-3.5 w-3.5" />
         <span>Documentation consulted</span>
         <ChevronRight className={cn('h-3.5 w-3.5 transition-transform', open && 'rotate-90')} />
@@ -25,7 +25,7 @@ export default function DocsBlock({ files }: DocsBlockProps) {
         <div className="mt-2 flex flex-wrap gap-1.5">
           {files.map((file) => (
             <span
-              className="rounded border border-amber-200 bg-amber-50 px-2 py-0.5 font-mono text-[11px] font-medium text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300"
+              className="rounded border border-warning/25 bg-warning/10 px-2 py-0.5 font-mono text-[11px] font-medium text-warning"
               key={file}
             >
               {file}

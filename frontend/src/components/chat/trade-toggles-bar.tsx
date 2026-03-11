@@ -122,7 +122,7 @@ export default function TradeTogglesBar({
             data-testid="system-mode-divider"
           />
 
-          <span className="hidden text-[9px] font-semibold tracking-widest text-amber-600 uppercase select-none sm:inline">
+          <span className="hidden text-[9px] font-semibold tracking-widest text-warning uppercase select-none sm:inline">
             PIPELINE
           </span>
 

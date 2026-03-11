@@ -184,7 +184,7 @@ function CollapsibleSection({ children, label }: { children: React.ReactNode; la
   return (
     <div className="mt-1">
       <button
-        className="flex items-center gap-1 rounded px-1 py-0.5 text-[11px] font-medium text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-slate-800/50 dark:hover:text-slate-300"
+        className="flex items-center gap-1 rounded px-1 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         onClick={() => setOpen((p) => !p)}
         type="button"
       >
@@ -202,14 +202,14 @@ function ReasoningContent({ content }: { content: string }) {
   }
   if (content.length <= 200) {
     return (
-      <p className="mt-0.5 text-[10px] leading-tight whitespace-pre-wrap text-slate-500 dark:text-slate-400">
+      <p className="mt-0.5 text-[10px] leading-tight whitespace-pre-wrap text-muted-foreground">
         {content}
       </p>
     );
   }
   return (
     <CollapsibleSection label="Agent reasoning">
-      <div className="mt-0.5 max-h-64 overflow-auto rounded bg-slate-50 p-1.5 text-[10px] leading-tight whitespace-pre-wrap text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+      <div className="mt-0.5 max-h-64 overflow-auto rounded bg-muted p-1.5 text-[10px] leading-tight whitespace-pre-wrap text-muted-foreground">
         {content}
       </div>
     </CollapsibleSection>
@@ -227,24 +227,22 @@ function ActionBlock({ action, index, total }: { action: Action; index: number; 
         <div
           className={cn(
             'h-1.5 w-1.5 rounded-full',
-            action.status === 'success' ? 'bg-violet-500' : 'bg-red-400 dark:bg-red-500',
+            action.status === 'success' ? 'bg-info' : 'bg-destructive',
           )}
         />
-        {index < total - 1 && <div className="mt-0.5 w-px flex-1 bg-slate-200 dark:bg-slate-700" />}
+        {index < total - 1 && <div className="mt-0.5 w-px flex-1 bg-border" />}
       </div>
 
       <div className="min-w-0 flex-1 pb-1">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-[10px] font-medium whitespace-nowrap text-slate-600 dark:text-slate-300">
+          <span className="text-[10px] font-medium whitespace-nowrap text-foreground">
             {label}
             {queryType ? ` (${queryType})` : ''}
           </span>
           <span
             className={cn(
               'min-w-0 truncate text-[10px]',
-              action.status === 'error'
-                ? 'text-red-500 dark:text-red-400'
-                : 'text-slate-400 dark:text-slate-500',
+              action.status === 'error' ? 'text-destructive' : 'text-muted-foreground',
             )}
           >
             {'\u2014'} {action.statusLine}
@@ -255,7 +253,7 @@ function ActionBlock({ action, index, total }: { action: Action; index: number; 
 
         {action.resultContent.length > 200 && (
           <CollapsibleSection label="Full result">
-            <pre className="mt-0.5 max-h-48 overflow-auto rounded bg-slate-50 p-1.5 font-mono text-[10px] leading-tight text-slate-600 dark:bg-slate-800/50 dark:text-slate-300">
+            <pre className="mt-0.5 max-h-48 overflow-auto rounded bg-muted p-1.5 font-mono text-[10px] leading-tight text-muted-foreground">
               {action.resultContent}
             </pre>
           </CollapsibleSection>
@@ -284,7 +282,7 @@ export default function GraphqlReasoningTrace({ entries, isActive }: GraphqlReas
   return (
     <div className="mt-1 ml-[18px]">
       <button
-        className="flex items-center gap-1 text-[11px] text-violet-500 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"
+        className="flex items-center gap-1 text-[11px] text-info hover:text-info/80"
         onClick={() => setExpanded((prev) => !prev)}
         type="button"
       >
@@ -292,18 +290,14 @@ export default function GraphqlReasoningTrace({ entries, isActive }: GraphqlReas
         {summaryText}
       </button>
       {isOpen && (
-        <div className="mt-1 border-l border-slate-300 pl-2 dark:border-slate-600">
+        <div className="mt-1 border-l border-border pl-2">
           {actions.map((action, i) => (
             <ActionBlock action={action} index={i} key={i} total={actions.length} />
           ))}
           {assessment && (
-            <div className="mt-1 rounded bg-slate-100 p-1.5 dark:bg-slate-800/50">
-              <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300">
-                Assessment
-              </span>
-              <p className="mt-0.5 text-[11px] leading-tight text-slate-700 dark:text-slate-200">
-                {assessment}
-              </p>
+            <div className="mt-1 rounded bg-muted p-1.5">
+              <span className="text-[10px] font-medium text-foreground">Assessment</span>
+              <p className="mt-0.5 text-[11px] leading-tight text-foreground">{assessment}</p>
             </div>
           )}
         </div>

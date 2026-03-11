@@ -115,7 +115,7 @@ function CollapsibleSection({ children, label }: { children: React.ReactNode; la
   return (
     <div className="mt-0.5">
       <button
-        className="flex items-center gap-1 text-[10px] font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+        className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground hover:text-foreground"
         onClick={() => setOpen((p) => !p)}
         type="button"
       >
@@ -134,13 +134,13 @@ function ResultTable({ data }: { data: Array<Array<string>> }) {
   }
 
   return (
-    <div className="mt-0.5 max-h-48 overflow-auto rounded bg-slate-50 dark:bg-slate-800/50">
+    <div className="mt-0.5 max-h-48 overflow-auto rounded bg-muted">
       <table className="w-full text-left text-[10px]">
         <thead>
           <tr>
             {header.map((cell, i) => (
               <th
-                className="border-b border-slate-200 px-1.5 py-0.5 font-medium text-slate-600 dark:border-slate-700 dark:text-slate-300"
+                className="border-b border-border px-1.5 py-0.5 font-medium text-muted-foreground"
                 key={i}
               >
                 {cell}
@@ -152,10 +152,7 @@ function ResultTable({ data }: { data: Array<Array<string>> }) {
           {rows.map((row, ri) => (
             <tr key={ri}>
               {row.map((cell, ci) => (
-                <td
-                  className="border-b border-slate-100 px-1.5 py-0.5 text-slate-500 dark:border-slate-700/50 dark:text-slate-400"
-                  key={ci}
-                >
+                <td className="border-b border-border px-1.5 py-0.5 text-muted-foreground" key={ci}>
                   {cell}
                 </td>
               ))}
@@ -174,7 +171,7 @@ function ReasoningContent({ content }: { content: string }) {
   // Short reasoning: show inline
   if (content.length <= 200) {
     return (
-      <p className="mt-0.5 text-[10px] leading-tight whitespace-pre-wrap text-slate-500 dark:text-slate-400">
+      <p className="mt-0.5 text-[10px] leading-tight whitespace-pre-wrap text-muted-foreground">
         {content}
       </p>
     );
@@ -182,7 +179,7 @@ function ReasoningContent({ content }: { content: string }) {
   // Long reasoning: collapsible
   return (
     <CollapsibleSection label="Agent reasoning">
-      <div className="mt-0.5 max-h-64 overflow-auto rounded bg-slate-50 p-1.5 text-[10px] leading-tight whitespace-pre-wrap text-slate-500 dark:bg-slate-800/50 dark:text-slate-400">
+      <div className="mt-0.5 max-h-64 overflow-auto rounded bg-muted p-1.5 text-[10px] leading-tight whitespace-pre-wrap text-muted-foreground">
         {content}
       </div>
     </CollapsibleSection>
@@ -207,20 +204,18 @@ function IterationBlock({
         <div
           className={cn(
             'h-1.5 w-1.5 rounded-full',
-            iteration.status === 'success' ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600',
+            iteration.status === 'success' ? 'bg-success' : 'bg-muted-foreground',
           )}
         />
         {/* Connecting line (except last) */}
-        {index < total - 1 && <div className="mt-0.5 w-px flex-1 bg-slate-200 dark:bg-slate-700" />}
+        {index < total - 1 && <div className="mt-0.5 w-px flex-1 bg-border" />}
       </div>
 
       {/* Content */}
       <div className="min-w-0 flex-1 pb-1">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-[10px] font-medium whitespace-nowrap text-slate-600 dark:text-slate-300">
-            {label}
-          </span>
-          <span className="text-[10px] text-slate-400 dark:text-slate-500">
+          <span className="text-[10px] font-medium whitespace-nowrap text-foreground">{label}</span>
+          <span className="text-[10px] text-muted-foreground">
             {'\u2014'} {iteration.statusLine}
           </span>
         </div>
@@ -238,7 +233,7 @@ function IterationBlock({
         {/* Collapsible SQL */}
         {iteration.sql && (
           <CollapsibleSection label="SQL query">
-            <pre className="mt-0.5 max-h-48 overflow-auto rounded bg-slate-50 p-1.5 font-mono text-[10px] leading-tight text-slate-600 dark:bg-slate-800/50 dark:text-slate-300">
+            <pre className="mt-0.5 max-h-48 overflow-auto rounded bg-muted p-1.5 font-mono text-[10px] leading-tight text-muted-foreground">
               {iteration.sql}
             </pre>
           </CollapsibleSection>
@@ -270,7 +265,7 @@ export default function ReasoningTrace({ entries, isActive }: ReasoningTraceProp
   return (
     <div className="mt-1 ml-[18px]">
       <button
-        className="flex items-center gap-1 text-[11px] text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+        className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80"
         onClick={() => setExpanded((prev) => !prev)}
         type="button"
       >
@@ -278,19 +273,15 @@ export default function ReasoningTrace({ entries, isActive }: ReasoningTraceProp
         {summaryText}
       </button>
       {isOpen && (
-        <div className="mt-1 border-l border-slate-300 pl-2 dark:border-slate-600">
+        <div className="mt-1 border-l border-border pl-2">
           {iterations.map((iter, i) => (
             <IterationBlock index={i} iteration={iter} key={i} total={iterations.length} />
           ))}
           {/* Assessment block */}
           {assessment && (
-            <div className="mt-1 rounded bg-slate-100 p-1.5 dark:bg-slate-800/50">
-              <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300">
-                Assessment
-              </span>
-              <p className="mt-0.5 text-[11px] leading-tight text-slate-700 dark:text-slate-200">
-                {assessment}
-              </p>
+            <div className="mt-1 rounded bg-muted p-1.5">
+              <span className="text-[10px] font-medium text-foreground">Assessment</span>
+              <p className="mt-0.5 text-[11px] leading-tight text-foreground">{assessment}</p>
             </div>
           )}
         </div>
