@@ -97,11 +97,14 @@ def _load_web_research(question_id: str) -> str | None:
         return None
 
 
-def _load_paper_research(question_id: str) -> tuple[str | None, list[str] | None]:
-    """Load paper research answer and quotes for a question.
+def _load_paper_research(
+    question_id: str,
+) -> tuple[str | None, list[str] | None, list[dict] | None, int | None]:
+    """Load paper research answer, quotes, data points, and year for a question.
 
     Returns:
-        Tuple of (research_answer, supporting_quotes), or (None, None) if unavailable.
+        Tuple of (research_answer, supporting_quotes, data_points, paper_year),
+        or (None, None, None, None) if unavailable.
     """
     path = (
         EVALUATION_BASE_DIR
@@ -111,14 +114,16 @@ def _load_paper_research(question_id: str) -> tuple[str | None, list[str] | None
         / "paper_research.json"
     )
     if not path.exists():
-        return None, None
+        return None, None, None, None
     try:
         data = load_json_file(path)
         answer = data.get("research_answer")
         quotes = data.get("supporting_quotes")
-        return answer, quotes
+        data_points = data.get("data_points")
+        paper_year = data.get("paper_year")
+        return answer, quotes, data_points, paper_year
     except Exception:
-        return None, None
+        return None, None, None, None
 
 
 async def _start_web_research(
@@ -301,8 +306,10 @@ async def _judge_all(
         ground_truth = _load_ground_truth(qid)
 
         # Paper research (higher priority than web research)
-        paper_research_answer, paper_research_quotes = (
-            _load_paper_research(qid) if ground_truth is None else (None, None)
+        paper_research_answer, paper_research_quotes, paper_data_points, paper_year = (
+            _load_paper_research(qid)
+            if ground_truth is None
+            else (None, None, None, None)
         )
 
         web_research = (
@@ -346,6 +353,8 @@ async def _judge_all(
                     web_research_answer=web_research,
                     paper_research_answer=paper_research_answer,
                     paper_research_quotes=paper_research_quotes,
+                    paper_data_points=paper_data_points,
+                    paper_year=paper_year,
                     model=judge_model,
                     provider=judge_provider,
                     tools_used=tools_used,

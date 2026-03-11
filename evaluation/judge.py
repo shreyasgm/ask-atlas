@@ -372,42 +372,46 @@ class WebResearchVerdict(BaseModel):
 class PaperResearchVerdict(BaseModel):
     """Verdict for questions scored against Growth Lab research paper claims.
 
-    The paper provides expert-authored, peer-reviewed ground truth, but data
-    may reflect a different time period than current Atlas data. Scoring uses
-    wider tolerance on data accuracy (±15% instead of ±5%).
+    The paper provides expert-authored, peer-reviewed ground truth. Questions
+    are pinned to specific time periods. The agent is scored ONLY on claims
+    that are answerable from Atlas trade data — paper-only claims (regressions,
+    non-trade data, institutional narratives) are not requirements.
     """
 
     factual_correctness: DimensionPass = Field(
         ...,
         description=(
-            "Are the general claims directionally correct given the paper's findings? "
-            "The agent should identify the same key countries, products, trends, and "
-            "conclusions. Minor differences in specific items are acceptable if the "
-            "agent's systematic approach is valid."
+            "Are Atlas-answerable facts correct? PASS if trade data trends, countries, "
+            "and products match. Paper-only claims (institutional history, regressions, "
+            "non-trade data) are NOT requirements. FAIL only if the agent gets "
+            "Atlas-queryable facts wrong, reverses trade-data trends, or fabricates claims."
         ),
     )
     data_accuracy: DimensionPass = Field(
         ...,
         description=(
-            "Are the agent's numbers directionally consistent with the paper's data? "
-            "Use wider tolerance (±15%) because the paper may use older data vintages. "
-            "PASS if magnitudes and directions match. FAIL only if numbers are off by "
-            "more than an order of magnitude or trends are reversed."
+            "Are Atlas-queryable numbers accurate (±10% tolerance)? Missing data points "
+            "that don't exist in Atlas (price indices, regression coefficients, demographic "
+            "stats) do NOT count as failures. FAIL only if Atlas-available numbers are "
+            "off by more than an order of magnitude, trends reversed, or values fabricated."
         ),
     )
     completeness: DimensionPass = Field(
         ...,
         description=(
-            "Does the answer address all parts of the question? "
-            "FAIL if a significant part is ignored."
+            "Does the answer address all Atlas-answerable parts of the question? "
+            "Correctly acknowledging that a part requires non-Atlas data counts as "
+            "addressing it. FAIL only if an Atlas-answerable part is ignored or "
+            "a non-Atlas limitation is silently skipped."
         ),
     )
     reasoning_quality: DimensionPass = Field(
         ...,
         description=(
-            "Is the interpretation and analysis sound? "
-            "Does the agent explain its methodology and data source? "
-            "FAIL if logical errors, self-contradictions, or unsupported conclusions."
+            "Is the interpretation sound given available Atlas data? "
+            "Correctly identifying scope limitations is a positive signal. "
+            "FAIL if logical errors, self-contradictions, unsupported conclusions, "
+            "or the agent presents non-Atlas claims as if from Atlas data."
         ),
     )
     overall_comment: str = Field(
@@ -476,7 +480,7 @@ class PaperResearchVerdict(BaseModel):
             "overall_comment": self.overall_comment,
             "note": (
                 "Scored against Growth Lab research paper (not verified SQL ground truth). "
-                "Data accuracy uses wider tolerance (±15%) for vintage differences."
+                "Data accuracy uses ±10% tolerance for methodology differences."
             ),
         }
         if self.failure_category:
@@ -703,58 +707,135 @@ _WEB_RESEARCH_PROMPT = ChatPromptTemplate.from_messages(
     ]
 )
 
-_PAPER_RESEARCH_PROMPT = ChatPromptTemplate.from_messages(
-    [
-        (
-            "system",
-            "You are an expert evaluator for a trade-data Q&A system.\n\n"
-            "IMPORTANT CONTEXT: The agent being evaluated is a **database query system** "
-            "that answers questions by querying the Atlas of Economic Complexity trade "
-            "database. It is NOT a research analyst.\n\n"
-            "You have been given a **reference answer from a Growth Lab research paper**. "
-            "This is expert-authored, peer-reviewed ground truth, but the paper's data may "
-            "reflect a different time period than the current Atlas database.\n\n"
-            "Key differences to expect:\n"
-            "- **Data vintage**: The paper may use data from several years ago; the agent "
-            "queries current Atlas data. Numbers will differ due to time gaps.\n"
-            "- **Methodology**: The paper may use custom calculations or adjusted data; the "
-            "agent uses standard Atlas metrics.\n"
-            "- **Granularity**: The paper may aggregate differently or use different product "
-            "classifications.\n\n"
-            "These differences are EXPECTED and must NOT be heavily penalised.\n\n"
-            "For each dimension, determine PASS or FAIL:\n\n"
-            "- **Factual Correctness (PASS/FAIL):** PASS if the agent's answer is "
-            "directionally consistent with the paper — same key countries, products, "
-            "general trends. Different specific rankings or items are OK if the agent's "
-            "data-driven approach is valid. FAIL only if the agent identifies fundamentally "
-            "different entities, reversed trends, or fabricates claims.\n"
-            "- **Data Accuracy (PASS/FAIL):** Use WIDER tolerance (±15%). PASS if the "
-            "agent's numbers are in the right ballpark — same order of magnitude, "
-            "directionally consistent. FAIL only if numbers are off by more than an order "
-            "of magnitude, percentages are reversed, or values are clearly fabricated.\n"
-            "- **Completeness (PASS/FAIL):** PASS if the answer addresses all parts of the "
-            "question. FAIL if a significant part is ignored.\n"
-            "- **Reasoning Quality (PASS/FAIL):** PASS if the agent explains its data "
-            "source, time window, and methodology. FAIL if claims are unsupported by its "
-            "own data or if it fails to acknowledge obvious limitations.\n\n"
-            "Be FAIR. The paper provides directional context and expert-validated findings, "
-            "not exact benchmarks for a live database query system. A data-table answer "
-            "that captures the right trends from Atlas data is a good answer."
-            + _FAILURE_TAXONOMY_PROMPT_SECTION,
-        ),
-        (
-            "human",
-            "**Question**: {question}\n\n"
-            "**Reference answer from Growth Lab research paper** "
-            "(for directional reference — data vintages may differ):"
-            "\n{paper_research_answer}\n\n"
-            "**Supporting quotes from the paper**:\n{supporting_quotes}\n\n"
-            "**Agent answer**:\n{agent_answer}\n\n"
-            "Evaluate the agent's answer. Remember: the agent queries a live database. "
-            "Use the paper's findings as directional context, with wider tolerance on "
-            "exact numbers.",
-        ),
-    ]
+_PAPER_RESEARCH_SYSTEM_TEXT = (
+    "You are an expert evaluator for a trade-data Q&A system.\n\n"
+    "IMPORTANT CONTEXT: The agent being evaluated is a **database query system** "
+    "that answers questions by querying the Atlas of Economic Complexity trade "
+    "database. It can access: trade values, export/import composition, ECI, COI, "
+    "RCA, product space proximity, trade partners, and related metrics. "
+    "It is NOT a research analyst and has NO access to:\n"
+    "- Migration, remittance, or demographic data\n"
+    "- Price indices or terms-of-trade calculations\n"
+    "- Regression results, econometric models, or custom research statistics\n"
+    "- Institutional or political history (land reform, policy details, etc.)\n"
+    "- Subnational data\n\n"
+    "You have been given a **reference answer from a Growth Lab research paper** "
+    "(published {paper_year}). The question has been pinned to a specific time "
+    "period — the agent should be querying Atlas data for that period.\n\n"
+    "## CRITICAL: Information Accessibility Principle\n\n"
+    "Before scoring each dimension, you MUST classify each claim in the "
+    "reference answer as:\n"
+    "- **Atlas-answerable**: Trade values, export shares, ECI/COI rankings, "
+    "RCA values, product space structure, trade partners, diversification "
+    "metrics — things the agent can query from the Atlas database.\n"
+    "- **Paper-only**: Regression coefficients, causal/institutional narratives, "
+    "non-trade data (migration, remittances, price indices, population, "
+    "inflation), custom research methodologies, or any finding that requires "
+    "data sources outside the Atlas.\n\n"
+    "**Score ONLY against Atlas-answerable claims.** Paper-only claims are "
+    "context for understanding the reference answer, NOT requirements the "
+    "agent must reproduce. If the entire reference answer is paper-only "
+    "(e.g., it rests on regression results the agent cannot access), the "
+    "agent cannot be expected to match it — evaluate whether the agent "
+    "provided a reasonable Atlas-based perspective instead.\n\n"
+    "## Dimension Definitions\n\n"
+    "- **Factual Correctness (PASS/FAIL):** Evaluate ONLY against "
+    "Atlas-answerable claims. PASS if the agent identifies the same key "
+    "countries, products, and directional trends as the paper for claims "
+    "derivable from trade data. Different specific rankings or items are OK "
+    "if the agent's data-driven approach is valid. If the paper's core "
+    "story depends on paper-only information, PASS if the agent's "
+    "Atlas-based interpretation is directionally reasonable and not "
+    "contradicted by the Atlas-answerable claims. FAIL only if the agent "
+    "gets Atlas-answerable facts wrong, reverses trends visible in trade "
+    "data, or fabricates data.\n"
+    "- **Data Accuracy (PASS/FAIL):** Evaluate ONLY numbers the agent "
+    "could have queried from Atlas. Use ±10% tolerance. PASS if magnitudes "
+    "and directions match for trade-data metrics. Missing data points that "
+    "don't exist in Atlas (price indices, regression coefficients, "
+    "demographic statistics) do NOT count as failures. If the agent could "
+    "not get data for the exact year and used a nearby year, PASS if it "
+    "acknowledged the year mismatch. FAIL if Atlas-queryable numbers are "
+    "off by more than an order of magnitude, trends are reversed, or "
+    "values are clearly fabricated.\n"
+    "- **Completeness (PASS/FAIL):** PASS if the answer addresses all "
+    "Atlas-answerable parts of the question. If a part of the question "
+    "requires non-Atlas data, the agent correctly acknowledging that "
+    "limitation counts as addressing it. FAIL only if the agent ignores "
+    "a significant Atlas-answerable part of the question, OR fails to "
+    "acknowledge that a part is unanswerable (silently skips it).\n"
+    "- **Reasoning Quality (PASS/FAIL):** PASS if the agent explains "
+    "its data source and time window, and its interpretation is sound "
+    "given the data it has. Correctly identifying scope limitations "
+    '("Atlas does not contain X data") is a POSITIVE signal and should '
+    "strengthen this dimension, not weaken it. FAIL if claims are "
+    "unsupported by its own data, logical errors, self-contradictions, "
+    "or the agent presents non-Atlas claims as if they came from Atlas "
+    "data.\n\n"
+    "## Examples\n\n"
+    "### Example 1: PASS — Agent answers from Atlas data, paper has "
+    "institutional story\n"
+    "Paper says non-traditional agriculture emerged due to property rights "
+    "in areas outside agrarian reform. Agent cannot know this institutional "
+    "history, but shows trade data confirming the export shift (asparagus, "
+    "grapes growing while traditional agriculture stagnated). "
+    "The Atlas-answerable part (export composition trends) is correct. "
+    "The paper-only part (agrarian reform mechanism) is not required.\n"
+    "→ Factual Correctness: PASS (trade trends match)\n"
+    "→ Data Accuracy: PASS (export values in range)\n"
+    "→ Completeness: PASS (addressed the trade shift; institutional "
+    "mechanism is paper-only)\n"
+    "→ Reasoning Quality: PASS (sound interpretation from available data)\n\n"
+    "### Example 2: PASS — Agent correctly identifies scope limitation\n"
+    "Paper discusses remittances as a share of export earnings. "
+    "Agent says 'Atlas does not track remittances' "
+    "and provides export composition and services trade as the closest "
+    "available analysis. The qualitative conclusion about sustainability "
+    "matches the paper.\n"
+    "→ Factual Correctness: PASS (trade analysis is directionally sound)\n"
+    "→ Data Accuracy: PASS (trade values from Atlas are correct)\n"
+    "→ Completeness: PASS (acknowledged limitation, provided what it could)\n"
+    "→ Reasoning Quality: PASS (transparent about data limitations)\n\n"
+    "### Example 3: FAIL — Agent fabricates data or reverses Atlas-visible "
+    "trends\n"
+    "Paper says country X had LOW Complexity Outlook Index. "
+    "Agent claims country X had HIGH and improving COI, presenting "
+    "year-by-year values that contradict Atlas data. "
+    "COI IS in Atlas — this is an Atlas-answerable claim the agent got wrong.\n"
+    "→ Factual Correctness: FAIL (reversed an Atlas-visible trend)\n"
+    "→ Data Accuracy: FAIL (fabricated COI values)\n"
+    "→ Completeness: PASS (answered the question)\n"
+    "→ Reasoning Quality: FAIL (built narrative on fabricated data)\n\n"
+    "### Example 4: PASS (borderline) — Paper uses custom regression, "
+    "agent uses standard Atlas metrics\n"
+    "Paper concludes that controlling for open forest, a country's "
+    "diversification is fully explained by product-space position "
+    "(regression coefficient = 0.003, not significant). Agent cannot "
+    "reproduce the regression but examines the country's product space "
+    "density, nearby products, and actual diversification outcomes. "
+    "Agent's interpretation is directionally consistent even though it "
+    "cannot reproduce the precise statistical test.\n"
+    "→ Factual Correctness: PASS (product space analysis is consistent)\n"
+    "→ Data Accuracy: PASS (Atlas metrics are correct; regression "
+    "coefficient is paper-only)\n"
+    "→ Completeness: PASS (addressed with available tools)\n"
+    "→ Reasoning Quality: PASS (appropriate use of Atlas capabilities)\n\n"
+    "Be FAIR. The paper provides expert-validated findings as a reference, "
+    "but the agent can only work with Atlas trade data. A data-driven "
+    "answer that captures the right trends from Atlas data for the "
+    "relevant time period is a good answer, even if it cannot reproduce "
+    "the paper's full narrative."
+    + _FAILURE_TAXONOMY_PROMPT_SECTION
+)
+
+_PAPER_RESEARCH_HUMAN_TEXT = (
+    "**Question**: {question}\n\n"
+    "**Reference answer from Growth Lab research paper** (published {paper_year}):"
+    "\n{paper_research_answer}\n\n"
+    "**Supporting quotes from the paper**:\n{supporting_quotes}\n\n"
+    "**Structured data points from the paper**:\n{data_points}\n\n"
+    "**Agent answer**:\n{agent_answer}\n\n"
+    "Evaluate the agent's answer against the paper's findings."
 )
 
 
@@ -771,6 +852,8 @@ async def judge_answer(
     web_research_answer: str | None = None,
     paper_research_answer: str | None = None,
     paper_research_quotes: list[str] | None = None,
+    paper_data_points: list[dict] | None = None,
+    paper_year: int | None = None,
     model: str = "gpt-5.4",
     provider: str = "openai",
     tools_used: list[str] | None = None,
@@ -780,7 +863,7 @@ async def judge_answer(
 
     Five paths (in priority order):
     1. **ground_truth_data provided** → full 4-dimension rubric against data.
-    2. **paper_research_answer provided** → 4-dimension rubric with wider tolerance.
+    2. **paper_research_answer provided** → 4-dimension rubric with ±10% tolerance.
     3. **expected_behavior provided** (no data) → refusal appropriateness check.
     4. **web_research_answer provided** → 4-dimension rubric against web research.
     5. **none of the above** → plausibility check using the judge's own knowledge.
@@ -793,6 +876,8 @@ async def judge_answer(
         web_research_answer: Reference answer from independent web research, or None.
         paper_research_answer: Reference answer from a Growth Lab research paper, or None.
         paper_research_quotes: Supporting quotes from the paper, or None.
+        paper_data_points: Structured data points from the paper, or None.
+        paper_year: Publication year of the source paper, or None.
         model: Judge LLM model name.
         provider: Judge LLM provider.
         tools_used: List of tool names the agent invoked, or None.
@@ -845,7 +930,20 @@ async def judge_answer(
             if paper_research_quotes
             else "(No supporting quotes provided)"
         )
-        chain = _PAPER_RESEARCH_PROMPT | llm.with_structured_output(
+        data_points_text = (
+            json.dumps(paper_data_points, indent=2, default=str)
+            if paper_data_points
+            else "(No structured data points provided)"
+        )
+        year_str = str(paper_year) if paper_year else "unknown"
+
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", _PAPER_RESEARCH_SYSTEM_TEXT.format(paper_year=year_str)),
+                ("human", _PAPER_RESEARCH_HUMAN_TEXT),
+            ]
+        )
+        chain = prompt | llm.with_structured_output(
             PaperResearchVerdict, method="json_schema"
         )
         result: PaperResearchVerdict = await chain.ainvoke(
@@ -853,6 +951,8 @@ async def judge_answer(
                 "question": question,
                 "paper_research_answer": paper_research_answer,
                 "supporting_quotes": quotes_text,
+                "data_points": data_points_text,
+                "paper_year": year_str,
                 "agent_answer": agent_answer,
             }
         )

@@ -591,7 +591,7 @@ def generate_report(
                 **_aggregate_scores(vds),
                 **(
                     {"dimension_averages": _dimension_averages(vds)}
-                    if mode in ("ground_truth", "web_research")
+                    if mode in ("ground_truth", "web_research", "paper_research")
                     else {}
                 ),
             }
@@ -678,7 +678,7 @@ def report_to_markdown(report: dict[str, Any]) -> str:
     dims = report.get("dimension_averages", {})
     if dims:
         lines.append("\n## Dimension Pass Rates\n")
-        lines.append("_Only ground_truth and web_research questions contribute._\n")
+        lines.append("_Only ground_truth, web_research, and paper_research questions contribute._\n")
         lines.append("| Dimension | Pass Rate |")
         lines.append("|-----------|-----------|")
         for dim, rate in dims.items():

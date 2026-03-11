@@ -109,6 +109,26 @@ def _load_enriched_data(run_dir: Path) -> dict[str, Any]:
         else:
             entry["web_research"] = None
 
+        # Load paper research
+        pr_path = (
+            EVALUATION_BASE_DIR / "results" / qid / "ground_truth" / "paper_research.json"
+        )
+        if pr_path.exists():
+            try:
+                pr = load_json_file(pr_path)
+                entry["paper_research"] = {
+                    "research_answer": pr.get("research_answer", ""),
+                    "supporting_quotes": pr.get("supporting_quotes", []),
+                    "data_points": pr.get("data_points", []),
+                    "confidence": pr.get("confidence", ""),
+                    "paper_title": pr.get("paper_title", ""),
+                    "paper_year": pr.get("paper_year"),
+                }
+            except Exception:
+                entry["paper_research"] = None
+        else:
+            entry["paper_research"] = None
+
         # Add expected_behavior for refusal questions
         if qid in expected_behaviors:
             entry["expected_behavior"] = expected_behaviors[qid]
@@ -1287,6 +1307,37 @@ function buildDetailHTML(q) {
       <h4>Web Research Reference${confBadge}</h4>
       ${metaLine ? '<div style="font-size:11px;color:#6b7280;margin-bottom:6px;">' + esc(metaLine) + '</div>' : ''}
       <div class="content md-rendered" style="max-height:400px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:6px;padding:12px;">${wrRendered}${sourcesHtml}</div>
+    </div>`;
+  }
+
+  // Paper research content (for paper_research judge mode)
+  if (q.paper_research && q.paper_research.research_answer) {
+    const confBadge = q.paper_research.confidence
+      ? ' <span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:' +
+        (q.paper_research.confidence === 'high' ? '#d1fae5;color:#065f46' : q.paper_research.confidence === 'medium' ? '#fef3c7;color:#92400e' : '#fee2e2;color:#991b1b') +
+        '">' + esc(q.paper_research.confidence) + ' confidence</span>'
+      : '';
+    const paperMeta = [q.paper_research.paper_title, q.paper_research.paper_year].filter(Boolean).join(' (') + (q.paper_research.paper_year ? ')' : '');
+    let prRendered;
+    try { prRendered = marked.parse(q.paper_research.research_answer); }
+    catch(e) { prRendered = '<pre>' + esc(q.paper_research.research_answer) + '</pre>'; }
+    let quotesHtml = '';
+    if (q.paper_research.supporting_quotes && q.paper_research.supporting_quotes.length > 0) {
+      quotesHtml = '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:12px;"><strong>Supporting Quotes:</strong><ul style="margin:4px 0 0 20px;padding:0;">' +
+        q.paper_research.supporting_quotes.map(s => '<li style="margin-bottom:4px;font-style:italic;color:#4b5563;">"' + esc(s) + '"</li>').join('') +
+        '</ul></div>';
+    }
+    let dataPointsHtml = '';
+    if (q.paper_research.data_points && q.paper_research.data_points.length > 0) {
+      dataPointsHtml = '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:12px;"><strong>Data Points:</strong><table style="width:100%;margin-top:4px;border-collapse:collapse;font-size:12px;">' +
+        '<tr style="background:#f9fafb;"><th style="padding:4px 8px;text-align:left;border:1px solid #e5e7eb;">Metric</th><th style="padding:4px 8px;text-align:left;border:1px solid #e5e7eb;">Value</th><th style="padding:4px 8px;text-align:left;border:1px solid #e5e7eb;">Year</th><th style="padding:4px 8px;text-align:left;border:1px solid #e5e7eb;">Country</th></tr>' +
+        q.paper_research.data_points.map(dp => '<tr><td style="padding:4px 8px;border:1px solid #e5e7eb;">' + esc(dp.metric || '') + '</td><td style="padding:4px 8px;border:1px solid #e5e7eb;">' + esc(dp.value || '') + '</td><td style="padding:4px 8px;border:1px solid #e5e7eb;">' + esc(dp.year || '') + '</td><td style="padding:4px 8px;border:1px solid #e5e7eb;">' + esc(dp.country || '') + '</td></tr>').join('') +
+        '</table></div>';
+    }
+    primary += `<div class="detail-section">
+      <h4>Paper Research Reference${confBadge}</h4>
+      ${paperMeta ? '<div style="font-size:11px;color:#6b7280;margin-bottom:6px;">' + esc(paperMeta) + '</div>' : ''}
+      <div class="content md-rendered" style="max-height:400px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:6px;padding:12px;">${prRendered}${quotesHtml}${dataPointsHtml}</div>
     </div>`;
   }
 
