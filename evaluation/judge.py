@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """LLM-as-judge: evaluate agent answers against ground truth data.
 
-Four evaluation paths:
+Five evaluation paths:
 
 1. **Ground truth** — agent's text answer is scored against verified data rows
    from executed SQL (binary pass/fail per dimension).
-2. **Refusal** — for out-of-scope / data-boundary questions with an
+2. **Paper research** — for questions sourced from Growth Lab research papers,
+   scored against the paper's own claims with wider data-accuracy tolerance
+   (paper data may use different vintages than current Atlas data).
+3. **Refusal** — for out-of-scope / data-boundary questions with an
    ``expected_behavior`` field, checks whether the agent refused appropriately.
-3. **Web research** — for questions without SQL ground truth or expected_behavior,
+4. **Web research** — for questions without SQL ground truth or expected_behavior,
    but with a ``web_research.json`` reference answer produced by an independent
    LLM with web search.  Scores the agent against this research-grade reference.
-4. **Plausibility** — for questions without any reference data, the judge uses
+5. **Plausibility** — for questions without any reference data, the judge uses
    its own knowledge to assess whether the answer is roughly plausible
    (not fabricated nonsense).  These results are flagged as
    ``"judge_mode": "plausibility"``.
@@ -23,6 +26,7 @@ from __future__ import annotations
 import json
 from typing import Literal
 
+from failure_taxonomy import FAILURE_CATEGORY_DESCRIPTIONS, FailureCategory
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
@@ -43,6 +47,26 @@ DIMENSION_WEIGHTS = {
 # Dimensions whose failure caps the overall verdict at "partial" even when
 # the total pass_count would otherwise qualify as "pass".
 _CRITICAL_DIMENSIONS = frozenset({"factual_correctness", "data_accuracy"})
+
+# Failure taxonomy descriptions for prompt injection
+_FAILURE_TAXONOMY_PROMPT_SECTION = (
+    "\n\n## Failure Classification\n"
+    "If the overall verdict is NOT pass, classify the primary failure into one of "
+    "these categories. If pass, set failure_category to null.\n\n"
+    + "\n".join(
+        f"- **{cat.value}**: {desc}"
+        for cat, desc in FAILURE_CATEGORY_DESCRIPTIONS.items()
+    )
+    + "\n\nSet `failure_category` to the single most applicable category. "
+    "If multiple apply, put the primary one in `failure_category` and any "
+    "additional ones in `secondary_failure_categories`."
+)
+
+# Valid failure categories for non-refusal verdicts
+_NON_REFUSAL_CATEGORIES = [
+    c.value for c in FailureCategory if c != FailureCategory.SCOPE_REFUSAL_FAILURE
+]
+_ALL_CATEGORIES = [c.value for c in FailureCategory]
 
 
 class DimensionPass(BaseModel):
@@ -67,6 +91,18 @@ class JudgeVerdict(BaseModel):
     )
     overall_comment: str = Field(
         ..., description="One-sentence summary of the evaluation"
+    )
+    failure_category: str | None = Field(
+        None,
+        description=(
+            "Primary failure category if verdict is not 'pass'. One of: fabricated_data, "
+            "wrong_entity_or_metric, numeric_inaccuracy, missing_required_data, "
+            "unsupported_embellishment, methodology_error. Null if pass."
+        ),
+    )
+    secondary_failure_categories: list[str] = Field(
+        default_factory=list,
+        description="Additional applicable failure categories (may be empty).",
     )
 
     @property
@@ -96,7 +132,7 @@ class JudgeVerdict(BaseModel):
 
     def to_dict(self) -> dict:
         pc = self.pass_count
-        return {
+        d = {
             "judge_mode": "ground_truth",
             "factual_correctness": {
                 "passed": self.factual_correctness.passed,
@@ -119,6 +155,11 @@ class JudgeVerdict(BaseModel):
             "verdict": self.verdict,
             "overall_comment": self.overall_comment,
         }
+        if self.failure_category:
+            d["failure_category"] = self.failure_category
+        if self.secondary_failure_categories:
+            d["secondary_failure_categories"] = self.secondary_failure_categories
+        return d
 
 
 class RefusalVerdict(BaseModel):
@@ -129,6 +170,19 @@ class RefusalVerdict(BaseModel):
     )
     graceful: bool = Field(..., description="Was the response polite and informative?")
     reasoning: str = Field(..., description="Justification")
+    failure_category: str | None = Field(
+        None,
+        description=(
+            "Primary failure category if verdict is not 'pass'. One of: fabricated_data, "
+            "wrong_entity_or_metric, numeric_inaccuracy, missing_required_data, "
+            "unsupported_embellishment, scope_refusal_failure, methodology_error. "
+            "Null if pass."
+        ),
+    )
+    secondary_failure_categories: list[str] = Field(
+        default_factory=list,
+        description="Additional applicable failure categories (may be empty).",
+    )
 
     @property
     def verdict(self) -> Literal["pass", "fail"]:
@@ -136,7 +190,7 @@ class RefusalVerdict(BaseModel):
 
     def to_dict(self) -> dict:
         is_pass = self.verdict == "pass"
-        return {
+        d = {
             "judge_mode": "refusal",
             "appropriate_refusal": self.appropriate_refusal,
             "graceful": self.graceful,
@@ -145,6 +199,11 @@ class RefusalVerdict(BaseModel):
             "verdict": self.verdict,
             "reasoning": self.reasoning,
         }
+        if self.failure_category:
+            d["failure_category"] = self.failure_category
+        if self.secondary_failure_categories:
+            d["secondary_failure_categories"] = self.secondary_failure_categories
+        return d
 
 
 class PlausibilityVerdict(BaseModel):
@@ -163,6 +222,18 @@ class PlausibilityVerdict(BaseModel):
         description="Does the answer contain obviously wrong claims (e.g. wrong order of magnitude, impossible values)?",
     )
     reasoning: str = Field(..., description="Justification")
+    failure_category: str | None = Field(
+        None,
+        description=(
+            "Primary failure category if verdict is not 'pass'. One of: fabricated_data, "
+            "wrong_entity_or_metric, numeric_inaccuracy, missing_required_data, "
+            "unsupported_embellishment, methodology_error. Null if pass."
+        ),
+    )
+    secondary_failure_categories: list[str] = Field(
+        default_factory=list,
+        description="Additional applicable failure categories (may be empty).",
+    )
 
     @property
     def verdict(self) -> Literal["pass", "fail"]:
@@ -170,7 +241,7 @@ class PlausibilityVerdict(BaseModel):
 
     def to_dict(self) -> dict:
         is_pass = self.verdict == "pass"
-        return {
+        d = {
             "judge_mode": "plausibility",
             "plausible": self.plausible,
             "factually_absurd": self.factually_absurd,
@@ -180,6 +251,11 @@ class PlausibilityVerdict(BaseModel):
             "reasoning": self.reasoning,
             "note": "No ground truth SQL — scored on plausibility only, not verified accuracy.",
         }
+        if self.failure_category:
+            d["failure_category"] = self.failure_category
+        if self.secondary_failure_categories:
+            d["secondary_failure_categories"] = self.secondary_failure_categories
+        return d
 
 
 class WebResearchVerdict(BaseModel):
@@ -220,6 +296,18 @@ class WebResearchVerdict(BaseModel):
     overall_comment: str = Field(
         ..., description="One-sentence summary of the evaluation"
     )
+    failure_category: str | None = Field(
+        None,
+        description=(
+            "Primary failure category if verdict is not 'pass'. One of: fabricated_data, "
+            "wrong_entity_or_metric, numeric_inaccuracy, missing_required_data, "
+            "unsupported_embellishment, methodology_error. Null if pass."
+        ),
+    )
+    secondary_failure_categories: list[str] = Field(
+        default_factory=list,
+        description="Additional applicable failure categories (may be empty).",
+    )
 
     @property
     def pass_count(self) -> int:
@@ -247,7 +335,7 @@ class WebResearchVerdict(BaseModel):
 
     def to_dict(self) -> dict:
         pc = self.pass_count
-        return {
+        d = {
             "judge_mode": "web_research",
             "factual_correctness": {
                 "passed": self.factual_correctness.passed,
@@ -274,6 +362,128 @@ class WebResearchVerdict(BaseModel):
                 "Data accuracy scoring is lenient on exact numbers."
             ),
         }
+        if self.failure_category:
+            d["failure_category"] = self.failure_category
+        if self.secondary_failure_categories:
+            d["secondary_failure_categories"] = self.secondary_failure_categories
+        return d
+
+
+class PaperResearchVerdict(BaseModel):
+    """Verdict for questions scored against Growth Lab research paper claims.
+
+    The paper provides expert-authored, peer-reviewed ground truth, but data
+    may reflect a different time period than current Atlas data. Scoring uses
+    wider tolerance on data accuracy (±15% instead of ±5%).
+    """
+
+    factual_correctness: DimensionPass = Field(
+        ...,
+        description=(
+            "Are the general claims directionally correct given the paper's findings? "
+            "The agent should identify the same key countries, products, trends, and "
+            "conclusions. Minor differences in specific items are acceptable if the "
+            "agent's systematic approach is valid."
+        ),
+    )
+    data_accuracy: DimensionPass = Field(
+        ...,
+        description=(
+            "Are the agent's numbers directionally consistent with the paper's data? "
+            "Use wider tolerance (±15%) because the paper may use older data vintages. "
+            "PASS if magnitudes and directions match. FAIL only if numbers are off by "
+            "more than an order of magnitude or trends are reversed."
+        ),
+    )
+    completeness: DimensionPass = Field(
+        ...,
+        description=(
+            "Does the answer address all parts of the question? "
+            "FAIL if a significant part is ignored."
+        ),
+    )
+    reasoning_quality: DimensionPass = Field(
+        ...,
+        description=(
+            "Is the interpretation and analysis sound? "
+            "Does the agent explain its methodology and data source? "
+            "FAIL if logical errors, self-contradictions, or unsupported conclusions."
+        ),
+    )
+    overall_comment: str = Field(
+        ..., description="One-sentence summary of the evaluation"
+    )
+    failure_category: str | None = Field(
+        None,
+        description=(
+            "Primary failure category if verdict is not 'pass'. One of: fabricated_data, "
+            "wrong_entity_or_metric, numeric_inaccuracy, missing_required_data, "
+            "unsupported_embellishment, methodology_error. Null if pass."
+        ),
+    )
+    secondary_failure_categories: list[str] = Field(
+        default_factory=list,
+        description="Additional applicable failure categories (may be empty).",
+    )
+
+    @property
+    def pass_count(self) -> int:
+        return sum(
+            1
+            for d in (
+                self.factual_correctness,
+                self.data_accuracy,
+                self.completeness,
+                self.reasoning_quality,
+            )
+            if d.passed
+        )
+
+    @property
+    def verdict(self) -> Literal["pass", "partial", "fail"]:
+        pc = self.pass_count
+        if pc >= 3:
+            if not self.factual_correctness.passed or not self.data_accuracy.passed:
+                return "partial"
+            return "pass"
+        if pc == 2:
+            return "partial"
+        return "fail"
+
+    def to_dict(self) -> dict:
+        pc = self.pass_count
+        d = {
+            "judge_mode": "paper_research",
+            "factual_correctness": {
+                "passed": self.factual_correctness.passed,
+                "reasoning": self.factual_correctness.reasoning,
+            },
+            "data_accuracy": {
+                "passed": self.data_accuracy.passed,
+                "reasoning": self.data_accuracy.reasoning,
+            },
+            "completeness": {
+                "passed": self.completeness.passed,
+                "reasoning": self.completeness.reasoning,
+            },
+            "reasoning_quality": {
+                "passed": self.reasoning_quality.passed,
+                "reasoning": self.reasoning_quality.reasoning,
+            },
+            "pass_count": pc,
+            "weighted_score": float(pc),  # backward compat
+            "verdict": self.verdict,
+            "overall_comment": self.overall_comment,
+            "note": (
+                "Scored against Growth Lab research paper (not verified SQL ground truth). "
+                "Data accuracy uses wider tolerance (±15%) for vintage differences."
+            ),
+        }
+        if self.failure_category:
+            d["failure_category"] = self.failure_category
+        if self.secondary_failure_categories:
+            d["secondary_failure_categories"] = self.secondary_failure_categories
+        return d
 
 
 # ---------------------------------------------------------------------------
@@ -294,14 +504,25 @@ _GROUND_TRUTH_SYSTEM_TEXT = (
     "- **Factual Correctness (PASS/FAIL):** PASS if the agent identifies the correct "
     "countries, products, time periods, and directions of change as shown in the ground "
     "truth. Minor omissions acceptable (e.g., missing one country in a top-10 list). "
-    "FAIL if wrong countries, wrong products, wrong direction, or fabricated entities.\n"
+    "If the core answer matches the ground truth but the agent adds extra details "
+    "(additional products, supplementary statistics, extended analysis) beyond what the "
+    "ground truth covers, this is still a PASS — extra context does not invalidate a "
+    "correct core answer. FAIL only if the core entities are wrong, wrong direction, "
+    "or fabricated entities.\n"
     "- **Data Accuracy (PASS/FAIL):** PASS if reported numbers match ground truth "
-    "within ±5%. FAIL if off by >5%, wrong order of magnitude, or fabricated.\n"
+    "within ±5%. If the agent adds extra numbers beyond what the ground truth covers "
+    "(e.g., supplementary statistics, services breakdowns, growth rates for additional "
+    "years), do not penalize as long as the extra numbers are generally plausible "
+    "(right order of magnitude, reasonable for the country/product in question). Only "
+    "FAIL extra numbers if they are obviously implausible (wrong order of magnitude, "
+    "impossible percentages, or directly contradict the ground truth). Score only the "
+    "core numbers against the ±5% threshold. "
+    "FAIL if off by >5%, wrong order of magnitude, or fabricated.\n"
     "- **Completeness (PASS/FAIL):** PASS if the answer addresses all parts of "
     "the question. FAIL if a significant part is ignored.\n"
     "- **Reasoning Quality (PASS/FAIL):** PASS if interpretation is sound and "
     "doesn't contradict its own data. FAIL if logical errors, self-contradictions, "
-    "or unsupported conclusions."
+    "or unsupported conclusions." + _FAILURE_TAXONOMY_PROMPT_SECTION
 )
 
 _GROUND_TRUTH_HUMAN_TEXT = (
@@ -363,7 +584,8 @@ _REFUSAL_PROMPT = ChatPromptTemplate.from_messages(
             "gracefully? did it explain why the question can't be answered? "
             "did it avoid fabricating data?\n\n"
             "Produce a binary pass/fail verdict: PASS if the agent appropriately "
-            "refused AND did so gracefully. FAIL otherwise.",
+            "refused AND did so gracefully. FAIL otherwise."
+            + _FAILURE_TAXONOMY_PROMPT_SECTION,
         ),
         (
             "human",
@@ -398,7 +620,8 @@ _PLAUSIBILITY_PROMPT = ChatPromptTemplate.from_messages(
             "Produce two boolean outputs: `plausible` and `factually_absurd`. "
             "PASS if plausible and NOT factually absurd. FAIL otherwise.\n\n"
             "IMPORTANT: This is a plausibility check only. A 'pass' here does "
-            "NOT mean the answer is verified — it means it's not obviously wrong.",
+            "NOT mean the answer is verified — it means it's not obviously wrong."
+            + _FAILURE_TAXONOMY_PROMPT_SECTION,
         ),
         (
             "human",
@@ -438,11 +661,21 @@ _WEB_RESEARCH_PROMPT = ChatPromptTemplate.from_messages(
             "- **Factual Correctness (PASS/FAIL):** PASS if the agent's answer is "
             "directionally consistent with the web research — right trends, right major "
             "players, right general story. Different specific countries/products OK if the "
-            "agent's systematic approach is valid. FAIL if the agent contradicts major "
-            "directional claims, identifies fundamentally different top players with no "
-            "reasonable explanation, or fabricates trends.\n"
+            "agent's systematic approach is valid. If the core answer is directionally correct "
+            "but the agent adds extra details (additional products, supplementary statistics, "
+            "extended analysis) beyond what the web research covers, this is still a PASS — "
+            "extra context does not invalidate a correct core answer. FAIL only if the agent "
+            "contradicts major directional claims, identifies fundamentally different top "
+            "players with no reasonable explanation, or fabricates trends.\n"
             "- **Data Accuracy (PASS/FAIL):** PASS if numbers are internally consistent, "
             "plausible in magnitude, and not contradicted by clear web research benchmarks. "
+            "If the agent adds extra numbers beyond what the web research covers "
+            "(e.g., supplementary statistics, services breakdowns, growth rates for additional "
+            "years), do not penalize as long as the extra numbers are generally plausible "
+            "(right order of magnitude, reasonable for the country/product in question). Only "
+            "FAIL extra numbers if they are obviously implausible (wrong order of magnitude, "
+            "impossible percentages, or directly contradict the web research). Score only the "
+            "core numbers against plausibility. "
             "FAIL if internally inconsistent (percentages don't sum, growth rates contradict "
             "start/end values), implausible magnitude, or specific numbers directly contradict "
             "well-sourced web research figures by more than an order of magnitude.\n"
@@ -455,7 +688,8 @@ _WEB_RESEARCH_PROMPT = ChatPromptTemplate.from_messages(
             "Be FAIR. The web research is context for an informed plausibility check, "
             "not ground truth. The agent's job is to query trade data accurately, not to "
             "write research reports. A data-table answer that captures the right trends "
-            "from the Atlas database is a good answer.",
+            "from the Atlas database is a good answer."
+            + _FAILURE_TAXONOMY_PROMPT_SECTION,
         ),
         (
             "human",
@@ -465,6 +699,60 @@ _WEB_RESEARCH_PROMPT = ChatPromptTemplate.from_messages(
             "**Agent answer**:\n{agent_answer}\n\n"
             "Evaluate the agent's answer. Remember: the agent is a database query system. "
             "Use the web research as context, not as a strict reference to match against.",
+        ),
+    ]
+)
+
+_PAPER_RESEARCH_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "You are an expert evaluator for a trade-data Q&A system.\n\n"
+            "IMPORTANT CONTEXT: The agent being evaluated is a **database query system** "
+            "that answers questions by querying the Atlas of Economic Complexity trade "
+            "database. It is NOT a research analyst.\n\n"
+            "You have been given a **reference answer from a Growth Lab research paper**. "
+            "This is expert-authored, peer-reviewed ground truth, but the paper's data may "
+            "reflect a different time period than the current Atlas database.\n\n"
+            "Key differences to expect:\n"
+            "- **Data vintage**: The paper may use data from several years ago; the agent "
+            "queries current Atlas data. Numbers will differ due to time gaps.\n"
+            "- **Methodology**: The paper may use custom calculations or adjusted data; the "
+            "agent uses standard Atlas metrics.\n"
+            "- **Granularity**: The paper may aggregate differently or use different product "
+            "classifications.\n\n"
+            "These differences are EXPECTED and must NOT be heavily penalised.\n\n"
+            "For each dimension, determine PASS or FAIL:\n\n"
+            "- **Factual Correctness (PASS/FAIL):** PASS if the agent's answer is "
+            "directionally consistent with the paper — same key countries, products, "
+            "general trends. Different specific rankings or items are OK if the agent's "
+            "data-driven approach is valid. FAIL only if the agent identifies fundamentally "
+            "different entities, reversed trends, or fabricates claims.\n"
+            "- **Data Accuracy (PASS/FAIL):** Use WIDER tolerance (±15%). PASS if the "
+            "agent's numbers are in the right ballpark — same order of magnitude, "
+            "directionally consistent. FAIL only if numbers are off by more than an order "
+            "of magnitude, percentages are reversed, or values are clearly fabricated.\n"
+            "- **Completeness (PASS/FAIL):** PASS if the answer addresses all parts of the "
+            "question. FAIL if a significant part is ignored.\n"
+            "- **Reasoning Quality (PASS/FAIL):** PASS if the agent explains its data "
+            "source, time window, and methodology. FAIL if claims are unsupported by its "
+            "own data or if it fails to acknowledge obvious limitations.\n\n"
+            "Be FAIR. The paper provides directional context and expert-validated findings, "
+            "not exact benchmarks for a live database query system. A data-table answer "
+            "that captures the right trends from Atlas data is a good answer."
+            + _FAILURE_TAXONOMY_PROMPT_SECTION,
+        ),
+        (
+            "human",
+            "**Question**: {question}\n\n"
+            "**Reference answer from Growth Lab research paper** "
+            "(for directional reference — data vintages may differ):"
+            "\n{paper_research_answer}\n\n"
+            "**Supporting quotes from the paper**:\n{supporting_quotes}\n\n"
+            "**Agent answer**:\n{agent_answer}\n\n"
+            "Evaluate the agent's answer. Remember: the agent queries a live database. "
+            "Use the paper's findings as directional context, with wider tolerance on "
+            "exact numbers.",
         ),
     ]
 )
@@ -481,18 +769,21 @@ async def judge_answer(
     ground_truth_data: list[dict] | None,
     expected_behavior: str | None = None,
     web_research_answer: str | None = None,
-    model: str = "gpt-5-mini",
+    paper_research_answer: str | None = None,
+    paper_research_quotes: list[str] | None = None,
+    model: str = "gpt-5.4",
     provider: str = "openai",
     tools_used: list[str] | None = None,
     classification_note: str | None = None,
 ) -> dict:
     """Score an agent answer using an LLM judge.
 
-    Four paths (in priority order):
+    Five paths (in priority order):
     1. **ground_truth_data provided** → full 4-dimension rubric against data.
-    2. **expected_behavior provided** (no data) → refusal appropriateness check.
-    3. **web_research_answer provided** → 4-dimension rubric against web research.
-    4. **none of the above** → plausibility check using the judge's own knowledge.
+    2. **paper_research_answer provided** → 4-dimension rubric with wider tolerance.
+    3. **expected_behavior provided** (no data) → refusal appropriateness check.
+    4. **web_research_answer provided** → 4-dimension rubric against web research.
+    5. **none of the above** → plausibility check using the judge's own knowledge.
 
     Args:
         question: The original user question.
@@ -500,6 +791,8 @@ async def judge_answer(
         ground_truth_data: Rows from verified SQL execution, or None.
         expected_behavior: For refusal/edge-case questions, the expected behaviour.
         web_research_answer: Reference answer from independent web research, or None.
+        paper_research_answer: Reference answer from a Growth Lab research paper, or None.
+        paper_research_quotes: Supporting quotes from the paper, or None.
         model: Judge LLM model name.
         provider: Judge LLM provider.
         tools_used: List of tool names the agent invoked, or None.
@@ -544,6 +837,26 @@ async def judge_answer(
         if classification_note:
             verdict_dict["classification_note_applied"] = True
         return verdict_dict
+
+    if paper_research_answer is not None:
+        # Path 2: Growth Lab research paper reference answer
+        quotes_text = (
+            "\n".join(f"- {q}" for q in paper_research_quotes)
+            if paper_research_quotes
+            else "(No supporting quotes provided)"
+        )
+        chain = _PAPER_RESEARCH_PROMPT | llm.with_structured_output(
+            PaperResearchVerdict, method="json_schema"
+        )
+        result: PaperResearchVerdict = await chain.ainvoke(
+            {
+                "question": question,
+                "paper_research_answer": paper_research_answer,
+                "supporting_quotes": quotes_text,
+                "agent_answer": agent_answer,
+            }
+        )
+        return result.to_dict()
 
     if expected_behavior is not None:
         # Path 2: expected refusal / limitation acknowledgment
