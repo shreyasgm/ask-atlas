@@ -1,0 +1,41 @@
+{
+  "question_id": "524",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.029093+00:00",
+  "paper_title": "Tackling Discrepancies in Trade Data: The Harvard Growth Lab International Trade Datasets",
+  "paper_year": 2025,
+  "source_paper": "2025-07-glwp-251-tackling-discrepancies-in-trade-data.pdf",
+  "research_answer": "Two distinct problems emerge when converting trade data between classification vintages, and together they affect a substantial share of world trade. First, there's misallocation: approximately 3% of world trade in 2007 is not properly redistributed under Comtrade's standard 1:1 concordance method, where a product code in one vintage maps to a single code in another even when the real relationship is many-to-many. Beyond that, the weights used to allocate trade values differ between data-driven methods and Comtrade's default approach for roughly 16% of world trade when converting from HS2007 to HS1992. Second, there's outright data loss: when converting 2022 data to HS1992, Comtrade loses approximately 500 product codes \u2014 the harmonized dataset ends up with only around 4,500 codes instead of the ~5,000 in the complete HS1992 vintage. Cumulatively, these issues mean that standard conversion methods introduce both measurement error and gaps in product coverage that compound over time as more classification revisions accumulate.",
+  "supporting_quotes": [
+    "The visualization also includes a 'misallocated trade' category, highlighting that approximately 3% of world trade in 2007 is not properly redistributed under Comtrade's 1:1 concordance method.",
+    "across the conversion from HS2007 to HS1992, we estimate that approximately 16% of world trade in the conversion is weighted differently under our method compared to Comtrade's default approach.",
+    "Consequently, Comtrade's 2022 data converted to HS1992 contains only around 4,500 codes\u2014approximately 500 fewer than the ~5,000 products in the complete HS1992 vintage."
+  ],
+  "data_points": [
+    {
+      "metric": "Share of world trade misallocated under 1:1 concordance",
+      "value": "3%",
+      "year": "2007",
+      "country": "Global"
+    },
+    {
+      "metric": "Share of world trade weighted differently (LT vs Comtrade)",
+      "value": "16%",
+      "year": "2007",
+      "country": "Global"
+    },
+    {
+      "metric": "Product codes lost in Comtrade HS1992 conversion",
+      "value": "~500",
+      "year": "2022",
+      "country": "Global"
+    },
+    {
+      "metric": "Product codes in Comtrade's converted HS1992",
+      "value": "~4,500",
+      "year": "2022",
+      "country": "Global"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,46 @@
+{
+  "question_id": "351",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.977299+00:00",
+  "paper_title": "Examining Beneficiation",
+  "paper_year": 2008,
+  "source_paper": "2008-5-cid-working-paper-162-examining-benefication.pdf",
+  "research_answer": "The typical probability of jointly exporting two products at a given point in time is around 27% (with a standard deviation of 19%), but the probability of a country transitioning into a new product within 5 years \u2014 when it currently doesn't export it \u2014 averages only 8% (standard deviation of 12%). The transition rate is roughly one-third of the joint-exporting rate, reflecting the substantial difficulty of building new export capabilities. Given that the average 5-year transition rate is 8%, the 9% transition from raw cotton to processed cotton and 3% transition from raw sugar to confectionery fall at or below average \u2014 meaning that downstream processing is no easier to break into than a typical new product, despite having the raw material input at hand.",
+  "supporting_quotes": [
+    "A \u2192 B_t : mean=27, standard deviation=19",
+    "A \u2192 B_t+5 : mean = 8, standard deviation=12",
+    "Furthermore, of the countries that exported raw cotton in 1995 but did not export processed cotton, only 9% were able to gain comparative advantage in processed cotton over the next 5 years.",
+    "Only 3% of raw sugar exporters who did not export confectionary products in 1995 were able to discover that sector by 2000"
+  ],
+  "data_points": [
+    {
+      "metric": "Average joint exporting probability",
+      "value": "27%",
+      "year": "1995",
+      "country": "global",
+      "product": "all"
+    },
+    {
+      "metric": "Average 5-year transition probability",
+      "value": "8%",
+      "year": "5-year windows 1975-2000",
+      "country": "global",
+      "product": "all"
+    },
+    {
+      "metric": "Transition from raw cotton to processed cotton",
+      "value": "9%",
+      "year": "1995-2000",
+      "country": "global sample",
+      "product": "processed cotton"
+    },
+    {
+      "metric": "Transition from raw sugar to confectionery",
+      "value": "3%",
+      "year": "1995-2000",
+      "country": "global sample",
+      "product": "confectionery"
+    }
+  ],
+  "confidence": "high"
+}

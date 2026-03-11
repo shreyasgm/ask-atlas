@@ -1,0 +1,38 @@
+{
+  "question_id": "595",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.050684+00:00",
+  "paper_title": "What is the Binding Constraint to Growth in Albania?",
+  "paper_year": 2017,
+  "source_paper": "alb_growth_diagnostic_report.pdf",
+  "research_answer": "Albania presents a paradox when it comes to its coastal geography. On tourism (travel services), Albania outperforms some non-coastal regional peers \u2014 its service exports per capita exceed those of Bosnia and Herzegovina, Macedonia, and Serbia. However, when compared specifically to other Adriatic coastal countries \u2014 Greece, Montenegro, Croatia, and Slovenia \u2014 Albania lags significantly behind in travel services per capita, suggesting its coastline is heavily underutilized for tourism. The shipping picture is even starker: Albania scores just 3.4 out of 100 on the UNCTAD liner shipping connectivity index (2016), placing it on par with landlocked or small island economies like Latvia, Eritrea, and Tonga \u2014 an extraordinary outcome for a country with coastal access. Despite its geography, Albania is also comparatively weak in transport services more broadly.",
+  "supporting_quotes": [
+    "Albania's comparative strength is in travel services, but it is comparatively weak in transport services (despite having a coastline) and information and communications technologies.",
+    "However, even in travel, when compared to the group of countries with the access to the Adriatic coastline (Greece, Montenegro, Croatia and Slovenia), Albania lags significantly behind.",
+    "On the United Nations Conference on Trade and Development (UNCTAD) index for liner shipping connectivity, Albania scores very poorly (a score of 3.4/100 in 2016), on par with Latvia, Eritrea and Tonga, as well as Montenegro."
+  ],
+  "data_points": [
+    {
+      "metric": "travel services per capita vs coastal peers",
+      "value": "significantly lower than Greece, Montenegro, Croatia, Slovenia",
+      "year": null,
+      "country": "Albania",
+      "product": "travel services"
+    },
+    {
+      "metric": "UNCTAD liner shipping connectivity index",
+      "value": "3.4/100",
+      "year": "2016",
+      "country": "Albania",
+      "product": null
+    },
+    {
+      "metric": "transport services comparative advantage",
+      "value": "weak despite coastline",
+      "year": null,
+      "country": "Albania",
+      "product": "transport services"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,47 @@
+{
+  "question_id": "375",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.987893+00:00",
+  "paper_title": "Jordan: The Elements of a Growth Strategy",
+  "paper_year": 2019,
+  "source_paper": "2019-02-28-cid-wp-346-jordan-growth-strategy-revised.pdf",
+  "research_answer": "Services have become an increasingly central pillar of Jordan's exports. From just $1.6 billion in 2000, service exports grew to $7.1 billion by 2014 \u2014 nearly a 4.5x increase \u2014 driven primarily by travel, tourism, transportation, and logistics. By 2016, services accounted for nearly 45% of Jordan's total exports, which is relatively high compared to benchmark countries. This growing services share helped cushion Jordan's overall export performance between 2009 and 2014, when goods exports stagnated but services kept expanding. However, the services-heavy composition also created a major vulnerability: because tourism, transport, and logistics are acutely sensitive to regional instability, the same sectors that had driven growth stagnated sharply after 2014 when conflicts in neighboring countries intensified. This meant that the diversification into services did not provide insulation from the regional shock \u2014 both goods and services were hit simultaneously.",
+  "supporting_quotes": [
+    "Jordan's service exports grew steadily \u2013 with a minor hiccup after the financial crisis \u2013 from US $1.6 billion in 2000 to US $7.1 billion in 2014.",
+    "Service exports continued to expand from 2009 to 2014 when goods exports stagnated; by 2016, they accounted for nearly 45% of total exports",
+    "Travel, tourism, transportation and logistics delivered the bulk of this growth",
+    "Regional instability caused these sectors to stagnate from 2014 onwards.",
+    "By 2016, they accounted for nearly 45% of total exports, which is relatively high when compared to benchmark countries"
+  ],
+  "data_points": [
+    {
+      "metric": "service exports",
+      "value": "$1.6 billion",
+      "year": "2000",
+      "country": "Jordan",
+      "product": "services"
+    },
+    {
+      "metric": "service exports",
+      "value": "$7.1 billion",
+      "year": "2014",
+      "country": "Jordan",
+      "product": "services"
+    },
+    {
+      "metric": "service exports share of total exports",
+      "value": "45%",
+      "year": "2016",
+      "country": "Jordan",
+      "product": "services"
+    },
+    {
+      "metric": "service export growth",
+      "value": "stagnation",
+      "year": "2014-2017",
+      "country": "Jordan",
+      "product": "travel, tourism, transportation, logistics"
+    }
+  ],
+  "confidence": "high"
+}

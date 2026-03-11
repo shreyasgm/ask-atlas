@@ -1,0 +1,30 @@
+{
+  "question_id": "636",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.064839+00:00",
+  "paper_title": "Growth Diagnostic: Paraguay",
+  "paper_year": 2007,
+  "source_paper": "growth_diagnostic_paraguay.pdf",
+  "research_answer": "Surprisingly, no \u2014 Paraguay is the odd one out in Mercosur in this regard. For all other Mercosur members, trade within the bloc tends to involve more sophisticated products compared to their global export mix. Paraguay is the only Mercosur country where the opposite is true: its exports within Mercosur are actually less sophisticated than its exports to the rest of the world. This is likely related to the fact that Argentina and Brazil \u2014 Paraguay's main Mercosur partners \u2014 are themselves net exporters of all or nearly all of Paraguay's major export products, meaning Mercosur offers Paraguay no real market advantage for the things it makes best.",
+  "supporting_quotes": [
+    "This is a quite surprising finding that is unique to Paraguay within Mercosur. Unlike all of the other members of Mercosur, Paraguay's export sophistication within the block is actually lower than outside of it, as shown below.",
+    "Interestingly, the major Mercosur countries are not net importers of these products. Argentina is a net exporter of all 15 products, and Brazil is a net exporter of 13 of the 15, with Argentina's net exports of those two products larger than Brazil's net imports."
+  ],
+  "data_points": [
+    {
+      "metric": "EXPY intra-Mercosur vs. global",
+      "value": "lower within Mercosur (unique among Mercosur members)",
+      "year": "2000-2004",
+      "country": "Paraguay",
+      "product": null
+    },
+    {
+      "metric": "product trade direction within Mercosur",
+      "value": "Argentina exports all 15 of Paraguay's major products; Brazil exports 13 of 15",
+      "year": "2004",
+      "country": "Paraguay, Argentina, Brazil",
+      "product": "Paraguay's 15 major exports"
+    }
+  ],
+  "confidence": "high"
+}

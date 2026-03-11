@@ -1,0 +1,30 @@
+{
+  "question_id": "405",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.998850+00:00",
+  "paper_title": "Does Birthplace Diversity Affect Economic Complexity? Cross-country Evidence",
+  "paper_year": 2020,
+  "source_paper": "2020-03-cid-fellows-wp-125-diversity-economic-complexity.pdf",
+  "research_answer": "The benefit is most concentrated in developing countries sitting in the middle of the economic complexity distribution \u2014 specifically, those in the second tercile of the ECI ranking. For these countries, a one standard deviation increase in birthplace diversity raises economic complexity by 0.141 to 0.148 standard deviations, and causal IV estimates push that even higher to 0.166 to 0.224. By contrast, the least complex (bottom tercile) and already highly complex (top tercile) economies show weaker effects. This non-linear pattern suggests diversity is most impactful when a country already has some productive base to build on but hasn't yet exhausted its diversification potential.",
+  "supporting_quotes": [
+    "Our results are particularly strong among developing countries that are in the middle of the economic complexity distribution, suggesting that an increase in skill variety is particularly relevant for boosting countries development path.",
+    "Combining both approaches (gravity model and shift-share based instruments), our estimates support a causal interpretation for the effect of diversity on economic complexity, in particular among developing countries."
+  ],
+  "data_points": [
+    {
+      "metric": "ECI effect magnitude (2nd tercile, OLS)",
+      "value": "0.141 to 0.148 SD",
+      "year": "1990-2000",
+      "country": "Developing countries in 2nd ECI tercile",
+      "product": null
+    },
+    {
+      "metric": "Birthplace diversity IV coefficient (2nd tercile)",
+      "value": "0.166 to 0.224",
+      "year": "1990-2000",
+      "country": "Developing countries in 2nd ECI tercile",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

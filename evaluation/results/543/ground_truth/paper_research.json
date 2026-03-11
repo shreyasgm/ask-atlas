@@ -1,0 +1,23 @@
+{
+  "question_id": "543",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.032788+00:00",
+  "paper_title": "Neighbors and the Evolution of the Comparative Advantage of Nations: Evidence of International Knowledge Diffusion?",
+  "paper_year": 2013,
+  "source_paper": "235_updated_bahar_hausmann.pdf",
+  "research_answer": "No \u2014 there is a striking asymmetry by development level. The neighbor effect on product adoption is statistically significant for non-OECD (developing) countries but not for OECD (high-income) countries. This makes intuitive sense: developing countries may benefit more from cross-border knowledge spillovers and learning from neighbors because they are at an earlier stage of building productive capabilities, whereas OECD countries may already have access to global knowledge networks and are less dependent on geographic proximity for learning what to produce. The finding suggests that geographic neighborhood is particularly important as a channel of economic learning for emerging economies.",
+  "supporting_quotes": [
+    "the estimator for \u03b2 is statistically significant only for the non OECD countries, as opposed to OECD countries."
+  ],
+  "data_points": [
+    {
+      "metric": "Neighbor effect significance \u2014 non-OECD countries",
+      "value": "statistically significant"
+    },
+    {
+      "metric": "Neighbor effect significance \u2014 OECD countries",
+      "value": "not statistically significant"
+    }
+  ],
+  "confidence": "high"
+}

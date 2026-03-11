@@ -1,0 +1,48 @@
+{
+  "question_id": "526",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.029458+00:00",
+  "paper_title": "Tackling Discrepancies in Trade Data: The Harvard Growth Lab International Trade Datasets",
+  "paper_year": 2025,
+  "source_paper": "2025-07-glwp-251-tackling-discrepancies-in-trade-data.pdf",
+  "research_answer": "The gains from improved methodology are substantial. Standard Comtrade HS1992 datasets capture around 6 million positive trade flows (at the origin-destination-product level) in recent years. Using mirroring alone \u2014 inferring a country's trade from what its partners report \u2014 recovers approximately 2 million additional data points per year beyond that. A comprehensive methodology combining mirroring with improved classification concordance reaches around 9 million positive trade flows, representing a 50% increase in data coverage over standard Comtrade. To put this in perspective, even 9 million flows represents only about 3% of the theoretical maximum of ~275 million observations if all countries traded all products with all partners \u2014 illustrating that trade data, even at its best, captures a sparse slice of all possible trade relationships. The recovered data for non-reporting countries has been validated against IMF Balance of Payments statistics and shows high correlation.",
+  "supporting_quotes": [
+    "In recent years, our methodology results in around 9 million observations. [...] our dataset, recovers the most data points, identifying up to 9M positive trade flows compared to only around 6M flows captured by Comtrade's standard HS1992 datasets. This represents a 50% increase in data coverage through our approach.",
+    "The mirroring-only approach (orange line) provides an intermediate gain, recovering approximately 2M additional data points beyond the Comtrade data per year.",
+    "if all countries traded all products with all other countries, we would see around 275 million observations. [...] Thus, the roughly 9 million observed trade flows in recent years correspond to approximately 3.0% of the potential maximum number of observations.",
+    "Our recovered export values (Panel C) and import values (Panel D) are highly correlated with the IMF Balance of Payments (BoP) statistics across countries."
+  ],
+  "data_points": [
+    {
+      "metric": "Positive trade flows from improved methodology",
+      "value": "~9 million",
+      "year": "2023",
+      "country": "Global"
+    },
+    {
+      "metric": "Positive trade flows from standard Comtrade HS1992",
+      "value": "~6 million",
+      "year": "2023",
+      "country": "Global"
+    },
+    {
+      "metric": "Additional flows recovered from mirroring alone",
+      "value": "~2 million",
+      "year": "2023",
+      "country": "Global"
+    },
+    {
+      "metric": "Increase in data coverage vs standard Comtrade",
+      "value": "50%",
+      "year": "2023",
+      "country": "Global"
+    },
+    {
+      "metric": "Observed flows as share of theoretical maximum",
+      "value": "3.0%",
+      "year": "2023",
+      "country": "Global"
+    }
+  ],
+  "confidence": "high"
+}

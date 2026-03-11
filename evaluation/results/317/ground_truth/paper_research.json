@@ -1,0 +1,46 @@
+{
+  "question_id": "317",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.965944+00:00",
+  "paper_title": "Growth Diagnostics in Peru",
+  "paper_year": 2008,
+  "source_paper": "181.pdf",
+  "research_answer": "No \u2014 Peru showed virtually no structural transformation over its export collapse and recovery cycle. The same sectors that drove the collapse (mining, hydrocarbons, and traditional agriculture) were the exact same sectors that led the recovery. About 81% of the export decline from 1979 to 1993 was attributable to traditional products, and then 78% of the recovery from 1993 to 2005 was also driven by those same traditional products. In real per capita terms, Peru's exports in 2005 ($547) were only marginally above the 1979 level ($522), meaning three decades of upheaval produced essentially no structural change in the export basket.",
+  "supporting_quotes": [
+    "81% of the fall was due to traditional products",
+    "78% of the recovery was also due to traditional products",
+    "the same activities that declined \u2013 mining and energy \u2013 are the ones that are leading the current recovery in exports to levels that in real per capita terms are similar to those achieved 30 years ago.",
+    "These are the very same sectors that collapsed in the 70s and 80s!"
+  ],
+  "data_points": [
+    {
+      "metric": "share of export decline from traditional products",
+      "value": "81%",
+      "year": "1979-1993",
+      "country": "Peru",
+      "product": "traditional agriculture, mining, hydrocarbons"
+    },
+    {
+      "metric": "share of export recovery from traditional products",
+      "value": "78%",
+      "year": "1993-2005",
+      "country": "Peru",
+      "product": "traditional agriculture, mining, hydrocarbons"
+    },
+    {
+      "metric": "exports per capita (real)",
+      "value": "$522",
+      "year": "1979",
+      "country": "Peru",
+      "product": "all exports"
+    },
+    {
+      "metric": "exports per capita (real)",
+      "value": "$547",
+      "year": "2005",
+      "country": "Peru",
+      "product": "all exports"
+    }
+  ],
+  "confidence": "high"
+}

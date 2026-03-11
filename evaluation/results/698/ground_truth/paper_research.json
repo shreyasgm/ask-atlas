@@ -1,0 +1,41 @@
+{
+  "question_id": "698",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.078350+00:00",
+  "paper_title": "Structural Transformation in Chile",
+  "paper_year": 2007,
+  "source_paper": "structural_transformation_in_chile.pdf",
+  "research_answer": "Chile's service exports are genuinely impressive by regional standards \u2014 per capita service exports nearly doubled between 1995 and 2005, and Chile significantly outperforms its Latin American neighbors. This is consistent with Chile's past growth being surprisingly robust despite a weak merchandise export basket. However, when Chile is compared not to its Latin American neighbors but to advanced natural resource exporters like Canada, Australia, and New Zealand, its service exports pale in comparison. This matters because Canada, Australia, and New Zealand represent the relevant peer group for what a successful resource-rich economy can achieve. Furthermore, Chile's GDP per worker and investment per worker both leveled off in the late 1990s despite booming export revenues \u2014 suggesting that strong commodity prices and even decent service export growth have not been sufficient to sustain productivity-driven economic upgrading.",
+  "supporting_quotes": [
+    "Indeed, Chile is a major service exporter. In per capita terms, service exports almost doubled between 1995 and 2005, and Chile's exports are significantly higher than its Latin American neighbors.",
+    "However, these exports pale in comparison to the advanced natural resource exporters.",
+    "Figure 1 shows GDP per worker and investment per worker from 1960 to 2004, both of which level off in the late 1990s. This is despite booming exports on the back of high international prices."
+  ],
+  "data_points": [
+    {
+      "metric": "per capita service exports growth",
+      "value": "nearly doubled",
+      "year": "1995-2005",
+      "country": "Chile"
+    },
+    {
+      "metric": "per capita service exports comparison",
+      "value": "higher than LA neighbors, lower than advanced NRE",
+      "year": "2005",
+      "country": "Chile"
+    },
+    {
+      "metric": "GDP per worker trend",
+      "value": "leveled off",
+      "year": "late 1990s",
+      "country": "Chile"
+    },
+    {
+      "metric": "investment per worker trend",
+      "value": "leveled off",
+      "year": "late 1990s",
+      "country": "Chile"
+    }
+  ],
+  "confidence": "high"
+}

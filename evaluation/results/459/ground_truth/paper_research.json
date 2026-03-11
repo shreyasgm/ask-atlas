@@ -1,0 +1,35 @@
+{
+  "question_id": "459",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.015762+00:00",
+  "paper_title": "A Measure of Countries' Distance to Frontier Based on Comparative Advantage",
+  "paper_year": 2022,
+  "source_paper": "2022-09-cid-fellows-wp-135-countries-distance-to-frontier.pdf",
+  "research_answer": "Yes, and the pattern is highly systematic. Countries closer to the global technological frontier are not just better at producing complex products \u2014 they are relatively more productive in complex products in a compounding, non-linear way. This property, known as log-supermodularity, means that moving from a simpler to a more complex product increases productivity proportionally more for frontier countries than for less advanced ones. The country-country similarity matrix shows this pattern holds 74.1% of the time at the individual country level across 130 countries, and 95.6% when countries are grouped into 13 bins by capability. Similarly, the product-product matrix shows 84.6% log-supermodularity across 243 product bins. This structure is the theoretical foundation for why export composition \u2014 and not just export volume \u2014 matters for economic development.",
+  "supporting_quotes": [
+    "Figure 5 shows that productivities are log-supermodular, with countries closer to the frontier having a relatively\u2014in a diff-in-diff sense\u2014higher productivity in more complex products.",
+    "As may be seen from Table 3, these tests strongly indicate that the estimated country-country similarity matrix is indeed log-supermodular.",
+    "Table S6 summarizes a test of log-supermodularity following Davis and Dingel (2020) for the product-product similarity matrix"
+  ],
+  "data_points": [
+    {
+      "metric": "log-supermodularity test success rate, country-country matrix (130 countries)",
+      "value": "74.1%",
+      "year": "2019",
+      "country": "multiple"
+    },
+    {
+      "metric": "log-supermodularity test success rate, country-country matrix (13 bins)",
+      "value": "95.6%",
+      "year": "2019",
+      "country": "multiple"
+    },
+    {
+      "metric": "log-supermodularity test success rate, product-product matrix (243 bins)",
+      "value": "84.6%",
+      "year": "2019",
+      "country": "multiple"
+    }
+  ],
+  "confidence": "high"
+}

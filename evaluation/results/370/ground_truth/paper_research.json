@@ -1,0 +1,22 @@
+{
+  "question_id": "370",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.985517+00:00",
+  "paper_title": "Recommendations for Trade Adjustment Assistance in Sri Lanka",
+  "paper_year": 2017,
+  "source_paper": "2017.10.28_tradeassistance_harvardcid_v2.pdf",
+  "research_answer": "Sri Lanka's policy of exempting exporters from certain tariff fees \u2014 while non-exporters remain subject to them \u2014 creates an artificial wedge between the two groups. Because exporters can import inputs duty-free but cannot pass those savings on to domestic input suppliers, they are strongly incentivized to source inputs from abroad rather than from local producers. This undermines the development of domestic supply chains: local manufacturers who could potentially supply inputs to exporters are priced out because they must pay the full tariff burden on their own imported materials. The result is a structural barrier to the kind of upstream-downstream industrial linkages that typically support export diversification and value chain integration in other developing economies.",
+  "supporting_quotes": [
+    "The system of exempting exporters from some fees creates an artificial barrier between exporters and non-exporters. This creates a strong bias against the development of local supply chains, since exporters are incentivized to import the inputs they need versus buying from domestic producers."
+  ],
+  "data_points": [
+    {
+      "metric": "tariff exemption structure",
+      "value": "exporters exempted, non-exporters not",
+      "year": "2017",
+      "country": "Sri Lanka",
+      "product": "imported inputs"
+    }
+  ],
+  "confidence": "high"
+}

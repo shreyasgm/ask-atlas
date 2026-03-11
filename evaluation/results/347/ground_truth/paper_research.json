@@ -1,0 +1,29 @@
+{
+  "question_id": "347",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.975816+00:00",
+  "paper_title": "Examining Beneficiation",
+  "paper_year": 2008,
+  "source_paper": "2008-5-cid-working-paper-162-examining-benefication.pdf",
+  "research_answer": "No. Despite the explicit intent to shift value addition toward processed and semi-processed wood products, the policy failed to deliver meaningful results. Earnings from processed and semi-processed wood did not increase significantly in the years following the 1996 ban. Even more strikingly, the combined earnings from both the processed and unprocessed wood sectors actually declined after the policy was implemented. This real-world outcome is consistent with the broader empirical finding that forward linkages between raw materials and their downstream products are weak drivers of structural transformation \u2014 countries cannot easily leverage raw material expertise to build comparative advantage in processing industries.",
+  "supporting_quotes": [
+    "According to a 2001 study, earnings from processed and semi-processed wood did not increased significantly after this policy was implemented, and earnings from the processed and unprocessed wood sectors combined actually declined (World Bank, 2001)."
+  ],
+  "data_points": [
+    {
+      "metric": "Change in processed wood earnings post-ban",
+      "value": "no significant increase",
+      "year": "1996-2001",
+      "country": "Ghana",
+      "product": "processed wood"
+    },
+    {
+      "metric": "Change in total wood sector earnings post-ban",
+      "value": "declined",
+      "year": "1996-2001",
+      "country": "Ghana",
+      "product": "all wood products"
+    }
+  ],
+  "confidence": "high"
+}

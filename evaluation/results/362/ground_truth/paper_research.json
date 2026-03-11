@@ -1,0 +1,53 @@
+{
+  "question_id": "362",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.980739+00:00",
+  "paper_title": "Constraints to Sustained and Inclusive Growth in Sri Lanka: An Initial Diagnosis and Key Topics for Discussion",
+  "paper_year": 2016,
+  "source_paper": "2016.01.07_hausmann_initial_constraints.pdf",
+  "research_answer": "Three countries \u2014 Thailand, Turkey, and Costa Rica \u2014 had export baskets closely resembling Sri Lanka's current structure at various points in the past, but all three subsequently diversified while Sri Lanka did not. Thailand in 1991 had an export basket dominated by garments and primary products similar to Sri Lanka's 2012\u20132014 basket, but went on to become a major exporter of electronics, machinery, and transport equipment. Turkey in 1994 was heavily concentrated in textiles and garments (like Sri Lanka today), but diversified into road vehicles, electrical machinery, and chemicals. Costa Rica in 1996 exported mainly coffee, agricultural goods, and garments, then successfully pivoted to electronics and electrical machinery. In all three cases, the starting point was structurally similar to Sri Lanka's current situation \u2014 the divergence lies in what happened next. Sri Lanka's export basket in 2012\u20132014 continues to mirror those earlier, pre-diversification snapshots without having followed the same upward trajectory.",
+  "supporting_quotes": [
+    "Thailand's export basket in 1991 was similar to Sri Lanka's now, but then it changed a lot... [showing Thailand 1991 composition similar to Sri Lanka 2012-2014, but Thailand 2010 highly diversified into electronics/machinery while Sri Lanka 2012-2014 remains concentrated in clothing and tea]",
+    "Turkey's export basket in 1994 was similar to Sri Lanka's now, and then it changed... [showing Turkey 1994 export composition similar to Sri Lanka 2012-2014, but Turkey shows substantial shift to road vehicles, electrical machinery by 2000s]",
+    "Costa Rica in 1996 was similar to Sri Lanka today, but then it changed... [showing Costa Rica 1996 with agricultural exports and garments, transitioning to office machines and electrical machinery by 2000s]"
+  ],
+  "data_points": [
+    {
+      "metric": "Comparison period",
+      "value": "Thailand 1991 \u2248 Sri Lanka 2012-2014",
+      "year": "1991 vs 2012-2014",
+      "country": "Thailand, Sri Lanka"
+    },
+    {
+      "metric": "Comparison period",
+      "value": "Turkey 1994 \u2248 Sri Lanka 2012-2014",
+      "year": "1994 vs 2012-2014",
+      "country": "Turkey, Sri Lanka"
+    },
+    {
+      "metric": "Comparison period",
+      "value": "Costa Rica 1996 \u2248 Sri Lanka 2012-2014",
+      "year": "1996 vs 2012-2014",
+      "country": "Costa Rica, Sri Lanka"
+    },
+    {
+      "metric": "Thailand export evolution",
+      "value": "From garments/commodities to electronics/machinery/transport",
+      "year": "1991-2010",
+      "country": "Thailand"
+    },
+    {
+      "metric": "Turkey export evolution",
+      "value": "From textiles/garments to vehicles/electrical machinery",
+      "year": "1994-2005",
+      "country": "Turkey"
+    },
+    {
+      "metric": "Costa Rica export evolution",
+      "value": "From coffee/agriculture/garments to electronics/machinery",
+      "year": "1996-2005",
+      "country": "Costa Rica"
+    }
+  ],
+  "confidence": "high"
+}

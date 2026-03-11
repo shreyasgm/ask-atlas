@@ -1,0 +1,43 @@
+{
+  "question_id": "419",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.003316+00:00",
+  "paper_title": "Implied Comparative Advantage",
+  "paper_year": 2020,
+  "source_paper": "2020-07-cid-wp-276-revised-implied-comparative-advantage.pdf",
+  "research_answer": "Somewhat counterintuitively, low-income and upper-middle-income countries show higher predictability (R\u00b2=0.201 and 0.212 respectively) than high-income countries (R\u00b2=0.137) when it comes to how their exports evolve over time. The likely reason is that rich, complex economies have more degrees of freedom \u2014 they can shift comparative advantage in ways driven by innovation, firm strategy, or policy that the product space and country space framework doesn't fully capture. Low-income countries, by contrast, may be more tightly constrained by their existing capabilities: they can only realistically expand into sectors that are closely related to what they already do. This finding suggests that export diversification in developing economies is more structurally determined and therefore more foreseeable, while advanced economies retain more flexibility to escape their current specialization patterns.",
+  "supporting_quotes": [
+    "Next, we can divide countries by income level (according to World Bank Group classifications): the groups are relatively close to each other, though low-income countries are the most predictable under our framework (possibly because they are less likely to shift their comparative advantage over the period)."
+  ],
+  "data_points": [
+    {
+      "metric": "R\u00b2 for low-income countries",
+      "value": "0.201",
+      "year": "1995-2016",
+      "country": "Low-income group",
+      "product": "All exports"
+    },
+    {
+      "metric": "R\u00b2 for lower-middle income countries",
+      "value": "0.186",
+      "year": "1995-2016",
+      "country": "Lower-middle income group",
+      "product": "All exports"
+    },
+    {
+      "metric": "R\u00b2 for upper-middle income countries",
+      "value": "0.212",
+      "year": "1995-2016",
+      "country": "Upper-middle income group",
+      "product": "All exports"
+    },
+    {
+      "metric": "R\u00b2 for high-income countries",
+      "value": "0.137",
+      "year": "1995-2016",
+      "country": "High-income group",
+      "product": "All exports"
+    }
+  ],
+  "confidence": "high"
+}

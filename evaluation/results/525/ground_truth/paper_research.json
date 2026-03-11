@@ -1,0 +1,47 @@
+{
+  "question_id": "525",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.029276+00:00",
+  "paper_title": "Tackling Discrepancies in Trade Data: The Harvard Growth Lab International Trade Datasets",
+  "paper_year": 2025,
+  "source_paper": "2025-07-glwp-251-tackling-discrepancies-in-trade-data.pdf",
+  "research_answer": "Vulnerability to reclassification distortions varies enormously by sector. Electronics is the most exposed: revised product codes (merged, split, or redefined codes) in the electronics chapter represent 7% of world trade \u2014 more than half of the sector's roughly 12% share of global trade. The standard 1:1 concordance method also causes the largest sectoral reallocation in electronics, shifting its measured share of world trade from 13.4% down to 12.2% after concordance to HS1992, with trade reassigned to sectors like machinery. At the other extreme, stones and minerals is among the most stable sectors: only 0.2% of world trade within that sector is affected by concordance revisions, out of a total sectoral share of roughly 3% of world trade. This contrast highlights how sectors with rapidly evolving product definitions \u2014 like technology goods \u2014 face much higher risk of measurement distortion when working with harmonized historical trade data.",
+  "supporting_quotes": [
+    "the electronics chapter, which accounts for approximately 12% of world trade in 2007, includes revised codes\u2014defined as codes that were merged, split, or entirely redefined\u2014that represent a value equivalent to 7% of world trade.",
+    "Notably, the electronics chapter undergoes the most extensive reallocation: under HS2007, it accounts for 13.4% of world trade in the year 2007, but this share falls to 12.2% after concordance to HS1992.",
+    "At the other end of the spectrum, the stones and minerals chapter is minimally affected by reclassification: only 0.2% of world trade within this sector is affected by concordance revisions, of a total sectoral share of 3% of world trade."
+  ],
+  "data_points": [
+    {
+      "metric": "Share of world trade in electronics affected by revised codes",
+      "value": "7%",
+      "year": "2007",
+      "product": "Electronics"
+    },
+    {
+      "metric": "Electronics share of world trade under HS2007",
+      "value": "13.4%",
+      "year": "2007",
+      "product": "Electronics"
+    },
+    {
+      "metric": "Electronics share after HS1992 concordance",
+      "value": "12.2%",
+      "year": "2007",
+      "product": "Electronics"
+    },
+    {
+      "metric": "Share of stones & minerals trade affected by concordance",
+      "value": "0.2%",
+      "year": "2007",
+      "product": "Stones and Minerals"
+    },
+    {
+      "metric": "Stones & minerals share of world trade",
+      "value": "3%",
+      "year": "2007",
+      "product": "Stones and Minerals"
+    }
+  ],
+  "confidence": "high"
+}

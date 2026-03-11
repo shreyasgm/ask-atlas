@@ -1,0 +1,30 @@
+{
+  "question_id": "403",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.998111+00:00",
+  "paper_title": "Does Birthplace Diversity Affect Economic Complexity? Cross-country Evidence",
+  "paper_year": 2020,
+  "source_paper": "2020-03-cid-fellows-wp-125-diversity-economic-complexity.pdf",
+  "research_answer": "The effect is meaningful but modest: a one standard deviation increase in birthplace diversity is associated with a country's Economic Complexity Index rising by 0.1 to 0.18 standard deviations above the mean. To put that in concrete export terms, the same increase in diversity is linked to roughly 12 additional products being exported competitively (with a revealed comparative advantage above 1) \u2014 about a 10% increase relative to the sample average of around 120 competitive products.",
+  "supporting_quotes": [
+    "Our cross-country analysis suggests that countries with higher birthplace diversity by one standard deviation are more economically complex by 0.1 to 0.18 standard deviations above the mean.",
+    "For instance, an increase of one standard deviation in our birthplace diversity index is associated with an increase in the number of goods exported competitively by around 12 (roughly a 10 percent increase, based on the sample mean of about 120, with standard deviation equal to 81)."
+  ],
+  "data_points": [
+    {
+      "metric": "ECI increase per 1 SD birthplace diversity",
+      "value": "0.1 to 0.18 SD",
+      "year": "1990-2000",
+      "country": "Multiple (100 countries)",
+      "product": null
+    },
+    {
+      "metric": "Additional competitive export products per 1 SD birthplace diversity",
+      "value": "~12 products (~10% increase)",
+      "year": "1990-2000",
+      "country": "Multiple (100 countries)",
+      "product": "All tradable goods (800 SITC 4-digit categories)"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,27 @@
+{
+  "question_id": "365",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.981651+00:00",
+  "paper_title": "Constraints to Sustained and Inclusive Growth in Sri Lanka: An Initial Diagnosis and Key Topics for Discussion",
+  "paper_year": 2016,
+  "source_paper": "2016.01.07_hausmann_initial_constraints.pdf",
+  "research_answer": "Sri Lanka's tourism revenue is substantially below what would be expected for a country at its income level. In 2013, Sri Lanka received approximately $50\u2013100 in tourism receipts per capita, placing it in a cluster of much lower-income countries despite having a GDP per capita of around $3,800. The gap between Sri Lanka's actual tourism receipts per capita and the expected level for its income was approximately $598 \u2014 meaning Sri Lanka is leaving nearly $600 per person per year on the table relative to peer economies. This suggests significant untapped potential in the tourism sector, which could be a meaningful source of foreign exchange earnings if developed further.",
+  "supporting_quotes": [
+    "Richer countries get more from tourism revenue per capita... Difference from expected value = -598 US$ per capita... Tourism receipts received per capita, 2013 Sri Lanka showing Sri Lanka clustered with low-income countries despite higher income"
+  ],
+  "data_points": [
+    {
+      "metric": "Tourism receipts per capita",
+      "value": "~$50-100",
+      "year": "2013",
+      "country": "Sri Lanka"
+    },
+    {
+      "metric": "Gap from expected tourism receipts",
+      "value": "-$598 per capita",
+      "year": "2013",
+      "country": "Sri Lanka"
+    }
+  ],
+  "confidence": "high"
+}

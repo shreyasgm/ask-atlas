@@ -1,0 +1,44 @@
+{
+  "question_id": "652",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.068807+00:00",
+  "paper_title": "Moving to the Adjacent Possible: Discovering Paths for Export Diversification in Rwanda",
+  "paper_year": 2015,
+  "source_paper": "hausmann_chauvin_rwanda_294.pdf",
+  "research_answer": "The East African regional market has been one of the fastest-growing import markets in the world during the 2000s. The five neighbors most relevant to Rwanda \u2014 Burundi, DRC, Kenya, Tanzania, and Uganda \u2014 collectively represent over $85 billion in GDP and approximately $20 billion in annual imports as of 2009, with a combined population exceeding 120 million. Crucially, this market more than doubled its import volumes during the 2000s. This rapid growth is particularly significant for Rwanda given that the region still imports far more from outside the region than from within it \u2014 as evidenced by the massive import gaps in chemicals ($1.2 billion), machinery ($888 million), and construction materials ($700 million) that regional producers are not supplying. Rwanda currently captures less than 10% of its exports from this market, suggesting enormous untapped potential in a rapidly growing nearby market.",
+  "supporting_quotes": [
+    "The regional market (Burundi, the Democratic Republic of the Congo, Kenya, Tanzania and Uganda) represents more than US $85 billion of GDP, close to US $20 billion of annual imports and a population of more than 120 million (as of 2009). This market has more than doubled its volume of imports during the 2000s",
+    "Meanwhile, exports to the nearby markets of East Africa, which could incur lower transportation costs, account for only 10 percent of Rwanda's total exports."
+  ],
+  "data_points": [
+    {
+      "metric": "East Africa regional GDP",
+      "value": ">$85 billion",
+      "year": "2009",
+      "country": "BDI, DRC, KEN, TZA, UGA",
+      "product": null
+    },
+    {
+      "metric": "East Africa annual imports",
+      "value": "~$20 billion",
+      "year": "2009",
+      "country": "East Africa",
+      "product": "All"
+    },
+    {
+      "metric": "Import growth rate",
+      "value": ">doubled during 2000s",
+      "year": "2000-2009",
+      "country": "East Africa",
+      "product": "All"
+    },
+    {
+      "metric": "Rwanda's share of exports to region",
+      "value": "<10%",
+      "year": "2010",
+      "country": "Rwanda",
+      "product": "All"
+    }
+  ],
+  "confidence": "high"
+}

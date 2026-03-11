@@ -1,0 +1,37 @@
+{
+  "question_id": "321",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.967219+00:00",
+  "paper_title": "Growth Diagnostics in Peru",
+  "paper_year": 2008,
+  "source_paper": "181.pdf",
+  "research_answer": "While non-traditional agriculture tripled in per capita terms between 1979 and 2005, it remains too small to meaningfully reshape Peru's export structure. It contributed only 6.1% of post-1993 export growth and represented just 5.8% of the overall export basket in 2005 \u2014 tiny figures compared to the 78% of export recovery driven by traditional sectors like mining and hydrocarbons. The impressive growth rate is in part a function of starting from a very small base. So while the sector shows promise, it has not come close to offsetting Peru's continued dependence on capital-intensive primary commodities.",
+  "supporting_quotes": [
+    "the emergence of the non-traditional agriculture sector, which we can see is more than three times as large in 2005 as it was in 1979 (in per capita terms). However, Figure 4 shows that the non-traditional agriculture sector was of minor importance in the export recovery post-1993, contributing only 6.1% of the export growth. In terms of the overall export basket in 2005, non-traditional agriculture only amounts to 5.8%.",
+    "78% of the recovery was also due to traditional products"
+  ],
+  "data_points": [
+    {
+      "metric": "growth in non-traditional agriculture exports per capita",
+      "value": ">300%",
+      "year": "1979-2005",
+      "country": "Peru",
+      "product": "non-traditional agriculture"
+    },
+    {
+      "metric": "share of export recovery",
+      "value": "6.1%",
+      "year": "1993-2005",
+      "country": "Peru",
+      "product": "non-traditional agriculture"
+    },
+    {
+      "metric": "share of 2005 export basket",
+      "value": "5.8%",
+      "year": "2005",
+      "country": "Peru",
+      "product": "non-traditional agriculture"
+    }
+  ],
+  "confidence": "high"
+}

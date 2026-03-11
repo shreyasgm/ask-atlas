@@ -1,0 +1,28 @@
+{
+  "question_id": "454",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.014427+00:00",
+  "paper_title": "A Measure of Countries' Distance to Frontier Based on Comparative Advantage",
+  "paper_year": 2022,
+  "source_paper": "2022-09-cid-fellows-wp-135-countries-distance-to-frontier.pdf",
+  "research_answer": "Between 1995 and 2019, there is a striking divergence in export sophistication across countries. East Asian economies that have been rapidly catching up \u2014 China, South Korea, Vietnam, and Thailand \u2014 all show increasingly similar export baskets to the global frontier (US, Japan, Germany). This reflects their successful climb up the value chain toward more complex manufactured goods. In sharp contrast, more stagnant economies like Argentina, Russia, and South Africa saw their export similarity with the frontier remain flat or even decline over the same period. This divergence neatly maps onto economic performance: the countries upgrading their exports grew faster, while those whose export baskets stagnated or regressed fell further behind the frontier.",
+  "supporting_quotes": [
+    "Moreover, over time, the export baskets of countries that have been rapidly catching up like China, South Korea, or Vietnam, have become increasingly similar to the frontier (panel (b)).",
+    "By contrast, the export similarity with the frontier of more stagnant countries like Argentina, Russia, or South Africa remained constant or even declined (panel (c))."
+  ],
+  "data_points": [
+    {
+      "metric": "export similarity with frontier",
+      "value": "increasing trend",
+      "year": "1995-2019",
+      "country": "China, South Korea, Vietnam, Thailand"
+    },
+    {
+      "metric": "export similarity with frontier",
+      "value": "constant or declining",
+      "year": "1995-2019",
+      "country": "Argentina, Russia, South Africa"
+    }
+  ],
+  "confidence": "high"
+}

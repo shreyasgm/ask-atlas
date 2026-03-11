@@ -1,0 +1,44 @@
+{
+  "question_id": "518",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.027990+00:00",
+  "paper_title": "The Devil's in the Dance: Elements of a Growth Diagnostic in Bolivia",
+  "paper_year": 2021,
+  "source_paper": "2025-05-glwp-247-bolivia-growth-diagnostic-2021.pdf",
+  "research_answer": "In the first half of 2021, Bolivia's two main commodity export categories moved in opposite directions. Mineral exports surged 97% compared to the same period in 2020, driven by recovering global commodity prices. Hydrocarbon exports, by contrast, were essentially flat \u2014 down 1% year-over-year. Overall, non-traditional commodity exports grew 63% in the same period. This divergence is significant: it suggests Bolivia's near-term export recovery is being driven by mining rather than gas, which has historically been the dominant export. Given that Bolivia's proven gas reserves could be depleted as early as 2028, the shift toward minerals may reflect an involuntary transition rather than a strategic diversification. The sustainability of this recovery will depend heavily on global commodity prices rather than any structural improvement in Bolivia's export complexity.",
+  "supporting_quotes": [
+    "Mineral exports have grown 97 percent over the same period, while hydrocarbon exports are down one percent.",
+    "Hopes have risen on the recovery of gas and mineral prices in early 2021, as non-traditional commodity exports show a 63 percent increase in value in the first six months of 2021 as compared to the same period the year prior.",
+    "At current rates of gas depletion, Bolivia risks exhausting its proven reserves by 2028."
+  ],
+  "data_points": [
+    {
+      "metric": "mineral export growth (H1 2021 vs H1 2020)",
+      "value": "97%",
+      "year": "2021 H1",
+      "country": "Bolivia",
+      "product": "minerals"
+    },
+    {
+      "metric": "hydrocarbon export growth (H1 2021 vs H1 2020)",
+      "value": "-1%",
+      "year": "2021 H1",
+      "country": "Bolivia",
+      "product": "hydrocarbons"
+    },
+    {
+      "metric": "non-traditional commodity export growth",
+      "value": "63%",
+      "year": "2021 H1 vs 2020 H1",
+      "country": "Bolivia"
+    },
+    {
+      "metric": "gas reserve depletion timeline",
+      "value": "by 2028",
+      "year": "2021 projection",
+      "country": "Bolivia",
+      "product": "natural gas"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,52 @@
+{
+  "question_id": "601",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.052767+00:00",
+  "paper_title": "Diversification in the Industrial Sector of Albania: Identifying Strategic Areas",
+  "paper_year": 2018,
+  "source_paper": "albania_diversification_brief.pdf",
+  "research_answer": "Agriculture and Foodstuffs ranks second overall in diversification feasibility for Albania, trailing Plastics and Rubbers. The key trade-off is this: Agriculture and Foodstuffs offers lower average product complexity than Plastics and Rubbers, but it sits much closer to Albania's existing export base in terms of capability proximity. Albania already exports significant quantities of fruits, vegetables, and seafood, making the jump to new products in this sector less risky. However, the sector's higher-potential products \u2014 particularly prepared and processed foods \u2014 are ones Albania currently produces very little of, even though these rank highly for diversification potential and carry relatively low risk. So while Agriculture and Foodstuffs is more accessible, the specific sub-segment where the biggest gains lie (processed foods) still requires a capability shift.",
+  "supporting_quotes": [
+    "The sector comes second in the ranking, with a lower average complexity but a higher proximity to current exports.",
+    "Albania already produces many products in this sector; for example, it already exports different types of fruits, vegetables, and seafood in significant quantities.",
+    "However, it does not produce many prepared or processed foods, which ranked highly for their potential to Albania and lower risk in diversification."
+  ],
+  "data_points": [
+    {
+      "metric": "sector diversification feasibility ranking",
+      "value": "1st",
+      "year": "2018",
+      "country": "Albania",
+      "product": "Plastics and Rubbers"
+    },
+    {
+      "metric": "sector diversification feasibility ranking",
+      "value": "2nd",
+      "year": "2018",
+      "country": "Albania",
+      "product": "Agriculture and Foodstuffs"
+    },
+    {
+      "metric": "proximity to current exports",
+      "value": "higher than Plastics and Rubbers",
+      "year": "2018",
+      "country": "Albania",
+      "product": "Agriculture and Foodstuffs"
+    },
+    {
+      "metric": "diversification potential",
+      "value": "high",
+      "year": "2018",
+      "country": "Albania",
+      "product": "prepared or processed foods"
+    },
+    {
+      "metric": "diversification risk",
+      "value": "low",
+      "year": "2018",
+      "country": "Albania",
+      "product": "prepared or processed foods"
+    }
+  ],
+  "confidence": "high"
+}

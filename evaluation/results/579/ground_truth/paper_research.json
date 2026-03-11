@@ -1,0 +1,39 @@
+{
+  "question_id": "579",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.044826+00:00",
+  "paper_title": "Opportunity analysis of agriculture products in Sri Lanka: Measuring markets and feasibility",
+  "paper_year": 2016,
+  "source_paper": "agri_sector_opportunities_feb_2018.pdf",
+  "research_answer": "Among selected agricultural products, Shrimp, Pepper, Mango, Vanilla, Ginger, and Cinnamon are growing fastest in world markets between 2012\u20132016. A second tier of moderately growing products includes Cuttlefish/Octopus & Bivalves, Plantains & Bananas, Soursop & Passion Fruits, and Bell Pepper. Exporters should exercise caution with products showing limited growth \u2014 including Cucumber & Gherkin, Tomatoes, Clove, Pineapple, Strawberry, Cut Flowers, Live Fish, and Sea Cucumber. Most concerning are products with actively shrinking world markets: Cardamom, Nutmeg & Mace, Cassava, Live Plants, and Foliage & Branches. These declining global trends suggest structural demand shifts rather than temporary fluctuations.",
+  "supporting_quotes": [
+    "Shrimp, Pepper, Mango, Vanilla, Ginger & Cinnamon have the highest growth rates",
+    "Cuttlefish, Octopus & Bivalves, Plantains & Bananas, Soursop & Passion Fruits, Bell Pepper are also growing in the world market",
+    "Cucumber & Gherkin, Tomatoes, Clove, Pineapple, Strawberry, Cut Flowers, Live Fish, Sea Cucumber have more limited growth",
+    "Cardomom, Nutmeg & Mace, Cassava, Live Plants, Foliage & Branches have shrinking markets"
+  ],
+  "data_points": [
+    {
+      "metric": "market growth",
+      "value": "highest/fastest",
+      "year": "2012-2016",
+      "country": "global",
+      "product": "Shrimp, Pepper, Mango, Vanilla, Ginger, Cinnamon"
+    },
+    {
+      "metric": "market growth",
+      "value": "limited",
+      "year": "2012-2016",
+      "country": "global",
+      "product": "Cucumber & Gherkin, Tomatoes, Clove, Pineapple, Strawberry, Cut Flowers, Live Fish, Sea Cucumber"
+    },
+    {
+      "metric": "market growth",
+      "value": "shrinking",
+      "year": "2012-2016",
+      "country": "global",
+      "product": "Cardamom, Nutmeg & Mace, Cassava, Live Plants, Foliage & Branches"
+    }
+  ],
+  "confidence": "high"
+}

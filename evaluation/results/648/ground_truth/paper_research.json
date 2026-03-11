@@ -1,0 +1,54 @@
+{
+  "question_id": "648",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.067819+00:00",
+  "paper_title": "Moving to the Adjacent Possible: Discovering Paths for Export Diversification in Rwanda",
+  "paper_year": 2015,
+  "source_paper": "hausmann_chauvin_rwanda_294.pdf",
+  "research_answer": "There is a striking geographic disconnect in Rwanda's trade relationships. Despite being landlocked in East Africa, Rwanda's top export destinations are largely distant Western markets. Belgium receives the largest single share of Rwanda's exports at 20.7%. Coffee goes primarily to Switzerland, Germany, and the US. Tea travels through Kenya to the UK and Pakistan. Metal exports are mostly destined for China. Meanwhile, the nearby East African markets \u2014 which would incur lower transportation costs \u2014 account for less than 10% of Rwanda's total exports. This pattern is unusual and points to a heavy reliance on commodity-driven trade relationships with wealthy distant importers rather than trade integration with the immediate regional economy.",
+  "supporting_quotes": [
+    "Belgium 20.7",
+    "The majority of Rwanda's coffee is exported to Switzerland, Germany and the U.S.",
+    "tea travels through Kenya to the U.K and Pakistan",
+    "most of the metal exports are destined for China",
+    "Meanwhile, exports to the nearby markets of East Africa, which could incur lower transportation costs, account for only 10 percent of Rwanda's total exports."
+  ],
+  "data_points": [
+    {
+      "metric": "Largest single export destination share",
+      "value": "20.7%",
+      "year": "2010",
+      "country": "Rwanda",
+      "product": "All \u2192 Belgium"
+    },
+    {
+      "metric": "Coffee destinations",
+      "value": "Switzerland, Germany, US",
+      "year": "2010",
+      "country": "Rwanda",
+      "product": "Coffee"
+    },
+    {
+      "metric": "Tea routing",
+      "value": "Via Kenya to UK and Pakistan",
+      "year": "2010",
+      "country": "Rwanda",
+      "product": "Tea"
+    },
+    {
+      "metric": "Metal destinations",
+      "value": "China",
+      "year": "2010",
+      "country": "Rwanda",
+      "product": "Metals"
+    },
+    {
+      "metric": "Regional export share",
+      "value": "<10%",
+      "year": "2010",
+      "country": "Rwanda",
+      "product": "All \u2192 East Africa"
+    }
+  ],
+  "confidence": "high"
+}

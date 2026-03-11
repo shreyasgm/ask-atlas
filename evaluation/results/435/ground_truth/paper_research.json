@@ -1,0 +1,22 @@
+{
+  "question_id": "435",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.007999+00:00",
+  "paper_title": "Accelerating Growth in Albania through Targeted Investment Promotion",
+  "paper_year": 2020,
+  "source_paper": "2020-11-policy-note-albania-targeted-investment-promotion.pdf",
+  "research_answer": "Plastics manufacturing is described as very well-aligned with Albania's comparative advantages and existing productive capabilities. The scale and diversity of Albania's plastic exports have been gradually expanding in recent years. This internal alignment \u2014 where the capabilities needed for plastics production overlap with what Albania already does well \u2014 makes the sector a particularly promising avenue for export diversification, as it represents a relatively low-friction upgrade path compared to entering entirely unrelated industries.",
+  "supporting_quotes": [
+    "Manufacturing of plastics products appears to be very well-aligned with Albania's comparative advantages and capabilities. The scale and diversity of plastic exports have been gradually expanding in Albania in recent years."
+  ],
+  "data_points": [
+    {
+      "metric": "Export diversification trend",
+      "value": "gradually expanding in scale and diversity",
+      "year": "recent years",
+      "country": "Albania",
+      "product": "plastics and plastic products"
+    }
+  ],
+  "confidence": "medium"
+}

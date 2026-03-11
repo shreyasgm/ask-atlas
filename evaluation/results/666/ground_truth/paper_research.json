@@ -1,0 +1,54 @@
+{
+  "question_id": "666",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.071999+00:00",
+  "paper_title": "Policies for Achieving Structural Transformation in the Caribbean",
+  "paper_year": 2009,
+  "source_paper": "policies-for-achieving-structural-transformation-in-the-caribbean-hausmann-klinger.pdf",
+  "research_answer": "Among CARICOM countries, St. Kitts and Nevis stands out as having the most promising product space position, with relatively well-connected exports in food and beverages, machinery, and electronics as of 2000 \u2014 sectors that are closer to the industrial core and offer more pathways to diversification. The Bahamas also has some exports in beverages and chemicals that are approaching the industrial core. On the other end, Belize is in the worst position \u2014 with extremely low EXPY and exports confined to peripheral agriculture, aquiculture, and forestry with very few nearby alternatives. Jamaica, despite a higher EXPY, is also severely constrained because it has already fully occupied all its peripheral agriculture and garment activities with no adjacent unoccupied products. Guyana's exports are highly peripheral in raw materials and timber, though it has some textile activities with nearby unoccupied textile products offering limited options.",
+  "supporting_quotes": [
+    "Even more so is the case with St. Kitts and Nevis, which (at least in 2000) had somewhat well-connected exports in areas such as food and beverages, machinery, and electronics.",
+    "Given the Bahamas' hyper-specialization in tourism and finance, it is difficult to draw many conclusions from their data, but that country does have some export activity in beverages as well as chemicals that are approaching the industrial core.",
+    "Belize in particular, with an extremely low EXPY, is squarely in the strategic bets quadrant of Figure 11 with no pathway to structural transformation: new areas of the product space have to be reached.",
+    "Jamaica, on the other hand, has completely occupied the peripheral agriculture and garment activities. It has no other activities that are nearby because it has already capitalized on all those products that require similar capabilities, and it is not clear where it can go next.",
+    "Guyana's products are also highly peripheral, with a concentration in raw materials and timber, but also some textile activities, and there are other textile activities not yet occupied by Guyana but nearby existing products."
+  ],
+  "data_points": [
+    {
+      "metric": "product space connectivity",
+      "value": "higher than other CARICOM",
+      "year": "2000",
+      "country": "St. Kitts and Nevis",
+      "product": "food, beverages, machinery, electronics"
+    },
+    {
+      "metric": "product space location",
+      "value": "approaching industrial core",
+      "year": "2000",
+      "country": "Bahamas",
+      "product": "beverages, chemicals"
+    },
+    {
+      "metric": "EXPY",
+      "value": "extremely low",
+      "year": "2005",
+      "country": "Belize",
+      "product": null
+    },
+    {
+      "metric": "product space saturation",
+      "value": "no nearby unoccupied activities",
+      "year": "2000",
+      "country": "Jamaica",
+      "product": "agriculture, garments"
+    },
+    {
+      "metric": "product space location",
+      "value": "peripheral",
+      "year": "2000",
+      "country": "Guyana",
+      "product": "raw materials, timber, textiles"
+    }
+  ],
+  "confidence": "high"
+}

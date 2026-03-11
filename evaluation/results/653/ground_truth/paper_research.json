@@ -1,0 +1,37 @@
+{
+  "question_id": "653",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.069097+00:00",
+  "paper_title": "Moving to the Adjacent Possible: Discovering Paths for Export Diversification in Rwanda",
+  "paper_year": 2015,
+  "source_paper": "hausmann_chauvin_rwanda_294.pdf",
+  "research_answer": "Despite having revealed comparative advantage in leather and hide products, Rwanda's actual export earnings from these goods amounted to less than $5 million in 2010 \u2014 a negligible figure. The contrast with regional neighbors is stark: Kenya exports more than $100 million in animal products annually, and Uganda more than $200 million. This gap highlights that having RCA in a product category does not automatically translate into significant export revenues \u2014 scale, supply chain depth, and market access all matter. For Rwanda, the animal products and leather sector represents an area where RCA exists in principle but the productive base is not yet developed enough to generate meaningful export volumes, especially relative to regional peers who have built much larger industries in adjacent categories.",
+  "supporting_quotes": [
+    "Although the cumulative export earnings of these products amounted to less than US$5 million in 2010",
+    "As Figure 22 shows, Kenya currently exports more than $100 million of animal products and Uganda more than $200 million."
+  ],
+  "data_points": [
+    {
+      "metric": "Leather/hide export value",
+      "value": "<$5 million",
+      "year": "2010",
+      "country": "Rwanda",
+      "product": "Leather, hides, furs"
+    },
+    {
+      "metric": "Animal product exports",
+      "value": ">$100 million",
+      "year": "2010",
+      "country": "Kenya",
+      "product": "Animal products"
+    },
+    {
+      "metric": "Animal product exports",
+      "value": ">$200 million",
+      "year": "2010",
+      "country": "Uganda",
+      "product": "Animal products"
+    }
+  ],
+  "confidence": "high"
+}

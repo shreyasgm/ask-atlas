@@ -1,0 +1,22 @@
+{
+  "question_id": "407",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.999437+00:00",
+  "paper_title": "Does Birthplace Diversity Affect Economic Complexity? Cross-country Evidence",
+  "paper_year": 2020,
+  "source_paper": "2020-03-cid-fellows-wp-125-diversity-economic-complexity.pdf",
+  "research_answer": "The primary driver is the expansion in the number of origin countries \u2014 what statisticians call the 'extensive margin' or 'between' component of diversity. Using a Theil index decomposition, most of the effect of diversity on economic complexity comes from countries drawing migrants from an ever-wider set of origins, rather than from shifts in the relative shares of already-represented nationalities. This is particularly true for developing countries in the middle of the complexity distribution. The implication is that adding new source countries of immigration \u2014 not just rebalancing existing flows \u2014 is what most expands a country's productive variety.",
+  "supporting_quotes": [
+    "we find that most of the effect is driven by the 'between' component, which can be interpreted as the extensive margin of diversity in the sense that it captures the contribution of new origin countries to the evolution of immigration diversity."
+  ],
+  "data_points": [
+    {
+      "metric": "Theil index between-component coefficient",
+      "value": "significant and positive (dominant driver)",
+      "year": "1990-2000",
+      "country": "2nd ECI tercile",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,36 @@
+{
+  "question_id": "422",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.004199+00:00",
+  "paper_title": "Implied Comparative Advantage",
+  "paper_year": 2020,
+  "source_paper": "2020-07-cid-wp-276-revised-implied-comparative-advantage.pdf",
+  "research_answer": "Yes, the implied comparative advantage signal adds genuine predictive power even after controlling for all industry-level and location-level fixed effects. When location and industry fixed effects are included \u2014 which absorb all average differences between countries and between sectors \u2014 the density residual (the gap between implied and actual comparative advantage) remains a highly significant predictor of export growth with a coefficient of -0.024 (p<0.001). The R\u00b2 rises from 0.412 with fixed effects alone to 0.439 when the density residual is added. Crucially, the density residual is constructed entirely from base-year data, with no forward-looking information, so it's not capturing anything mechanical. This confirms that the product space contains genuine structural information about which specific country-industry combinations are under- or over-shooting their implied equilibrium.",
+  "supporting_quotes": [
+    "Column 8 shows the baseline growth equation with location and industry fixed effects and initial location-industry size. Column 9 reintroduces the density residual and shows that its economic and statistical significance is undiminished. It is important to again point out that the density residual uses only base-year data and thus contains no information regarding future growth, while the coefficients on the fixed effects are calculated ex post."
+  ],
+  "data_points": [
+    {
+      "metric": "R\u00b2 with fixed effects alone",
+      "value": "0.412",
+      "year": "1995-2016",
+      "country": "119 countries",
+      "product": "All HS4 products"
+    },
+    {
+      "metric": "R\u00b2 with fixed effects + density residual",
+      "value": "0.439",
+      "year": "1995-2016",
+      "country": "119 countries",
+      "product": "All HS4 products"
+    },
+    {
+      "metric": "Density residual coefficient (with fixed effects)",
+      "value": "-0.024",
+      "year": "1995-2016",
+      "country": "119 countries",
+      "product": "All HS4 products"
+    }
+  ],
+  "confidence": "high"
+}

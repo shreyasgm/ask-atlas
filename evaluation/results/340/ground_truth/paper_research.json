@@ -1,0 +1,30 @@
+{
+  "question_id": "340",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.973416+00:00",
+  "paper_title": "Examining Beneficiation",
+  "paper_year": 2008,
+  "source_paper": "2008-5-cid-working-paper-162-examining-benefication.pdf",
+  "research_answer": "The chances are surprisingly low. Only 9% of countries that exported raw cotton in 1995 but lacked comparative advantage in processed cotton managed to develop that capability within the next 5 years. This is particularly striking because intuition might suggest that having the raw material gives a country a natural stepping stone into downstream processing. Instead, the data shows that raw cotton exporters are far more likely to diversify laterally \u2014 25% of those without comparative advantage in fruit developed it over the same 5-year window. This suggests that the productive capabilities needed to export raw cotton (resource rights, basic logistics) are more closely related to other agricultural sectors than to textile manufacturing.",
+  "supporting_quotes": [
+    "Furthermore, of the countries that exported raw cotton in 1995 but did not export processed cotton, only 9% were able to gain comparative advantage in processed cotton over the next 5 years.",
+    "And one quarter of raw cotton exporters who could not export fruit with comparative advantage in 1995 were able to develop comparative advantage in the fruit sector over the next 5 years."
+  ],
+  "data_points": [
+    {
+      "metric": "Transition probability into processed cotton",
+      "value": "9%",
+      "year": "1995-2000",
+      "country": "global sample",
+      "product": "processed cotton"
+    },
+    {
+      "metric": "Transition probability into fruit",
+      "value": "25%",
+      "year": "1995-2000",
+      "country": "global sample",
+      "product": "fruit"
+    }
+  ],
+  "confidence": "high"
+}

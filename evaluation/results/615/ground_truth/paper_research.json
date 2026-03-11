@@ -1,0 +1,38 @@
+{
+  "question_id": "615",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.058157+00:00",
+  "paper_title": "How should Uganda grow?",
+  "paper_year": 2014,
+  "source_paper": "cid_working_paper_275.pdf",
+  "research_answer": "South Sudan's reconstruction needs have made it an important and fast-growing market for Uganda, driving demand for food and manufactured materials. This regional trade relationship is significant for Uganda's complexity trajectory because it is through African markets \u2014 including South Sudan \u2014 that Uganda is already exporting its most complex products. The African market is Uganda's most diversified export destination, encompassing not just agricultural goods but also machinery, construction materials, chemicals, and food processing products. South Sudan's ongoing reconstruction creates sustained demand for exactly the kinds of light manufactured goods \u2014 cement, steel, and building materials \u2014 that Uganda has started producing and exporting. This makes regional demand a real-world testing ground and scaling opportunity for Uganda to move up the product complexity ladder.",
+  "supporting_quotes": [
+    "Recent export growth has been stimulated by demand in neighboring countries. South Sudan has emerged to be an important trading partner with Uganda demanding food and other manufactured material to help with reconstruction.",
+    "But the local African market is by far the most diversified and also includes exports of machinery, construction materials and equipment, chemicals, and food processing (Figure 24).",
+    "There has also been an increase in exports of light manufactured building materials including cement and steel products especially to the neighboring countries."
+  ],
+  "data_points": [
+    {
+      "metric": "key export growth driver",
+      "value": "South Sudan reconstruction demand",
+      "year": null,
+      "country": "Uganda",
+      "product": "food, manufactured materials"
+    },
+    {
+      "metric": "new manufactured export categories",
+      "value": "cement, steel products",
+      "year": null,
+      "country": "Uganda",
+      "product": "construction materials"
+    },
+    {
+      "metric": "most diversified export destination",
+      "value": "African market",
+      "year": null,
+      "country": "Uganda",
+      "product": "machinery, construction, chemicals, food processing"
+    }
+  ],
+  "confidence": "high"
+}

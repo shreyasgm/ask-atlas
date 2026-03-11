@@ -1,0 +1,38 @@
+{
+  "question_id": "683",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.075555+00:00",
+  "paper_title": "Engaging Overseas Sri Lankans to Facilitate Export Diversification",
+  "paper_year": 2018,
+  "source_paper": "srilanka_export_diversification_thesis.pdf",
+  "research_answer": "Sri Lanka's IT and BPO export sector has been one of the country's genuine growth stories, expanding roughly fourfold from $213 million in 2007 to $850 million in 2015. However, in the context of total exports, IT services still only account for approximately 4% of Sri Lanka's export base as of 2016. This highlights a structural tension: while IT is growing fast and represents a higher-complexity, higher-wage sector relative to traditional exports like tea, rubber, and garments (whose wages have fallen below the national average), it has not yet reached a scale where it can anchor Sri Lanka's export diversification on its own. The challenge is scaling IT from a niche bright spot to a major pillar of export earnings.",
+  "supporting_quotes": [
+    "The IT and BPO export industry is a small story of success however, growing exports from $213m to $850m from 2007-2015",
+    "This could establish IT as a major part of Sri Lanka's exports from the 4% of exports it consists of today",
+    "These traditional industries are no longer able to pay wages commensurate with Sri Lanka's level of development, and new higher-wage export industries are required."
+  ],
+  "data_points": [
+    {
+      "metric": "export value",
+      "value": "$213m to $850m",
+      "year": "2007-2015",
+      "country": "Sri Lanka",
+      "product": "IT and BPO services"
+    },
+    {
+      "metric": "export share",
+      "value": "4%",
+      "year": "2016",
+      "country": "Sri Lanka",
+      "product": "IT services"
+    },
+    {
+      "metric": "wage comparison",
+      "value": "traditional export sector wages below average",
+      "year": "2018",
+      "country": "Sri Lanka",
+      "product": "tea, rubber, garments"
+    }
+  ],
+  "confidence": "high"
+}

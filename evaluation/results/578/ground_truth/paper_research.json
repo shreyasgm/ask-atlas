@@ -1,0 +1,53 @@
+{
+  "question_id": "578",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.044419+00:00",
+  "paper_title": "Opportunity analysis of agriculture products in Sri Lanka: Measuring markets and feasibility",
+  "paper_year": 2016,
+  "source_paper": "agri_sector_opportunities_feb_2018.pdf",
+  "research_answer": "The four largest global markets among selected agricultural products are Shrimp ($15 billion), Plantains & Bananas ($14 billion), Cuttlefish/Octopus & Bivalves ($11 billion), and Tomatoes ($8.5 billion). However, market size and growth don't always align. Shrimp stands out as both the largest and fastest-growing product globally. Plantains & Bananas also have a very large market with moderate growth. Cuttlefish/Octopus & Bivalves have a large market growing at a moderately fast pace. Tomatoes, despite their large market, show low overall growth \u2014 with the EU market for tomatoes actually shrinking. This means Shrimp and Plantains offer the most attractive combination of scale and momentum, while Tomatoes represent a mature, slower-growth opportunity.",
+  "supporting_quotes": [
+    "Largest markets are: Shrimp (15 Bn, Plantains 14 Bn, Cuttlefish/Bivalves 11 Bn, and Tomatoes 8.5 Bn)",
+    "Shrimp: Growing fastest and has a very large world market",
+    "Tomatoes: Large world market but low growth (moderate in US and shrinking in EU)",
+    "Plantains & Bananas: Growing moderately fast with a very large world market"
+  ],
+  "data_points": [
+    {
+      "metric": "world market size",
+      "value": "15 billion USD",
+      "year": "2016",
+      "country": "global",
+      "product": "Shrimp"
+    },
+    {
+      "metric": "world market size",
+      "value": "14 billion USD",
+      "year": "2016",
+      "country": "global",
+      "product": "Plantains & Bananas"
+    },
+    {
+      "metric": "world market size",
+      "value": "11 billion USD",
+      "year": "2016",
+      "country": "global",
+      "product": "Cuttlefish, Octopus & Bivalves"
+    },
+    {
+      "metric": "world market size",
+      "value": "8.5 billion USD",
+      "year": "2016",
+      "country": "global",
+      "product": "Tomatoes"
+    },
+    {
+      "metric": "market growth",
+      "value": "shrinking",
+      "year": "2012-2016",
+      "country": "EU",
+      "product": "Tomatoes"
+    }
+  ],
+  "confidence": "high"
+}

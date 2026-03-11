@@ -1,0 +1,37 @@
+{
+  "question_id": "645",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.067065+00:00",
+  "paper_title": "Moving to the Adjacent Possible: Discovering Paths for Export Diversification in Rwanda",
+  "paper_year": 2015,
+  "source_paper": "hausmann_chauvin_rwanda_294.pdf",
+  "research_answer": "Yes, and it's a counterintuitive finding. Despite Rwanda's overall export basket being low-complexity, the products it sells to regional East African neighbors are actually more complex and diverse than what it exports to its major global partners. Europe, Asia, and the United States import basic commodities from Rwanda \u2014 primarily coffee, tea, and minerals. By contrast, regional neighbors import a greater variety of processed and semi-manufactured goods, including fertilizers, energy products, fabrics, and wood products. This pattern suggests that regional trade acts as an important but underutilized channel for moving Rwanda up the value chain, even though the East African market accounts for less than 10% of Rwanda's total exports.",
+  "supporting_quotes": [
+    "Indeed, current export patterns already show a difference in the complexity of products that Rwanda exports to the regional market versus what it exports to the world. While Europe, Asia, and the United States import basic commodities from Rwanda, its regional neighbors import a greater variety of processed and semi-manufactured goods, including fertilizers, energy, fabrics, and wood products",
+    "Meanwhile, exports to the nearby markets of East Africa, which could incur lower transportation costs, account for only 10 percent of Rwanda's total exports."
+  ],
+  "data_points": [
+    {
+      "metric": "Share of exports going to East Africa",
+      "value": "<10%",
+      "year": "2010",
+      "country": "Rwanda",
+      "product": "All"
+    },
+    {
+      "metric": "Products exported to global markets",
+      "value": "Basic commodities (coffee, tea, minerals)",
+      "year": "2010",
+      "country": "Rwanda",
+      "product": "Commodities"
+    },
+    {
+      "metric": "Products exported to regional markets",
+      "value": "Processed/semi-manufactured goods (fertilizers, energy, fabrics, wood)",
+      "year": "2010",
+      "country": "Rwanda",
+      "product": "Processed goods"
+    }
+  ],
+  "confidence": "high"
+}

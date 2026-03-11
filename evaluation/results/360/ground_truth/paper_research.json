@@ -1,0 +1,45 @@
+{
+  "question_id": "360",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.980158+00:00",
+  "paper_title": "Constraints to Sustained and Inclusive Growth in Sri Lanka: An Initial Diagnosis and Key Topics for Discussion",
+  "paper_year": 2016,
+  "source_paper": "2016.01.07_hausmann_initial_constraints.pdf",
+  "research_answer": "Sri Lanka faces a significant income-competitiveness mismatch in its garment exports. At a GDP per capita of $3,800, Sri Lanka competes in women's undergarments against Bangladesh ($1,045), Cambodia ($1,105), and Vietnam ($2,050) \u2014 all countries with dramatically lower income levels and therefore lower labor costs. Since garments are a labor-intensive, lower-complexity product, these competitors have a structural cost advantage over Sri Lanka. Given that garments collectively form a large share of Sri Lanka's $11.1B export basket, this mismatch represents a core vulnerability: as Sri Lanka's income rises, maintaining competitiveness in these products becomes harder without moving up the value chain.",
+  "supporting_quotes": [
+    "Women's Undergarments: Low income competitors... Global Share of Women's Undergarments Exports (Net) in 2014 showing Sri Lanka in competition with China, India, Bangladesh, Cambodia, Vietnam, Thailand, with GDP per capita chart showing Sri Lanka at ~$3,800 while competitors are mostly under $2,500"
+  ],
+  "data_points": [
+    {
+      "metric": "GDP per capita",
+      "value": "$3,800",
+      "year": "2014",
+      "country": "Sri Lanka"
+    },
+    {
+      "metric": "GDP per capita",
+      "value": "$1,045",
+      "year": "2014",
+      "country": "Bangladesh"
+    },
+    {
+      "metric": "GDP per capita",
+      "value": "$1,105",
+      "year": "2014",
+      "country": "Cambodia"
+    },
+    {
+      "metric": "GDP per capita",
+      "value": "$2,050",
+      "year": "2014",
+      "country": "Vietnam"
+    },
+    {
+      "metric": "Women's undergarments share of exports",
+      "value": "~5%",
+      "year": "2014",
+      "country": "Sri Lanka"
+    }
+  ],
+  "confidence": "high"
+}

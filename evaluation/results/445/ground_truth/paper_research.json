@@ -1,0 +1,34 @@
+{
+  "question_id": "445",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.011708+00:00",
+  "paper_title": "What Will It Take for Jordan to Grow?",
+  "paper_year": 2022,
+  "source_paper": "2022-03-cid-wp-411-what-will-it-take-for-jordan-to-grow-final.pdf",
+  "research_answer": "Jordan's economic complexity ranking declined significantly over the 2010s \u2014 from 47th in the world in 2009 to 65th by 2019, a drop of 18 places. This deterioration reflects a shift in Jordan's export composition away from more complex, higher-value goods, partly driven by the collapse of key regional trade partners like Iraq and Syria. Despite this decline, Jordan's current level of complexity relative to its GDP per capita still implies an annualized growth projection of about 2.5% over the next decade \u2014 slightly above its recent de facto steady state, but modest given the country's potential.",
+  "supporting_quotes": [
+    "Jordan was the 47th most complex economy in the world in 2009, based on the composition of its exports, and had fallen to 65th by 2019.",
+    "This level of complexity in relation to Jordan's GDP per capita implies an annualized growth projection over the next ten years of 2.5% \u2014 slightly above the de facto steady state."
+  ],
+  "data_points": [
+    {
+      "metric": "Economic Complexity Index ranking",
+      "value": "47th",
+      "year": "2009",
+      "country": "Jordan"
+    },
+    {
+      "metric": "Economic Complexity Index ranking",
+      "value": "65th",
+      "year": "2019",
+      "country": "Jordan"
+    },
+    {
+      "metric": "growth projection based on economic complexity",
+      "value": "2.5% annualized",
+      "year": "2019-2029",
+      "country": "Jordan"
+    }
+  ],
+  "confidence": "high"
+}

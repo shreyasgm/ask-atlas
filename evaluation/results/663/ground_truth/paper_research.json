@@ -1,0 +1,22 @@
+{
+  "question_id": "663",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.071433+00:00",
+  "paper_title": "Policies for Achieving Structural Transformation in the Caribbean",
+  "paper_year": 2009,
+  "source_paper": "policies-for-achieving-structural-transformation-in-the-caribbean-hausmann-klinger.pdf",
+  "research_answer": "CARICOM countries export surprisingly unsophisticated goods relative to their income levels. Countries like Belize, Dominica, St. Vincent and the Grenadines, Grenada, and Guyana have among the poorest export baskets for countries at their level of development. This means their EXPY \u2014 a measure of export sophistication that reflects the income levels of countries that export similar products \u2014 is well below what you'd expect given their GDP per capita. This is a notable underperformance compared to peer countries at similar development stages.",
+  "supporting_quotes": [
+    "This figure shows that the majority of the lower-income CARICOM countries export a relatively poor-country export basket for their level of income. Countries like Belize, Dominica, St. Vincent and the Grenadines, Grenada, and Guyana have among the poorest export baskets for countries with their level of development."
+  ],
+  "data_points": [
+    {
+      "metric": "EXPY (export sophistication)",
+      "value": "low relative to GDP per capita",
+      "year": "2005",
+      "country": "Belize, Dominica, St. Vincent and the Grenadines, Grenada, Guyana",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

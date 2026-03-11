@@ -1,0 +1,21 @@
+{
+  "question_id": "529",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.030008+00:00",
+  "paper_title": "Tackling Discrepancies in Trade Data: The Harvard Growth Lab International Trade Datasets",
+  "paper_year": 2025,
+  "source_paper": "2025-07-glwp-251-tackling-discrepancies-in-trade-data.pdf",
+  "research_answer": "Classification usage is highly fragmented in practice. In 2007 alone, countries simultaneously used five different classification vintages to report their trade, ranging from the newly released HS2007 all the way back to the much older SITC Rev. 3. This means that when compiling a global bilateral trade dataset for any given year, researchers are essentially collecting data reported under fundamentally different product taxonomies and must convert them all to a common standard. Each of these conversions introduces potential error through misallocation of trade values, loss of product codes, and incorrect weighting in many-to-many code relationships. The simultaneous use of five vintages in a single year illustrates why harmonizing global trade data is so methodologically challenging.",
+  "supporting_quotes": [
+    "The data reveal substantial heterogeneity in classification usage: in 2007 alone, countries employed five different vintages to report trade, ranging from the newly released HS2007 to the much older SITC Rev. 3."
+  ],
+  "data_points": [
+    {
+      "metric": "Number of classification vintages in simultaneous use",
+      "value": "5",
+      "year": "2007",
+      "country": "Global"
+    }
+  ],
+  "confidence": "high"
+}

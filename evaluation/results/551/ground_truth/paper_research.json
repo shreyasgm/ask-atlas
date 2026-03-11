@@ -1,0 +1,22 @@
+{
+  "question_id": "551",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.034272+00:00",
+  "paper_title": "A Tale of Two Clusters: The Evolution of Ireland's Economic Complexity since 1995",
+  "paper_year": 2015,
+  "source_paper": "2_oclery.pdf",
+  "research_answer": "Ireland sits in two separate regions of the Product Space. The first is a peripheral but complex cluster dominated by high-tech electronics and chemicals/pharmaceuticals \u2014 industries that are sophisticated but relatively isolated from other product groups, making it harder to leverage them as stepping stones. The second is a denser, central cluster of foodstuffs, animals, and agriculture \u2014 slightly less complex but well-connected to neighboring products, offering better diversification pathways. This dual structure is unusual and creates a strategic tension: the high-tech cluster generates most of Ireland's export value and is dominated by foreign multinationals, but its peripherality in the Product Space limits organic spillovers. The food/agriculture cluster is more domestically owned and better positioned structurally for related diversification, even if each individual product is less complex.",
+  "supporting_quotes": [
+    "Figure 5 shows that today Ireland occupies two distinct clusters in the Product Space \u2013 one including mainly complex but peripheral industries such as high tech/electronics and chemicals/pharmaceuticals, and a second cluster in the densely connected, but slightly less complex, central region of the Product Space including foodstuffs, animals and agriculture."
+  ],
+  "data_points": [
+    {
+      "metric": "Product Space position",
+      "value": "two distinct clusters \u2014 peripheral high-tech and central food/agriculture",
+      "year": "2013",
+      "country": "Ireland",
+      "product": "pharmaceuticals, electronics, food, agriculture"
+    }
+  ],
+  "confidence": "high"
+}

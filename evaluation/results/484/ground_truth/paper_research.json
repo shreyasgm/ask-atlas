@@ -1,0 +1,30 @@
+{
+  "question_id": "484",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.021640+00:00",
+  "paper_title": "From Products to Capabilities: Constructing a Genotypic Product Space",
+  "paper_year": 2024,
+  "source_paper": "2024-06-glwp-230-genotypic_ps.pdf",
+  "research_answer": "Vietnam's industrial transformation between 1992 and 2016 involved entering roughly 12 new industries, expanding from footwear and apparel into high-tech sectors like Communications Equipment Manufacturing, Audio and Video Equipment Manufacturing, Computer and Peripheral Equipment Manufacturing, and Semiconductor and Other Electronic Component Manufacturing. To make this leap, Vietnam needed to acquire approximately 40 new capabilities \u2014 including expertise associated with Computer Hardware Engineers, Materials Scientists, Electronics Engineers, Electromechanical Equipment Assemblers, and Data Communications Analysts. This case illustrates how industrial upgrading is not just about entering new markets, but about systematically building a new set of specialized occupational capabilities that make complex industries viable.",
+  "supporting_quotes": [
+    "Over the next three decades, Vietnam entered a dozen new industries, including Communications Equipment Manufacturing, Audio and Video Equipment Manufacturing, Computer and Peripheral Equipment Manufacturing and Semiconductor and Other Electronic Component Manufacturing.",
+    "According to our analysis, this expansion required acquiring about 40 new capabilities, including the expertise of Computer Hardware Engineers, Materials Scientists, Electronics Engineers, Electromechanical Equipment Assemblers, and Data Communications Analysts."
+  ],
+  "data_points": [
+    {
+      "metric": "New industries entered",
+      "value": "12",
+      "year": "1992-2016",
+      "country": "Vietnam",
+      "product": "Electronics and telecommunications"
+    },
+    {
+      "metric": "New capabilities acquired",
+      "value": "~40",
+      "year": "1992-2016",
+      "country": "Vietnam",
+      "product": "Electronics sector"
+    }
+  ],
+  "confidence": "high"
+}

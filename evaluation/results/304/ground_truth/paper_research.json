@@ -1,0 +1,47 @@
+{
+  "question_id": "304",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.944358+00:00",
+  "paper_title": "Fresh Tomatoes: Ideas to Build a Productive Eco-System",
+  "paper_year": 2014,
+  "source_paper": "1408_tomatoes_value_chain_analysis_nicolas_ajzenman.pdf",
+  "research_answer": "Russia alone accounts for 62% of total tomato import growth in the European and Eurasian region since 2005. The broader regional market is massive \u2014 approximately 3.6 million tons per year, representing about two-thirds of total world tomato imports \u2014 and has been growing at a steady 4% CAGR over eight years. This makes Russia by far the most important growth engine for tomato exporters in the region. Paradoxically, Albania \u2014 which is geographically positioned within this region \u2014 has been increasing its export participation in countries that are *not* among the fastest-growing importers. Albania's current export destinations (Kosovo, Serbia, Montenegro, Macedonia, Bulgaria, Greece) are its immediate neighbors but are relatively minor players in regional import growth. This misalignment between where Albania sells and where demand is growing represents a structural strategic gap.",
+  "supporting_quotes": [
+    "Out of the 100% growth since 2005, Russia alone explains about 62%",
+    "imports of tomatoes in Albania's relevant area sum approximately 3.6 Million Tn per year and represents about 2/3 of the world total imports",
+    "growth in volume has been steady at a fairly high rate of 4% per year CARG in the last eight years",
+    "we see an increasing participation of countries who are not part of the fastest growing importers in the region",
+    "Albania's target are basically the neighbor countries, which are not very relevant in regional terms"
+  ],
+  "data_points": [
+    {
+      "metric": "Russia's share of regional import growth",
+      "value": "62%",
+      "year": "2005\u20132012",
+      "country": "Russia",
+      "product": "fresh tomatoes"
+    },
+    {
+      "metric": "regional import volume",
+      "value": "3.6 million tons/year",
+      "year": "2012",
+      "country": "Europe and Eurasia",
+      "product": "fresh tomatoes"
+    },
+    {
+      "metric": "regional import CAGR",
+      "value": "4% per year",
+      "year": "2005\u20132013",
+      "country": "Europe and Eurasia",
+      "product": "fresh tomatoes"
+    },
+    {
+      "metric": "Albania export market alignment",
+      "value": "concentrated in non-fastest-growing markets",
+      "year": "2013",
+      "country": "Albania",
+      "product": "fresh tomatoes"
+    }
+  ],
+  "confidence": "high"
+}

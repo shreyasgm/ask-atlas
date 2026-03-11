@@ -1,0 +1,43 @@
+{
+  "question_id": "610",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.056473+00:00",
+  "paper_title": "How should Uganda grow?",
+  "paper_year": 2014,
+  "source_paper": "cid_working_paper_275.pdf",
+  "research_answer": "Nigeria's export data offers a striking illustration of how oil dependence can coexist with \u2014 and perhaps contribute to \u2014 extreme underdevelopment of non-oil exports. In 2010, Nigeria's oil exports stood at $433 per capita. But its non-oil exports were only $15 per capita. Mexico had a similar level of oil exports per capita, yet its non-oil exports were 139 times larger at roughly $2,085 per capita. Norway exported about 33 times more oil per capita than Nigeria, yet its non-oil exports were 653 times larger \u2014 approximately $9,795 per capita. This comparison shows that oil wealth alone doesn't build economic complexity; what matters is whether a country develops the productive capabilities to export a wide range of non-oil products. Norway and Mexico both did; Nigeria largely has not.",
+  "supporting_quotes": [
+    "In 2010, Nigeria's oil exports were only 433 dollars per capita. But its non-oil exports were barely 15 dollars per capita. By contrast, Mexico had a similar level of oil exports, but its non-oil exports per capita were 139 times larger than Nigeria's. In the case of Norway, its oil exports were 33 times larger than Nigeria's. In spite of this abundance of oil, its non-oil exports were 653 times those of Nigeria."
+  ],
+  "data_points": [
+    {
+      "metric": "non-oil exports per capita",
+      "value": "$15",
+      "year": "2010",
+      "country": "Nigeria",
+      "product": "non-oil exports"
+    },
+    {
+      "metric": "non-oil exports per capita",
+      "value": "~$2,085 (139x Nigeria)",
+      "year": "2010",
+      "country": "Mexico",
+      "product": "non-oil exports"
+    },
+    {
+      "metric": "non-oil exports per capita",
+      "value": "~$9,795 (653x Nigeria)",
+      "year": "2010",
+      "country": "Norway",
+      "product": "non-oil exports"
+    },
+    {
+      "metric": "oil exports per capita",
+      "value": "$433",
+      "year": "2010",
+      "country": "Nigeria",
+      "product": "oil"
+    }
+  ],
+  "confidence": "high"
+}

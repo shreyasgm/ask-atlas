@@ -1,0 +1,28 @@
+{
+  "question_id": "554",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.035256+00:00",
+  "paper_title": "A Tale of Two Clusters: The Evolution of Ireland's Economic Complexity since 1995",
+  "paper_year": 2015,
+  "source_paper": "2_oclery.pdf",
+  "research_answer": "The predictive power of the Product Space \u2014 the idea that countries tend to develop new export capabilities in products that are 'nearby' in capability space \u2014 varies significantly depending on whether you look at domestic or foreign-owned sectors in Ireland. For domestically owned industries, the Product Space has become increasingly predictive over time: new product appearances are better explained by proximity to existing capabilities, suggesting that Ireland's indigenous firms have been building and expanding their underlying capability base in a coherent way. However, for foreign-owned sectors, the opposite is true \u2014 the Product Space's predictive power has been decreasing over time. This suggests that foreign multinationals are not generating spillovers into the broader Irish economy. The capabilities embedded in foreign-owned high-tech firms appear too distant from existing local capabilities to transfer effectively to the indigenous workforce.",
+  "supporting_quotes": [
+    "Appearances in domestic sectors became more predictable over time suggesting that an expansion of the underlying capability base has given rise to new products as modelled by the Product Space.",
+    "In the latter case we observe a decrease in the prediction power of the Product Space structure, suggesting a lack of spill-over from the high-tech foreign sector possibly due to a lack of transfer of sufficient capabilities to the indigenous workforce due to their relative distance from existing local capabilities."
+  ],
+  "data_points": [
+    {
+      "metric": "Product Space predictability - domestic sectors",
+      "value": "increasing over time",
+      "year": "2000-2012",
+      "country": "Ireland"
+    },
+    {
+      "metric": "Product Space predictability - foreign-owned sectors",
+      "value": "decreasing over time",
+      "year": "2000-2012",
+      "country": "Ireland"
+    }
+  ],
+  "confidence": "high"
+}

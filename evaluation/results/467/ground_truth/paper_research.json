@@ -1,0 +1,40 @@
+{
+  "question_id": "467",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.017815+00:00",
+  "paper_title": "A Simple Theory of Economic Development at the Extensive Industry Margin",
+  "paper_year": 2022,
+  "source_paper": "2022-09-cid-wp-416-extensive-industry-margin.pdf",
+  "research_answer": "On average, countries are missing about 8\u20139% of the occupational employment required to enter the industries they don't yet export. Specifically, measuring distance using wage-bill shares gives an average distance of 0.079, while using employment shares yields 0.092. However, the variation around this average is substantial \u2014 the maximum distance reaches 0.718 under the wage-bill measure and 0.772 under the employment measure, meaning some countries are missing more than 70% of the qualifications needed for their potential new industries. This wide spread confirms that while the average country is only modestly capability-constrained in aggregate, some countries face dramatically higher barriers to expanding their export baskets.",
+  "supporting_quotes": [
+    "The average distance \u03bc indicates that about 8%-9% of qualified employment is missing.",
+    "There is, however, quite some variation, with a maximum distance of over 70% for both indicators."
+  ],
+  "data_points": [
+    {
+      "metric": "average distance (wage-bill shares)",
+      "value": "0.079",
+      "year": "1992-2016",
+      "country": "140 countries"
+    },
+    {
+      "metric": "average distance (employment shares)",
+      "value": "0.092",
+      "year": "1992-2016",
+      "country": "140 countries"
+    },
+    {
+      "metric": "maximum distance (Cobb-Douglas)",
+      "value": "0.718",
+      "year": "1992-2016",
+      "country": "140 countries"
+    },
+    {
+      "metric": "maximum distance (Leontief)",
+      "value": "0.772",
+      "year": "1992-2016",
+      "country": "140 countries"
+    }
+  ],
+  "confidence": "high"
+}

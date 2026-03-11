@@ -1,0 +1,55 @@
+{
+  "question_id": "680",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.074745+00:00",
+  "paper_title": "Public\u2013Private Dialogs to Spur Export-led Growth: The Case of Productivity Taskforces in Namibia",
+  "paper_year": 2025,
+  "source_paper": "public-private-dialogs-to-spur-export-led-growth.pdf",
+  "research_answer": "Namibia imports the vast majority of its fruit consumption \u2014 only 4% of produce was sourced locally in 2019 \u2014 and just 17% of its total arable land was under cultivation in 2021, pointing to a large untapped productive base. Yet the export performance of high-value fruits has been accelerating rapidly: grape exports rose 40% between 2020 and 2022 and another 21% in 2023, while two high-value fruit farms ranked among Namibia's four fastest-growing companies in 2023. Investment signals are also strong: a US$80 million blueberry project backed by two large Spanish agri-food companies was announced in 2023, targeting a 250-hectare farm and aimed at exporting its first harvest in September 2024. Taken together, the picture is of a sector still in early stages \u2014 with most land uncultivated and most fruit still imported \u2014 but showing the kind of export acceleration and inward investment that can indicate the beginning of a structural transformation, especially in the context of global demand for grapes, dates, and blueberries rising consistently since the early 2000s.",
+  "supporting_quotes": [
+    "Only 4% of the produce was sourced locally in 2019, and only 17% of the total arable land was under cultivation in 2021.",
+    "Gross exports increased by 40% between 2020 and 2022.",
+    "In 2023, gross exports of grapes increased by 21% versus the previous year.",
+    "Two high-value fruit farms were among the four top fastest-growing companies in Namibia, according to Africa's Fastest Growing Companies Report 2023.",
+    "A company focused on the production of blueberries (Namibia Berries) announced a US$80 million investment over seven years to establish a 250-hectare farm in the Kavango East region.",
+    "The global demand for grapes, dates, and blueberries had been consistently increasing since the early 2000s \u2013 with growing markets in the United States, Europe, and Asia."
+  ],
+  "data_points": [
+    {
+      "metric": "local fruit sourcing",
+      "value": "4%",
+      "year": "2019",
+      "country": "Namibia",
+      "product": "fruit"
+    },
+    {
+      "metric": "arable land under cultivation",
+      "value": "17%",
+      "year": "2021",
+      "country": "Namibia",
+      "product": null
+    },
+    {
+      "metric": "gross export increase",
+      "value": "40%",
+      "year": "2020-2022",
+      "country": "Namibia",
+      "product": "grapes"
+    },
+    {
+      "metric": "FDI announcement",
+      "value": "US$80 million",
+      "year": "2023",
+      "country": "Namibia",
+      "product": "blueberries"
+    },
+    {
+      "metric": "company growth ranking",
+      "value": "2 of top 4 fastest-growing in Namibia",
+      "year": "2023",
+      "country": "Namibia",
+      "product": "high-value fruits"
+    }
+  ],
+  "confidence": "high"
+}

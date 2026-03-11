@@ -1,0 +1,40 @@
+{
+  "question_id": "676",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.073964+00:00",
+  "paper_title": "Public\u2013Private Dialogs to Spur Export-led Growth: The Case of Productivity Taskforces in Namibia",
+  "paper_year": 2025,
+  "source_paper": "public-private-dialogs-to-spur-export-led-growth.pdf",
+  "research_answer": "The comparison between Namibia and Peru is striking. Peru has become one of the world's most successful exporters of fruits and vegetables, particularly grapes and blueberries. Crucially, the regions of Peru where these crops boomed are semi-desertic \u2014 geographically similar to southern Namibia, where most of Namibia's high-value fruit farms are concentrated. Furthermore, Namibia's current output levels for grapes and blueberries are described as reminiscent of what Peru looked like roughly twenty years ago, suggesting Namibia may be at the beginning of a similar growth trajectory. One key mechanism in Peru's transformation was a dramatic consolidation and expansion of agricultural land: the government sold about 68,000 hectares in coastal areas between 1997 and 2008, with the average parcel size of 350 hectares being 100 times larger than the regional average of 3.5 hectares in 1997. This scale enabled the commercial farming model that drove Peru's export surge. Namibia also holds a geographic edge over Peru for European markets, as its ports are closer to Europe than Peru's. However, Namibia has not yet been able to access the fast-growing Asian markets that have absorbed more African fruit exports, partly due to productivity constraints.",
+  "supporting_quotes": [
+    "Peru has been one of the most successful countries in exporting fruits and vegetables \u2013 particularly grapes and blueberries.",
+    "Some of the regions of Peru where high-value fruits like blueberries and table grapes boomed are also semi-desertic areas like the South of Namibia, where most of the high-value fruit farms are located. Likewise, the output of grapes and blueberries in Namibia at the time was also reminiscent of what was seen in Peru twenty years ago.",
+    "From 1997 to 2008, the government sold around 68,000 hectares in the coastal areas. The average size of land sold was 350 hectares, a hundred times larger than the size of the average property from the region, 3.5 hectares in 1997.",
+    "The ports that can be accessed from and in Namibia are closer in distance to Europe than those used in leading countries in the sector, like Peru.",
+    "However, the country was not in the same position to start exporting to the Asian markets, which was related to productivity constraints."
+  ],
+  "data_points": [
+    {
+      "metric": "development stage comparison",
+      "value": "Namibia (2021) \u2248 Peru (2000)",
+      "year": "2000-2021",
+      "country": "Namibia, Peru",
+      "product": "grapes, blueberries"
+    },
+    {
+      "metric": "land sold for agriculture",
+      "value": "68,000 hectares",
+      "year": "1997-2008",
+      "country": "Peru",
+      "product": "agricultural land"
+    },
+    {
+      "metric": "average farm size vs. regional average",
+      "value": "350 ha vs 3.5 ha (100x)",
+      "year": "1997-2008",
+      "country": "Peru",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

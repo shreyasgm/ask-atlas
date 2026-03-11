@@ -1,0 +1,43 @@
+{
+  "question_id": "334",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.971588+00:00",
+  "paper_title": "South Africa's Export Predicament",
+  "paper_year": 2006,
+  "source_paper": "2006-08-glwp-06-south_africa_export_predicament.pdf",
+  "research_answer": "The sector rankings shift meaningfully depending on the strategic objective, but textiles and clothing consistently underperform across most strategies. In a balanced strategy, machinery (0.24) and agriculture (0.19) lead; in a low-hanging-fruit strategy, agriculture dominates (0.68), followed by coke and refined products (0.32); and in an externality-generation strategy, machinery is a clear winner (0.80), with metal fabrication a distant second (0.13). Textiles and clothing score negative in all three of these strategies. They only appear attractive in a labor-absorbing strategy, where clothing (0.64) and textiles (0.50) rank high \u2014 but even there, agriculture outscores them once the analysis is rationalized (agriculture 1.15, clothing 0.82, textiles 0.80). So textiles and clothing are only competitive if job creation for unskilled workers is the overriding and near-exclusive priority, and even then agriculture performs better. Aerospace consistently scores at the bottom across all strategies.",
+  "supporting_quotes": [
+    "Table 2.B Low Hanging Fruit Strategy, Sector Average: agriculture 0.68, coke and refined products 0.32, basic chemicals 0.07... clothing -0.42, aerospace -0.42",
+    "Table 2.A Balanced Strategy, Sector Average: machinery 0.24, agriculture 0.19... clothing -0.20, aerospace -0.29",
+    "Table 2.D Externality Generation Strategy, Sector Average: machinery 0.80, metal fabrication 0.13... textiles -0.22, clothing -0.28, aerospace -0.29",
+    "Table 3.C Labor Absorbing Strategy, Rationalized: agriculture 1.15, clothing 0.82, textiles 0.80... machinery 0.02",
+    "We see that, consistent with the findings in Section 3, the clothing and textiles sector scores quite low unless an extremely high weight is placed on unskilled labor intensity, and even in that case these sectors score below agriculture."
+  ],
+  "data_points": [
+    {
+      "metric": "sector score (balanced strategy)",
+      "value": "machinery 0.24, agriculture 0.19, clothing -0.20, aerospace -0.29",
+      "year": "2004",
+      "country": "South Africa"
+    },
+    {
+      "metric": "sector score (low-hanging fruit strategy)",
+      "value": "agriculture 0.68, coke 0.32, clothing -0.42, aerospace -0.42",
+      "year": "2004",
+      "country": "South Africa"
+    },
+    {
+      "metric": "sector score (externality generation strategy)",
+      "value": "machinery 0.80, metal fabrication 0.13, textiles -0.22, clothing -0.28",
+      "year": "2004",
+      "country": "South Africa"
+    },
+    {
+      "metric": "sector score (labor-absorbing, rationalized)",
+      "value": "agriculture 1.15, clothing 0.82, textiles 0.80, machinery 0.02",
+      "year": "2004",
+      "country": "South Africa"
+    }
+  ],
+  "confidence": "high"
+}

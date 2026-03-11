@@ -1,0 +1,29 @@
+{
+  "question_id": "350",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.976928+00:00",
+  "paper_title": "Examining Beneficiation",
+  "paper_year": 2008,
+  "source_paper": "2008-5-cid-working-paper-162-examining-benefication.pdf",
+  "research_answer": "The relationship between forward linkages and joint export patterns has been consistently weak and dominated by factor intensities throughout the entire 1975\u20132000 period. While the forward linkage coefficient shows some variation \u2014 rising from approximately 0.431 in 1975 to 0.719 by 2000 \u2014 it remains far below the LEAMER factor intensity coefficient, which ranged from about 4.855 in 1975 to 5.200 in 2000. The gap between these two measures is large and persistent across all time periods, indicating that the weak role of forward linkages in determining international trade patterns is not a temporary or recent phenomenon, but a structural feature of the global economy over at least a 25-year span.",
+  "supporting_quotes": [
+    "All results are for 1995 (results for 1975 to 2000 for A\u2192B and 1975-1995 for A\u2192B_t+5 are provided in the Appendix, with all findings discussed below continuing to hold in that data)."
+  ],
+  "data_points": [
+    {
+      "metric": "Forward linkage coefficient trend",
+      "value": "0.431 (1975) to 0.719 (2000)",
+      "year": "1975-2000",
+      "country": "global",
+      "product": "all"
+    },
+    {
+      "metric": "LEAMER coefficient trend",
+      "value": "4.855 (1975) to 5.200 (2000)",
+      "year": "1975-2000",
+      "country": "global",
+      "product": "all"
+    }
+  ],
+  "confidence": "medium"
+}

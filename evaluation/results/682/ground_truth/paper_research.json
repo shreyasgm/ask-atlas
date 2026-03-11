@@ -1,0 +1,55 @@
+{
+  "question_id": "682",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.075332+00:00",
+  "paper_title": "Engaging Overseas Sri Lankans to Facilitate Export Diversification",
+  "paper_year": 2018,
+  "source_paper": "srilanka_export_diversification_thesis.pdf",
+  "research_answer": "India's IT export sector offers a detailed roadmap of how diaspora return migration can seed and scale a technology export industry. The process began with individual returnees in anchor institutions: HP-India, founded in 1985 \u2014 the first offshore center in India \u2014 was set up by an Indian diaspora manager from HP America. Wipro later recruited a US-based Indian from General Electric in 1999 to lead its software services segment, eventually growing into an $8 billion company. When macroeconomic shocks in the US (the dot-com crash in 2001) pushed talent back, India saw around 5,000 experienced technology professionals return from the US in 2002\u20132003, founding at least 200 new IT companies by 2004. This wave also produced firms like Ittiam Systems (integrated circuits), founded in 2001 by former senior managers at Texas Instruments. The Indian pharmaceutical sector followed a parallel path \u2014 starting with lower-complexity drug discovery compounds and gradually climbing to clinical trials and GMP manufacturing. Together, these cases suggest that diaspora return catalyzes export complexity upgrades through knowledge transfer, firm formation, and incremental product-space expansion.",
+  "supporting_quotes": [
+    "HP-India, created in 1985, was the first of two offshore centers in India and was set-up by Radha Basu, an Indian diaspora who had been educated in the US and worked as a manager at HP in America",
+    "Eventually Wipro moved into the software business and after recruiting another US-based Indian diaspora in 1999 from General Electric to spearhead the new software services segment, grew into the $8bn company it is today",
+    "some 5,000 overseas Indian technology professionals with more than five years of work experience moved back to India from the US in 2002-3",
+    "This cemented much of the growth in the early 2000s, founding at least 200 companies by 2004",
+    "the integrated circuit manufacturer Ittiam Systems that was founded in 2001 by Indian diaspora who had been senior managers at Texas Instruments",
+    "The Indian outsourced pharmaceutical manufacturing industry began by producing lower complexity compounds used in drug discovery. They slowly built up a reputation for quality until firms were manufacturing at every stage of the process including discovery, clinical trials, and GMP laboratories."
+  ],
+  "data_points": [
+    {
+      "metric": "offshore center establishment",
+      "value": "first center",
+      "year": "1985",
+      "country": "India",
+      "product": "IT services"
+    },
+    {
+      "metric": "company value",
+      "value": "$8bn",
+      "year": "2018",
+      "country": "India",
+      "product": "software services"
+    },
+    {
+      "metric": "return migration",
+      "value": "5,000",
+      "year": "2002-2003",
+      "country": "India",
+      "product": "technology services"
+    },
+    {
+      "metric": "new company formation",
+      "value": "200+",
+      "year": "2004",
+      "country": "India",
+      "product": "IT services"
+    },
+    {
+      "metric": "product complexity progression",
+      "value": "drug discovery compounds \u2192 clinical trials \u2192 GMP laboratories",
+      "year": "mid-2000s",
+      "country": "India",
+      "product": "pharmaceutical compounds"
+    }
+  ],
+  "confidence": "high"
+}

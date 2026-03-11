@@ -1,0 +1,41 @@
+{
+  "question_id": "689",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.076709+00:00",
+  "paper_title": "Structural Transformation in Chile",
+  "paper_year": 2007,
+  "source_paper": "structural_transformation_in_chile.pdf",
+  "research_answer": "No \u2014 the resource-based economy explanation doesn't hold up when you compare Chile directly to other natural resource exporters. Canada, Australia, and New Zealand are also heavily resource-endowed, but Chile lags significantly behind all three in export sophistication metrics. Chile is far more specialized in raw materials, forestry, and agriculture than these advanced natural-resource exporters, and it underperforms dramatically in manufactured goods, which tend to be more sophisticated and higher-wage. Chile is also highly under-specialized in all categories of non-resource-based exports, particularly high-technology products, whereas countries like Canada and Australia have successfully diversified into more complex manufactured exports alongside their resource base. So Chile's predicament isn't inherent to being resource-rich \u2014 it reflects a structural failure to move beyond the most peripheral, low-sophistication parts of the export basket.",
+  "supporting_quotes": [
+    "Furthermore, this isn't due to Chile's status as a natural resource-based economy, as the country lags in these dimensions even when compared to countries like Canada, Australia, and New Zealand.",
+    "Chile is clearly much more specialized in raw materials, forestry, and agriculture than these advanced natural-resource exporters. And as can be seen below, the country is lagging in manufactured goods, which tend to be more sophisticated and pay higher wages.",
+    "Again, we see that Chile is highly specialized in primary products. Moreover, it is highly under-specialized in all categories of non-resource based exports, which tend to be more sophisticated and pay higher wages. This is particularly true of the higher-technology product categories."
+  ],
+  "data_points": [
+    {
+      "metric": "export sophistication vs NRE comparators",
+      "value": "lagging",
+      "year": "2004",
+      "country": "Chile"
+    },
+    {
+      "metric": "RCA in raw materials",
+      "value": "very high",
+      "year": "1999",
+      "country": "Chile"
+    },
+    {
+      "metric": "RCA in high-technology products",
+      "value": "very low",
+      "year": "1999",
+      "country": "Chile"
+    },
+    {
+      "metric": "RCA in non-resource based manufacturing",
+      "value": "under-specialized",
+      "year": "1999",
+      "country": "Chile"
+    }
+  ],
+  "confidence": "high"
+}

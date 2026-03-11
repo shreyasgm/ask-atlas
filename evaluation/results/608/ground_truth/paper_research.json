@@ -1,0 +1,29 @@
+{
+  "question_id": "608",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.055837+00:00",
+  "paper_title": "How should Uganda grow?",
+  "paper_year": 2014,
+  "source_paper": "cid_working_paper_275.pdf",
+  "research_answer": "Uganda's cotton garments industry failed because, despite the surface-level logic of adding value to domestic raw cotton, the industry turned out to be too distant from Uganda's existing position in the product space. The product space framework suggests that countries can most successfully diversify into products that are 'nearby' \u2014 meaning they require similar capabilities, knowledge, and inputs to what the country already produces. Cotton garments, while seemingly related to cotton production, actually require a very different set of capabilities (manufacturing, logistics, quality control, international market access) that Uganda had not developed. This case illustrates why proximity in the product space matters: jumping to a distant product, even one that appears logically connected to an existing export, often fails because the underlying capabilities don't transfer.",
+  "supporting_quotes": [
+    "An illustrative case is the failure of the cotton garments industry in Uganda (see World Bank, 2007). While this industry provided the opportunity to add value to Uganda's raw cotton, it proved too distant from Uganda's position in the product space."
+  ],
+  "data_points": [
+    {
+      "metric": "failed diversification attempt",
+      "value": "cotton garments",
+      "year": null,
+      "country": "Uganda",
+      "product": "cotton garments"
+    },
+    {
+      "metric": "reason for failure",
+      "value": "too distant in product space from existing capabilities",
+      "year": null,
+      "country": "Uganda",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,44 @@
+{
+  "question_id": "571",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.041765+00:00",
+  "paper_title": "Can industrial zones address the binding constraints to Sri Lanka's growth?",
+  "paper_year": 2018,
+  "source_paper": "Growth_Diagnostic_And_Zones_24May2018.pdf",
+  "research_answer": "Sri Lanka is dramatically behind its regional peers when it comes to producer-driven exports \u2014 the kind associated with cars, airplanes, and electronics manufacturing. Only about 6% of Sri Lanka's exports fall into producer-driven categories, compared to 34% for Vietnam, 59% for Thailand, and 69% for Malaysia. Meanwhile, Sri Lanka's export basket is dominated by buyer-driven products like garments, footwear, and gems, which account for 61% of exports. This gap suggests Sri Lanka has largely missed out on the global production-sharing networks that have propelled manufacturing-led growth in much of Southeast Asia.",
+  "supporting_quotes": [
+    "Sri Lanka's exports are dominated by buyer-driven products (mainly garments, footwear and gems); there is very little export activity from sectors associated with producer-driven networks (such as car, airplane or electronics manufacturing).",
+    "Figure 4. Sri Lanka's low share of producer-driven exports suggests a lack of global production sharing"
+  ],
+  "data_points": [
+    {
+      "metric": "share of producer-driven exports",
+      "value": "6%",
+      "year": "2012-13",
+      "country": "Sri Lanka",
+      "product": null
+    },
+    {
+      "metric": "share of producer-driven exports",
+      "value": "34%",
+      "year": "2012-13",
+      "country": "Vietnam",
+      "product": null
+    },
+    {
+      "metric": "share of producer-driven exports",
+      "value": "59%",
+      "year": "2012-13",
+      "country": "Thailand",
+      "product": null
+    },
+    {
+      "metric": "share of producer-driven exports",
+      "value": "69%",
+      "year": "2012-13",
+      "country": "Malaysia",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

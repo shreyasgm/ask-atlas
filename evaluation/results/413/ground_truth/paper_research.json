@@ -1,0 +1,45 @@
+{
+  "question_id": "413",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.001409+00:00",
+  "paper_title": "Does Birthplace Diversity Affect Economic Complexity? Cross-country Evidence",
+  "paper_year": 2020,
+  "source_paper": "2020-03-cid-fellows-wp-125-diversity-economic-complexity.pdf",
+  "research_answer": "Yes, and the correlations are quite different in magnitude. Economic complexity (ECI) correlates very strongly and positively with the number of products a country exports competitively (correlation of 0.811), confirming that more complex economies have much broader export baskets. However, ECI's negative correlation with the Herfindahl-Hirschman Index (HHI) of export concentration is considerably weaker at -0.557. This asymmetry suggests ECI captures more than just low export concentration \u2014 it reflects the depth and sophistication of the export structure in ways that simple concentration metrics miss. Meanwhile, birthplace diversity itself shows a positive but more modest correlation with export breadth (0.342), and a slight negative correlation with weighted product ubiquity (-0.185 to -0.188), hinting that diverse countries tend to export somewhat less ubiquitous products.",
+  "supporting_quotes": [
+    "Table 7 shows the correlation across those measures of diversification, export uniqueness and our measures of birthplace diversity, GDP per capita as well as ECI.",
+    "the table also documents that economic complexity and immigration diversity are positively correlated with measures of export diversification (or, in fact, negatively correlated with measures of concentration).",
+    "Concerning measures of export uniqueness we find a negative and significant correlation between our weighted measures of competitive products and diversity, suggesting that more diversity is related with less ubiquitously exported goods."
+  ],
+  "data_points": [
+    {
+      "metric": "Correlation between ECI and products with RCA>1",
+      "value": "0.811",
+      "year": "1990-2000",
+      "country": "Multiple (100 countries)",
+      "product": null
+    },
+    {
+      "metric": "Correlation between ECI and HHI (export concentration)",
+      "value": "-0.557",
+      "year": "1990-2000",
+      "country": "Multiple (100 countries)",
+      "product": null
+    },
+    {
+      "metric": "Correlation between birthplace diversity and total products",
+      "value": "0.342",
+      "year": "1990-2000",
+      "country": "Multiple (100 countries)",
+      "product": null
+    },
+    {
+      "metric": "Correlation between birthplace diversity and weighted product ubiquity",
+      "value": "-0.185 to -0.188",
+      "year": "1990-2000",
+      "country": "Multiple (100 countries)",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

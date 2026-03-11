@@ -1,0 +1,35 @@
+{
+  "question_id": "696",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.078014+00:00",
+  "paper_title": "Structural Transformation in Chile",
+  "paper_year": 2007,
+  "source_paper": "structural_transformation_in_chile.pdf",
+  "research_answer": "Chile had one of the highest unit value gaps in Latin America at the end of the 1990s. A unit value gap measures the difference between the prices a country gets for its exports and the global frontier prices for the same products \u2014 a larger gap indicates more room to improve quality and capture higher prices within existing product categories. The good news is that this represents a genuine growth opportunity: evidence shows that countries with larger quality gaps in existing products tend to grow faster, and quality upgrading measured by unit prices tends to converge toward the global frontier at an unconditional rate of 5\u20136% per year once a country is successfully exporting a product. For Chile, this means there is still meaningful headroom to boost export revenues and productivity through quality improvements in its current products, even without diversifying into entirely new product categories.",
+  "supporting_quotes": [
+    "Chile had one of the highest unit value gaps in Latin America at the end of the 1990s, meaning that there remains room to increase exports through quality upgrading.",
+    "And as shown in this graph, countries with room for upgrading in existing products grow faster.",
+    "But this quality, as measured by unit prices, converges to the global frontier at a rate of 5 to 6% per annum unconditionally (Hwang 2007). That is, once a country begins to successfully export a particular product, its quality increases to the global frontier unconditionally at a relatively rapid pace."
+  ],
+  "data_points": [
+    {
+      "metric": "unit value gap",
+      "value": "among highest in Latin America",
+      "year": "1998-2000",
+      "country": "Chile"
+    },
+    {
+      "metric": "relationship between quality gap and growth",
+      "value": "positive correlation",
+      "year": "1989-1991",
+      "country": "multiple"
+    },
+    {
+      "metric": "quality convergence rate",
+      "value": "5-6% per annum",
+      "year": null,
+      "country": "multiple"
+    }
+  ],
+  "confidence": "high"
+}

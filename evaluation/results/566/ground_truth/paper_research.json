@@ -1,0 +1,33 @@
+{
+  "question_id": "566",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.040202+00:00",
+  "paper_title": "Structural Transformation and Competitiveness in Pakistan",
+  "paper_year": "2008",
+  "source_paper": "41661-01-pak-tacr.pdf",
+  "research_answer": "The product space offers a compelling structural explanation for these countries' diverging economic trajectories. Pakistan, Bangladesh, and Sri Lanka share very similar positions in the product space \u2014 all specialized in the garments and textiles cluster on the periphery, with few connections to the broader industrial economy. This peripheral position means structural transformation is inherently difficult: the capabilities built in these sectors transfer poorly to higher-complexity products. Thailand and Indonesia, by contrast, are in a completely different situation \u2014 they not only dominate garments and electronics but have also penetrated the industrial core of the product space, where products are densely connected and diversification is much easier. Since countries with higher open forest (better-connected product positions) grow their export sophistication faster, and since export sophistication is itself positively linked to GDP growth, this structural divergence compounds over time. The product space essentially predicts that Thailand and Indonesia will continue to upgrade more easily than Pakistan, Bangladesh, and Sri Lanka unless the latter group makes successful jumps to new, better-connected clusters.",
+  "supporting_quotes": [
+    "Pakistan's orientation in the product space is similar to Bangladesh and Sri Lanka, which are also specialized in the garments and textiles area of the space.",
+    "Thailand and Indonesia are in a completely different situation when it comes to structural transformation, as they dominate not only garments and electronics, but have also penetrated the industrial core.",
+    "Countries with a high level of open forest enjoy faster subsequent growth in export sophistication and overall economic growth.",
+    "Countries that have managed to develop a sophisticated export package relative to their income level grow faster. However, countries specialized in relatively unsophisticated export baskets suffer lagging economic performance."
+  ],
+  "data_points": [
+    {
+      "metric": "product space location",
+      "countries": "Pakistan, Bangladesh, Sri Lanka",
+      "specialization": "garments/textiles periphery"
+    },
+    {
+      "metric": "product space penetration",
+      "countries": "Thailand, Indonesia",
+      "clusters": "garments, electronics, industrial core"
+    },
+    {
+      "metric": "open forest impact",
+      "relationship": "positive with future EXPY and GDP growth",
+      "significance": "highly significant"
+    }
+  ],
+  "confidence": "high"
+}

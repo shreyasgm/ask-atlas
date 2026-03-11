@@ -1,0 +1,45 @@
+{
+  "question_id": "479",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.020683+00:00",
+  "paper_title": "Economic Growth and Complexity in the UAE: Summary Report",
+  "paper_year": 2023,
+  "source_paper": "2023-05-UAE-growth-complexity-summary-report.pdf",
+  "research_answer": "The growth is real but the scale remains limited. Financial services and other business services \u2014 both high-complexity categories with strong PCIs \u2014 have seen strong growth in the UAE over 2005\u20132019. However, this growth started from a very low base, meaning the absolute export values are still small relative to the UAE's dominant service exports like trade, transport, and travel. Those three sectors alone account for 90% of the UAE's service exports. Financial services, despite their high complexity (PCI of 1.95), still carry an RCA of only 0.28 \u2014 well below the threshold for revealed comparative advantage. So while the direction of travel is positive for complexity upgrading in services, the UAE remains far from having built a genuinely competitive position in its most complex service categories.",
+  "supporting_quotes": [
+    "The UAE has seen strong growth in more complex services like financial services, and other business services, but overall these export values are still small as growth has come on top of a low base.",
+    "Three broad sectors (i.e., trade, transport, and other business services) make up 90% of the UAE's service exports.",
+    "Financial services... 0.28 RCA... 1.95 PCI"
+  ],
+  "data_points": [
+    {
+      "metric": "growth in complex services",
+      "value": "strong from low base",
+      "year": "2005-2019",
+      "country": "UAE",
+      "product": "financial services, business services"
+    },
+    {
+      "metric": "share of top 3 service export sectors",
+      "value": "90%",
+      "year": "2019",
+      "country": "UAE",
+      "product": "trade, transport, other business services"
+    },
+    {
+      "metric": "RCA in financial services",
+      "value": "0.28",
+      "year": "2019",
+      "country": "UAE",
+      "product": "financial services"
+    },
+    {
+      "metric": "PCI in financial services",
+      "value": "1.95",
+      "year": "2019",
+      "country": "UAE",
+      "product": "financial services"
+    }
+  ],
+  "confidence": "high"
+}

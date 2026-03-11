@@ -1,0 +1,35 @@
+{
+  "question_id": "397",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.995969+00:00",
+  "paper_title": "A Roadmap for Investment Promotion and Export Diversification: The Case of Jordan",
+  "paper_year": 2019,
+  "source_paper": "2020-01-cid-wp-374-roadmap-jordan-revised-march.pdf",
+  "research_answer": "Not really. While manufacturing accounts for roughly half of Jordan's industry diversity, that doesn't translate into a particularly strong position relative to benchmark economies. Jordan ranks approximately 5th among its benchmark group in manufacturing diversity. So despite manufacturing being a major component of what Jordan produces, it hasn't built the breadth of manufacturing capabilities that peer countries have. Interestingly, Jordan actually ranks 1st or 2nd among its benchmark peers in sectors like public administration, transportation/communications/utilities, and finance/insurance/real estate \u2014 suggesting its relative strengths lie more in services-adjacent sectors than in manufacturing.",
+  "supporting_quotes": [
+    "The results indicate that even though manufacturing accounts for roughly half of Jordan's diversity, the country's diversity in manufacturing is not particularly high in comparison to benchmark economies.",
+    "In the case of the public administration; transportation, communications and public utilities; and finance, insurance and real estate sectors, Jordan ranks first or second in diversity among the group."
+  ],
+  "data_points": [
+    {
+      "metric": "manufacturing share of diversity",
+      "value": "~50%",
+      "year": "2015",
+      "country": "Jordan"
+    },
+    {
+      "metric": "manufacturing diversity rank among peers",
+      "value": "5th among 8 benchmark countries",
+      "year": "2015",
+      "country": "Jordan"
+    },
+    {
+      "metric": "sectoral diversity ranking",
+      "value": "1st-2nd among peers",
+      "year": "2015",
+      "country": "Jordan",
+      "product": "public admin, transport/comms/utilities, finance/insurance/real estate"
+    }
+  ],
+  "confidence": "high"
+}

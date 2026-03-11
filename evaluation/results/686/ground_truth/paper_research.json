@@ -1,0 +1,46 @@
+{
+  "question_id": "686",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.076148+00:00",
+  "paper_title": "Engaging Overseas Sri Lankans to Facilitate Export Diversification",
+  "paper_year": 2018,
+  "source_paper": "srilanka_export_diversification_thesis.pdf",
+  "research_answer": "Both Taiwan and China experienced significant waves of diaspora return that were closely tied to the build-out of their technology export sectors, but the scale and timing differed. Taiwan saw 40,000 Chinese return from the US between 1986 and 1996, driven partly by a US technology recession in the early 1990s. This wave was critical to establishing Taiwan's high-tech export identity \u2014 by 2000, 42% of founders in the Hsinchu science park were diaspora returnees, and Taiwan had captured 90% of global scanner production. China's return wave came slightly later: by 2002, the Chinese news agency reported 130,000 diaspora had returned in a phenomenon dubbed 'B2C' (back-to-China). The much larger scale of China's return \u2014 over three times Taiwan's figure \u2014 reflects both China's larger population base and the intensity of the post-dot-com-crash reverse migration. Together, these cases suggest that external shocks in advanced economies (recessions, tech busts) can accelerate diaspora return and catalyze export complexity upgrading in origin countries.",
+  "supporting_quotes": [
+    "facing a US technology recession at the beginning of the 1990s, 40,000 Chinese returned to Taiwan from the US between 1986-1996",
+    "By the year 2000, 42% of company founders located in the Hsinchu science park (the home of the Taiwanese high-tech sector) were diaspora returnees",
+    "China too saw many return in a phenomenon dubbed B2C (back-to-China), the Chinese news agency at one point in 2002 reported that 130,000 diaspora had returned",
+    "by 2000 Taiwan produced 90% of the world's scanners, with Microtek itself producing 20% of the market"
+  ],
+  "data_points": [
+    {
+      "metric": "return migration",
+      "value": "40,000",
+      "year": "1986-1996",
+      "country": "Taiwan",
+      "product": "technology sector"
+    },
+    {
+      "metric": "diaspora founder share",
+      "value": "42%",
+      "year": "2000",
+      "country": "Taiwan",
+      "product": "high-tech"
+    },
+    {
+      "metric": "export market share",
+      "value": "90% global scanner production",
+      "year": "2000",
+      "country": "Taiwan",
+      "product": "scanners"
+    },
+    {
+      "metric": "return migration",
+      "value": "130,000",
+      "year": "2002",
+      "country": "China",
+      "product": "multiple sectors"
+    }
+  ],
+  "confidence": "high"
+}

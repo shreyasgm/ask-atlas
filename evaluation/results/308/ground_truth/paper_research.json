@@ -1,0 +1,50 @@
+{
+  "question_id": "308",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.946665+00:00",
+  "paper_title": "Fresh Tomatoes: Ideas to Build a Productive Eco-System",
+  "paper_year": 2014,
+  "source_paper": "1408_tomatoes_value_chain_analysis_nicolas_ajzenman.pdf",
+  "research_answer": "Even benchmarking against Macedonia \u2014 a much lower-value market than top producers like Spain or France \u2014 would dramatically transform Albania's export performance. If improving production organization and practices led to: (a) export prices rising to Macedonia's level, (b) a 20% yield improvement, and (c) a 50% reduction in quality-related losses, the combined effect would be a 14% increase in total production volume, a 60% increase in export volumes, and a 135% increase in export value. The export value doubling-plus comes from both higher volumes and higher prices per kilogram. This is notable because the benchmark is not France or Spain \u2014 it is Macedonia, a neighboring developing country. The gap between Albania's current performance and even this modest benchmark underscores how much value Albania is leaving on the table due to organizational and quality deficiencies rather than fundamental geographic or resource constraints.",
+  "supporting_quotes": [
+    "suppose the impact of this is (a) an increase in the export price which takes it to the same price that today Macedonia gets for their tomatoes (which of course is notably lower than the price that the top producers like Spain, France or Italy get), (b) a small increase in the yield of 20% and (c) a reduction of approximately 50% in the losses due to bad quality produce. The result of just improving the organization of production and apply better practices would be an additional 14% increase in the volume of production and an additional 60% increase in the volume of exports and 135% in the value of exports"
+  ],
+  "data_points": [
+    {
+      "metric": "yield improvement scenario",
+      "value": "20%",
+      "year": "2014",
+      "country": "Albania vs. Macedonia",
+      "product": "fresh tomatoes"
+    },
+    {
+      "metric": "quality loss reduction scenario",
+      "value": "50%",
+      "year": "2014",
+      "country": "Albania",
+      "product": "fresh tomatoes"
+    },
+    {
+      "metric": "export volume increase",
+      "value": "60%",
+      "year": "2014",
+      "country": "Albania",
+      "product": "fresh tomatoes"
+    },
+    {
+      "metric": "export value increase",
+      "value": "135%",
+      "year": "2014",
+      "country": "Albania",
+      "product": "fresh tomatoes"
+    },
+    {
+      "metric": "production volume increase",
+      "value": "14%",
+      "year": "2014",
+      "country": "Albania",
+      "product": "fresh tomatoes"
+    }
+  ],
+  "confidence": "high"
+}

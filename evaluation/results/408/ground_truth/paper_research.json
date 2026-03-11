@@ -1,0 +1,30 @@
+{
+  "question_id": "408",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.999746+00:00",
+  "paper_title": "Does Birthplace Diversity Affect Economic Complexity? Cross-country Evidence",
+  "paper_year": 2020,
+  "source_paper": "2020-03-cid-fellows-wp-125-diversity-economic-complexity.pdf",
+  "research_answer": "Birthplace diversity primarily helps countries export a broader range of products (extensive margin), but its effect on product uniqueness is less clear-cut. More diverse countries do export significantly more products with a revealed comparative advantage (RCA > 1) \u2014 about 12 additional competitive products per standard deviation increase in diversity. However, the relationship with export ubiquity \u2014 how rare or unique those products are in world trade \u2014 is not statistically significant, even though the directional trend suggests slightly less ubiquitous (more unique) exports. So diversity expands the export basket more reliably than it deepens the sophistication of individual products.",
+  "supporting_quotes": [
+    "While not all point estimates are statistically different from zero based on the conventional confidence intervals, we do find significant coefficients for the number of products with RCA above one (columns 7 to 9).",
+    "Panel B shows the partial correlations between skill-specific migration diversity and export ubiquity. Overall the estimates are not statistically different from zero, however the direction of the point estimates is toward a reduction of products ubiquity."
+  ],
+  "data_points": [
+    {
+      "metric": "Birthplace diversity effect on products with RCA>1",
+      "value": "positive and significant (~12 additional products)",
+      "year": "1990-2000",
+      "country": "Multiple (100 countries)",
+      "product": null
+    },
+    {
+      "metric": "Birthplace diversity effect on product ubiquity",
+      "value": "not statistically significant",
+      "year": "1990-2000",
+      "country": "Multiple (100 countries)",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

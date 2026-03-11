@@ -1,0 +1,35 @@
+{
+  "question_id": "697",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.078186+00:00",
+  "paper_title": "Structural Transformation in Chile",
+  "paper_year": 2007,
+  "source_paper": "structural_transformation_in_chile.pdf",
+  "research_answer": "Argentina and Chile present a striking contrast in terms of structural transformation potential. Chile is concentrated in a loosely-connected cluster of agricultural goods and natural resources that sit in a peripheral, sparse part of the product space. Its clusters are nearly fully saturated, there are virtually no upscale products within reach, and simulations show it struggles to diffuse even with relatively generous proximity assumptions. Argentina, on the other hand, has a very diffuse set of productive capabilities spread across the product space, implying many more opportunities for future structural transformation. This means Argentina's economy, even if it faces other constraints, has the productive knowledge base to jump to a much wider variety of new products than Chile does. In the density-sophistication framework, Argentina is explicitly listed alongside Canada and Mexico as having a much richer option set compared to Chile.",
+  "supporting_quotes": [
+    "Argentina has a very diffuse set of productive capabilities that imply many opportunities for future structural transformation, should other constraints to growth be addressed.",
+    "Chile is concentrated in a loosely-connected cluster of agricultural goods and natural resources, which are relatively disconnected from the product space.",
+    "Canada, Mexico, and even Argentina have a much richer option set."
+  ],
+  "data_points": [
+    {
+      "metric": "diversification potential",
+      "value": "many opportunities",
+      "year": "2005",
+      "country": "Argentina"
+    },
+    {
+      "metric": "product clusters",
+      "value": "loosely-connected ag and NR cluster",
+      "year": "2005",
+      "country": "Chile"
+    },
+    {
+      "metric": "diversification options",
+      "value": "richer option set",
+      "year": "2004",
+      "country": "Argentina"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,37 @@
+{
+  "question_id": "349",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.976556+00:00",
+  "paper_title": "Examining Beneficiation",
+  "paper_year": 2008,
+  "source_paper": "2008-5-cid-working-paper-162-examining-benefication.pdf",
+  "research_answer": "Precious metal exporters show a similar pattern to other raw material exporters \u2014 lateral diversification into unrelated sectors is at least as common as downstream processing. Only one-quarter of gold and silver exporters also export those metals in more processed forms, and one-third export jewelry and silverware. But strikingly, more than half \u2014 over 50% \u2014 of precious metals exporters also export fish, which has no direct forward linkage to mining. The probability of jointly exporting fish is actually higher than the probability of jointly exporting processed precious metals. This again suggests that the productive capabilities underlying raw mineral extraction (resource rights, capital-intensive extraction operations, remote logistics) translate more naturally into other resource-extraction activities like fishing than into the manufacturing processes required for metal refining or jewelry production.",
+  "supporting_quotes": [
+    "One-quarter of raw gold and silver exporters also export those metals in more processed forms, and one third also export jewelry and silverware.",
+    "The same proportion also export raw cotton, apparel, and other minerals, whereas over half also export fish."
+  ],
+  "data_points": [
+    {
+      "metric": "Joint exporting with processed precious metals",
+      "value": "25%",
+      "year": "1995",
+      "country": "global sample",
+      "product": "precious metals"
+    },
+    {
+      "metric": "Joint exporting with jewelry/silverware",
+      "value": "33%",
+      "year": "1995",
+      "country": "global sample",
+      "product": "precious metals"
+    },
+    {
+      "metric": "Joint exporting with fish",
+      "value": ">50%",
+      "year": "1995",
+      "country": "global sample",
+      "product": "precious metals and fish"
+    }
+  ],
+  "confidence": "high"
+}

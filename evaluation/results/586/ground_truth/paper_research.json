@@ -1,0 +1,46 @@
+{
+  "question_id": "586",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.047449+00:00",
+  "paper_title": "Opportunity analysis of agriculture products in Sri Lanka: Measuring markets and feasibility",
+  "paper_year": 2016,
+  "source_paper": "agri_sector_opportunities_feb_2018.pdf",
+  "research_answer": "Among fruits, Plantains & Bananas dominate with the largest global market and a considerable growth rate, making them the strongest large-scale opportunity. Soursop & Passion Fruit has a smaller market but is also growing strongly, suggesting emerging demand. Mango & Guava show a higher growth rate than most fruits but have a comparatively smaller market size. Strawberry and Pineapple are growing more slowly with market sizes similar to other fruits excluding Plantains. From Sri Lanka's perspective, most fruit exports are small in scale but growing very fast, which aligns with the global growth trajectory of products like Mango \u2014 suggesting there is momentum to build on, even if volumes are currently low.",
+  "supporting_quotes": [
+    "Plantains & Bananas have the largest market and the market is growing at a considerable growth rate. Soursop & Passion Fruit has a smaller market that is also growing strongly.",
+    "Mango & Guava have a higher growth rate of the world market, but comparatively lower market size.",
+    "Strawberry and Pineapple have less growth in the world market and market sizes that are similar to the other fruits except for Plantains & Bananas.",
+    "Most of the fruit exports are smaller in scale but growing very fast."
+  ],
+  "data_points": [
+    {
+      "metric": "market size and growth",
+      "value": "largest market, considerable growth",
+      "year": "2012-2016",
+      "country": "global",
+      "product": "Plantains & Bananas"
+    },
+    {
+      "metric": "market growth",
+      "value": "strong",
+      "year": "2012-2016",
+      "country": "global",
+      "product": "Soursop & Passion Fruit"
+    },
+    {
+      "metric": "market growth vs size",
+      "value": "high growth, lower market size",
+      "year": "2012-2016",
+      "country": "global",
+      "product": "Mango & Guava"
+    },
+    {
+      "metric": "export growth",
+      "value": "very fast but small scale",
+      "year": "2012-2016",
+      "country": "Sri Lanka",
+      "product": "fruits"
+    }
+  ],
+  "confidence": "high"
+}

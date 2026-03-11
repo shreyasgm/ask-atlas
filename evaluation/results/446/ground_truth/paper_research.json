@@ -1,0 +1,37 @@
+{
+  "question_id": "446",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.012070+00:00",
+  "paper_title": "What Will It Take for Jordan to Grow?",
+  "paper_year": 2022,
+  "source_paper": "2022-03-cid-wp-411-what-will-it-take-for-jordan-to-grow-final.pdf",
+  "research_answer": "Jordan's export basket to neighboring countries is notably more diverse and complex than what it ships to the rest of the world, including the United States. Iraq alone once accounted for 15\u201320% of Jordan's goods exports before the Daesh conflict disrupted trade routes. As these regional markets \u2014 particularly Iraq and Syria \u2014 collapsed, Jordan's export concentration shifted toward the US and other MENA markets. However, the exports that grew toward the US were heavily concentrated in lower-complexity products like garments, rather than the more sophisticated goods Jordan had been selling regionally. This shift helps explain part of Jordan's overall decline in economic complexity during the 2010s.",
+  "supporting_quotes": [
+    "Jordan exports a more diverse and more complex mix of exports to its neighbors than it does the rest of the world, and the United States in particular, and Iraq was a large destination for Jordanian exports prior to the Daesh conflict (15-20% of Jordan's goods exports).",
+    "Exports to some other markets did grow, but these tended to be focused within lower complexity \u2014 and hence lower-wage \u2014 products. For example, export growth to the United States continued but these were highly concentrated in garments.",
+    "As these traditionally important trade partners collapsed, the concentration of exports shifted, most prominently to the United States, and to other MENA markets in more recent years."
+  ],
+  "data_points": [
+    {
+      "metric": "share of goods exports to Iraq",
+      "value": "15-20%",
+      "year": "pre-2014",
+      "country": "Jordan",
+      "product": "all goods"
+    },
+    {
+      "metric": "export complexity",
+      "value": "higher to neighbors than to USA",
+      "year": "2010s",
+      "country": "Jordan"
+    },
+    {
+      "metric": "US export concentration",
+      "value": "low-complexity garments",
+      "year": "2010s",
+      "country": "Jordan",
+      "product": "garments"
+    }
+  ],
+  "confidence": "high"
+}

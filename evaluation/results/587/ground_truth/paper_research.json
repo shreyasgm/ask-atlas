@@ -1,0 +1,47 @@
+{
+  "question_id": "587",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.047813+00:00",
+  "paper_title": "Opportunity analysis of agriculture products in Sri Lanka: Measuring markets and feasibility",
+  "paper_year": 2016,
+  "source_paper": "agri_sector_opportunities_feb_2018.pdf",
+  "research_answer": "The EU is by far the largest single market for selected agricultural products, accounting for 42% of world imports. Within the EU, the most attractive opportunities differ by risk profile. Mango, Vanilla, Ginger, Turmeric, and Cinnamon offer the highest growth rates, making them dynamic opportunities even if their absolute market size may be smaller. Shrimp and Cuttlefish/Octopus & Bivalves combine large EU markets with considerable growth rates \u2014 offering both scale and momentum. Plantains & Bananas, Bell Pepper, and Cut Flowers have large EU markets but lower growth rates, positioning them as high-volume but mature, competitive categories. Tomatoes present the weakest EU picture \u2014 large market but the EU is actually a shrinking market for tomatoes. Spice exporters should particularly note that the EU is one of the best markets for Cinnamon and Ginger, which is significant for Sri Lanka given its spice export base.",
+  "supporting_quotes": [
+    "EU Market 40.6 [USD, bn], 42.0% [of world]",
+    "Mango, Vanilla, Ginger, Turmeric, and Cinnamon have the highest growth rates in the EU market.",
+    "Shrimp and Cuttlefish, Octopus & Bivalves have large markets in the EU with high growth rates.",
+    "Plantains & Bananas, Bell Pepper, and Cut Flowers have large markets but lower growth rates.",
+    "Tomatoes: Large world market but low growth (moderate in US and shrinking in EU)"
+  ],
+  "data_points": [
+    {
+      "metric": "share of world imports",
+      "value": "42.0%",
+      "year": "2016",
+      "country": "EU",
+      "product": "selected agricultural sectors"
+    },
+    {
+      "metric": "market growth",
+      "value": "highest",
+      "year": "2012-2016",
+      "country": "EU",
+      "product": "Mango, Vanilla, Ginger, Turmeric, Cinnamon"
+    },
+    {
+      "metric": "market size and growth",
+      "value": "large market, high growth",
+      "year": "2012-2016",
+      "country": "EU",
+      "product": "Shrimp, Cuttlefish, Octopus, Bivalves"
+    },
+    {
+      "metric": "market growth",
+      "value": "shrinking",
+      "year": "2012-2016",
+      "country": "EU",
+      "product": "Tomatoes"
+    }
+  ],
+  "confidence": "high"
+}

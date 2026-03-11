@@ -1,0 +1,37 @@
+{
+  "question_id": "414",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.001720+00:00",
+  "paper_title": "Implied Comparative Advantage",
+  "paper_year": 2020,
+  "source_paper": "2020-07-cid-wp-276-revised-implied-comparative-advantage.pdf",
+  "research_answer": "The predictive power of implied comparative advantage \u2014 derived from a country's existing export basket \u2014 improves substantially over longer time horizons. Using data from 1995 to 2016, the minimum explanatory power (R\u00b2) across any time window exceeds 8.5%, the mean across all horizons is 14.6%, and it reaches roughly 20% at the full 21-year horizon. This means that the structural gaps between where a country 'should' have comparative advantage (based on its neighbor industries and similar countries) and where it actually does are better signals of long-run export evolution than short-run shifts. The implication is that trade diversification is a slow, path-dependent process \u2014 not a sudden reorientation \u2014 and that the product space and country space together act as structural attractors pulling export patterns toward their implied equilibrium over decades.",
+  "supporting_quotes": [
+    "Figure 2 shows adjusted R\u00b2 values for international trade regressions (including base-year controls) over all possible year combinations. Each regression explains a sizable portion of the variation, with the lowest adjusted R\u00b2 exceeding 8.5%, and a mean R\u00b2 of 14.6%. Explanatory power generally improves as the interval increases",
+    "Residual, Hybrid Density, 1995: -0.024*** (0.001)... Table 6 shows regressions of growth in international exports."
+  ],
+  "data_points": [
+    {
+      "metric": "Minimum R\u00b2 for short-term growth prediction",
+      "value": "0.085",
+      "year": "1995-2000",
+      "country": "Multiple",
+      "product": "All traded goods"
+    },
+    {
+      "metric": "Mean R\u00b2 across all horizons",
+      "value": "0.146",
+      "year": "1995-2016",
+      "country": "Multiple",
+      "product": "All traded goods"
+    },
+    {
+      "metric": "Maximum R\u00b2 for long-term growth prediction",
+      "value": "0.20",
+      "year": "1995-2016",
+      "country": "Multiple",
+      "product": "All traded goods"
+    }
+  ],
+  "confidence": "high"
+}

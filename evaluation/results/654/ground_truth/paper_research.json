@@ -1,0 +1,38 @@
+{
+  "question_id": "654",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.069329+00:00",
+  "paper_title": "Moving to the Adjacent Possible: Discovering Paths for Export Diversification in Rwanda",
+  "paper_year": 2015,
+  "source_paper": "hausmann_chauvin_rwanda_294.pdf",
+  "research_answer": "The gap between Rwanda's current textile exports and its identified potential is enormous. As of 2010, Rwanda exports just $100,000 in textiles and footwear \u2014 a negligible amount \u2014 and has RCA in only 6 textile products, compared to 27 for Kenya and 28 for Tanzania. Yet the product space analysis identifies 12 frontier textile and garment products as feasible targets for Rwanda's global export diversification, representing more than $100 billion in world trade. The logic is that some of these products are 'adjacent' to capabilities Rwanda already has, making them achievable stepping stones rather than distant leaps. The contrast between Rwanda's current $100k baseline and a $100+ billion global market opportunity illustrates both the scale of the challenge and the potential upside if Rwanda can build the necessary productive capabilities.",
+  "supporting_quotes": [
+    "of which Rwanda already exports some US$ 100k in value",
+    "Textiles Rwanda Burundi Kenya Tanzania Uganda DRC 6 7 27 28 6 0",
+    "The 12 frontier products in this category account for more than $100 billion of world trade, with moderate growth rates."
+  ],
+  "data_points": [
+    {
+      "metric": "Current textile export value",
+      "value": "$100,000",
+      "year": "2010",
+      "country": "Rwanda",
+      "product": "Textiles, footwear"
+    },
+    {
+      "metric": "Textile products with RCA",
+      "value": "Rwanda: 6, Kenya: 27, Tanzania: 28",
+      "year": "2010",
+      "country": "East Africa",
+      "product": "Textiles"
+    },
+    {
+      "metric": "World trade in frontier textile products",
+      "value": ">$100 billion",
+      "year": "2010",
+      "country": "World",
+      "product": "Specialized textiles, garments"
+    }
+  ],
+  "confidence": "high"
+}

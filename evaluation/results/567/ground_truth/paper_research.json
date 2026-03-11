@@ -1,0 +1,41 @@
+{
+  "question_id": "567",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.040537+00:00",
+  "paper_title": "Structural Transformation and Competitiveness in Pakistan",
+  "paper_year": "2008",
+  "source_paper": "41661-01-pak-tacr.pdf",
+  "research_answer": "Beyond the immediate low-hanging fruit, Pakistan's product space analysis identifies a set of 'strategic bet' sectors that are further along the efficient frontier \u2014 requiring more of a capability leap but offering significantly higher sophistication and strategic value. Key examples include paint and coating manufacturing (strategic value ~$12,595), plastics packaging materials, film and sheet (~$12,453), and tire manufacturing (~$11,151). These sectors are more sophisticated than Pakistan's current exports and better connected to the industrial core of the product space, meaning success in them would open up a wider range of subsequent diversification options. They represent a middle path between the modest nearby opportunities (dairy, jewelry, oilseeds) and the very distant Vision 2030 targets (machinery, electronics). For comparison, even Pakistan's nearby 'low-hanging fruit' like dairy products offer high sophistication scores but are in world markets of $48 billion, while jewelry represents a $174 billion global market \u2014 but the strategic bets in intermediates like plastics and paints offer the additional advantage of better connecting Pakistan to higher-complexity manufacturing.",
+  "supporting_quotes": [
+    "Table 3 Further along the Efficient Frontier: Strategic Bets... Paint and coating manufacturing... Plastics packaging materials, film and sheet... Tire manufacturing...",
+    "In terms of the market size of the opportunities, the largest are aluminum, dairy, jewelry, oilseeds, and coffee/tea production. Dairy products in particular offer high sophistication and strategic value."
+  ],
+  "data_points": [
+    {
+      "metric": "strategic value",
+      "product": "paint and coating manufacturing",
+      "value": "12595"
+    },
+    {
+      "metric": "strategic value",
+      "product": "plastics packaging materials",
+      "value": "12453"
+    },
+    {
+      "metric": "strategic value",
+      "product": "tire manufacturing",
+      "value": "11151"
+    },
+    {
+      "metric": "world market size",
+      "product": "jewelry and silverware",
+      "value": "$174 billion"
+    },
+    {
+      "metric": "world market size",
+      "product": "dry/condensed/evaporated dairy",
+      "value": "$48 billion"
+    }
+  ],
+  "confidence": "high"
+}

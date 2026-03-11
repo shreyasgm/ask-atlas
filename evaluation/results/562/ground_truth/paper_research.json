@@ -1,0 +1,31 @@
+{
+  "question_id": "562",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.038838+00:00",
+  "paper_title": "Structural Transformation and Competitiveness in Pakistan",
+  "paper_year": "2008",
+  "source_paper": "41661-01-pak-tacr.pdf",
+  "research_answer": "Despite being the most feasible path for export diversification, Pakistan's low-hanging fruit offers surprisingly limited upside. Even if Pakistan were to achieve revealed comparative advantage in all of the high-density nearby products (those in the 90th percentile of density, including things like frozen foods, oilseeds, dairy products, jewelry, and paper products), total exports would increase by only approximately $408 million, or about 2% of current exports. The analysis notes this is a conservative estimate, but even scaling it up tenfold would still represent a relatively modest gain. This finding underscores the fundamental challenge Pakistan faces: the nearby, achievable opportunities in the product space are simply not numerous or large enough to drive a major transformation of the export basket. Real structural transformation would require jumping to more distant, better-connected parts of the product space \u2014 which is precisely what Pakistan has failed to do over the past 40 years.",
+  "supporting_quotes": [
+    "Even if Pakistan were able to achieve comparative advantage in the sectors listed in Table 1, exports would only increase by approximately $408 million, or 2%. This estimate is quite conservative, but even an increase of ten times that is relatively small."
+  ],
+  "data_points": [
+    {
+      "metric": "potential export increase from low-hanging fruit",
+      "country": "Pakistan",
+      "value": "$408 million",
+      "year": "2006"
+    },
+    {
+      "metric": "percentage increase",
+      "value": "2%"
+    },
+    {
+      "metric": "low-hanging fruit count",
+      "country": "Pakistan",
+      "threshold": "90th percentile density",
+      "count": "24 products"
+    }
+  ],
+  "confidence": "high"
+}

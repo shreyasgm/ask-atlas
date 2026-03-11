@@ -1,0 +1,37 @@
+{
+  "question_id": "681",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.075128+00:00",
+  "paper_title": "Engaging Overseas Sri Lankans to Facilitate Export Diversification",
+  "paper_year": 2018,
+  "source_paper": "srilanka_export_diversification_thesis.pdf",
+  "research_answer": "Taiwan's scanner industry is a striking case of diaspora-driven export transformation. When a returning diaspora member seeded the industry in 1980 by founding Microtek, it set off a chain of events that culminated in Taiwan producing 90% of the world's scanners by 2000 \u2014 with Microtek alone commanding 20% of the global market. This trajectory illustrates how a single diaspora returnee with industry knowledge and foreign market connections can anchor an entirely new export sector. By 2000, 42% of all company founders in the Hsinchu science park \u2014 Taiwan's high-tech export hub \u2014 were diaspora returnees, suggesting that the scanner story was part of a broader pattern of diaspora-led export diversification into high-complexity products.",
+  "supporting_quotes": [
+    "by 2000 Taiwan produced 90% of the world's scanners, with Microtek itself producing 20% of the market",
+    "By the year 2000, 42% of company founders located in the Hsinchu science park (the home of the Taiwanese high-tech sector) were diaspora returnees"
+  ],
+  "data_points": [
+    {
+      "metric": "export market share",
+      "value": "90% global scanner production",
+      "year": "2000",
+      "country": "Taiwan",
+      "product": "scanners"
+    },
+    {
+      "metric": "firm market share",
+      "value": "Microtek 20% of market",
+      "year": "2000",
+      "country": "Taiwan",
+      "product": "scanners"
+    },
+    {
+      "metric": "diaspora founder share",
+      "value": "42%",
+      "year": "2000",
+      "country": "Taiwan",
+      "product": "high-tech"
+    }
+  ],
+  "confidence": "high"
+}

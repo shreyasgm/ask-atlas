@@ -1,0 +1,41 @@
+{
+  "question_id": "401",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.997475+00:00",
+  "paper_title": "A Roadmap for Investment Promotion and Export Diversification: The Case of Jordan",
+  "paper_year": 2019,
+  "source_paper": "2020-01-cid-wp-374-roadmap-jordan-revised-march.pdf",
+  "research_answer": "Jordan experienced a prolonged and severe economic deterioration: nine consecutive years (2008\u20132017) of negative GDP per capita growth, resulting in a cumulative loss of 14% in GDP per capita over the decade from 2009 to 2018. This makes Jordan's case for diversification particularly urgent. Its economic complexity is already lower than what its income level would predict \u2014 itself a warning signal for slower future growth \u2014 and its export base is less diversified than benchmark peers, with industries that tend to be more common and less sophisticated globally. The combination of a shrinking economic base and a relatively weak productive structure underscores why broadening and upgrading exports is critical.",
+  "supporting_quotes": [
+    "Failure to cope with a 50.4% growth in population led to nine consecutive years (2008-2017) of negative growth rates in GDP per capita, resulting in a cumulative loss of 14.0% over the past decade (2009-2018).",
+    "Jordan shows an ECI index that is lower than what can be expected for its income per capita level.",
+    "Jordan, with a diversity of 178, ranks second-to-last among the benchmark countries."
+  ],
+  "data_points": [
+    {
+      "metric": "GDP per capita growth",
+      "value": "negative for 9 consecutive years",
+      "year": "2008-2017",
+      "country": "Jordan"
+    },
+    {
+      "metric": "cumulative GDP per capita loss",
+      "value": "14.0%",
+      "year": "2009-2018",
+      "country": "Jordan"
+    },
+    {
+      "metric": "ECI vs. income per capita",
+      "value": "below expected level",
+      "year": "2015",
+      "country": "Jordan"
+    },
+    {
+      "metric": "industry diversity rank among peers",
+      "value": "second-to-last",
+      "year": "2015",
+      "country": "Jordan"
+    }
+  ],
+  "confidence": "high"
+}

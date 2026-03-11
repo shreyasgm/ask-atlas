@@ -1,0 +1,46 @@
+{
+  "question_id": "307",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.946069+00:00",
+  "paper_title": "Fresh Tomatoes: Ideas to Build a Productive Eco-System",
+  "paper_year": 2014,
+  "source_paper": "1408_tomatoes_value_chain_analysis_nicolas_ajzenman.pdf",
+  "research_answer": "Capturing just 1% of Germany's fresh tomato imports would increase Albanian export volumes by 53% \u2014 a striking demonstration of how large and high-value the German market is relative to Albania's current export base. This is because Germany is a major high-value importer (with average prices around or above $2/kg), while Albania currently exports negligible volumes to Western Europe. To meet this additional demand without transforming the entire agricultural system, Albania would need to expand greenhouse facilities by only 10% (requiring an investment of approximately $6 million) and reduce current post-harvest losses by two-thirds. Post-harvest losses currently run at about 20% and amount to roughly 3,500 tons \u2014 a 2/3 reduction in those losses alone would yield a 3% increase in usable production and a 15% increase in export volumes. Combined, these two relatively modest interventions could unlock the 53% volume growth implied by 1% German market penetration.",
+  "supporting_quotes": [
+    "suppose Albania can get 1% of the fresh tomato imports of Germany. Ceteris Paribus... demand would be increased by about 7% in real terms, which in turn implied that exports would grow 53% in volumes",
+    "Just by increasing in only 10% the number of Ha with Greenhouse facilities (which requires an approximate investment of no more than $ 6 Million) and reducing by 2/3 the current losses due to lack of demand",
+    "Again, 2/3 reduction in those losses (which represent no more than 3.5 thousand Tones, less than 3% of total current production) would imply a 3% additional increase in production and a 15% increase in exports (in real terms)",
+    "the proportion of lost production is too high (about 20% on average according to our sample)"
+  ],
+  "data_points": [
+    {
+      "metric": "export volume growth from 1% German market share",
+      "value": "53%",
+      "year": "2014",
+      "country": "Albania",
+      "product": "fresh tomatoes"
+    },
+    {
+      "metric": "greenhouse expansion needed",
+      "value": "10%",
+      "year": "2014",
+      "country": "Albania",
+      "product": "fresh tomatoes"
+    },
+    {
+      "metric": "investment required",
+      "value": "$6 million",
+      "year": "2014",
+      "country": "Albania",
+      "product": "fresh tomatoes"
+    },
+    {
+      "metric": "post-harvest loss reduction impact on exports",
+      "value": "15% volume increase",
+      "year": "2014",
+      "country": "Albania",
+      "product": "fresh tomatoes"
+    }
+  ],
+  "confidence": "high"
+}

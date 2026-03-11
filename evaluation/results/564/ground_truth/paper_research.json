@@ -1,0 +1,45 @@
+{
+  "question_id": "564",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.039661+00:00",
+  "paper_title": "Structural Transformation and Competitiveness in Pakistan",
+  "paper_year": "2008",
+  "source_paper": "41661-01-pak-tacr.pdf",
+  "research_answer": "According to product space analysis, all of Pakistan's Vision 2030 priority industrial sectors are far from its current production capabilities, but there is meaningful variation among them. Chemicals is the closest sector in terms of product space density (0.12), making it the 'low-hanging fruit' of the strategy \u2014 but it also carries the lowest sophistication and strategic value among the priority sectors. Pharmaceuticals sits in a similar position of modest accessibility. Machinery, Electronics, and Automobiles are all very far away. Among these three, Machinery offers the best trade-off: it has the highest sophistication (PRODY ~$16,267) and strategic value, meaning it connects well to other high-value products. Electronics sits in the middle in terms of both distance and sophistication (~$13,967), while Automobiles are both far away and have the lowest sophistication (~$12,327), making them arguably the worst-positioned priority sector. The analysis suggests that if Pakistan were to pursue any of these ambitious targets, machinery would offer the most strategic leverage.",
+  "supporting_quotes": [
+    "The Chemicals sector is the one sector that is closest, but also has the lowest level of sophistication and strategic value of the priority sectors. This would make it the 'low-hanging fruit' sector in the strategy.",
+    "Machinery, Automobiles, and Electronics are very far away, but compared to one another machinery has higher sophistication and strategic value, automobiles the lowest, and electronics somewhere in between."
+  ],
+  "data_points": [
+    {
+      "metric": "density (proximity)",
+      "sector": "chemicals",
+      "value": "0.12",
+      "year": "2006"
+    },
+    {
+      "metric": "average sophistication (PRODY)",
+      "sector": "machinery",
+      "value": "$16,267",
+      "year": "2006"
+    },
+    {
+      "metric": "average sophistication (PRODY)",
+      "sector": "electronics",
+      "value": "$13,967",
+      "year": "2006"
+    },
+    {
+      "metric": "average sophistication (PRODY)",
+      "sector": "automobiles",
+      "value": "$12,327",
+      "year": "2006"
+    },
+    {
+      "metric": "distance from current production",
+      "sectors": "machinery, electronics, automobiles",
+      "finding": "All far, machinery has highest strategic value"
+    }
+  ],
+  "confidence": "high"
+}

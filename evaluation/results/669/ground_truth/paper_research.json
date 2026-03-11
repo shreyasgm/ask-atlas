@@ -1,0 +1,46 @@
+{
+  "question_id": "669",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.072580+00:00",
+  "paper_title": "Policies for Achieving Structural Transformation in the Caribbean",
+  "paper_year": 2009,
+  "source_paper": "policies-for-achieving-structural-transformation-in-the-caribbean-hausmann-klinger.pdf",
+  "research_answer": "CARICOM countries are significantly disadvantaged compared to Latin American peers in terms of product space connectivity. Costa Rica has established a presence in the electronics cluster \u2014 one of the most densely connected parts of the product space \u2014 in addition to diversified agriculture. Guatemala has significant agricultural diversification including processing activities, which creates more adjacencies for future expansion. By contrast, virtually all CARICOM countries are located in highly peripheral parts of the product space with few nearby activities. Their open forest values are extremely low, meaning there are few unoccupied products close enough to their current capabilities to move into. This places most CARICOM countries in the 'strategic bets' quadrant, requiring large leaps to new productive activities rather than incremental diversification, while countries like Costa Rica and Guatemala have more organic pathways available.",
+  "supporting_quotes": [
+    "For example, Costa Rica is present in the electronics cluster and Guatemala has significant agricultural diversification, including processing.",
+    "In general these figures show that the CARICOM countries are located in a highly peripheral part of the product space, but with some differences.",
+    "These figures suggest that the CARICOM countries are in an extremely sparse part of the product space.",
+    "Both of these methodologies suggest that the CARICOM countries are, for the most part, in the lower left 'strategic bets' quadrant: they have to move to new productive activities but have very few nearby."
+  ],
+  "data_points": [
+    {
+      "metric": "product space connectivity",
+      "value": "high",
+      "year": "2000",
+      "country": "Costa Rica",
+      "product": "electronics, agriculture"
+    },
+    {
+      "metric": "product diversification",
+      "value": "high",
+      "year": "2000",
+      "country": "Guatemala",
+      "product": "agriculture and processing"
+    },
+    {
+      "metric": "open forest",
+      "value": "extremely low",
+      "year": "2005",
+      "country": "all CARICOM countries",
+      "product": null
+    },
+    {
+      "metric": "policy quadrant classification",
+      "value": "strategic bets (lower-left)",
+      "year": "2005",
+      "country": "most CARICOM countries",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

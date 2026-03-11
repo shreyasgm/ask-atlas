@@ -1,0 +1,30 @@
+{
+  "question_id": "434",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.007709+00:00",
+  "paper_title": "Accelerating Growth in Albania through Targeted Investment Promotion",
+  "paper_year": 2020,
+  "source_paper": "2020-11-policy-note-albania-targeted-investment-promotion.pdf",
+  "research_answer": "Germany, one of the largest global markets for packing lids, sources its imports primarily from other European countries \u2014 particularly Poland and, to a lesser degree, the Czech Republic. This suggests that proximity and integration into European supply chains are key factors in serving the German market. For Albania to break into this market, it would need to compete against established Central and Eastern European suppliers that likely already have strong logistics ties and production networks with German buyers.",
+  "supporting_quotes": [
+    "If one then looks at the suppliers of German imports of packing lids, it becomes clear that other European trade partners provide the supply, such as Poland and to a lesser degree Czech Republic.",
+    "Italy and Greece represent only 2.5% and 0.2% of global demand, respectively, while countries such as Germany and France are bigger markets."
+  ],
+  "data_points": [
+    {
+      "metric": "Primary suppliers to Germany",
+      "value": "Poland, Czech Republic",
+      "year": "2018",
+      "country": "Germany",
+      "product": "packing lids"
+    },
+    {
+      "metric": "Global market share",
+      "value": "Germany and France are larger markets than Italy (2.5%) and Greece (0.2%)",
+      "year": "2018",
+      "country": "global",
+      "product": "packing lids"
+    }
+  ],
+  "confidence": "high"
+}

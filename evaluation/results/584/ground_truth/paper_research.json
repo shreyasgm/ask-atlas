@@ -1,0 +1,31 @@
+{
+  "question_id": "584",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.046691+00:00",
+  "paper_title": "Opportunity analysis of agriculture products in Sri Lanka: Measuring markets and feasibility",
+  "paper_year": 2016,
+  "source_paper": "agri_sector_opportunities_feb_2018.pdf",
+  "research_answer": "Despite being targeted for development in Sri Lanka, Sea Cucumber faces a shrinking market in East Asia \u2014 its primary destination. This is a significant red flag from a market attractiveness standpoint. East Asia (China, Japan, South Korea, Singapore, Hong Kong) represents 15.4% of world imports for selected agricultural products, and while it is a major seafood market overall, the demand trend for Sea Cucumber within that bloc is declining between 2012\u20132016. Additionally, Sea Cucumber is classified globally as a product with limited growth. This combination of regional market contraction and weak global momentum suggests Sea Cucumber carries substantial market risk as an export priority.",
+  "supporting_quotes": [
+    "MoPI targeted the development of the Sea Cucumber projects for the East Asian market. However, this product has a shrinking market in East Asia, which should be considered.",
+    "Cucumber & Gherkin, Tomatoes, Clove, Pineapple, Strawberry, Cut Flowers, Live Fish, Sea Cucumber have more limited growth",
+    "East Asian Market (China, Japan, South Korea, Singapore, Hong Kong) 14.9 [USD, bn], 15.4% [of world]"
+  ],
+  "data_points": [
+    {
+      "metric": "market growth",
+      "value": "shrinking",
+      "year": "2012-2016",
+      "country": "East Asia",
+      "product": "Sea Cucumber"
+    },
+    {
+      "metric": "market growth",
+      "value": "limited",
+      "year": "2012-2016",
+      "country": "global",
+      "product": "Sea Cucumber"
+    }
+  ],
+  "confidence": "high"
+}

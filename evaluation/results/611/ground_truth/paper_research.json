@@ -1,0 +1,37 @@
+{
+  "question_id": "611",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.056825+00:00",
+  "paper_title": "How should Uganda grow?",
+  "paper_year": 2014,
+  "source_paper": "cid_working_paper_275.pdf",
+  "research_answer": "Oil products score the lowest on both complexity and connectedness among all major product communities in the product space. Connectedness measures how many pathways a product offers into other products and communities \u2014 a high score means that producing this product builds capabilities that transfer easily to many other goods. Oil, by contrast, is linked to only one other product and to only one other community (petrochemicals) in the product space map. This isolation means that even a very successful oil export sector does little to build the productive capabilities needed to branch out into other industries. Compare this to machinery or chemicals communities, which score high on both complexity and connectedness, meaning success there opens doors to many further diversification opportunities. The implication is that oil-dependent economies face a structural disadvantage in building economic complexity, which helps explain why countries like Nigeria have struggled to develop robust non-oil export sectors.",
+  "supporting_quotes": [
+    "Conversely, another large community \u2013 oil \u2013 exhibits both the lowest complexity and connectedness score. This is also apparent in the map of the product space where oil products are linked to only one other product and to only one other community (petrochemicals).",
+    "In Figure 19 we see that the more complex communities are generally more connected. This means that as countries diversify into more complex products, they also increase their opportunities for further diversification. For example the machinery and the various chemicals communities are highly complex as well as highly connected."
+  ],
+  "data_points": [
+    {
+      "metric": "oil products complexity score",
+      "value": "lowest among all product communities",
+      "year": null,
+      "country": null,
+      "product": "oil"
+    },
+    {
+      "metric": "oil products connectedness",
+      "value": "lowest \u2014 linked to only 1 product and 1 community",
+      "year": null,
+      "country": null,
+      "product": "oil"
+    },
+    {
+      "metric": "machinery and chemicals connectedness",
+      "value": "high",
+      "year": null,
+      "country": null,
+      "product": "machinery, chemicals"
+    }
+  ],
+  "confidence": "high"
+}

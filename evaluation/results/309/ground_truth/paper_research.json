@@ -1,0 +1,46 @@
+{
+  "question_id": "309",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.947276+00:00",
+  "paper_title": "Fresh Tomatoes: Ideas to Build a Productive Eco-System",
+  "paper_year": 2014,
+  "source_paper": "1408_tomatoes_value_chain_analysis_nicolas_ajzenman.pdf",
+  "research_answer": "Yes, and geography is actually one of Albania's underutilized advantages. Fresh tomatoes are highly perishable and trade almost exclusively within regional proximity \u2014 the USA imports 99% of its tomatoes from Canada and Mexico, Brazil imports 100% from Argentina, and Australia imports 99% from New Zealand. This means distance is a fundamental structural constraint in the tomato trade globally. Albania sits within 2,200 km by land of major high-value markets like Germany, Switzerland, the Netherlands, and France \u2014 and within 1,500 km of emerging growth markets like Ukraine. These distances are entirely viable for fresh produce logistics. The irony is that despite this geographic advantage, Albania currently sells almost all its tomatoes to its immediate low-value neighbors (Kosovo, Serbia, Montenegro, Macedonia, Bulgaria, Greece), bypassing the higher-paying Western European and rapidly growing Eurasian markets that are geographically accessible.",
+  "supporting_quotes": [
+    "Tomatoes are perishable vegetables which cannot be profitably trade to very distant locations. For this reason, trade is most of the times regional (CommTrade Database): USA imports 99% of its production from its neighbors (Canada and Mexico), Brazil imports 100% from Argentina, Australia 99% from New Zealand",
+    "The higher-end markets of Europe (Germany, Switzerland, Netherlands, France, etc) are no more than 2,200 Km away by land (in the case of Amsterdam, the most distant location)",
+    "New trendy markets (for example) like Ukraine are less than 1,500 Km away",
+    "Kosovo 23%, Serbia 25%, Montenegro 14%, Bulgaria 11%, Macedonia 10%, Greece 6%, Others 11%"
+  ],
+  "data_points": [
+    {
+      "metric": "USA regional import share",
+      "value": "99%",
+      "year": "2012",
+      "country": "USA",
+      "product": "fresh tomatoes"
+    },
+    {
+      "metric": "Brazil regional import share",
+      "value": "100%",
+      "year": "2012",
+      "country": "Brazil",
+      "product": "fresh tomatoes"
+    },
+    {
+      "metric": "distance to Western European markets",
+      "value": "max 2,200 km",
+      "year": "2014",
+      "country": "Albania",
+      "product": "fresh tomatoes"
+    },
+    {
+      "metric": "distance to Eurasian growth markets",
+      "value": "<1,500 km",
+      "year": "2014",
+      "country": "Albania",
+      "product": "fresh tomatoes"
+    }
+  ],
+  "confidence": "high"
+}

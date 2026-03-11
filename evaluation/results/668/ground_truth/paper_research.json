@@ -1,0 +1,38 @@
+{
+  "question_id": "668",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.072380+00:00",
+  "paper_title": "Policies for Achieving Structural Transformation in the Caribbean",
+  "paper_year": 2009,
+  "source_paper": "policies-for-achieving-structural-transformation-in-the-caribbean-hausmann-klinger.pdf",
+  "research_answer": "The results are striking. If CARICOM were treated as a perfectly integrated single country, its export sophistication (EXPY) would actually be considered high relative to its level of development \u2014 a complete reversal from the picture at the individual country level, where most members are underperformers. Moreover, this integrated CARICOM's opportunities for structural transformation (measured by open forest) would be significantly better than for any individual member country \u2014 not merely an average of the members, but actually higher than the best individual member. Interestingly, if GDP per capita were weighted by population (giving Jamaica a larger weight), CARICOM's income level would appear even lower on the scale, making the export sophistication look even more impressive relative to development level. The implication is that deeper regional economic integration could be a meaningful lever for improving the Caribbean's collective trade competitiveness and diversification prospects.",
+  "supporting_quotes": [
+    "if CARICOM were a single, fully integrated country, its export sophistication would be considered high. And note that here we assigned the simple median GDP per capita across all CARICOM countries. If it were population-weighted, then Jamaica would be given a much larger weight, CARICOM would be even further to the left on the x-axis, and therefore even higher given its level of development.",
+    "Although future opportunities for structural transformation facing the Caribbean countries as an integrated block are more or less average for the level of development, they are significantly better than when considering each country individually.",
+    "It is important to note that the result is not merely an averaging of the individual members' level of sophistication and connectedness. For most sophistication and opportunities for future structural transformation, the levels for the block as a whole are higher than for any individual member country."
+  ],
+  "data_points": [
+    {
+      "metric": "EXPY (hypothetical integrated CARICOM)",
+      "value": "high relative to GDP",
+      "year": "2005",
+      "country": "CARICOM (hypothetical integration)",
+      "product": null
+    },
+    {
+      "metric": "open forest (hypothetical integrated CARICOM)",
+      "value": "significantly higher than individual countries",
+      "year": "2005",
+      "country": "CARICOM (hypothetical integration)",
+      "product": null
+    },
+    {
+      "metric": "EXPY and open forest (integrated vs. individual)",
+      "value": "integrated > max(individual countries)",
+      "year": "2005",
+      "country": "CARICOM",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

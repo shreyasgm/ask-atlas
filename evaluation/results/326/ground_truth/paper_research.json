@@ -1,0 +1,29 @@
+{
+  "question_id": "326",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.968840+00:00",
+  "paper_title": "Growth Diagnostics in Peru",
+  "paper_year": 2008,
+  "source_paper": "181.pdf",
+  "research_answer": "Very little of Peru's export growth has come from increased production volumes. Analysis of growth from 1993 to 1997 and again from 2001 to 2005 shows that the quantity component of export growth \u2014 actual increases in how much is being produced and exported \u2014 is a minority of total export growth. The bulk of the dollar-value increase in exports came from price effects, meaning Peru was largely riding commodity price cycles rather than expanding productive capacity. This makes the recovery fragile and dependent on continued favorable commodity prices, rather than reflecting a genuine expansion of Peru's productive base.",
+  "supporting_quotes": [
+    "Figure 14 shows recent overall export growth in blue, and the component of that growth that is through an increase in quantities in purple, first from 1993 to 1997, then from 2001 to 2005. Very little of the current growth in exports is from increased production."
+  ],
+  "data_points": [
+    {
+      "metric": "quantity-driven share of export growth",
+      "value": "small minority",
+      "year": "1993-1997 and 2001-2005",
+      "country": "Peru",
+      "product": "all exports"
+    },
+    {
+      "metric": "price-driven share of export growth",
+      "value": "dominant",
+      "year": "1993-1997 and 2001-2005",
+      "country": "Peru",
+      "product": "all exports"
+    }
+  ],
+  "confidence": "high"
+}

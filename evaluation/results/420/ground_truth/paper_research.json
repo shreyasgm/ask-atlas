@@ -1,0 +1,36 @@
+{
+  "question_id": "420",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.003669+00:00",
+  "paper_title": "Implied Comparative Advantage",
+  "paper_year": 2020,
+  "source_paper": "2020-07-cid-wp-276-revised-implied-comparative-advantage.pdf",
+  "research_answer": "The predictive accuracy is remarkably high. Using a probit model that combines product space and country space density, the area under the ROC curve (AUC) \u2014 a measure of binary classification accuracy \u2014 reaches approximately 0.93\u20130.94 across all datasets tested. For US establishments the AUC is 0.934, for Chilean establishments it is 0.936, and for international export data it is 0.936. An AUC of 0.5 is random chance, and 1.0 is perfect prediction. These results mean that knowing a location's existing export or industry mix, and knowing what similar locations do, gets you nearly all the way to correctly predicting which industries will be present or absent \u2014 before even observing any industry-specific data. This validates the product space concept at a binary presence/absence level, not just as a continuous measure of export intensity.",
+  "supporting_quotes": [
+    "Table 8 applies our probit regression model to the US and Chilean establishment data and international export data, for the first year of each. Our PS and CS densities combined explain one half of the variance in industry-location; AUC values are also very high (close to 94% for hybrid models)."
+  ],
+  "data_points": [
+    {
+      "metric": "AUC for USA establishments",
+      "value": "0.934",
+      "year": "2003",
+      "country": "United States",
+      "product": "All industries"
+    },
+    {
+      "metric": "AUC for Chile establishments",
+      "value": "0.936",
+      "year": "2005",
+      "country": "Chile",
+      "product": "All industries"
+    },
+    {
+      "metric": "AUC for international exports",
+      "value": "0.936",
+      "year": "1995",
+      "country": "119 countries",
+      "product": "All HS4 products"
+    }
+  ],
+  "confidence": "high"
+}

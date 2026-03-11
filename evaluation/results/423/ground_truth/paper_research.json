@@ -1,0 +1,50 @@
+{
+  "question_id": "423",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.004475+00:00",
+  "paper_title": "Implied Comparative Advantage",
+  "paper_year": 2020,
+  "source_paper": "2020-07-cid-wp-276-revised-implied-comparative-advantage.pdf",
+  "research_answer": "The framework performs well across all three countries but with interesting variation. For explaining current industry composition, US establishment data shows the strongest fit (R\u00b2=0.795), followed by Chile (R\u00b2=0.697), India's employment (R\u00b2=0.403), and US employment (R\u00b2=0.275). For predicting growth, India stands out with the highest R\u00b2 at 0.428 for employment growth over 1990\u20132005, suggesting that India's industrial evolution was particularly tightly constrained by relatedness during this period of rapid structural change. Chile's establishment growth prediction is also strong (R\u00b2=0.327), while US employment growth is somewhat lower (R\u00b2=0.220). The variation between employment and establishment data in the US (R\u00b2=0.220 vs. R\u00b2=0.231) suggests the framework picks up industry-location dynamics at multiple margins. Overall, the consistency across three very different country contexts \u2014 a high-income, a middle-income, and a large emerging economy \u2014 strengthens confidence that the product space mechanism is a general feature of economic geography.",
+  "supporting_quotes": [
+    "Table 5 shows the regressions for the US, India and Chile datasets. In all cases, both PS and CS density are significant (p < 0.001 in all cases); interestingly, they also yield coefficients that sum close to unity on average (from 0.75 to 1.1). As with the export data, R\u00b2 values are substantial, especially for establishments."
+  ],
+  "data_points": [
+    {
+      "metric": "R\u00b2 for PS+CS density on establishments (USA)",
+      "value": "0.795",
+      "year": "2003",
+      "country": "United States",
+      "product": "All industries"
+    },
+    {
+      "metric": "R\u00b2 for PS+CS density on establishments (Chile)",
+      "value": "0.697",
+      "year": "2005",
+      "country": "Chile",
+      "product": "All industries"
+    },
+    {
+      "metric": "R\u00b2 for PS+CS density on employment (India)",
+      "value": "0.403",
+      "year": "1990",
+      "country": "India",
+      "product": "All industries"
+    },
+    {
+      "metric": "R\u00b2 for residual predicting employment growth (India)",
+      "value": "0.428",
+      "year": "1990-2005",
+      "country": "India",
+      "product": "All industries"
+    },
+    {
+      "metric": "R\u00b2 for residual predicting employment growth (USA)",
+      "value": "0.220",
+      "year": "2003-2011",
+      "country": "United States",
+      "product": "All industries"
+    }
+  ],
+  "confidence": "high"
+}

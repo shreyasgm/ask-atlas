@@ -1,0 +1,41 @@
+{
+  "question_id": "330",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.970331+00:00",
+  "paper_title": "South Africa's Export Predicament",
+  "paper_year": 2006,
+  "source_paper": "2006-08-glwp-06-south_africa_export_predicament.pdf",
+  "research_answer": "The story has two interlocking parts. First, mining \u2014 South Africa's traditional export engine \u2014 faces a largely fixed resource endowment while the population nearly tripled, from 17 million in 1960 to 47 million in 2004, so mining exports per capita have declined substantially. Second, manufacturing, which could have picked up the slack, expanded in the 1960s and early 1970s but has been essentially stagnant since then. The result is that South Africa's export basket remains heavily concentrated in mining and metals \u2014 gold, coal, other mining, and basic iron and steel \u2014 with little diversification into new sectors. So it's not one factor but a combination: a diluted resource base and a failure of manufacturing to scale up and diversify.",
+  "supporting_quotes": [
+    "A principal cause behind the poor export performance is the fact that mining faces a rather fixed endowment in a country where the population has been rising. For example, in 1960, South Africa was a country with a population of 17 million. Today, South Africa is a country of 47 million.",
+    "Figure 7 shows that manufacturing per capita did expand in the 60s and early 70s, but since then has been quite stagnant.",
+    "Even today, South Africa's comparative advantage in exports is concentrated in mining and metals. As shown in Figure 8, the principal sectors showing large net exports are mining (gold (230), coal (210), other mining (220) and basic iron and steel (351))."
+  ],
+  "data_points": [
+    {
+      "metric": "population",
+      "value": "17 million",
+      "year": "1960",
+      "country": "South Africa"
+    },
+    {
+      "metric": "population",
+      "value": "47 million",
+      "year": "2004",
+      "country": "South Africa"
+    },
+    {
+      "metric": "manufacturing output per capita",
+      "value": "expanded then stagnant since early 1970s",
+      "year": "1960-2005",
+      "country": "South Africa"
+    },
+    {
+      "metric": "export concentration",
+      "value": "gold, coal, other mining, basic iron and steel",
+      "year": "2004",
+      "country": "South Africa"
+    }
+  ],
+  "confidence": "high"
+}

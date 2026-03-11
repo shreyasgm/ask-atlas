@@ -1,0 +1,46 @@
+{
+  "question_id": "585",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.047062+00:00",
+  "paper_title": "Opportunity analysis of agriculture products in Sri Lanka: Measuring markets and feasibility",
+  "paper_year": 2016,
+  "source_paper": "agri_sector_opportunities_feb_2018.pdf",
+  "research_answer": "The floriculture sector shows a stark split in global market dynamics. Cut Flowers have a significant market size but very low growth, making them a large but mature category. Live Plants and Foliage & Branches, by contrast, are actively shrinking in world markets \u2014 classifying them among the most concerning products from an export perspective. Interestingly, Live Plants show high growth rates in East Asia specifically (2012\u20132016), which is an exception to the global trend. For Cut Flowers, the EU market is one of the largest globally, but growth there is slower \u2014 meaning the overall volume opportunity exists but the market is competitive and stagnant. Export strategies in floriculture should therefore focus on Cut Flowers for volume while being cautious about Live Plants and Foliage given declining global demand.",
+  "supporting_quotes": [
+    "Live Plants and Foliage are shrinking on the world market. Cut Flowers have a significant market size and low market growth.",
+    "While Pineapple, Cinnamon, Vanilla, Plantains & Bananas, Live Plants, and Strawberries have the highest growth rates [in East Asia].",
+    "Plantains & Bananas, Bell Pepper, and Cut Flowers have large markets but lower growth rates [in EU].",
+    "Cardomom, Nutmeg & Mace, Cassava, Live Plants, Foliage & Branches have shrinking markets"
+  ],
+  "data_points": [
+    {
+      "metric": "market growth",
+      "value": "shrinking globally",
+      "year": "2012-2016",
+      "country": "global",
+      "product": "Live Plants, Foliage & Branches"
+    },
+    {
+      "metric": "market growth",
+      "value": "highest in East Asia",
+      "year": "2012-2016",
+      "country": "East Asia",
+      "product": "Live Plants"
+    },
+    {
+      "metric": "market growth",
+      "value": "low",
+      "year": "2012-2016",
+      "country": "global",
+      "product": "Cut Flowers"
+    },
+    {
+      "metric": "market size",
+      "value": "significant",
+      "year": "2016",
+      "country": "global",
+      "product": "Cut Flowers"
+    }
+  ],
+  "confidence": "high"
+}

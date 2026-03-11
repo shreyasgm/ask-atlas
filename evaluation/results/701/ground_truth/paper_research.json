@@ -1,0 +1,40 @@
+{
+  "question_id": "701",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.078853+00:00",
+  "paper_title": "Towards a Strategy for Economic Growth in Uruguay",
+  "paper_year": 2005,
+  "source_paper": "towards-strategy-economic-growth-uruguay.pdf",
+  "research_answer": "The key divergence was in real exchange rate management after each country's financial crisis. Chile sustained its real exchange rate depreciation from the 1982\u201383 financial crisis well into the late 1990s, meaning its currency remained significantly more competitive in 2002 than it had been in the late 1970s and early 1980s. This sustained competitiveness underpinned an export boom and average growth exceeding 7 percent for 14 consecutive years after 1984. Uruguay, by contrast, saw its competitiveness gains almost entirely eroded by 2001 due to real appreciation throughout the 1990s. Uruguay's average growth over the same 14-year period was less than 4 percent. The broader empirical pattern this illustrates is that growth take-offs are associated with sustained real exchange rate depreciations and sustained export growth \u2014 a condition Chile met but Uruguay did not.",
+  "supporting_quotes": [
+    "Chile was able to sustain its real exchange rate depreciation following the financial crisis of 1982-83 well into the late 1990s. As of 2002, its currency remained significantly more competitive than it had been in the late 1970s and early 1980s",
+    "In Uruguay, by contrast, the gain in competitiveness had almost all been given up by 2001 due to the real appreciation of the 1990s.",
+    "The country had seen a drop in GDP of 18 percent over the two previous years... starting that year, the country embarked on a sustained expansion with growth exceeding 7 percent on average for the following 14 years, compared to less than 4 percent for Uruguay in the same period.",
+    "This contrast between Uruguay and Chile illustrates an important empirical regularity: growth take-offs take place in the context of sustained real exchange rate depreciations and are associated with sustained export growth"
+  ],
+  "data_points": [
+    {
+      "metric": "average growth rate",
+      "value": ">7%",
+      "year": "14 years after 1984",
+      "country": "Chile"
+    },
+    {
+      "metric": "average growth rate",
+      "value": "<4%",
+      "year": "14 years after 1984",
+      "country": "Uruguay"
+    },
+    {
+      "metric": "RER competitiveness",
+      "value": "sustained depreciation through late 1990s",
+      "country": "Chile"
+    },
+    {
+      "metric": "competitiveness gains eroded",
+      "value": "almost all given up by 2001",
+      "country": "Uruguay"
+    }
+  ],
+  "confidence": "high"
+}

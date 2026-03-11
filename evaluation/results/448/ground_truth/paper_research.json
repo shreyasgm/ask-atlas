@@ -1,0 +1,35 @@
+{
+  "question_id": "448",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.012780+00:00",
+  "paper_title": "What Will It Take for Jordan to Grow?",
+  "paper_year": 2022,
+  "source_paper": "2022-03-cid-wp-411-what-will-it-take-for-jordan-to-grow-final.pdf",
+  "research_answer": "Jordan's total exports collapsed dramatically from 56% of GDP in 2008 to just 34% of GDP in 2016 \u2014 a decline of 22 percentage points over eight years. This was driven by a combination of shocks including the Global Financial Crisis, regional instability, and the loss of key trade corridors through Syria and Iraq. Goods exports never recovered as a share of GDP after the GFC, continuing to decline throughout the decade. However, a partial recovery began after 2016, led primarily by tourism (services exports), which had fallen mid-decade but began growing again. This recovery was then cut short by COVID-19's devastating impact on global travel.",
+  "supporting_quotes": [
+    "Exports collapsed from 56% of GDP in 2008 to 34% of GDP in 2016, but export recovery had begun, led by tourism, as exports climbed gradually each of the next three years.",
+    "Exports of goods never recovered as a share of GDP after the GFC and in fact continued to decline throughout the decade.",
+    "Service exports fell as a share of GDP in the middle of the last decade and had begun to grow until COVID-19 introduced an unprecedented shock to global travel and tourism."
+  ],
+  "data_points": [
+    {
+      "metric": "total exports as share of GDP",
+      "value": "56%",
+      "year": "2008",
+      "country": "Jordan"
+    },
+    {
+      "metric": "total exports as share of GDP",
+      "value": "34%",
+      "year": "2016",
+      "country": "Jordan"
+    },
+    {
+      "metric": "export recovery driver",
+      "value": "tourism-led services growth",
+      "year": "2016-2019",
+      "country": "Jordan"
+    }
+  ],
+  "confidence": "high"
+}

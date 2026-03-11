@@ -1,0 +1,45 @@
+{
+  "question_id": "352",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.977600+00:00",
+  "paper_title": "Examining Beneficiation",
+  "paper_year": 2008,
+  "source_paper": "2008-5-cid-working-paper-162-examining-benefication.pdf",
+  "research_answer": "Yes, logging is a partial exception among raw material sectors. While cotton and sugar show very low rates of joint exporting with their downstream industries (24% and 33% respectively), more than half of the world's log exporters also export sawmill output, and transitions from log exporting into sawmill output were relatively common over the 1995\u20132000 period. This is partly attributed to the widespread adoption of explicit beneficiation policies in the forestry sector \u2014 many countries have passed legislation requiring local processing of timber before export. Even so, even with this policy tailwind, more log exporters exported fruit than plywood \u2014 a higher-value downstream wood product \u2014 suggesting the broader pattern still holds: lateral diversification based on shared capabilities tends to dominate downstream processing even in sectors where policy actively promotes value addition.",
+  "supporting_quotes": [
+    "One interesting case is the logging sector. We see that more than half of the world's log exporters also export sawmill output, and it was common to see countries that exported logs but not mill output in 1995 transition to export mill output by 2000.",
+    "Nevertheless, even with this policy bias, we see that more log exporters exported fruit than plywood.",
+    "We are trying to measure natural economic relationships in a distortion-free equilibrium, but when using real-world export data our measures incorporate the effects of real-world policies."
+  ],
+  "data_points": [
+    {
+      "metric": "Log exporters also exporting sawmill output",
+      "value": ">50%",
+      "year": "1995",
+      "country": "global sample",
+      "product": "logs and sawmill output"
+    },
+    {
+      "metric": "Log exporters also exporting fruit vs. plywood",
+      "value": "fruit > plywood",
+      "year": "1995",
+      "country": "global sample",
+      "product": "logs, fruit, plywood"
+    },
+    {
+      "metric": "Cotton exporters also exporting processed cotton",
+      "value": "24%",
+      "year": "1995",
+      "country": "global sample",
+      "product": "cotton"
+    },
+    {
+      "metric": "Sugar exporters also exporting confectionery",
+      "value": "33%",
+      "year": "1995",
+      "country": "global sample",
+      "product": "sugar"
+    }
+  ],
+  "confidence": "high"
+}

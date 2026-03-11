@@ -1,0 +1,29 @@
+{
+  "question_id": "432",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.007062+00:00",
+  "paper_title": "Accelerating Growth in Albania through Targeted Investment Promotion",
+  "paper_year": 2020,
+  "source_paper": "2020-11-policy-note-albania-targeted-investment-promotion.pdf",
+  "research_answer": "Albania's packing lid exports grew substantially in the second half of the 2000s but stagnated and then declined following the Global Financial Crisis. The key reason was competitive displacement: Albania lost market share specifically in Greece, which continued to import packing lids throughout the 2010s but shifted its sourcing away from Albania. Given that Greece (along with Italy) accounted for about 80% of Albanian packing lid export demand, this shift in Greek import sourcing had an outsized negative effect on Albania's overall performance in this product category.",
+  "supporting_quotes": [
+    "Albania's packing lids exports increased substantially in the second half of the 2000s, but then stagnated and declined after the Global Financial Crisis. This was largely due to losing market share to Greece (which continued to import packing lids in the 2010s, but not much from Albania)."
+  ],
+  "data_points": [
+    {
+      "metric": "Export trajectory",
+      "value": "increase, then stagnation and decline",
+      "year": "2000s-2010s",
+      "country": "Albania",
+      "product": "packing lids"
+    },
+    {
+      "metric": "Competitive displacement",
+      "value": "market share lost to Greece",
+      "year": "post-2008 Global Financial Crisis",
+      "country": "Albania",
+      "product": "packing lids"
+    }
+  ],
+  "confidence": "high"
+}

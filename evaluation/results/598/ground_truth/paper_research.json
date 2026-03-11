@@ -1,0 +1,45 @@
+{
+  "question_id": "598",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.051797+00:00",
+  "paper_title": "What is the Binding Constraint to Growth in Albania?",
+  "paper_year": 2017,
+  "source_paper": "alb_growth_diagnostic_report.pdf",
+  "research_answer": "Natural resource extraction forms a substantial and long-standing pillar of Albania's export profile. As of 2014, mineral products alone accounted for 35% of goods exports \u2014 broken down as 20% from crude oil and 15% from other minerals and electrical energy \u2014 making crude oil the single largest individual export. When combined with metals, the minerals-and-metals category reaches 46% of total exports. This heavy resource dependence coexists with extremely limited FDI into non-mining manufacturing; most incoming FDI has instead flowed into electricity generation, mining, and telecommunications rather than into productive manufacturing sectors. The pattern suggests that Albania's resource exports reflect its natural endowments more than accumulated productive knowhow, which partly explains why its ECI is lower than expected for its income level.",
+  "supporting_quotes": [
+    "As of 2014, Albania's largest single export was crude oil. Mineral products and metals together accounted for 46% of Albania's exports.",
+    "mineral products made up 35% of Albania's goods exports in 2014 (20% from crude oil and 15% from other minerals and electrical energy).",
+    "However, very little FDI has flowed into non-mining manufacturing."
+  ],
+  "data_points": [
+    {
+      "metric": "export share - mineral products total",
+      "value": "35%",
+      "year": "2014",
+      "country": "Albania",
+      "product": "mineral products"
+    },
+    {
+      "metric": "export share - crude oil",
+      "value": "20%",
+      "year": "2014",
+      "country": "Albania",
+      "product": "crude oil"
+    },
+    {
+      "metric": "export share - minerals and metals combined",
+      "value": "46%",
+      "year": "2014",
+      "country": "Albania",
+      "product": "minerals and metals"
+    },
+    {
+      "metric": "non-mining manufacturing FDI",
+      "value": "very low",
+      "year": null,
+      "country": "Albania",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

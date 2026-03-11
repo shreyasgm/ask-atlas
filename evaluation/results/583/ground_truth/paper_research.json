@@ -1,0 +1,46 @@
+{
+  "question_id": "583",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.046306+00:00",
+  "paper_title": "Opportunity analysis of agriculture products in Sri Lanka: Measuring markets and feasibility",
+  "paper_year": 2016,
+  "source_paper": "agri_sector_opportunities_feb_2018.pdf",
+  "research_answer": "Pepper dominates the global spice market by a substantial margin, and it is among the fastest-growing products worldwide between 2012\u20132016. Its growth is high-to-moderate across the EU, US, and Middle East. However, the East Asian market for Pepper is actually shrinking \u2014 an important regional nuance. For Sri Lanka, Pepper is one of the two largest agricultural exports (alongside Cinnamon), and both are growing, though Cinnamon is growing faster. The combination of Pepper's dominant spice market position, strong Western market growth, and established Sri Lankan export presence makes it a key strategic product \u2014 though exporters should be aware of the declining East Asian demand.",
+  "supporting_quotes": [
+    "However, Pepper has the largest overall market by a substantial amount.",
+    "Shrimp, Pepper, Mango, Vanilla, Ginger & Cinnamon have the highest growth rates",
+    "Pepper: Moderate size and high-to-moderate growth in EU, US, ME; Shrinking in EA",
+    "Largest exports are Cinnamon and Pepper. Both are growing, but Cinnamon is growing faster."
+  ],
+  "data_points": [
+    {
+      "metric": "market size rank",
+      "value": "largest among spices",
+      "year": "2016",
+      "country": "global",
+      "product": "Pepper"
+    },
+    {
+      "metric": "market growth",
+      "value": "high-to-moderate",
+      "year": "2012-2016",
+      "country": "EU, USA, Middle East",
+      "product": "Pepper"
+    },
+    {
+      "metric": "market growth",
+      "value": "shrinking",
+      "year": "2012-2016",
+      "country": "East Asia",
+      "product": "Pepper"
+    },
+    {
+      "metric": "export status",
+      "value": "one of Sri Lanka's largest, growing",
+      "year": "2016",
+      "country": "Sri Lanka",
+      "product": "Pepper"
+    }
+  ],
+  "confidence": "high"
+}

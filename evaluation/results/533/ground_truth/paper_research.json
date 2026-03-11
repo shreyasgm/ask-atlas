@@ -1,0 +1,63 @@
+{
+  "question_id": "533",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.030922+00:00",
+  "paper_title": "Global Imbalances in International Trade, Dynamics of Debt and Finance: Causes and Mitigation Measures",
+  "paper_year": 2025,
+  "source_paper": "2025-08-glwp-252-global-imbalances.pdf",
+  "research_answer": "In 2024, China and the US sit on opposite ends of the global trade imbalance. China ran a current account surplus of $423.92 billion (1.7% of GDP), driven by a massive goods trade surplus of $767.9 billion, which was partially offset by a services trade deficit of $228.8 billion. The US, by contrast, recorded a current account deficit of $1.13 trillion (3.9% of GDP) \u2014 the largest ever recorded \u2014 anchored by a goods trade deficit of $1.21 trillion, only partially offset by a services surplus of $295.2 billion. The goods vs. services split tells a revealing structural story: China dominates in manufactured goods exports but remains a net importer of services (tourism, finance, IP royalties), while the US has retained strength in services even as its goods manufacturing base has eroded. Notably, the US bilateral deficit with China alone was $295.4 billion in 2024 \u2014 equivalent to 24.4% of the total US trade deficit \u2014 though this is down from a peak of $418.2 billion in 2018 following the imposition of US tariffs.",
+  "supporting_quotes": [
+    "in 2024, China's current account surplus reached a historic maximum of $423.92 billion, or 1.7% of GDP.",
+    "The trade surplus in goods in 2024 amounted to $767.9 billion.",
+    "Trade in services remained in deficit, amounting to $228.8 billion.",
+    "It widened by 25.2% in 2024 and reached its highest historical volume of $1.13 trillion or 3.9% of GDP.",
+    "The core of this deficit is the US trade deficit on goods, which stands at $1.21 trillion.",
+    "Surplus of balance on services was $295,2 billion",
+    "The US trade deficit with China rose substantially after China's Accession to the World Trade Organisation in 2001 and reached its historical maximum $418,2 billion in 2018."
+  ],
+  "data_points": [
+    {
+      "metric": "current account surplus",
+      "value": "$423.92 billion / 1.7% of GDP",
+      "year": "2024",
+      "country": "China",
+      "product": null
+    },
+    {
+      "metric": "trade surplus in goods",
+      "value": "$767.9 billion",
+      "year": "2024",
+      "country": "China",
+      "product": "goods"
+    },
+    {
+      "metric": "trade deficit in services",
+      "value": "$228.8 billion",
+      "year": "2024",
+      "country": "China",
+      "product": "services"
+    },
+    {
+      "metric": "current account deficit",
+      "value": "$1.13 trillion / 3.9% of GDP",
+      "year": "2024",
+      "country": "United States",
+      "product": null
+    },
+    {
+      "metric": "trade deficit on goods",
+      "value": "$1.21 trillion",
+      "year": "2024",
+      "country": "United States",
+      "product": "goods"
+    },
+    {
+      "metric": "trade surplus in services",
+      "value": "$295.2 billion",
+      "year": "2024",
+      "country": "United States",
+      "product": "services"
+    }
+  ],
+  "confidence": "high"
+}

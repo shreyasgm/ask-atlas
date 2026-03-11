@@ -1,0 +1,46 @@
+{
+  "question_id": "674",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.073559+00:00",
+  "paper_title": "Public\u2013Private Dialogs to Spur Export-led Growth: The Case of Productivity Taskforces in Namibia",
+  "paper_year": 2025,
+  "source_paper": "public-private-dialogs-to-spur-export-led-growth.pdf",
+  "research_answer": "Namibia has a surprisingly strong combination of structural trade advantages for high-value fruit exports. First, its harvest season runs from November to January \u2014 precisely the off-season for major grape-producing countries in the Northern Hemisphere like the US and Europe, meaning Namibia faces minimal direct competition when its produce hits those markets. Second, Namibia's ports are geographically closer to Europe than those of Peru, one of the world's leading fruit exporters, giving it a logistics cost edge on that key route. Third, Namibia's membership in AGOA provides preferential access to the US market compared to non-African exporters. Finally, Namibia signed an Economic Partnership Agreement with the EU in 2014 and has maintained commercial relationships with European countries since independence, providing favorable trade terms for its largest potential market.",
+  "supporting_quotes": [
+    "One of main factors that could boost Namibia's fruit exports was that its harvest season does not overlap with that of the Northern Hemisphere. Fruit harvest in Namibia spans from November to January, which offers a strategic advantage as it aligns with the off-season in major grape-producing countries in the Northern Hemisphere, including the United States and Europe.",
+    "Namibia was in an excellent position to cater to demand from the North American and European markets. The ports that can be accessed from and in Namibia are closer in distance to Europe than those used in leading countries in the sector, like Peru.",
+    "Being part of the African Growth and Opportunity Act (AGOA) gave Namibia a competitive edge when exporting to the United States vis-\u00e0-vis other non-African exporters of high-value fruits.",
+    "Namibia had also established commercial relationships with multiple European countries since its independence, and, in 2014, signed an Economic Partnership Agreement with the European Union."
+  ],
+  "data_points": [
+    {
+      "metric": "harvest season",
+      "value": "November-January (Northern Hemisphere off-season)",
+      "year": null,
+      "country": "Namibia",
+      "product": "grapes, high-value fruits"
+    },
+    {
+      "metric": "port proximity to Europe",
+      "value": "closer than Peru",
+      "year": null,
+      "country": "Namibia",
+      "product": "high-value fruits"
+    },
+    {
+      "metric": "trade agreement",
+      "value": "AGOA member",
+      "year": null,
+      "country": "Namibia",
+      "product": "high-value fruits"
+    },
+    {
+      "metric": "trade agreement",
+      "value": "EU Economic Partnership Agreement",
+      "year": "2014",
+      "country": "Namibia",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,30 @@
+{
+  "question_id": "441",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.010035+00:00",
+  "paper_title": "A Growth Diagnostic of Namibia",
+  "paper_year": 2022,
+  "source_paper": "2022-02-cid-wp-405-namibia-growth-diagnostic.pdf",
+  "research_answer": "Only one sector \u2014 Chemicals and plastics \u2014 has an average weighted PCI higher than zero, meaning it is the only sector contributing positively to Namibia's economic complexity. All other sectors in Namibia's export basket have weighted PCIs at or below zero, which pulls the country's overall ECI down. This is because the sectors that dominate Namibia's export diversity \u2014 Agriculture and Mineral products \u2014 are inherently low-complexity sectors. The country has no exported products with a PCI above the global median, so even the \"best\" products in Namibia's basket are only average or below-average in terms of embedded know-how and sophistication.",
+  "supporting_quotes": [
+    "Only one sector \u2013 Chemicals and plastics \u2013 has an average weighted PCI higher than zero, which contributes positively to Namibia's economic complexity.",
+    "no product in its current export basket displays an average PCI above the global median, and the products that concentrate most of the country's diversity \u2013 Agriculture and Mineral products \u2013 tend to be of low complexity."
+  ],
+  "data_points": [
+    {
+      "metric": "Sectors with positive weighted PCI",
+      "value": "1 (Chemicals and plastics only)",
+      "year": "2018",
+      "country": "Namibia",
+      "product": "Chemicals and plastics"
+    },
+    {
+      "metric": "Dominant diversity sectors",
+      "value": "Agriculture and Minerals (low complexity)",
+      "year": "2018",
+      "country": "Namibia",
+      "product": "Agriculture, Minerals"
+    }
+  ],
+  "confidence": "high"
+}

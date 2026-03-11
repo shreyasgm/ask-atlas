@@ -1,0 +1,37 @@
+{
+  "question_id": "538",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.031870+00:00",
+  "paper_title": "Neighbors and the Evolution of the Comparative Advantage of Nations: Evidence of International Knowledge Diffusion?",
+  "paper_year": 2013,
+  "source_paper": "235_updated_bahar_hausmann.pdf",
+  "research_answer": "The effect is substantial. The baseline (unconditional) probability of a country adding any new product to its export basket over a ten-year period is just 1.5%. But if at least one geographic neighbor already exports that product with a revealed comparative advantage (RCA) above 1, that probability jumps to about 2.5% \u2014 a 1 percentage point increase, or roughly 65% higher than the baseline. The effect also scales continuously: each doubling of a neighbor's export intensity (RCA) in a product is associated with an additional 0.4 percentage point increase in the likelihood of adoption. Critically, this effect disappears entirely when neighbors are randomly assigned rather than geographically defined, confirming the result is genuinely geographic and not a statistical artifact.",
+  "supporting_quotes": [
+    "The probability that a product is added to a country's export basket is, on average, 65% larger if a neighboring country is a successful exporter of that same product.",
+    "if a country has one neighbor that already exports product p with an RCA above 1 at the beginning of the period, then the chance that the country 'jumps' to that product increases by 1 percentage point. This represents for the average product an increase of roughly 65% in the probability of 'jumping' (from 1.5% to 2.5%)",
+    "a doubling in the export intensity of a product by a geographic neighbor (i.e. RCA) at the beginning of the period is associated, on average, with a 0.4 percentage points increase in the likelihood of a country adding that product to its export basket."
+  ],
+  "data_points": [
+    {
+      "metric": "Unconditional probability of product adoption (10-year period)",
+      "value": "1.5%"
+    },
+    {
+      "metric": "Probability with one neighbor having RCA>1",
+      "value": "2.5%"
+    },
+    {
+      "metric": "Absolute increase in adoption probability",
+      "value": "1 percentage point"
+    },
+    {
+      "metric": "Relative increase in adoption probability",
+      "value": "~65%"
+    },
+    {
+      "metric": "Adoption probability increase per doubling of neighbor RCA",
+      "value": "0.4 percentage points"
+    }
+  ],
+  "confidence": "high"
+}

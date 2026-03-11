@@ -1,0 +1,48 @@
+{
+  "question_id": "521",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.028534+00:00",
+  "paper_title": "Tackling Discrepancies in Trade Data: The Harvard Growth Lab International Trade Datasets",
+  "paper_year": 2025,
+  "source_paper": "2025-07-glwp-251-tackling-discrepancies-in-trade-data.pdf",
+  "research_answer": "Global trade data is far less reliable than most people assume. Only about 10% of all country pairs represent the 'best case' where both partners report a trade flow and their numbers agree within 25% of each other. The situation breaks down dramatically from there: roughly 50% of all possible country pairs show no trade reported by either side, about 9.3% have trade reported only by the exporter, and 10% only by the importer. Most strikingly, among the flows where both countries do report, nearly two-thirds \u2014 about 66.7% \u2014 show discrepancies greater than 25%, a threshold large enough to account for legitimate differences like freight and insurance costs. This means that truly consistent, jointly-reported bilateral trade data is the exception rather than the rule in international trade statistics.",
+  "supporting_quotes": [
+    "The best-case scenario, in which both partners report and the discrepancy is small, applies to only about 10% of all country pairs.",
+    "In 2010, approximately 50% of all possible country pairs fell into this category [neither country reported any bilateral trade].",
+    "the flows shown in blue and orange represent cases where trade was reported only by the exporter (9.3%) or only by the importer (10%), respectively.",
+    "nearly two-thirds of the jointly reported trade flows exhibit discrepancies greater than 25%, shown in green."
+  ],
+  "data_points": [
+    {
+      "metric": "Share of country pairs with ideal bilateral reporting (<25% discrepancy)",
+      "value": "10%",
+      "year": "2010",
+      "country": "Global"
+    },
+    {
+      "metric": "Share of country pairs with no trade reported by either side",
+      "value": "50%",
+      "year": "2010",
+      "country": "Global"
+    },
+    {
+      "metric": "Share of flows reported only by exporter",
+      "value": "9.3%",
+      "year": "2010",
+      "country": "Global"
+    },
+    {
+      "metric": "Share of flows reported only by importer",
+      "value": "10%",
+      "year": "2010",
+      "country": "Global"
+    },
+    {
+      "metric": "Share of jointly reported flows with >25% discrepancy",
+      "value": "66.7%",
+      "year": "2010",
+      "country": "Global"
+    }
+  ],
+  "confidence": "high"
+}

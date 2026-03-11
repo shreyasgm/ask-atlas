@@ -1,0 +1,59 @@
+{
+  "question_id": "572",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.042097+00:00",
+  "paper_title": "Can industrial zones address the binding constraints to Sri Lanka's growth?",
+  "paper_year": 2018,
+  "source_paper": "Growth_Diagnostic_And_Zones_24May2018.pdf",
+  "research_answer": "Sri Lanka's export basket is overwhelmingly concentrated in sectors with low intrafirm trade \u2014 79% of its exports fall into these low-intrafirm-trade categories. This is a striking contrast to regional peers: only 43% of Vietnam's exports, 25% of Thailand's, and 29% of Malaysia's fall into the same low-intrafirm-trade bucket. Intrafirm trade matters because it signals deep integration into multinational production networks \u2014 for example, in the US market, 87% of automobile imports, 75% of pharmaceutical imports, and 67% of electrical machinery imports are transacted between related parties, versus only 15% for apparel. Since Sri Lanka specializes heavily in apparel-type goods, it misses out on the technology transfer, capital, and stable demand that come with being embedded in producer-driven, intrafirm trade networks.",
+  "supporting_quotes": [
+    "In Sri Lanka, the export basket is largely lacking goods associated with high levels of intrafirm trade (Figure 5), indicating that the economy may in fact have issues attracting investment in those sectors.",
+    "in the US in 2000, 87% of automobile imports, 75% of pharmaceutical imports, and 67% of electrical machinery imports were from related parties, compared to only 15% of apparel imports",
+    "Figure 5. Sri Lanka has few exports in sectors dominated by intra-firm trade"
+  ],
+  "data_points": [
+    {
+      "metric": "share of exports in low intrafirm trade sectors",
+      "value": "79%",
+      "year": "2015",
+      "country": "Sri Lanka",
+      "product": null
+    },
+    {
+      "metric": "share of exports in low intrafirm trade sectors",
+      "value": "43%",
+      "year": "2015",
+      "country": "Vietnam",
+      "product": null
+    },
+    {
+      "metric": "share of exports in low intrafirm trade sectors",
+      "value": "25%",
+      "year": "2015",
+      "country": "Thailand",
+      "product": null
+    },
+    {
+      "metric": "share of exports in low intrafirm trade sectors",
+      "value": "29%",
+      "year": "2015",
+      "country": "Malaysia",
+      "product": null
+    },
+    {
+      "metric": "share of intrafirm imports",
+      "value": "87%",
+      "year": "2000",
+      "country": "United States",
+      "product": "automobiles"
+    },
+    {
+      "metric": "share of intrafirm imports",
+      "value": "15%",
+      "year": "2000",
+      "country": "United States",
+      "product": "apparel"
+    }
+  ],
+  "confidence": "high"
+}

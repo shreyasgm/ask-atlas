@@ -1,0 +1,46 @@
+{
+  "question_id": "687",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.076337+00:00",
+  "paper_title": "Engaging Overseas Sri Lankans to Facilitate Export Diversification",
+  "paper_year": 2018,
+  "source_paper": "srilanka_export_diversification_thesis.pdf",
+  "research_answer": "The occupational distribution of overseas Sri Lankans (OSL) in the US and Australia aligns surprisingly well with Sri Lanka's priority export sectors. In the US, 49% of employed OSL work in industries identified as high-potential by Sri Lanka's Board of Investment, while in Australia the figure is 39%, with 11,000 OSL specifically engaged in entrepreneurially likely occupations within those priority industries. This concentration is significant because it means a substantial share of the diaspora already possesses the sector-specific knowledge, networks, and credentials most relevant to the export industries Sri Lanka is trying to develop. Drawing on this diaspora \u2014 whether through return migration, remote collaboration, or market-access facilitation \u2014 could provide a targeted pathway to export diversification, particularly into higher-complexity sectors like IT services, which have already demonstrated growth from $213 million to $850 million between 2007 and 2015.",
+  "supporting_quotes": [
+    "Encouragingly, 49% of OSL are employed in industries which (at the highest level) were identified as high potential by the Board of Investment (BOI)",
+    "As in the US there is a significant proportion of OSL in priority industries with 39% of those in employment working in such industries",
+    "Table 4 shows that 11,000 OSL are engaged in entrepreneurially likely occupations in priority industries",
+    "The IT and BPO export industry is a small story of success however, growing exports from $213m to $850m from 2007-2015"
+  ],
+  "data_points": [
+    {
+      "metric": "employment share in priority industries",
+      "value": "49%",
+      "year": "2016",
+      "country": "USA",
+      "product": "multiple priority sectors"
+    },
+    {
+      "metric": "employment share in priority industries",
+      "value": "39%",
+      "year": "2016",
+      "country": "Australia",
+      "product": "multiple priority sectors"
+    },
+    {
+      "metric": "labor in high-skill occupations",
+      "value": "11,000",
+      "year": "2016",
+      "country": "Australia",
+      "product": "priority export sectors"
+    },
+    {
+      "metric": "export value",
+      "value": "$213m to $850m",
+      "year": "2007-2015",
+      "country": "Sri Lanka",
+      "product": "IT and BPO services"
+    }
+  ],
+  "confidence": "high"
+}

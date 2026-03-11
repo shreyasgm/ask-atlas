@@ -1,0 +1,60 @@
+{
+  "question_id": "670",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.072758+00:00",
+  "paper_title": "Policies for Achieving Structural Transformation in the Caribbean",
+  "paper_year": 2009,
+  "source_paper": "policies-for-achieving-structural-transformation-in-the-caribbean-hausmann-klinger.pdf",
+  "research_answer": "Both Belize and Jamaica have low-hanging fruit concentrated in agricultural and marine products, but Jamaica's nearby products are actually closer in absolute density terms. For Belize, the highest-density nearby products are cocoa beans (density 0.058), fish fillets (0.054), and wood products (0.049), all in agriculture, forestry, and mariculture. Jamaica's top nearby products include vegetables (density 0.093), fish (0.091), and legumes (0.091) \u2014 noticeably higher densities than Belize's equivalents, suggesting Jamaica has stronger existing capability links to these products. Jamaica also already has a presence in some of these sectors, giving it a head start. However, both countries' low-hanging fruit products tend to have low strategic value \u2014 they don't create many new downstream capabilities. Moving to products with higher strategic value requires longer leaps in the product space for both countries, though for Belize this challenge is especially acute given its extremely low EXPY.",
+  "supporting_quotes": [
+    "The low-hanging fruit in Belize is almost exclusively in agriculture: nontraditional agriculture, forest products, processed foods, and mariculture.",
+    "Jamaica's low-hanging fruit is also concentrated in a narrow range of activities: agriculture and mariculture, as well as a couple of garment and textile sectors.",
+    "It is interesting to note that comparing the two countries, the nearby sectors for Jamaica are much closer in absolute terms. Moreover, Jamaica already has a presence in some of these sectors.",
+    "But we can see in Figure 14 that on average these low-hanging fruit products have a lower strategic value: they do not represent the creation of a host of new capabilities with alternative uses."
+  ],
+  "data_points": [
+    {
+      "metric": "density",
+      "value": 0.058,
+      "year": "2005",
+      "country": "Belize",
+      "product": "cocoa beans"
+    },
+    {
+      "metric": "density",
+      "value": 0.054,
+      "year": "2005",
+      "country": "Belize",
+      "product": "fish fillets"
+    },
+    {
+      "metric": "density",
+      "value": 0.049,
+      "year": "2005",
+      "country": "Belize",
+      "product": "wood products"
+    },
+    {
+      "metric": "density",
+      "value": 0.093,
+      "year": "2004",
+      "country": "Jamaica",
+      "product": "vegetables"
+    },
+    {
+      "metric": "density",
+      "value": 0.091,
+      "year": "2004",
+      "country": "Jamaica",
+      "product": "fish"
+    },
+    {
+      "metric": "density",
+      "value": 0.091,
+      "year": "2004",
+      "country": "Jamaica",
+      "product": "legumes"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,38 @@
+{
+  "question_id": "442",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.010503+00:00",
+  "paper_title": "A Growth Diagnostic of Namibia",
+  "paper_year": 2022,
+  "source_paper": "2022-02-cid-wp-405-namibia-growth-diagnostic.pdf",
+  "research_answer": "Namibia is highly trade-dependent: foreign trade represents 84% of GDP as of 2019, making it pivotal to the entire economy. Despite this deep integration with global markets, the composition of trade does not reflect a sophisticated or diversified export structure. The export basket is dominated by primary products \u2014 diamonds, copper, zinc, and gold have been the main drivers of export growth \u2014 and no exported product exceeds the global median in product complexity. This creates a vulnerability: a country so reliant on trade, but with exports concentrated in volatile commodity markets, faces significant risk when commodity cycles turn. The 7x growth in net exports between 2000 and 2018 was largely tied to the commodity super-cycle, and market shares for those key products remained volatile throughout.",
+  "supporting_quotes": [
+    "Foreign trade represents 84% of GDP in 2019 and is pivotal to its economy.",
+    "until 2018, net exports multiplied by a factor of 7, driven mostly by higher demand for diamonds, copper, zinc, and gold.",
+    "growth in exports has not been accompanied with substantive growth in market shares of its main products, with highly volatile trajectories. This trend highlights potential challenges around sustaining long periods of rapid and inclusive growth."
+  ],
+  "data_points": [
+    {
+      "metric": "Trade as share of GDP",
+      "value": "84%",
+      "year": "2019",
+      "country": "Namibia",
+      "product": null
+    },
+    {
+      "metric": "Net exports growth",
+      "value": "7x",
+      "year": "2000-2018",
+      "country": "Namibia",
+      "product": "diamonds, copper, zinc, gold"
+    },
+    {
+      "metric": "Market share trajectory",
+      "value": "volatile, no substantive growth",
+      "year": "2000-2018",
+      "country": "Namibia",
+      "product": "minerals"
+    }
+  ],
+  "confidence": "high"
+}

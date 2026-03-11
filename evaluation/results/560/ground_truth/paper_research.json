@@ -1,0 +1,34 @@
+{
+  "question_id": "560",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.037213+00:00",
+  "paper_title": "Structural Transformation and Competitiveness in Pakistan",
+  "paper_year": "2008",
+  "source_paper": "41661-01-pak-tacr.pdf",
+  "research_answer": "Pakistan's garments and textiles specialization is a trap because of how the product space is structured. While the garment cluster is internally tight \u2014 meaning once you can make pants, it's relatively easy to also make shorts or skirts \u2014 it is very weakly connected to the rest of the product space. Moving from pants to spark plugs or hard drives requires an almost entirely different set of capabilities. Pakistan has essentially fully saturated this garment cluster between 1975 and 2000 without making any substantial jumps to new areas of the product space. The problem is that continued consolidation within garments offers diminishing returns: there are few nearby products outside the cluster that Pakistan can realistically target, since the capabilities built in garments don't transfer well to higher-complexity industries. This is in sharp contrast to the Philippines, Thailand, and Indonesia, which used their garment footholds as a springboard \u2014 the Philippines jumped to electronics, while Thailand and Indonesia went further and penetrated the industrial core.",
+  "supporting_quotes": [
+    "While this cluster is tightly connected within itself (i.e. once you make pants, it is easy to then make shorts and skirts) it is very weakly connected to the rest of the space (once you make pants, it is not much easier to make spark plugs or hard drives). Pakistan has almost fully occupied the tight cluster and seems to be left with few nearby options for structural transformation around these sectors.",
+    "Between 1975 and 2000 Pakistan did not make any substantial jumps and occupy new areas of the product space.",
+    "The Philippines has also occupied that cluster, but that country has also made the jump to another tightly-knit cluster, this one much better connected to the rest of the industrial core: electronics."
+  ],
+  "data_points": [
+    {
+      "metric": "intra-cluster connectivity",
+      "country": "Pakistan",
+      "cluster": "garments/textiles",
+      "finding": "High internal, very low external connectivity"
+    },
+    {
+      "metric": "product space expansion",
+      "country": "Pakistan",
+      "period": "1975\u20132000",
+      "finding": "No substantial new sectors entered"
+    },
+    {
+      "metric": "cluster jumping",
+      "country": "Philippines",
+      "finding": "Successfully moved from garments to electronics"
+    }
+  ],
+  "confidence": "high"
+}

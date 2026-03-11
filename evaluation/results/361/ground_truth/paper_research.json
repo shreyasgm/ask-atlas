@@ -1,0 +1,52 @@
+{
+  "question_id": "361",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.980432+00:00",
+  "paper_title": "Constraints to Sustained and Inclusive Growth in Sri Lanka: An Initial Diagnosis and Key Topics for Discussion",
+  "paper_year": 2016,
+  "source_paper": "2016.01.07_hausmann_initial_constraints.pdf",
+  "research_answer": "Yes \u2014 retreaded tires are a notable exception to the pattern seen in Sri Lanka's other major exports. Sri Lanka holds a remarkable 33% global share of retreaded tire exports and competes against much wealthier nations: Belgium ($46,000 GDP per capita), Germany ($37,000), Japan ($35,000), and Brazil ($11,000). This is the opposite of the situation in garments and tea, where Sri Lanka competes against lower-income countries. Retreaded tires account for about 3% of Sri Lanka's exports, suggesting this is a niche success story that bucks the general trend but hasn't been scaled into broader export diversification.",
+  "supporting_quotes": [
+    "Retreaded Tires: Middle and high income competitors... Global Share of Retreaded Tires Exports (Net) in 2014 [showing Sri Lanka 33%, China 14%, Japan 11%, Brazil 9%] with GDP per capita showing Sri Lanka at ~$4,000 vs Belgium $47,000, Germany $37,000, Japan $36,000, Brazil $11,000"
+  ],
+  "data_points": [
+    {
+      "metric": "Global retreaded tires export share",
+      "value": "33%",
+      "year": "2014",
+      "country": "Sri Lanka",
+      "product": "Retreaded tires"
+    },
+    {
+      "metric": "GDP per capita",
+      "value": "$3,800",
+      "year": "2014",
+      "country": "Sri Lanka"
+    },
+    {
+      "metric": "GDP per capita",
+      "value": "$46,000",
+      "year": "2014",
+      "country": "Belgium"
+    },
+    {
+      "metric": "GDP per capita",
+      "value": "$37,000",
+      "year": "2014",
+      "country": "Germany"
+    },
+    {
+      "metric": "GDP per capita",
+      "value": "$35,000",
+      "year": "2014",
+      "country": "Japan"
+    },
+    {
+      "metric": "Retreaded tires share of exports",
+      "value": "~3%",
+      "year": "2014",
+      "country": "Sri Lanka"
+    }
+  ],
+  "confidence": "high"
+}

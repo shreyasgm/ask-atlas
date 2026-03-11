@@ -1,0 +1,52 @@
+{
+  "question_id": "665",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.071807+00:00",
+  "paper_title": "Policies for Achieving Structural Transformation in the Caribbean",
+  "paper_year": 2009,
+  "source_paper": "policies-for-achieving-structural-transformation-in-the-caribbean-hausmann-klinger.pdf",
+  "research_answer": "Jamaica's EXPY is being pulled upward by two specific products: beer (6% of exports, PRODY of $10,200) and chemicals (3.7% of exports, PRODY of $14,700). These are relatively high-sophistication products that inflate the overall sophistication score. However, this doesn't necessarily mean Jamaica has a broadly complex or well-connected export base. In fact, Jamaica is an outlier in terms of having extremely few nearby opportunities for structural transformation in the product space \u2014 it has already fully occupied the peripheral agriculture and garment activities, leaving it with almost nowhere nearby to expand. So Jamaica's elevated EXPY is driven by a narrow set of products rather than deep economic complexity.",
+  "supporting_quotes": [
+    "One exception seems to be Jamaica, whose EXPY is being pulled up by exports of beer (6% of exports with a PRODY of $10,200) and chemicals (3.7% of exports with a PRODY of $14,700).",
+    "Jamaica, on the other hand, has completely occupied the peripheral agriculture and garment activities. It has no other activities that are nearby because it has already capitalized on all those products that require similar capabilities, and it is not clear where it can go next.",
+    "Even countries that are not outliers in terms of having highly unsophisticated current exports, most importantly Jamaica, are outliers in terms of having few nearby opportunities for structural transformation."
+  ],
+  "data_points": [
+    {
+      "metric": "PRODY",
+      "value": 10200,
+      "year": "2005",
+      "country": "Jamaica",
+      "product": "beer"
+    },
+    {
+      "metric": "export share",
+      "value": 0.06,
+      "year": "2005",
+      "country": "Jamaica",
+      "product": "beer"
+    },
+    {
+      "metric": "PRODY",
+      "value": 14700,
+      "year": "2005",
+      "country": "Jamaica",
+      "product": "chemicals"
+    },
+    {
+      "metric": "export share",
+      "value": 0.037,
+      "year": "2005",
+      "country": "Jamaica",
+      "product": "chemicals"
+    },
+    {
+      "metric": "open forest",
+      "value": "extremely low",
+      "year": "2005",
+      "country": "Jamaica",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

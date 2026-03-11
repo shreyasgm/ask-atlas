@@ -1,0 +1,30 @@
+{
+  "question_id": "433",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.007397+00:00",
+  "paper_title": "Accelerating Growth in Albania through Targeted Investment Promotion",
+  "paper_year": 2020,
+  "source_paper": "2020-11-policy-note-albania-targeted-investment-promotion.pdf",
+  "research_answer": "Albania's exports of insulated electrical wire (HS 8544) grew more than fourfold between 2015 and 2018, rising from under $4 million per year to over $18 million. The growth has been driven primarily by exports to Germany and the Czech Republic. This surge coincides with Albania successfully attracting foreign producers of automotive wiring harnesses, such as Yura and Sumitomo, suggesting that the export growth is closely tied to the arrival of multinational manufacturers integrating Albania into European automotive supply chains.",
+  "supporting_quotes": [
+    "Exports of insulated electrical wire (HS 8544) have also grown rapidly from under 4 million USD per year to over 18 million USD over 2015-18, driven by exports to Germany and the Czech Republic.",
+    "Albania has had recent success in attracting producers of wiring harnesses for cars (i.e. Yura, Sumitomo)."
+  ],
+  "data_points": [
+    {
+      "metric": "Export value",
+      "value": "4 million USD to 18 million USD",
+      "year": "2015-2018",
+      "country": "Albania",
+      "product": "insulated electrical wire (HS 8544)"
+    },
+    {
+      "metric": "Export destinations",
+      "value": "Germany, Czech Republic",
+      "year": "2015-2018",
+      "country": "Albania",
+      "product": "insulated electrical wire (HS 8544)"
+    }
+  ],
+  "confidence": "high"
+}

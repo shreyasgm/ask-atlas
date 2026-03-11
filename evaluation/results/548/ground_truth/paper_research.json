@@ -1,0 +1,45 @@
+{
+  "question_id": "548",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.033694+00:00",
+  "paper_title": "Neighbors and the Evolution of the Comparative Advantage of Nations: Evidence of International Knowledge Diffusion?",
+  "paper_year": 2013,
+  "source_paper": "235_updated_bahar_hausmann.pdf",
+  "research_answer": "Export similarities between neighboring countries are systematically stronger for non-primary-resource-based (NPRB) manufactured goods than for primary-resource-based (PRB) commodities. The border effect is slightly larger for NPRB products (0.9 standard deviations above the mean) than for all products combined (0.8 standard deviations). Similarly, the combined border-plus-same-region effect is 1.25 standard deviations for NPRB versus 1.2 for all goods. This pattern makes sense: primary commodity exports are largely determined by geography and natural resource endowments, which are idiosyncratic and not transferable across borders. Manufactured goods, by contrast, depend heavily on productive knowledge, technology, and organizational capabilities \u2014 precisely the kinds of things that can diffuse across borders through trade, migration, and observation of neighboring country success. Japan and Korea, for example, export 61.75% of NPRB products with above-average RCA, compared to only 34.71% for PRB products.",
+  "supporting_quotes": [
+    "Sharing a border is associated with an export similarity index that is, on average, higher by 0.8 standard deviations above the mean for all products and 0.9 for NPRB goods.",
+    "neighboring countries in the same region to have, on average, a similarity index higher by roughly 1.2 standard deviations above the mean relative to non-neighbors from different regions for all goods and 1.25 for NPRB products.",
+    "Japan and Korea export 61.75% of all of their NPRB products with an RCA above their respective means (in the upper right part of the graph), compared to only 34.71% for PRB products."
+  ],
+  "data_points": [
+    {
+      "metric": "Border effect \u2014 all products",
+      "value": "+0.8 standard deviations"
+    },
+    {
+      "metric": "Border effect \u2014 NPRB products",
+      "value": "+0.9 standard deviations"
+    },
+    {
+      "metric": "Border + region effect \u2014 all products",
+      "value": "+1.2 standard deviations"
+    },
+    {
+      "metric": "Border + region effect \u2014 NPRB products",
+      "value": "+1.25 standard deviations"
+    },
+    {
+      "metric": "Japan & Korea: NPRB products with above-mean RCA",
+      "value": "61.75%",
+      "country": "Japan, Korea",
+      "year": "2008"
+    },
+    {
+      "metric": "Japan & Korea: PRB products with above-mean RCA",
+      "value": "34.71%",
+      "country": "Japan, Korea",
+      "year": "2008"
+    }
+  ],
+  "confidence": "high"
+}

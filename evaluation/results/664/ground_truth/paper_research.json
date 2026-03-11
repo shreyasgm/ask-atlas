@@ -1,0 +1,30 @@
+{
+  "question_id": "664",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.071624+00:00",
+  "paper_title": "Policies for Achieving Structural Transformation in the Caribbean",
+  "paper_year": 2009,
+  "source_paper": "policies-for-achieving-structural-transformation-in-the-caribbean-hausmann-klinger.pdf",
+  "research_answer": "Tourism specialization alone doesn't explain CARICOM's low export sophistication. Cyprus and Malta are useful comparators here \u2014 both have comparable tourism intensity to several CARICOM economies (measured by visitor arrivals per 100,000 population), yet they maintain significantly higher merchandise export sophistication than their Caribbean counterparts. Malta has moved into electronics manufacturing and machinery, while Cyprus exports machinery, metal products, and chemicals \u2014 all products approaching or within the industrial core of the product space. So CARICOM countries appear to be underperforming on merchandise export complexity even after accounting for their tourism orientation.",
+  "supporting_quotes": [
+    "What is interesting to note is that, although those two countries have comparable tourism activity (among those CARICOM countries for which we have arrivals data), they also have higher export sophistication in their merchandise export baskets. So at least taking these two comparators into account, the CARICOM countries are not suffering a lagging EXPY simply because they are concentrated in tourism.",
+    "But in addition to those sectors, both countries have made greater inroads into the industrial core, with Malta moving into electronics manufacturing and machinery, and Cyprus becoming a significant exporter of machinery and other metal products, as well as some chemical products."
+  ],
+  "data_points": [
+    {
+      "metric": "EXPY comparison",
+      "value": "higher for Cyprus and Malta",
+      "year": "2005",
+      "country": "Cyprus, Malta vs. CARICOM",
+      "product": null
+    },
+    {
+      "metric": "product space location",
+      "value": "industrial core",
+      "year": "2000",
+      "country": "Malta, Cyprus",
+      "product": "electronics, machinery, metal products, chemicals"
+    }
+  ],
+  "confidence": "high"
+}

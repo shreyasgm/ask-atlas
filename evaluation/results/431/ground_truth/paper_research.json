@@ -1,0 +1,22 @@
+{
+  "question_id": "431",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.006764+00:00",
+  "paper_title": "Accelerating Growth in Albania through Targeted Investment Promotion",
+  "paper_year": 2020,
+  "source_paper": "2020-11-policy-note-albania-targeted-investment-promotion.pdf",
+  "research_answer": "Packing lids (HS 3923) have a Product Complexity Index (PCI) of -0.067, which is notably higher than Albania's average PCI of -0.39. This means packing lids are a relatively more sophisticated product compared to what Albania typically exports, making them an interesting candidate for export expansion from an economic complexity standpoint \u2014 they represent a step up the complexity ladder for the country.",
+  "supporting_quotes": [
+    "Packing lids present a higher complexity index than Albania's average (-0.067 vs -0.39)."
+  ],
+  "data_points": [
+    {
+      "metric": "Product Complexity Index (PCI)",
+      "value": "-0.067 for packing lids vs -0.39 for Albania average",
+      "year": "2018",
+      "country": "Albania",
+      "product": "packing lids (HS 3923)"
+    }
+  ],
+  "confidence": "high"
+}

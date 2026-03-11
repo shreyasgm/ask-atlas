@@ -1,0 +1,38 @@
+{
+  "question_id": "638",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.065303+00:00",
+  "paper_title": "Growth Diagnostic: Paraguay",
+  "paper_year": 2007,
+  "source_paper": "growth_diagnostic_paraguay.pdf",
+  "research_answer": "The expansion is dramatically misaligned with Paraguay's natural land suitability. By 2006, Paraguay had planted over 2.2 million hectares of soybeans, but only 542,000 hectares of its land is classified as suitable or very suitable for the crop \u2014 meaning Paraguay has planted soybeans on roughly four times more land than is actually well-suited for it, pushing into only moderately suitable territory. Meanwhile, Paraguay has left a massive opportunity largely untapped: the country has over 4.6 million hectares classified as very suitable or suitable for sugar, yet has planted only about 75,000 hectares \u2014 just 1.6% of its suitable sugar land. This contrast is especially striking given that the relative price of sugar to soybeans doubled between 2004 and 2006, partly due to demand for sugar-based bio-ethanol.",
+  "supporting_quotes": [
+    "The country only has 542000 hectares of land which is classified either as suitable or very suitable for soybeans, but it has already planted 2.2 million hectares, 4 times more than this amount. To do so, it has had to go to lands which are deemed only moderately suitable.",
+    "By contrast, the country has over 4.6 million hectares that are deemed either very suitable or suitable for sugar but has planted barely 75.000 or 1.6 percent of the total.",
+    "But this situation has now reversed with the relative price of sugar doubling between 2004 and 2006 in part due to the use of sugar in bio-ethanol."
+  ],
+  "data_points": [
+    {
+      "metric": "soybean cultivation vs. suitable land",
+      "value": "2.2M hectares planted vs. 542k hectares suitable (4x overshoot)",
+      "year": "2006",
+      "country": "Paraguay",
+      "product": "soybeans"
+    },
+    {
+      "metric": "sugar cultivation vs. suitable land",
+      "value": "75,000 hectares planted vs. 4.6M hectares suitable (1.6% utilization)",
+      "year": "2006",
+      "country": "Paraguay",
+      "product": "sugar"
+    },
+    {
+      "metric": "relative price change",
+      "value": "sugar/soybean price ratio doubled",
+      "year": "2004-2006",
+      "country": "Paraguay",
+      "product": "sugar vs. soybeans"
+    }
+  ],
+  "confidence": "high"
+}

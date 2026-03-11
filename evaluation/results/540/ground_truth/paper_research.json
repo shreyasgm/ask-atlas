@@ -1,0 +1,47 @@
+{
+  "question_id": "540",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.032235+00:00",
+  "paper_title": "Neighbors and the Evolution of the Comparative Advantage of Nations: Evidence of International Knowledge Diffusion?",
+  "paper_year": 2013,
+  "source_paper": "235_updated_bahar_hausmann.pdf",
+  "research_answer": "Neighboring countries that share a border have export baskets that are, on average, twice as similar as non-neighboring country pairs. Quantitatively, the average export similarity index for border-sharing neighbors is 0.40, compared to just 0.16 for non-neighbors \u2014 a stark difference. Statistically, sharing a border is associated with an export similarity index that is about 0.8 standard deviations above the mean for all products, rising slightly to 0.9 standard deviations when focusing on non-primary-resource-based (NPRB) manufactured goods. When you combine the border effect with being in the same geographic region, the advantage widens to approximately 1.2 standard deviations above the mean for all goods and 1.25 for NPRB products.",
+  "supporting_quotes": [
+    "countries sharing a border have export baskets that are, on average, twice as similar as pairs of countries that do not share a border. The average Sc,c0 for border sharing geographic neighbors (i.e. share a border) is 0.40, compared to 0.16 for non-neighbors.",
+    "Sharing a border is associated with an export similarity index that is, on average, higher by 0.8 standard deviations above the mean for all products and 0.9 for NPRB goods.",
+    "neighboring countries in the same region to have, on average, a similarity index higher by roughly 1.2 standard deviations above the mean relative to non-neighbors from different regions for all goods and 1.25 for NPRB products."
+  ],
+  "data_points": [
+    {
+      "metric": "Export Similarity Index \u2014 border-sharing neighbors",
+      "value": "0.40",
+      "year": "2000"
+    },
+    {
+      "metric": "Export Similarity Index \u2014 non-neighbors",
+      "value": "0.16",
+      "year": "2000"
+    },
+    {
+      "metric": "Border effect (all products)",
+      "value": "+0.8 standard deviations",
+      "year": "2000"
+    },
+    {
+      "metric": "Border effect (NPRB products)",
+      "value": "+0.9 standard deviations",
+      "year": "2000"
+    },
+    {
+      "metric": "Border + same-region effect (all products)",
+      "value": "+1.2 standard deviations",
+      "year": "2000"
+    },
+    {
+      "metric": "Border + same-region effect (NPRB products)",
+      "value": "+1.25 standard deviations",
+      "year": "2000"
+    }
+  ],
+  "confidence": "high"
+}

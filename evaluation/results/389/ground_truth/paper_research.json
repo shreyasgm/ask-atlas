@@ -1,0 +1,37 @@
+{
+  "question_id": "389",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.993184+00:00",
+  "paper_title": "A Structural Ranking of Economic Complexity",
+  "paper_year": 2019,
+  "source_paper": "2019-11-cid-fellows-wp-119-structural-rank-ec.pdf",
+  "research_answer": "Product complexity rankings are meaningfully less robust than country rankings. The rank correlation between the original Product Complexity Index (PCI) and the structural OLS-based alternative is 0.84, compared to 0.96 for country rankings. A striking example of disagreement is musical instruments (HS 92): the original PCI places them 4th most complex globally, while the structural approach ranks them 35th. Part of the reason for lower robustness is a statistical limitation \u2014 the product similarity matrix is constructed using export data from 127 countries to evaluate only 97 products, so there is less information per product than per country in the estimation.",
+  "supporting_quotes": [
+    "The product ranking is somewhat less robust, which may not come as a surprise given that we use export data from 127 countries to evaluate the similarities of 97 products.",
+    "For instance, 'Musical instruments, parts and accessories of such articles' (92) are ranked 4th by the original PCI, but 35th according to our structural alternative using OLS in the first step."
+  ],
+  "data_points": [
+    {
+      "metric": "Rank correlation: structural OLS vs original PCI (products)",
+      "value": "0.84",
+      "year": "2016",
+      "country": null,
+      "product": "97 HS2 products"
+    },
+    {
+      "metric": "Musical instruments (HS 92): original PCI rank",
+      "value": "4th",
+      "year": "2016",
+      "country": null,
+      "product": "HS 92"
+    },
+    {
+      "metric": "Musical instruments (HS 92): structural OLS rank",
+      "value": "35th",
+      "year": "2016",
+      "country": null,
+      "product": "HS 92"
+    }
+  ],
+  "confidence": "high"
+}

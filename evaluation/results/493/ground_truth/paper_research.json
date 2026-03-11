@@ -1,0 +1,30 @@
+{
+  "question_id": "493",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.023285+00:00",
+  "paper_title": "Export-led Growth",
+  "paper_year": 2024,
+  "source_paper": "2024-07-glwp-231-export-led-growth.pdf",
+  "research_answer": "Exports consistently grow faster than GDP as countries develop, and this relationship holds both across countries and within countries over time. Looking across 171 countries in 2019, the elasticity of exports per capita to GDP per capita is 1.53 \u2014 meaning a 1% increase in income per capita is associated with a 1.53% increase in exports per capita. This implies the gap in export intensity between rich and poor countries grows more than proportionally with income. Within individual countries tracked over time, the elasticity is 1.37, confirming that as countries grow richer, their exports tend to expand even faster than their overall economy. Together, these findings suggest that export-led growth is not just a development strategy but a structural feature of how economies scale \u2014 richer, more developed economies are systematically more export-intensive.",
+  "supporting_quotes": [
+    "The slope of this curve implies an elasticity of 1.53 with a standard error of 0.09. This means that the gap in export per capita grows more than proportionally with income per capita.",
+    "Within countries, a dynamic estimation of this slope over time delivers an elasticity of 1.37 with a standard error of 0.06, meaning that as countries grow, their exports tend to grow faster than GDP."
+  ],
+  "data_points": [
+    {
+      "metric": "cross-section elasticity of exports per capita to GDP per capita",
+      "value": "1.53",
+      "year": "2019",
+      "country": "171 countries",
+      "product": "all exports"
+    },
+    {
+      "metric": "within-country time-series elasticity of exports to GDP",
+      "value": "1.37",
+      "year": "multiple years",
+      "country": "multiple countries",
+      "product": "all exports"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,52 @@
+{
+  "question_id": "327",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.969155+00:00",
+  "paper_title": "Growth Diagnostics in Peru",
+  "paper_year": 2008,
+  "source_paper": "181.pdf",
+  "research_answer": "Peru's export trajectory over this period forms a deep U-shape with almost no net progress. Real exports per capita stood at $522 in 1979, then fell 40% by 1983, and collapsed by over 80% to just $176 by 1993 \u2014 the trough. By 2005, after more than a decade of recovery, exports per capita had reached $547, only modestly above the 1979 peak. In other words, it took Peru roughly 26 years just to return to where it started in per capita export terms, and the composition of those exports was essentially unchanged \u2014 still dominated by mining and hydrocarbons.",
+  "supporting_quotes": [
+    "From 1979 to 1983, exports per capita fell by 40%, and from 1979 to 1993, by over 80%.",
+    "1979 Exports per capita (real $): 522; 1993 Exports per capita (real $) 176; 2005 Exports per capita (real $) 547",
+    "the same activities that declined \u2013 mining and energy \u2013 are the ones that are leading the current recovery in exports to levels that in real per capita terms are similar to those achieved 30 years ago."
+  ],
+  "data_points": [
+    {
+      "metric": "exports per capita (real)",
+      "value": "$522",
+      "year": "1979",
+      "country": "Peru",
+      "product": "all exports"
+    },
+    {
+      "metric": "exports per capita (real)",
+      "value": "$176",
+      "year": "1993",
+      "country": "Peru",
+      "product": "all exports"
+    },
+    {
+      "metric": "exports per capita (real)",
+      "value": "$547",
+      "year": "2005",
+      "country": "Peru",
+      "product": "all exports"
+    },
+    {
+      "metric": "exports per capita decline",
+      "value": "40%",
+      "year": "1979-1983",
+      "country": "Peru",
+      "product": "all exports"
+    },
+    {
+      "metric": "exports per capita decline",
+      "value": ">80%",
+      "year": "1979-1993",
+      "country": "Peru",
+      "product": "all exports"
+    }
+  ],
+  "confidence": "high"
+}

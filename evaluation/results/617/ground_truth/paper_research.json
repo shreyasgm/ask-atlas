@@ -1,0 +1,69 @@
+{
+  "question_id": "617",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.058791+00:00",
+  "paper_title": "The Exposure of U.S. Manufacturing Industries to Exchange Rates",
+  "paper_year": 2018,
+  "source_paper": "cidrfwp92.pdf",
+  "research_answer": "U.S. export sectors vary dramatically in their sensitivity to dollar appreciation. Motor vehicles are the most exposed, with an elasticity of -1.86 \u2014 meaning a 10% dollar appreciation reduces motor vehicle export volumes by nearly 19%. Aluminum and iron & steel exports also have elasticities greater than 1 in absolute value, making them highly sensitive. Wood and pulp exports have an elasticity of -1.27, also above unity. Paper exports are moderately sensitive at -0.63. By contrast, pharmaceuticals, chemicals, and plastics exports show no statistically significant response to exchange rate movements at all. This divide likely reflects product sophistication: pharmaceuticals (with a product complexity ranking of 234) are differentiated, hard-to-substitute goods where buyers don't easily switch based on price, while commodities like aluminum and steel face much more price-driven competition.",
+  "supporting_quotes": [
+    "Motor vehicle exports have an exchange rate elasticity of -1.86, indicating that a 10 percent appreciation of the dollar will reduce the volume of exports by almost 19 percent.",
+    "Aluminum and iron & steel exports also have elasticities greater than unity.",
+    "Forestry exports are sensitive to the exchange rate, with the elasticity for wood & pulp exports equal to -1.27",
+    "and the elasticity for paper exports equal to -0.63",
+    "On the other hand, there is no evidence that pharmaceuticals, chemicals, and plastics exports are affected by exchange rates.",
+    "Product Complexity Ranking [for Pharmaceuticals (30)]: 234"
+  ],
+  "data_points": [
+    {
+      "metric": "exchange rate elasticity",
+      "value": "-1.86",
+      "year": null,
+      "country": "United States",
+      "product": "motor vehicles"
+    },
+    {
+      "metric": "exchange rate elasticity",
+      "value": ">1 (absolute value)",
+      "year": null,
+      "country": "United States",
+      "product": "aluminum"
+    },
+    {
+      "metric": "exchange rate elasticity",
+      "value": ">1 (absolute value)",
+      "year": null,
+      "country": "United States",
+      "product": "iron & steel"
+    },
+    {
+      "metric": "exchange rate elasticity",
+      "value": "-1.27",
+      "year": null,
+      "country": "United States",
+      "product": "wood & pulp"
+    },
+    {
+      "metric": "exchange rate elasticity",
+      "value": "-0.63",
+      "year": null,
+      "country": "United States",
+      "product": "paper"
+    },
+    {
+      "metric": "exchange rate elasticity",
+      "value": "not significant",
+      "year": null,
+      "country": "United States",
+      "product": "pharmaceuticals"
+    },
+    {
+      "metric": "product complexity ranking",
+      "value": "234",
+      "year": null,
+      "country": null,
+      "product": "pharmaceuticals"
+    }
+  ],
+  "confidence": "high"
+}

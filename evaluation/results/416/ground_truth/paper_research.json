@@ -1,0 +1,51 @@
+{
+  "question_id": "416",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.002333+00:00",
+  "paper_title": "Implied Comparative Advantage",
+  "paper_year": 2020,
+  "source_paper": "2020-07-cid-wp-276-revised-implied-comparative-advantage.pdf",
+  "research_answer": "Industries that are 'unexpectedly present' \u2014 meaning a country has comparative advantage in them despite low product space and country space density \u2014 tend to disappear over time at significantly elevated rates. This pattern holds across international trade data and subnational data for the US and Chile. In the US, the probit coefficient for residual on disappearance is +2.50 (p<0.001), and in Chile it is +1.76 (p<0.001). The international export dataset shows a coefficient of +1.28 (p<0.001). Conversely, industries that are 'unexpectedly absent' \u2014 where implied density is high but current exports are low \u2014 tend to appear over time. The US coefficient on appearance is -2.39 and Chile's is -2.33 (both p<0.001). Together, this reveals a strong gravitational pull: export structures tend to converge toward what their product space and country space imply they should be, rather than drifting randomly.",
+  "supporting_quotes": [
+    "Table 9... shows that residual term is always negative (as expected), highly significant, and with a similar magnitude to that of our original density formula... [for disappearances] large positive residuals signify an 'unexpectedly present' industry-location, and should thus predict disappearances",
+    "This means that unexpectedly absent industries tend to preferentially appear over time while unexpectedly present industries tend to disappear."
+  ],
+  "data_points": [
+    {
+      "metric": "Residual coefficient on disappearance (USA)",
+      "value": "+2.497",
+      "year": "2003-2011",
+      "country": "United States",
+      "product": "All industries"
+    },
+    {
+      "metric": "Residual coefficient on disappearance (Chile)",
+      "value": "+1.757",
+      "year": "2005-2008",
+      "country": "Chile",
+      "product": "All industries"
+    },
+    {
+      "metric": "Residual coefficient on disappearance (International)",
+      "value": "+1.277",
+      "year": "1995-2010",
+      "country": "119 countries",
+      "product": "All HS4 products"
+    },
+    {
+      "metric": "Residual coefficient on appearance (USA)",
+      "value": "-2.385",
+      "year": "2003-2011",
+      "country": "United States",
+      "product": "All industries"
+    },
+    {
+      "metric": "Residual coefficient on appearance (Chile)",
+      "value": "-2.327",
+      "year": "2005-2008",
+      "country": "Chile",
+      "product": "All industries"
+    }
+  ],
+  "confidence": "high"
+}

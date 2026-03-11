@@ -1,0 +1,53 @@
+{
+  "question_id": "657",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.070093+00:00",
+  "paper_title": "Shifting Gears: A Growth Diagnostic of Panama",
+  "paper_year": 2016,
+  "source_paper": "panama_growth_diagnostics_wp_325.pdf",
+  "research_answer": "Panama's service export mix has changed significantly since 1998. Canal tolls and port services \u2014 once the dominant category at nearly 30% of service exports \u2014 have shrunk to about 15% by 2014, not because they declined in absolute terms, but because other categories grew much faster. Air passenger transport more than doubled its share, from 5.8% to 15.7%, reflecting Panama's emergence as a regional aviation hub. Panama also outperformed OECD economies on transport services (exporting 2.4 times more per capita) and travel services (40% above the OECD average) by 2014. More recently, business and entrepreneurial services became a significant new contributor, generating a net surplus of US$1.3 billion in 2015 and the first three quarters of 2016.",
+  "supporting_quotes": [
+    "In 1998, 29.5% of services exports corresponded to tolls collected by ACP and 5.8% to air passengers. By 2014, the first activity had reduced its share to 14.9% and the second had increased its to 15.7%.",
+    "By 2014, Panama exported 2.4 times more Transport services than high-income OECD economies.",
+    "By 2014 Panama had also outperformed OECD economies on Travel services per capita by 40%.",
+    "In 2015 and the first three quarters of 2016, Business and Entrepreneurial services became relevant, registering a net surplus of US$1.3 billion on each."
+  ],
+  "data_points": [
+    {
+      "metric": "Transport services (Canal/ports) share",
+      "value": "29.5% (1998) \u2192 14.9% (2014)",
+      "year": "1998-2014",
+      "country": "Panama",
+      "product": "transport services"
+    },
+    {
+      "metric": "Air passenger services share",
+      "value": "5.8% (1998) \u2192 15.7% (2014)",
+      "year": "1998-2014",
+      "country": "Panama",
+      "product": "air transport services"
+    },
+    {
+      "metric": "Transport services exports vs OECD",
+      "value": "2.4x OECD average",
+      "year": "2014",
+      "country": "Panama",
+      "product": "transport services"
+    },
+    {
+      "metric": "Travel services per capita vs OECD",
+      "value": "+40% vs OECD",
+      "year": "2014",
+      "country": "Panama",
+      "product": "travel services"
+    },
+    {
+      "metric": "Business and entrepreneurial services surplus",
+      "value": "US$1.3 billion",
+      "year": "2015-2016",
+      "country": "Panama",
+      "product": "business services"
+    }
+  ],
+  "confidence": "high"
+}

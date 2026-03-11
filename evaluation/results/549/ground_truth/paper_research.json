@@ -1,0 +1,36 @@
+{
+  "question_id": "549",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.033877+00:00",
+  "paper_title": "A Tale of Two Clusters: The Evolution of Ireland's Economic Complexity since 1995",
+  "paper_year": 2015,
+  "source_paper": "2_oclery.pdf",
+  "research_answer": "Ireland's export structure has undergone a dramatic transformation since 1995, becoming increasingly specialized rather than diversified. The number of products exported with Revealed Comparative Advantage (RCA) has been shrinking, and Ireland's diversity level now approaches that of oil-rich Norway \u2014 a country whose specialization is driven by a single natural resource. The composition has shifted heavily toward pharmaceuticals and chemicals, while the share from food and agriculture has declined (though total food export values have grown). Strikingly, the correlation between Ireland's RCA values in 1995 and 2012 is low compared to other Northern European countries, meaning Ireland hasn't just specialized \u2014 it has radically changed its export mix. Meanwhile, its complexity rank has been declining relative to peer nations, and its GDP per capita is high relative to what its Economic Complexity Index would predict, suggesting limited growth potential at the current complexity level unless the capability base is broadened.",
+  "supporting_quotes": [
+    "Over the past decade Ireland's coverage of the Product Space, in terms of the number of products exported with RCA, has been shrinking.",
+    "Ireland's diversity has been decreasing \u2013 its level of specialisation increasing - and today is very high within the context of similar nations, approaching that of oil-rich Norway.",
+    "We observe a low correlation value within the context of other Northern European countries suggesting that Ireland has not only specialised, but also radically changed its export mix relative to its neighbours during this period.",
+    "Relative to similar countries and the most complex countries, Ireland exhibits declining complexity rank."
+  ],
+  "data_points": [
+    {
+      "metric": "export diversity",
+      "value": "very high specialization, approaching Norway",
+      "year": "2012",
+      "country": "Ireland"
+    },
+    {
+      "metric": "correlation of RCA 1995-2012",
+      "value": "low vs. Northern European peers",
+      "year": "1995-2012",
+      "country": "Ireland"
+    },
+    {
+      "metric": "complexity rank",
+      "value": "declining",
+      "year": "1995-2012",
+      "country": "Ireland"
+    }
+  ],
+  "confidence": "high"
+}

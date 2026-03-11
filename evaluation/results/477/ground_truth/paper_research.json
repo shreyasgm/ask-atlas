@@ -1,0 +1,39 @@
+{
+  "question_id": "477",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.020231+00:00",
+  "paper_title": "Economic Growth and Complexity in the UAE: Summary Report",
+  "paper_year": 2023,
+  "source_paper": "2023-05-UAE-growth-complexity-summary-report.pdf",
+  "research_answer": "Re-exports account for 40% of the UAE's total goods exports, making them a substantial pillar of its trade profile. The major product categories in this re-export flow are electronics, vehicles, and textiles. It's also notable that 40% of the country's exports \u2014 including these re-exports \u2014 flow through the UAE's free zones, highlighting the role of those zones as logistics and trade facilitation hubs. When re-exports are stripped out, non-oil domestically produced goods exports grew at just over 5% per year between 2005 and 2019 \u2014 meaningfully slower than the 7.7% headline non-oil goods figure \u2014 and have been largely stagnant since 2011\u20132012.",
+  "supporting_quotes": [
+    "Re-exports make up 40% of the UAE's total goods exports, with a heavy representation of electronics, vehicles, and textiles.",
+    "40% of the country's exports (including re-exports) occur from the free zones.",
+    "Non-oil and re-export goods exports have grown a little more than 5% per year between 2005 and 2019.",
+    "Post 2011-2012, we can see that most non-oil goods sector exports have more or less stagnated."
+  ],
+  "data_points": [
+    {
+      "metric": "re-export share of total goods exports",
+      "value": "40%",
+      "year": "2019",
+      "country": "UAE",
+      "product": "electronics, vehicles, textiles"
+    },
+    {
+      "metric": "share of exports from free zones",
+      "value": "40%",
+      "year": "2019",
+      "country": "UAE",
+      "product": "all exports including re-exports"
+    },
+    {
+      "metric": "non-oil and re-export goods export growth rate",
+      "value": ">5% per year",
+      "year": "2005-2019",
+      "country": "UAE",
+      "product": "non-oil and re-export goods"
+    }
+  ],
+  "confidence": "high"
+}

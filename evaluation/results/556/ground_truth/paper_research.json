@@ -1,0 +1,30 @@
+{
+  "question_id": "556",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.035911+00:00",
+  "paper_title": "A Tale of Two Clusters: The Evolution of Ireland's Economic Complexity since 1995",
+  "paper_year": 2015,
+  "source_paper": "2_oclery.pdf",
+  "research_answer": "Ireland's export growth has been concentrated in two distinct geographic directions with different product profiles. Trade with North America and Western Europe has been increasing since 1995, and this growth is primarily driven by the USA and Belgium \u2014 both of which are mainly purchasing pharmaceutical inputs. This reflects the multinational-dominated, pharmaceutical-heavy cluster in Ireland's export basket. Closer to home, the UK and Germany import a much broader range of products from Ireland, including food and agricultural goods \u2014 reflecting Ireland's second, more domestically-grounded cluster. This bifurcation in trade partners mirrors the dual cluster structure of Ireland's Product Space: complex, peripheral pharmaceutical exports going to specialized industrial buyers in the US and Belgium, while more diversified food and agricultural products flow to nearby European markets.",
+  "supporting_quotes": [
+    "Export to the North America and Western Europe has been increasing since 1995, driven by the USA and Belgium, who mainly buy pharmaceutical inputs.",
+    "Closer to home, the UK and Germany also import a large range of products including food and agricultural products."
+  ],
+  "data_points": [
+    {
+      "metric": "exports to North America/Western Europe",
+      "value": "increasing since 1995",
+      "year": "1995-2012",
+      "country": "Ireland",
+      "product": "pharmaceutical inputs"
+    },
+    {
+      "metric": "main buyers of Irish food/agriculture",
+      "value": "UK and Germany",
+      "year": "2012",
+      "country": "Ireland",
+      "product": "food, agricultural products"
+    }
+  ],
+  "confidence": "high"
+}

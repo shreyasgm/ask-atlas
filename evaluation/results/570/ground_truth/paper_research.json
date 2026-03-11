@@ -1,0 +1,35 @@
+{
+  "question_id": "570",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.041453+00:00",
+  "paper_title": "Structural Transformation and Competitiveness in Pakistan",
+  "paper_year": "2008",
+  "source_paper": "41661-01-pak-tacr.pdf",
+  "research_answer": "The product space framework reveals a fundamental disconnect between physical input-output relationships and the actual similarity of productive capabilities across industries. The key insight is that what makes two products 'close' in the product space is whether they tend to be co-exported by the same countries \u2014 a proxy for whether they require similar underlying capabilities (labor skills, knowledge, institutions, infrastructure). Physical input-output chains don't capture this. The Switzerland-chocolate example is illustrative: Switzerland imports all its cocoa yet dominates global chocolate exports, because the relevant capabilities are in precision manufacturing, quality control, and product development \u2014 not raw material production. Even more strikingly, raw diamonds, cut diamonds, and jewelry are not adjacent in the product space despite forming an obvious vertical chain. For Pakistan, this means that having cotton doesn't make downstream apparel easy, and having apparel doesn't make downstream luxury goods or synthetics easy \u2014 each requires a largely different set of capabilities. Empirically, the capability-based (input-output) measure of product proximity has only one-third the predictive power of the outcomes-based (co-export probability) measure for forecasting structural transformation.",
+  "supporting_quotes": [
+    "Switzerland is renowned for its chocolate, but imports all of its cocoa.",
+    "Raw diamonds are not next to cut and polished diamonds which are not next to jewelry. Physical input-output relationships have little to do with the structure of the product space.",
+    "Downstream products are not closer to Pakistan's current location in the product space than non-downstream activities.",
+    "Our outcomes-based measure of density has greater statistical and economic significance than the capability-based measure."
+  ],
+  "data_points": [
+    {
+      "metric": "downstream proximity test",
+      "country": "Pakistan",
+      "finding": "Downstream products no closer than non-downstream products"
+    },
+    {
+      "metric": "density coefficient (probability-based)",
+      "value": "0.0639"
+    },
+    {
+      "metric": "density coefficient (capability-based)",
+      "value": "0.0213"
+    },
+    {
+      "metric": "Switzerland chocolate example",
+      "finding": "World-class exporter imports all raw inputs"
+    }
+  ],
+  "confidence": "high"
+}

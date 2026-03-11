@@ -1,0 +1,44 @@
+{
+  "question_id": "417",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.002639+00:00",
+  "paper_title": "Implied Comparative Advantage",
+  "paper_year": 2020,
+  "source_paper": "2020-07-cid-wp-276-revised-implied-comparative-advantage.pdf",
+  "research_answer": "China and the United States have the most dissimilar export structures of any country pair in the international dataset, with a location similarity score of just 0.326 \u2014 far below the random baseline of 0.5. This means the two economies tend to export complementary rather than overlapping baskets of goods. At the other extreme, Sudan and Chad have the highest observed similarity at 0.867, reflecting shared geography, climate, and possibly regional knowledge spillovers. Other highly similar pairs include Japan-South Korea (0.78) and Finland-Sweden (0.745). The contrast between the China-US pair and these regional pairs illustrates how geographic proximity and shared endowments drive convergent export structures, while the US-China divergence reflects deep specialization differences between a highly complex advanced economy and a manufacturing-intensive emerging giant.",
+  "supporting_quotes": [
+    "For example, the lowest similarity value we observe is between China and the US (\u03c6China,USA = 0.326); this is far below random (0.5), meaning that we can expect one country to export what the other does not.",
+    "We note that the most similar countries are those in the same geographic region, a phenomenon that can be explained by geological and climate effects as well as regional knowledge spillovers... Table 2 shows the top ten most similar pairs of countries and products in the most recent year."
+  ],
+  "data_points": [
+    {
+      "metric": "Location similarity (China-USA)",
+      "value": "0.326",
+      "year": "2010",
+      "country": "China and United States",
+      "product": "All exports"
+    },
+    {
+      "metric": "Location similarity (Sudan-Chad)",
+      "value": "0.867",
+      "year": "2010",
+      "country": "Sudan and Chad",
+      "product": "All exports"
+    },
+    {
+      "metric": "Location similarity (Japan-Korea)",
+      "value": "0.78",
+      "year": "2010",
+      "country": "Japan and South Korea",
+      "product": "All exports"
+    },
+    {
+      "metric": "Location similarity (Finland-Sweden)",
+      "value": "0.745",
+      "year": "2010",
+      "country": "Finland and Sweden",
+      "product": "All exports"
+    }
+  ],
+  "confidence": "high"
+}

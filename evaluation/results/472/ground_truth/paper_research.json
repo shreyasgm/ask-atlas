@@ -1,0 +1,53 @@
+{
+  "question_id": "472",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.018869+00:00",
+  "paper_title": "Economic Growth and Complexity in the UAE: Summary Report",
+  "paper_year": 2023,
+  "source_paper": "2023-05-UAE-growth-complexity-summary-report.pdf",
+  "research_answer": "Service exports have been the standout performer in the UAE's non-oil export story. Between 2005 and 2019, service exports grew at 9.7% per year \u2014 outpacing non-oil goods export growth of 7.7% per year \u2014 and by 2019 had reached roughly USD 70 billion, 3.5 times their 2005 value. Crucially, services maintained steady and consistent growth throughout the entire period, while non-oil goods exports stagnated after 2011\u20132012. Even within the 7.7% goods figure, much of the growth was concentrated in stone exports and some chemicals and metals \u2014 largely in the 2005\u20132012 window \u2014 meaning domestically produced, non-re-export goods have been essentially flat for most of the period.",
+  "supporting_quotes": [
+    "From 2005 to 2019, non-oil goods exports grew at a brisk 7.7% per year.",
+    "Non-oil service exports have grown even stronger during this time at 9.7% per year, growing by a factor of 3.5.",
+    "In 2019, according to the WTO, the UAE's service exports stood at around USD 70 billion (3.5 times the value in 2005).",
+    "Non-oil non-re-exports are still stagnant overall. On the other hand, services exports have seen steady and consistent growth during the entire period."
+  ],
+  "data_points": [
+    {
+      "metric": "non-oil goods export growth rate",
+      "value": "7.7% per year",
+      "year": "2005-2019",
+      "country": "UAE",
+      "product": "non-oil goods"
+    },
+    {
+      "metric": "non-oil service export growth rate",
+      "value": "9.7% per year",
+      "year": "2005-2019",
+      "country": "UAE",
+      "product": "services"
+    },
+    {
+      "metric": "service exports value",
+      "value": "USD 70 billion",
+      "year": "2019",
+      "country": "UAE",
+      "product": "services"
+    },
+    {
+      "metric": "service export growth multiplier",
+      "value": "3.5x",
+      "year": "2005-2019",
+      "country": "UAE",
+      "product": "services"
+    },
+    {
+      "metric": "non-oil non-re-export performance",
+      "value": "stagnant",
+      "year": "2005-2019",
+      "country": "UAE",
+      "product": "non-oil non-re-exports"
+    }
+  ],
+  "confidence": "high"
+}

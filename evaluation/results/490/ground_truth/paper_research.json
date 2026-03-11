@@ -1,0 +1,29 @@
+{
+  "question_id": "490",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.022724+00:00",
+  "paper_title": "From Products to Capabilities: Constructing a Genotypic Product Space",
+  "paper_year": 2024,
+  "source_paper": "2024-06-glwp-230-genotypic_ps.pdf",
+  "research_answer": "More common than one might expect from the structural barriers they face. Among countries that had fewer than 20 export industries in 1992\u20131996, 30% managed to add at least 5 new industries and 50% improved on their baseline diversification level within a 5-year window. This suggests that while low-diversification countries face real structural constraints \u2014 especially those below the ~270-capability threshold \u2014 export diversification is not simply locked in. A meaningful share of less-diversified countries do make measurable progress. The challenge is that Vietnam-style transformations, which require acquiring ~40 new capabilities and entering a dozen new industries, are the more demanding end of the spectrum.",
+  "supporting_quotes": [
+    "Among the set of countries with less than 20 industries in 1992 to 1996 in our sample, 30% diversified their export by at least 5 industries and 50% compared to their baseline diversification."
+  ],
+  "data_points": [
+    {
+      "metric": "Countries adding 5+ industries (from <20 baseline)",
+      "value": "30%",
+      "year": "1992-1996 baseline, 5-year window",
+      "country": "Multiple",
+      "product": "All"
+    },
+    {
+      "metric": "Countries improving on baseline diversification",
+      "value": "50%",
+      "year": "1992-1996 baseline, 5-year window",
+      "country": "Multiple",
+      "product": "All"
+    }
+  ],
+  "confidence": "high"
+}

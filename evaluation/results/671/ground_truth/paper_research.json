@@ -1,0 +1,30 @@
+{
+  "question_id": "671",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.072949+00:00",
+  "paper_title": "Policies for Achieving Structural Transformation in the Caribbean",
+  "paper_year": 2009,
+  "source_paper": "policies-for-achieving-structural-transformation-in-the-caribbean-hausmann-klinger.pdf",
+  "research_answer": "While garments are nearby in Jamaica's product space (meaning Jamaica has the capabilities to produce them), they have a significantly lower PRODY than alternatives like agricultural processing or pharmaceutical/cosmetics products. PRODY reflects the income level of countries that successfully export a product \u2014 so a lower PRODY means garments are typically produced by lower-income countries and support lower wages. Moving further out on Jamaica's efficient strategic frontier, products like dairy goods, canned vegetables, and processed fish offer both proximity and higher PRODY than garments. Even further out, medicaments and cosmetics \u2014 including creams, soaps, non-soap surface-active agents, and hair products \u2014 enter the efficient frontier with higher income potential. This suggests that while garments are accessible for Jamaica, they offer limited wage and development benefits compared to agricultural processing or light manufacturing in personal care and pharmaceutical products.",
+  "supporting_quotes": [
+    "In the case of Jamaica, both the very nearby products and those slightly up the efficient frontier are agricultural goods, such as dairy products, canned vegetables, and processed fish products. There are also activities in the garments cluster; however, these have a significantly lower PRODY, meaning they typically support only low wages.",
+    "Allowing for further jumps, other manufactured products enter the efficient frontier, such as simple plastic, as well as many goods in the medicaments and cosmetics industry, such as creams and soaps, non-soap surface-active agents, and hair products."
+  ],
+  "data_points": [
+    {
+      "metric": "PRODY comparison",
+      "value": "agricultural products > garments",
+      "year": "2004",
+      "country": "Jamaica",
+      "product": "dairy, vegetables, fish vs. garments"
+    },
+    {
+      "metric": "PRODY (distant products)",
+      "value": "higher for pharmaceuticals/cosmetics than garments",
+      "year": "2004",
+      "country": "Jamaica",
+      "product": "medicaments, cosmetics, creams, soaps, hair products"
+    }
+  ],
+  "confidence": "high"
+}

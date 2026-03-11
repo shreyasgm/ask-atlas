@@ -1,0 +1,28 @@
+{
+  "question_id": "552",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.034573+00:00",
+  "paper_title": "A Tale of Two Clusters: The Evolution of Ireland's Economic Complexity since 1995",
+  "paper_year": 2015,
+  "source_paper": "2_oclery.pdf",
+  "research_answer": "Ireland's export basket has shifted dramatically in terms of which countries it resembles. In 1995, Ireland was positioned in the Country Space between the Scandinavian nations and Canada \u2014 broadly diversified, mid-complexity European-style economies. By 2012, Ireland had migrated to cluster with highly specialized high-tech Asian export economies such as Japan, Singapore, and South Korea. Even more specifically, Ireland's current Product Space is found to be most similar to Singapore and Hong Kong \u2014 city-state economies known for extreme specialization in high-tech and services. This is a striking finding because Ireland is a geographically and institutionally European nation that has come to resemble Asian tiger economies in its export structure.",
+  "supporting_quotes": [
+    "In 1995, Ireland was positioned between the Scandinavian nations and Canada, and the Eastern European bloc. However, in 2012 Ireland had migrated to be more similar to countries reliant on high tech exports such as Japan, Singapore and South Korea.",
+    "We find, somewhat surprisingly, that the current Product Space of Ireland appears to be most similar to those of highly specialised high-tech Asian economies such as Singapore and Hong Kong."
+  ],
+  "data_points": [
+    {
+      "metric": "Country Space position",
+      "value": "Scandinavian/Canada cluster (1995) \u2192 high-tech Asian economies cluster (2012)",
+      "year": "1995-2012",
+      "country": "Ireland"
+    },
+    {
+      "metric": "Product Space similarity",
+      "value": "most similar to Singapore and Hong Kong",
+      "year": "2012",
+      "country": "Ireland"
+    }
+  ],
+  "confidence": "high"
+}

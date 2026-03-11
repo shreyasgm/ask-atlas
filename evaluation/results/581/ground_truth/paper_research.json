@@ -1,0 +1,44 @@
+{
+  "question_id": "581",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.045551+00:00",
+  "paper_title": "Opportunity analysis of agriculture products in Sri Lanka: Measuring markets and feasibility",
+  "paper_year": 2016,
+  "source_paper": "agri_sector_opportunities_feb_2018.pdf",
+  "research_answer": "Plantains & Bananas have the second-largest global agricultural market at $14 billion, and their growth prospects vary considerably by region. The Middle East stands out as the most dynamic opportunity \u2014 combining a large market with high growth rates. East Asia offers moderate market size with moderate growth. By contrast, the EU and US, despite having the largest absolute markets for plantains, show slow growth, suggesting they are mature markets. This pattern makes the Middle East the highest-growth frontier for plantain exporters, even though the EU and US remain the largest destinations by volume.",
+  "supporting_quotes": [
+    "Plantains & Bananas: Growing moderately fast with a very large world market; In East Asia, moderate growth and moderate market size; In EU & US, large market but slow growth; In Middle East, large market and high growth",
+    "Tomatoes, Plantains & Bananas, and Shrimp have the highest market opportunities in the Middle East"
+  ],
+  "data_points": [
+    {
+      "metric": "world market size",
+      "value": "14 billion USD",
+      "year": "2016",
+      "country": "global",
+      "product": "Plantains & Bananas"
+    },
+    {
+      "metric": "market growth",
+      "value": "high",
+      "year": "2012-2016",
+      "country": "Middle East",
+      "product": "Plantains & Bananas"
+    },
+    {
+      "metric": "market growth",
+      "value": "slow",
+      "year": "2012-2016",
+      "country": "EU, USA",
+      "product": "Plantains & Bananas"
+    },
+    {
+      "metric": "market growth",
+      "value": "moderate",
+      "year": "2012-2016",
+      "country": "East Asia",
+      "product": "Plantains & Bananas"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,22 @@
+{
+  "question_id": "406",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.999136+00:00",
+  "paper_title": "Does Birthplace Diversity Affect Economic Complexity? Cross-country Evidence",
+  "paper_year": 2020,
+  "source_paper": "2020-03-cid-fellows-wp-125-diversity-economic-complexity.pdf",
+  "research_answer": "Yes, and the data provide a way to quantify how much. When economic complexity is added as a control in regressions linking birthplace diversity to GDP per capita, the partial correlation between diversity and income drops by about 20%. This means ECI acts as a meaningful \u2014 though partial \u2014 channel through which immigrant diversity translates into higher income. In other words, one reason diverse immigrant populations raise incomes is that they help countries export a broader and more sophisticated range of products, which is exactly what economic complexity captures.",
+  "supporting_quotes": [
+    "Note that when ECI is controlled for there is a significant reduction of the partial correlation between diversity and GDP per capita, of around 20%. This suggests that ECI is, in part, one of the channels through which birthplace diversity affects income."
+  ],
+  "data_points": [
+    {
+      "metric": "Share of diversity-to-income effect mediated by ECI",
+      "value": "approximately 20%",
+      "year": "1990-2000",
+      "country": "Multiple (100 countries)",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

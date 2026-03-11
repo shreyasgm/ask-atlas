@@ -1,0 +1,50 @@
+{
+  "question_id": "426",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.005335+00:00",
+  "paper_title": "Implied Comparative Advantage",
+  "paper_year": 2020,
+  "source_paper": "2020-07-cid-wp-276-revised-implied-comparative-advantage.pdf",
+  "research_answer": "When countries are grouped by region, Latin America and the Caribbean show the lowest export predictability (R\u00b2=0.167), which is unexpectedly low given their income levels. By comparison, Europe and Central Asia scores the highest (R\u00b2=0.211), followed by South Asia (0.187), the Middle East and North Africa (0.183), and East Asia and the Pacific (0.180). The finding suggests that Latin American countries' export trajectories deviate more from what their existing capabilities would imply \u2014 potentially reflecting commodity boom-and-bust cycles, greater dependence on natural resource exports whose dynamics are geologically rather than capability-driven, or structural diversification patterns that don't follow the product space as closely. The regional ranking broadly mirrors income levels except for Latin America, which stands out as an outlier on the low side of predictability relative to its development stage.",
+  "supporting_quotes": [
+    "Finally, the results by region appear to fall roughly in order of (non-oil) income (unlike looking at income directly); this would make Latin America and the Caribbean somewhat less predictable than expected based on income alone."
+  ],
+  "data_points": [
+    {
+      "metric": "R\u00b2 for Europe & Central Asia",
+      "value": "0.211",
+      "year": "1995-2016",
+      "country": "Europe & Central Asia",
+      "product": "All exports"
+    },
+    {
+      "metric": "R\u00b2 for South Asia",
+      "value": "0.187",
+      "year": "1995-2016",
+      "country": "South Asia",
+      "product": "All exports"
+    },
+    {
+      "metric": "R\u00b2 for Middle East & North Africa",
+      "value": "0.183",
+      "year": "1995-2016",
+      "country": "MENA",
+      "product": "All exports"
+    },
+    {
+      "metric": "R\u00b2 for East Asia & Pacific",
+      "value": "0.180",
+      "year": "1995-2016",
+      "country": "East Asia & Pacific",
+      "product": "All exports"
+    },
+    {
+      "metric": "R\u00b2 for Americas",
+      "value": "0.167",
+      "year": "1995-2016",
+      "country": "Americas",
+      "product": "All exports"
+    }
+  ],
+  "confidence": "medium"
+}

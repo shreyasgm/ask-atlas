@@ -1,0 +1,41 @@
+{
+  "question_id": "692",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.077268+00:00",
+  "paper_title": "Structural Transformation in Chile",
+  "paper_year": 2007,
+  "source_paper": "structural_transformation_in_chile.pdf",
+  "research_answer": "Simulation analysis of Chile's potential to jump to new products in the product space reveals a troubling picture that gets worse as you tighten the proximity constraints. When diversification is restricted to products within a proximity of 0.65 \u2014 the kind of 'nearby' moves that are most empirically common \u2014 Chile, unlike Korea, shows no diffusion at all through the product space. Only when you allow for larger jumps to products with a proximity of 0.6 or lower does Chile show any diffusion, and even then the process is slow. Critically, jumps of this distance (0.6 or lower) are empirically infrequent in the historical record, making this path unlikely to materialize in practice. As proximity constraints are progressively tightened from 0.55 to 0.65, Chile converges to progressively lower levels of export sophistication and at slower rates. Even controlling for Chile's already-low current export sophistication, the simulated trajectory looks bleak compared to countries with similarly low starting points.",
+  "supporting_quotes": [
+    "If we restrict diversification to only those products within a proximity of 0.65, Chile, unlike Korea, does not diffuse. It is only when we allow for larger jumps (all products with proximity of 0.6 or lower) that Chile is able to diffuse rather slowly within the product space.",
+    "This is worrying because jumps of this distance are empirically infrequent (Hidalgo et al. forthcoming).",
+    "Chile converges to progressively lower levels of export sophistication, and at slower rates. Even controlling for the low level of export sophistication today, Chile's future path of structural transformation looks bleak."
+  ],
+  "data_points": [
+    {
+      "metric": "diversification at proximity 0.65",
+      "value": "no diffusion",
+      "year": "2000",
+      "country": "Chile"
+    },
+    {
+      "metric": "diversification at proximity 0.6",
+      "value": "slow diffusion",
+      "year": "2000",
+      "country": "Chile"
+    },
+    {
+      "metric": "frequency of large product jumps",
+      "value": "infrequent",
+      "year": null,
+      "country": "multiple"
+    },
+    {
+      "metric": "simulated convergence across proximity thresholds",
+      "value": "declining trajectory as threshold tightens",
+      "year": "2000",
+      "country": "Chile"
+    }
+  ],
+  "confidence": "high"
+}

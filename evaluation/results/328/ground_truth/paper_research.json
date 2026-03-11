@@ -1,0 +1,30 @@
+{
+  "question_id": "328",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.969695+00:00",
+  "paper_title": "Growth Diagnostics in Peru",
+  "paper_year": 2008,
+  "source_paper": "181.pdf",
+  "research_answer": "The emergence of non-traditional agriculture appears to be directly connected to which parts of Peru's agricultural sector were insulated from the 1969 agrarian reform. The reform targeted large plantations, and by 1975 had affected nearly all of them \u2014 decimating traditional export crops like cotton and sugar. Non-traditional agriculture, however, emerged precisely in areas not covered by the reform and in smaller landholdings that were less vulnerable to large-scale expropriation. In other words, the new export sector grew not because of a deliberate diversification strategy, but because it operated in a space where property rights were more secure. This pattern underscores how the risk of expropriation shaped which export activities could develop.",
+  "supporting_quotes": [
+    "the only new activities to emerge (the non-traditional export sector) are in areas not affected by the agrarian reform and in smaller landholdings which are not as sensitive to large-scale expropriation.",
+    "the agrarian reform of 1969, which by 1975 affected nearly all plantations, preceded the cotton and sugar collapse in the early 1980s."
+  ],
+  "data_points": [
+    {
+      "metric": "new export emergence pattern",
+      "value": "confined to areas outside agrarian reform coverage",
+      "year": "1990s-2005",
+      "country": "Peru",
+      "product": "non-traditional agriculture"
+    },
+    {
+      "metric": "agrarian reform coverage",
+      "value": "nearly all plantations",
+      "year": "1975",
+      "country": "Peru",
+      "product": "cotton, sugar"
+    }
+  ],
+  "confidence": "high"
+}

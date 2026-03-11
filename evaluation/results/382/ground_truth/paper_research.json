@@ -1,0 +1,38 @@
+{
+  "question_id": "382",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.990375+00:00",
+  "paper_title": "Jordan: The Elements of a Growth Strategy",
+  "paper_year": 2019,
+  "source_paper": "2019-02-28-cid-wp-346-jordan-growth-strategy-revised.pdf",
+  "research_answer": "Jordan exhibits revealed comparative advantage (high relative presence) in public administration, transportation and communications, finance and insurance, and real estate \u2014 sectors that are largely non-tradable or service-oriented. On the goods side, Jordan made notable market share gains in garments, chemicals, and agricultural goods during the 2000s boom. However, these sectors \u2014 particularly garments and agriculture \u2014 tend to be relatively lower in the product complexity spectrum. This composition helps explain a key paradox: despite strong export volume growth, Jordan's Economic Complexity Index has been on a declining trend for roughly 20 years. The sectors where Jordan has comparative advantage are either services (often less captured by goods-based ECI metrics) or lower-complexity goods, suggesting the country has not been moving up the complexity ladder toward more sophisticated, knowledge-intensive products.",
+  "supporting_quotes": [
+    "Jordan exhibits a high presence in other industries such as, public administration; transportation, communications and public utilities; and finance, insurance and real estate.",
+    "Jordan's ECI, as measured by its goods exports, has been falling over the last 20 years.",
+    "This went beyond a mere commodity boom: it entailed significant gains in market share for Jordan's exports, in particular, for garments, chemicals, and agricultural goods."
+  ],
+  "data_points": [
+    {
+      "metric": "RCA (revealed comparative advantage)",
+      "value": "high",
+      "year": "2015",
+      "country": "Jordan",
+      "product": "public administration, transportation/communications/utilities, finance/insurance/real estate"
+    },
+    {
+      "metric": "Economic Complexity Index trend",
+      "value": "falling",
+      "year": "1995-2015",
+      "country": "Jordan",
+      "product": "goods"
+    },
+    {
+      "metric": "market share gains",
+      "value": "significant",
+      "year": "2000-2008",
+      "country": "Jordan",
+      "product": "garments, chemicals, agricultural goods"
+    }
+  ],
+  "confidence": "medium"
+}

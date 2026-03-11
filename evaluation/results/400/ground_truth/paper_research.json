@@ -1,0 +1,33 @@
+{
+  "question_id": "400",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.996995+00:00",
+  "paper_title": "A Roadmap for Investment Promotion and Export Diversification: The Case of Jordan",
+  "paper_year": 2019,
+  "source_paper": "2020-01-cid-wp-374-roadmap-jordan-revised-march.pdf",
+  "research_answer": "There's a fundamental trade-off embedded in the product space for developing economies. The industries that score highest on complexity (Product Complexity Index) and strategic positioning (Complexity Outlook Gain) tend to be the ones furthest from a country's existing capabilities \u2014 meaning they require know-how and inputs that aren't currently present. Conversely, the industries that are closest to what a country already does well tend to be less complex and offer weaker long-term strategic value. This negative correlation between distance and complexity/strategic gain means that the easiest moves in the product space often yield the lowest returns, while the highest-return moves require the biggest capability leaps.",
+  "supporting_quotes": [
+    "While PCI and COG tend to be positively correlated, there tends to be negative correlation between Distance and each of these indicators in developing economies. This reflects an important trade-off: the most complex industries and those with the best strategic positioning tend to be further away from existing capabilities, while less complex industries tend to be closer."
+  ],
+  "data_points": [
+    {
+      "metric": "correlation: Distance vs. PCI",
+      "value": "negative in developing economies",
+      "year": "2015",
+      "country": "Jordan"
+    },
+    {
+      "metric": "correlation: Distance vs. COG",
+      "value": "negative in developing economies",
+      "year": "2015",
+      "country": "Jordan"
+    },
+    {
+      "metric": "correlation: PCI vs. COG",
+      "value": "positive",
+      "year": "2015",
+      "country": "Jordan"
+    }
+  ],
+  "confidence": "high"
+}

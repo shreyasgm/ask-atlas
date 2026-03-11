@@ -1,0 +1,31 @@
+{
+  "question_id": "613",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.057477+00:00",
+  "paper_title": "How should Uganda grow?",
+  "paper_year": 2014,
+  "source_paper": "cid_working_paper_275.pdf",
+  "research_answer": "Economic complexity is a remarkably strong predictor of income: the ECI can explain approximately 75% of the variation in GDP per capita across countries, with high-complexity countries consistently achieving higher incomes. Uganda's position on this relationship is particularly instructive \u2014 it falls significantly below the prediction line, meaning it has a higher level of economic complexity than you would expect for a country at its income level. This is actually a favorable signal: research shows that countries whose complexity exceeds what their income would predict tend to subsequently grow faster, as their productive capabilities are ahead of their current income, creating upward pressure on economic performance. For Uganda, this misalignment between complexity and income represents latent growth potential rather than a problem.",
+  "supporting_quotes": [
+    "It shows that economic complexity can explain about 75 percent of the variation in income; countries with high ECI tend to have higher per capita income.",
+    "Uganda appears significantly below the prediction line, indicating that it has a relatively high level of complexity for its level of income.",
+    "Figure 17 shows that countries whose economic complexity is greater than what we would expect, given their level of income, tend to grow faster than those that are 'too rich' for their current level of economic complexity."
+  ],
+  "data_points": [
+    {
+      "metric": "R-squared of ECI on GDP per capita",
+      "value": "0.75 (75% of variance explained)",
+      "year": null,
+      "country": "global",
+      "product": null
+    },
+    {
+      "metric": "Uganda ECI vs income prediction",
+      "value": "significantly below prediction line (higher complexity than income implies)",
+      "year": null,
+      "country": "Uganda",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

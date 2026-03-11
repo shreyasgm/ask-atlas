@@ -1,0 +1,38 @@
+{
+  "question_id": "672",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.073155+00:00",
+  "paper_title": "Policies for Achieving Structural Transformation in the Caribbean",
+  "paper_year": 2009,
+  "source_paper": "policies-for-achieving-structural-transformation-in-the-caribbean-hausmann-klinger.pdf",
+  "research_answer": "Yes, there's a clear trade-off. For Belize, nearby low-hanging fruit products in agriculture (like cocoa, fish fillets, wood products) are accessible given existing capabilities, but they have low strategic value \u2014 meaning they don't open up many new downstream diversification opportunities. As you allow for longer jumps to more distant products, the strategic value increases substantially. Specifically, manufacturing sectors like apparel and electronics, while far from Belize's current export base, appear on the efficient frontier because they offer the best combination of higher wages (PRODY) and the creation of new capabilities with broader alternative uses. This creates a genuine strategic dilemma: the easy path (agriculture) leads to a dead end, while the high-value path (manufacturing) requires a large leap that is difficult to achieve without significant external support or targeted policy intervention.",
+  "supporting_quotes": [
+    "But we can see in Figure 14 that on average these low-hanging fruit products have a lower strategic value: they do not represent the creation of a host of new capabilities with alternative uses. As you allow for further and further jumps, activities emerge with a much higher strategic value.",
+    "Allowing for longer jumps adds some manufacturing sectors, namely apparel and electronics. As can be seen above, these sectors (the light-blue dots) are quite distant, but they represent the best mix of high wages and stimulation of subsequent structural transformation at that distance, making them sensible considerations.",
+    "Belize in particular, with an extremely low EXPY, is squarely in the strategic bets quadrant of Figure 11 with no pathway to structural transformation: new areas of the product space have to be reached."
+  ],
+  "data_points": [
+    {
+      "metric": "strategic value vs. distance relationship",
+      "value": "positive correlation for distant products",
+      "year": "2005",
+      "country": "Belize",
+      "product": null
+    },
+    {
+      "metric": "strategic value of distant products",
+      "value": "high for apparel and electronics",
+      "year": "2005",
+      "country": "Belize",
+      "product": "apparel, electronics"
+    },
+    {
+      "metric": "EXPY",
+      "value": "extremely low",
+      "year": "2005",
+      "country": "Belize",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

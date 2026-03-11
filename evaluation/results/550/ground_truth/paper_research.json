@@ -1,0 +1,29 @@
+{
+  "question_id": "550",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.034064+00:00",
+  "paper_title": "A Tale of Two Clusters: The Evolution of Ireland's Economic Complexity since 1995",
+  "paper_year": 2015,
+  "source_paper": "2_oclery.pdf",
+  "research_answer": "Economic complexity theory predicts that a country's income level should broadly align with the sophistication of its export basket. Ireland breaks this pattern: its GDP per capita is high relative to other countries with comparable Economic Complexity Index (ECI) scores \u2014 both in 1995 and in 2012. This creates a negative residual in the GDP-ECI relationship, and that residual has been growing more negative over time. Even when chemicals and pharmaceuticals are stripped out of the analysis (to test whether those sectors are artificially inflating apparent complexity), the negative residual persists and worsens, suggesting the gap is not just a measurement artifact. In complexity theory, being wealthy relative to your complexity level implies limited upside growth potential \u2014 you've already captured more income than your observable capability base would typically support, leaving less room for complexity-driven growth.",
+  "supporting_quotes": [
+    "Ireland's GDP per capita relative to other countries with comparable ECI is high in both 1995 and 2012, suggesting limited growth potential at the current complexity level.",
+    "In this case, we observe an increasing negative residual, further confirming that Ireland exhibits high wealth compared to its observable capability base, and diversity, as captured by exports.",
+    "We observe a high level of specialisation in Ireland's export structure, coupled with high income per capita as compared to the complexity level of its industrial activities."
+  ],
+  "data_points": [
+    {
+      "metric": "GDP per capita residual vs. ECI",
+      "value": "increasingly negative",
+      "year": "1995-2012",
+      "country": "Ireland"
+    },
+    {
+      "metric": "ECI excluding chemicals and pharmaceuticals",
+      "value": "increasingly negative residual vs. GDP per capita",
+      "year": "1995-2012",
+      "country": "Ireland"
+    }
+  ],
+  "confidence": "high"
+}

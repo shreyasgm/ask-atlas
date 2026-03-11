@@ -1,0 +1,43 @@
+{
+  "question_id": "483",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.021442+00:00",
+  "paper_title": "From Products to Capabilities: Constructing a Genotypic Product Space",
+  "paper_year": 2024,
+  "source_paper": "2024-06-glwp-230-genotypic_ps.pdf",
+  "research_answer": "Yes, and the data reveals a striking non-linear pattern. Countries with around 270 capabilities or fewer show very little growth in the number of industries they can export, regardless of how many more capabilities they accumulate. For example, Angola has 138 capabilities and exports in just 1 industry, while Qatar has 214 capabilities and only 5 industries. But once countries cross this threshold, diversification accelerates rapidly: Albania with 298 capabilities already exports 21 industries, and Germany with 387 capabilities exports 47. This suggests a capability threshold effect \u2014 below roughly 270 occupational capabilities, countries are in a kind of 'quiescence trap' where additional capabilities don't yet unlock new export industries.",
+  "supporting_quotes": [
+    "At low levels of diversification, i.e., among countries with \u223c 270 capabilities or less, industrial diversification grows only little with the number of capabilities. For instance Angola has 138 capabilities and 1 industry, while Qatar has 214 capabilities and 5 industries. As we move to countries with more capabilities, the number of industries rises rapidly: Albania has 298 capabilities but already 21 industries, while Germany has 387 capabilities and 47 industries."
+  ],
+  "data_points": [
+    {
+      "metric": "Capabilities and industries",
+      "value": "138 capabilities, 1 industry",
+      "year": "2002",
+      "country": "Angola",
+      "product": "All"
+    },
+    {
+      "metric": "Capabilities and industries",
+      "value": "214 capabilities, 5 industries",
+      "year": "2002",
+      "country": "Qatar",
+      "product": "All"
+    },
+    {
+      "metric": "Capabilities and industries",
+      "value": "298 capabilities, 21 industries",
+      "year": "2002",
+      "country": "Albania",
+      "product": "All"
+    },
+    {
+      "metric": "Capabilities and industries",
+      "value": "387 capabilities, 47 industries",
+      "year": "2002",
+      "country": "Germany",
+      "product": "All"
+    }
+  ],
+  "confidence": "high"
+}

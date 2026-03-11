@@ -1,0 +1,45 @@
+{
+  "question_id": "577",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.044055+00:00",
+  "paper_title": "Opportunity analysis of agriculture products in Sri Lanka: Measuring markets and feasibility",
+  "paper_year": 2016,
+  "source_paper": "agri_sector_opportunities_feb_2018.pdf",
+  "research_answer": "Global trade in selected agricultural products is highly concentrated. Just five market blocs \u2014 the EU, USA, Middle East, East Asia, and India \u2014 account for 80.7% of total world trade in these products. The EU alone commands 42.0% of world imports (about $40.6 billion), making it by far the dominant market. The USA is the second-largest at 18.8% ($18.2 billion), followed by East Asia (China, Japan, South Korea, Singapore, Hong Kong) at 15.4% ($14.9 billion). This means that nearly any agricultural export strategy targeting these sectors must prioritize the EU and USA above all others.",
+  "supporting_quotes": [
+    "EU Market 40.6 [USD, bn], 42.0% [of world]; USA Market 18.2 [USD, bn], 18.8% [of world]",
+    "East Asian Market (China, Japan, South Korea, Singapore, Hong Kong) 14.9 [USD, bn], 15.4% [of world]",
+    "Total 78.0 [USD, bn], 80.7% [of world]"
+  ],
+  "data_points": [
+    {
+      "metric": "share of world imports",
+      "value": "42.0%",
+      "year": "2016",
+      "country": "EU",
+      "product": "selected agricultural sectors"
+    },
+    {
+      "metric": "share of world imports",
+      "value": "18.8%",
+      "year": "2016",
+      "country": "USA",
+      "product": "selected agricultural sectors"
+    },
+    {
+      "metric": "share of world imports",
+      "value": "15.4%",
+      "year": "2016",
+      "country": "East Asia",
+      "product": "selected agricultural sectors"
+    },
+    {
+      "metric": "share of total world trade",
+      "value": "80.7%",
+      "year": "2016",
+      "country": "EU+USA+Middle East+East Asia+India",
+      "product": "selected agricultural products"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,38 @@
+{
+  "question_id": "412",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.001083+00:00",
+  "paper_title": "Does Birthplace Diversity Affect Economic Complexity? Cross-country Evidence",
+  "paper_year": 2020,
+  "source_paper": "2020-03-cid-fellows-wp-125-diversity-economic-complexity.pdf",
+  "research_answer": "The shift has been dramatic. Between 1970 and 2010, the share of non-OECD migrants in OECD destination countries grew by a factor of 8.7, while the share of intra-OECD migrants barely budged \u2014 growing by only a factor of 1.2 over the same period. At the same time, the overall foreign-born share in OECD countries nearly doubled, from 7% to 13%. This shift toward migrants from more diverse, non-OECD origin countries is precisely the type of change \u2014 expanding the 'between' component of birthplace diversity \u2014 that the research identifies as the primary driver of complexity gains. This suggests the post-1970 migration wave may have carried more complexity-building potential than its raw numbers imply, as it substantially widened the variety of knowledge and skills flowing into OECD economies.",
+  "supporting_quotes": [
+    "the average share of non-OECD migrants growing by a factor of 8.7 over the 1970-2010 period against just 1.2 for OECD migrants over the same period.",
+    "While the global share of immigrants has remained stable over time \u2013at about three percent of the world population\u2013 the share of the foreign-born population in OECD countries has increased from seven to thirteen percent on average between 1970 and 2010.",
+    "we find that most of the effect is driven by the 'between' component, which can be interpreted as the extensive margin of diversity in the sense that it captures the contribution of new origin countries to the evolution of immigration diversity."
+  ],
+  "data_points": [
+    {
+      "metric": "Growth factor in non-OECD migrant share in OECD",
+      "value": "8.7x",
+      "year": "1970-2010",
+      "country": "OECD destination countries",
+      "product": null
+    },
+    {
+      "metric": "Growth factor in intra-OECD migrant share",
+      "value": "1.2x",
+      "year": "1970-2010",
+      "country": "OECD destination countries",
+      "product": null
+    },
+    {
+      "metric": "Foreign-born share in OECD",
+      "value": "7% (1970) to 13% (2010)",
+      "year": "1970-2010",
+      "country": "OECD countries",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

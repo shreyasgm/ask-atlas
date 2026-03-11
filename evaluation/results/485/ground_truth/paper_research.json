@@ -1,0 +1,38 @@
+{
+  "question_id": "485",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.021813+00:00",
+  "paper_title": "From Products to Capabilities: Constructing a Genotypic Product Space",
+  "paper_year": 2024,
+  "source_paper": "2024-06-glwp-230-genotypic_ps.pdf",
+  "research_answer": "This is one of the more counterintuitive findings in economic complexity research. When you simulate development paths, footwear manufacturing (industry 3162) and tobacco manufacturing (3122) have roughly similar average distances to the rest of the industrial network \u2014 yet countries are much more likely to diversify out of footwear than out of tobacco, because footwear sits near 'stepping stone' industries that open pathways to more complex sectors. Metal ore mining is even more extreme: despite not being especially far from other industries on average, it offers some of the poorest diversification prospects in the entire product space. This points to a novel form of the 'resource curse' that doesn't operate through the classic wage-inflation channel, but through the peripheral location of extractive industries in the product space \u2014 they simply don't neighbor industries that enable further diversification. Core manufacturing industries, by contrast, allow further diversification with probability above 0.99, while Oil and Gas Extraction only allows it 78% of the time.",
+  "supporting_quotes": [
+    "Countries are much more likely to grow out of industry 3162 than out of industry 3122 even though they have about the same average distance from the network of industries, highlighting the importance of nearby stepping stones that can lead on a pathway to prosperity.",
+    "Interestingly, the poor diversification prospects when starting from 2122\u2014see panel (f)\u2014points to a novel type of resource curse that does not operate through higher wages\u2014the classical argument\u2014but through the peripheral location of metal ore mining in the product space.",
+    "The top 10\u2014all of which (almost) always allowed further diversification upon entry\u2014are manufacturing industries at or close to the core of the product space. Conversely, the bottom 10 industries are more peripheral."
+  ],
+  "data_points": [
+    {
+      "metric": "Probability of further diversification - core manufacturing",
+      "value": ">0.99",
+      "year": "Simulated (3000 iterations)",
+      "country": "Hypothetical",
+      "product": "Core manufacturing"
+    },
+    {
+      "metric": "Probability of further diversification - Oil & Gas",
+      "value": "0.78",
+      "year": "Simulated (3000 iterations)",
+      "country": "Hypothetical",
+      "product": "Oil & Gas Extraction"
+    },
+    {
+      "metric": "Diversification prospects - metal ore mining",
+      "value": "Among worst in product space",
+      "year": "Simulated",
+      "country": "Hypothetical",
+      "product": "Metal Ore Mining (2122)"
+    }
+  ],
+  "confidence": "high"
+}

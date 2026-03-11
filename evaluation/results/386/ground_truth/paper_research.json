@@ -1,0 +1,29 @@
+{
+  "question_id": "386",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.992023+00:00",
+  "paper_title": "A Structural Ranking of Economic Complexity",
+  "paper_year": 2019,
+  "source_paper": "2019-11-cid-fellows-wp-119-structural-rank-ec.pdf",
+  "research_answer": "The structural approach and the original ECI agree quite strongly at the country level. The rank correlation between the structural OLS-based ranking and the original ECI is 0.96, indicating broad agreement. When comparing two variants of the structural approach itself \u2014 one estimated with OLS and one with PPML \u2014 the correlation rises above 0.995, meaning the choice of gravity model estimator makes very little practical difference. So while the structural method has a stronger theoretical foundation, it largely validates the ordering produced by the original ECI at the country level.",
+  "supporting_quotes": [
+    "The rank correlation with the one derived from using PPML in the first step is larger than .995, and even with the original ECI that starts from a binary country-product matrix indicating country-product pairs with RCA of at least one it has a rank correlation of .96."
+  ],
+  "data_points": [
+    {
+      "metric": "Rank correlation: structural OLS vs structural PPML",
+      "value": ">0.995",
+      "year": "2016",
+      "country": "127 countries",
+      "product": null
+    },
+    {
+      "metric": "Rank correlation: structural OLS vs original ECI",
+      "value": "0.96",
+      "year": "2016",
+      "country": "127 countries",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

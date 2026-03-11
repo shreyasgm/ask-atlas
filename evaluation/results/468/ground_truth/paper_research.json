@@ -1,0 +1,28 @@
+{
+  "question_id": "468",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.018047+00:00",
+  "paper_title": "A Simple Theory of Economic Development at the Extensive Industry Margin",
+  "paper_year": 2022,
+  "source_paper": "2022-09-cid-wp-416-extensive-industry-margin.pdf",
+  "research_answer": "It's quite rare. Across 38,586 country-industry observations where a country lacked a revealed comparative advantage (RCA > 1) in a given industry, new entry occurred in only about 5% of cases in any given period. This 5% baseline \u2014 or unconditional probability \u2014 is the benchmark against which proximity effects are measured. The fact that occupational distance can swing the probability from 2% (maximum distance) to 8% (zero distance) means that being capability-ready quadruples the chances of crossing even this relatively low baseline threshold.",
+  "supporting_quotes": [
+    "In about 5% of these observations, we record the appearance of a new country-industry combination.",
+    "The unconditional probability (5%, the mean of a^i_{c,t})."
+  ],
+  "data_points": [
+    {
+      "metric": "unconditional entry probability",
+      "value": "5%",
+      "year": "1992-2016",
+      "country": "140 countries"
+    },
+    {
+      "metric": "sample size for entry analysis",
+      "value": "38,586 observations",
+      "year": "1992-2016",
+      "country": "140 countries"
+    }
+  ],
+  "confidence": "high"
+}

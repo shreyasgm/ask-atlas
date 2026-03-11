@@ -1,0 +1,30 @@
+{
+  "question_id": "667",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.072198+00:00",
+  "paper_title": "Policies for Achieving Structural Transformation in the Caribbean",
+  "paper_year": 2009,
+  "source_paper": "policies-for-achieving-structural-transformation-in-the-caribbean-hausmann-klinger.pdf",
+  "research_answer": "Both Trinidad and Tobago and Singapore have significant hydrocarbon-related exports, but their product space positions are dramatically different. Trinidad and Tobago's exports are dominated by hydrocarbons, which are highly profitable but also highly peripheral \u2014 meaning the capabilities, institutions, and infrastructure they require have very few alternative uses in other industries. This limits diversification pathways. Singapore, by contrast, has moved well beyond peripheral hydrocarbon sectors to occupy the electronics cluster, industrial chemicals, and machinery that are well-connected to the industrial core of the product space. This means Singapore's existing capabilities can be leveraged to enter many new adjacent industries, enabling continued structural transformation. Trinidad and Tobago's hydrocarbon wealth essentially creates a dead end in the product space, while Singapore's diversification into core manufacturing sectors creates a virtuous cycle of capability-building.",
+  "supporting_quotes": [
+    "Although Trinidad and Tobago has some other exports like food goods, these are swamped by the country's significant exports of hydrocarbons, which are highly profitable but also highly peripheral, meaning that the institutions, skills, and infrastructure they use do not have many alternative uses.",
+    "Singapore has moved beyond the peripheral natural resource and hydrocarbon sectors to also occupy the electronics cluster, industrial chemicals, and other machinery that is well connected to the industrial core of the product space. That country can then be expected to enjoy continued accelerated structural transformation because many alternative activities can use the inputs of its existing product set."
+  ],
+  "data_points": [
+    {
+      "metric": "product space location",
+      "value": "peripheral",
+      "year": "2000",
+      "country": "Trinidad and Tobago",
+      "product": "hydrocarbons"
+    },
+    {
+      "metric": "product space location",
+      "value": "industrial core",
+      "year": "2000",
+      "country": "Singapore",
+      "product": "electronics, chemicals, machinery"
+    }
+  ],
+  "confidence": "high"
+}

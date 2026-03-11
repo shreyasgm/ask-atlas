@@ -1,0 +1,39 @@
+{
+  "question_id": "443",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.010951+00:00",
+  "paper_title": "A Growth Diagnostic of Namibia",
+  "paper_year": 2022,
+  "source_paper": "2022-02-cid-wp-405-namibia-growth-diagnostic.pdf",
+  "research_answer": "Namibia's diversification record presents a genuine paradox. On one hand, Namibia has diversified faster than the average country given its productive capabilities, and faster than most of its regional and international peers \u2014 which is a meaningful achievement for a low-complexity economy. On the other hand, the content of that diversification is almost entirely low-complexity: 95% of value added from products entered since 2003 comes from products with a PCI below the global mean. The new exports \u2014 primarily transport, metals, and stone products \u2014 are adjacent to existing capabilities but do not represent a significant step up the complexity ladder. This means Namibia is good at doing what its current capabilities allow, but its current capabilities are themselves limited. The Complexity Outlook Index confirms this: few complex products are within reach, and density across all export categories lags peers. So the diversification story is real but bounded \u2014 Namibia is maximizing a constrained opportunity set rather than expanding it.",
+  "supporting_quotes": [
+    "the country has been able to diversify differentially more than the average country and more that most of its peers, given its current set of productive capabilities.",
+    "Out of the products added since 2003, 95% of the value added corresponds to products with an average PCI lower than the global mean, mostly transport, metals, and stone products.",
+    "Put in a different way, within the context of low ECI, the country has been able to materialize diversification opportunities by conquering adjacent products.",
+    "Namibia has few complex products within a short distance."
+  ],
+  "data_points": [
+    {
+      "metric": "Diversification rate relative to peers",
+      "value": "above average given capabilities",
+      "year": "2010-2018",
+      "country": "Namibia",
+      "product": null
+    },
+    {
+      "metric": "New product value added with below-median PCI",
+      "value": "95%",
+      "year": "2003-2018",
+      "country": "Namibia",
+      "product": "transport, metals, stone"
+    },
+    {
+      "metric": "Complexity Outlook Index",
+      "value": "low \u2014 few complex products within reach",
+      "year": "2018",
+      "country": "Namibia",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

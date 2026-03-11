@@ -1,0 +1,30 @@
+{
+  "question_id": "346",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.975494+00:00",
+  "paper_title": "Examining Beneficiation",
+  "paper_year": 2008,
+  "source_paper": "2008-5-cid-working-paper-162-examining-benefication.pdf",
+  "research_answer": "This pattern reflects how productive capabilities \u2014 rather than input-output relationships \u2014 drive export diversification. Exporting logs successfully requires a mix of natural resource property rights, firms with sufficient capital to harvest the resource, and basic rural infrastructure to gather and ship it. These capabilities \u2014 oriented around resource extraction, capital deployment in remote areas, and logistics for bulky commodities \u2014 are more similar to what's needed to export fish than to what's needed to run a pulp mill. Pulp mills require centralized factories, large pools of unskilled workers conditioned for factory work, and manufacturing coordination capabilities that are quite distant from logging. In other words, countries diversify into products that use similar underlying capabilities, not simply into products that use their exports as inputs.",
+  "supporting_quotes": [
+    "What are the capabilities needed to export logs? Probably a mix of natural resource property rights, firms with sufficient capital to harvest the resource, and simple rural infrastructure to gather the resource and ship it to port efficiently and securely. This mix of national-level capabilities seems much more relevant to fish exports than pulp mills, which require centralized factories with armies of unskilled workers that are conditioned for factory work.",
+    "Nevertheless, even with this policy bias, we see that more log exporters exported fruit than plywood."
+  ],
+  "data_points": [
+    {
+      "metric": "Log exporters also exporting fish vs. pulp mills",
+      "value": "fish more common than pulp",
+      "year": "1995",
+      "country": "global sample",
+      "product": "logs, fish, pulp"
+    },
+    {
+      "metric": "Log exporters also exporting fruit vs. plywood",
+      "value": "fruit > plywood despite policy bias toward plywood",
+      "year": "1995",
+      "country": "global sample",
+      "product": "logs, fruit, plywood"
+    }
+  ],
+  "confidence": "medium"
+}

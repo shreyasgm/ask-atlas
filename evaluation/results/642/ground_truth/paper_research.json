@@ -1,0 +1,39 @@
+{
+  "question_id": "642",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.066236+00:00",
+  "paper_title": "Growth Diagnostic: Paraguay",
+  "paper_year": 2007,
+  "source_paper": "growth_diagnostic_paraguay.pdf",
+  "research_answer": "The dominance of soybeans is problematic for several interconnected reasons from a complexity perspective. First, soybeans are an extremely land- and capital-intensive product with very low labor intensity \u2014 in the US a hectare requires only 6 hours of labor per year, and in Brazil about 15 hours, which is less than one-fifteenth of the labor required for a crop like sugar. This means soybean expansion generates limited employment and backward linkages. Second, Paraguay has already overshot its most suitable land \u2014 planting 2.2 million hectares against only 542,000 hectares of truly suitable land \u2014 limiting future yield gains. Third, soybeans sit in a peripheral, isolated part of the product space, meaning the capabilities built up around soybean production do not easily transfer to more complex or higher-value products. Finally, Paraguay's export sophistication (EXPY) has remained very low precisely because it has deepened into soybeans rather than diversifying, and countries with low EXPY tend to grow more slowly over the long run.",
+  "supporting_quotes": [
+    "In the US, a hectare of soybeans requires barely 6 hours of work per year while the equivalent number for Brazil is about 15 hours per year. This is at least less than 1/15th of the equivalent labor input for a crop such as sugar, assuming mechanized harvesting.",
+    "The country only has 542000 hectares of land which is classified either as suitable or very suitable for soybeans, but it has already planted 2.2 million hectares, 4 times more than this amount.",
+    "These figures show that Paraguay's productive capabilities are concentrated in very sparse parts of the product space, and they have undergone very little changes over time.",
+    "Given the finding that countries with less-sophisticated export baskets grow slower, Paraguay's low long-term export growth should not be very surprising."
+  ],
+  "data_points": [
+    {
+      "metric": "labor intensity per hectare",
+      "value": "6 hours (US) / 15 hours (Brazil) for soybeans vs. >225 hours for sugar",
+      "year": "2006",
+      "country": "United States, Brazil",
+      "product": "soybeans vs. sugar"
+    },
+    {
+      "metric": "soybean cultivation vs. suitable land",
+      "value": "2.2M planted vs. 542k suitable",
+      "year": "2006",
+      "country": "Paraguay",
+      "product": "soybeans"
+    },
+    {
+      "metric": "product space position",
+      "value": "sparse, peripheral, no movement to complex clusters",
+      "year": "1975-2000",
+      "country": "Paraguay",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,39 @@
+{
+  "question_id": "337",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.972455+00:00",
+  "paper_title": "South Africa's Export Predicament",
+  "paper_year": 2006,
+  "source_paper": "2006-08-glwp-06-south_africa_export_predicament.pdf",
+  "research_answer": "South Africa's economic growth over the 1960\u20132004 period has been distinctly underwhelming compared to a wide range of peer economies. Its GDP per capita grew only 40% over those 44 years. By comparison, Mexico achieved 85% growth, Egypt 130%, and Malaysia a striking 168%. This means Malaysia's economy grew more than four times as fast as South Africa's in per capita terms over the same period. These are not just advanced economies; they include developing countries at broadly comparable starting points. This underperformance is closely linked to South Africa's export stagnation, as export growth and structural transformation are key channels through which countries raise productivity and incomes.",
+  "supporting_quotes": [
+    "South Africa's output growth since 1960 has been rather disappointing, with GDP per capita in 2004 only 40% higher than it was in 1960. This is compared to an increase over the equivalent period of 85% in Mexico, 130% in Egypt, and 168% in Malaysia."
+  ],
+  "data_points": [
+    {
+      "metric": "GDP per capita growth 1960-2004",
+      "value": "+40%",
+      "year": "1960-2004",
+      "country": "South Africa"
+    },
+    {
+      "metric": "GDP per capita growth 1960-2004",
+      "value": "+85%",
+      "year": "1960-2004",
+      "country": "Mexico"
+    },
+    {
+      "metric": "GDP per capita growth 1960-2004",
+      "value": "+130%",
+      "year": "1960-2004",
+      "country": "Egypt"
+    },
+    {
+      "metric": "GDP per capita growth 1960-2004",
+      "value": "+168%",
+      "year": "1960-2004",
+      "country": "Malaysia"
+    }
+  ],
+  "confidence": "high"
+}

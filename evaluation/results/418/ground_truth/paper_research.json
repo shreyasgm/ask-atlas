@@ -1,0 +1,43 @@
+{
+  "question_id": "418",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.002939+00:00",
+  "paper_title": "Implied Comparative Advantage",
+  "paper_year": 2020,
+  "source_paper": "2020-07-cid-wp-276-revised-implied-comparative-advantage.pdf",
+  "research_answer": "Yes, and the difference is meaningful. High-tech products like electronics, machinery, and medical devices show the strongest predictability under implied comparative advantage frameworks, with R\u00b2 values of around 0.19\u20130.20 for growth predictions. By contrast, extractive industries and agricultural products show the weakest predictability, with R\u00b2 values in the range of 0.14\u20130.15. The intuition is that high-tech manufacturing requires dense, overlapping capabilities \u2014 the same knowledge that makes a country good at one type of machine makes it likely to be good at adjacent machines \u2014 while comparative advantage in commodities often depends on geographic luck (e.g., oilfield discoveries or soil conditions) that has little to do with a country's broader technological capabilities. Apparel and textiles also show relatively low predictability (R\u00b2\u22480.14), likely because labor cost dynamics can shift these industries across countries in ways unrelated to capability relatedness.",
+  "supporting_quotes": [
+    "For product subsamples (based on the HS chapters)... it appears that the most easily-explained categories are high-tech goods like electronics or medical devices. The worst predictions are in the extractives and agricultural categories; this makes sense, since shifts in these commodities may have more to do with geographic luck (e.g., oilfield discoveries) than shared technological requirements."
+  ],
+  "data_points": [
+    {
+      "metric": "R\u00b2 for Electronics/Machinery",
+      "value": "0.20",
+      "year": "1995-2016",
+      "country": "119 countries",
+      "product": "Electronics and machinery"
+    },
+    {
+      "metric": "R\u00b2 for Medical devices",
+      "value": "0.186",
+      "year": "1995-2016",
+      "country": "119 countries",
+      "product": "Medical devices"
+    },
+    {
+      "metric": "R\u00b2 for Extractives",
+      "value": "0.152",
+      "year": "1995-2016",
+      "country": "119 countries",
+      "product": "Natural resources"
+    },
+    {
+      "metric": "R\u00b2 for Apparel/Textiles",
+      "value": "0.14",
+      "year": "1995-2016",
+      "country": "119 countries",
+      "product": "Apparel and textiles"
+    }
+  ],
+  "confidence": "high"
+}

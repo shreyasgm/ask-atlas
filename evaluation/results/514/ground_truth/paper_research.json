@@ -1,0 +1,42 @@
+{
+  "question_id": "514",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.027249+00:00",
+  "paper_title": "The Devil's in the Dance: Elements of a Growth Diagnostic in Bolivia",
+  "paper_year": 2021,
+  "source_paper": "2025-05-glwp-247-bolivia-growth-diagnostic-2021.pdf",
+  "research_answer": "Bolivia's economic complexity has deteriorated significantly over the past two decades. In 2000, Bolivia ranked 81st most complex economy out of 133 countries. By the time of the most recent data, it had fallen to 115th out of 133 \u2014 a drop of 34 places. This decline is closely tied to the structure of Bolivia's boom period (roughly 2003\u20132014), during which commodity revenues fueled growth in non-tradable services like construction, retail, and wholesale trade rather than in manufacturing or other sophisticated tradable sectors. The export base actually narrowed during this period while dependence on complex imports grew. In other words, Bolivia was consuming increasingly sophisticated goods from abroad while producing and exporting simpler ones \u2014 a pattern that erodes economic complexity over time.",
+  "supporting_quotes": [
+    "Bolivia ranks as the 115th most complex economy out of 133 economies in the Economic Complexity Index (ECI).",
+    "Unfortunately for Bolivia, the country's economic complexity performs poorly versus regional peers and has been worsening over time, as the economy was the 81st most complex economy in 2000.",
+    "Even before the fall in commodity prices, the growth period in Bolivia led to a narrowing of the export base, while increasing the dependence on complex imports.",
+    "During this period of fiscal expansion, the fastest growing sectors were primarily non-tradable services, including construction and retail and wholesale trade."
+  ],
+  "data_points": [
+    {
+      "metric": "Economic Complexity Index ranking",
+      "value": "81 out of 133",
+      "year": "2000",
+      "country": "Bolivia"
+    },
+    {
+      "metric": "Economic Complexity Index ranking",
+      "value": "115 out of 133",
+      "year": "recent",
+      "country": "Bolivia"
+    },
+    {
+      "metric": "export base trend",
+      "value": "narrowing",
+      "year": "2003-2014",
+      "country": "Bolivia"
+    },
+    {
+      "metric": "fastest growing sectors",
+      "value": "construction, retail, wholesale trade (non-tradable)",
+      "year": "2003-2014",
+      "country": "Bolivia"
+    }
+  ],
+  "confidence": "high"
+}

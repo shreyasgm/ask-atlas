@@ -1,0 +1,29 @@
+{
+  "question_id": "323",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.967930+00:00",
+  "paper_title": "Growth Diagnostics in Peru",
+  "paper_year": 2008,
+  "source_paper": "181.pdf",
+  "research_answer": "The contrast is dramatic. Between 1975 and 2000, Peru made minimal movement through the product space despite experiencing a massive export collapse and recovery that might have been expected to force structural transformation. Malaysia, starting from a broadly comparable developing-country position in 1975, moved significantly and purposively through the product space over the same period \u2014 upgrading into more sophisticated and diverse products. This comparison highlights that Peru's export recovery was a restoration of the status quo rather than a structural upgrade, while Malaysia used the same timeframe to fundamentally transform its export composition.",
+  "supporting_quotes": [
+    "Compare this to Malaysia, which has moved significantly and purposively through the product space in the same period."
+  ],
+  "data_points": [
+    {
+      "metric": "product space movement",
+      "value": "minimal",
+      "year": "1975-2000",
+      "country": "Peru",
+      "product": "all exports"
+    },
+    {
+      "metric": "product space movement",
+      "value": "significant and purposive",
+      "year": "1975-2000",
+      "country": "Malaysia",
+      "product": "all exports"
+    }
+  ],
+  "confidence": "medium"
+}

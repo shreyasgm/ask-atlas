@@ -1,0 +1,27 @@
+{
+  "question_id": "366",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.981983+00:00",
+  "paper_title": "Constraints to Sustained and Inclusive Growth in Sri Lanka: An Initial Diagnosis and Key Topics for Discussion",
+  "paper_year": 2016,
+  "source_paper": "2016.01.07_hausmann_initial_constraints.pdf",
+  "research_answer": "While remittances are a positive contributor to Sri Lanka's external accounts \u2014 at roughly $310\u2013320 per capita in 2014, they are $120 above the level expected for a country at Sri Lanka's income level \u2014 they are not considered a viable long-term growth engine. The above-expected remittance receipts indicate that a disproportionate share of Sri Lanka's workforce has emigrated in search of higher-paying jobs abroad, which is itself a symptom of limited domestic productive opportunities rather than a source of sustainable structural transformation. Unlike export diversification, remittances depend on external labor markets and do not build the domestic productive capabilities needed to sustain long-run growth.",
+  "supporting_quotes": [
+    "Remittance income is probably not going to be an engine of growth in the longer (or shorter) run... +120US$ per capita... Remittances received per capita, 2014"
+  ],
+  "data_points": [
+    {
+      "metric": "Remittances per capita",
+      "value": "~$310-320",
+      "year": "2014",
+      "country": "Sri Lanka"
+    },
+    {
+      "metric": "Remittances above expected level",
+      "value": "+$120 per capita",
+      "year": "2014",
+      "country": "Sri Lanka"
+    }
+  ],
+  "confidence": "high"
+}

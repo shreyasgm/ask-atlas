@@ -1,0 +1,39 @@
+{
+  "question_id": "607",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.055441+00:00",
+  "paper_title": "How should Uganda grow?",
+  "paper_year": 2014,
+  "source_paper": "cid_working_paper_275.pdf",
+  "research_answer": "Not really. While Uganda's exports have become more diverse over time, this diversification has been largely confined to other primary products \u2014 particularly mining and fish. The country remains heavily concentrated in peripheral product communities like tree crops, flowers, food processing, animal products, and fish and seafood, and has made very few inroads into larger, more complex, and more connected communities such as garments, construction materials, chemicals, and machinery. There has been a small but notable uptick in exports of light manufactured building materials like cement and steel products to neighboring countries, but this remains limited. In short, Uganda's diversification so far has been horizontal within the primary sector rather than a structural upgrade toward more complex products.",
+  "supporting_quotes": [
+    "Although exports have become more diverse over time, this has been mostly due to diversification into other primary products such as mining and fish.",
+    "Uganda has a significant presence in many of the peripheral communities, particularly, tree crops and flowers, as well as food processing, animal products and fish and seafood.",
+    "Yet Uganda has made few inroads into the larger, more complex, and more connected communities such as garments, construction materials, chemicals, and machinery.",
+    "There has also been an increase in exports of light manufactured building materials including cement and steel products especially to the neighboring countries."
+  ],
+  "data_points": [
+    {
+      "metric": "export diversification type",
+      "value": "primary products only (mining, fish)",
+      "year": null,
+      "country": "Uganda",
+      "product": "mining, fish"
+    },
+    {
+      "metric": "presence in peripheral product communities",
+      "value": "significant",
+      "year": null,
+      "country": "Uganda",
+      "product": "tree crops, flowers, food processing, animal products, fish"
+    },
+    {
+      "metric": "presence in complex product communities",
+      "value": "low",
+      "year": null,
+      "country": "Uganda",
+      "product": "garments, construction materials, chemicals, machinery"
+    }
+  ],
+  "confidence": "high"
+}

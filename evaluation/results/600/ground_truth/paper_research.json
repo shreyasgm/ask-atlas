@@ -1,0 +1,29 @@
+{
+  "question_id": "600",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.052444+00:00",
+  "paper_title": "Diversification in the Industrial Sector of Albania: Identifying Strategic Areas",
+  "paper_year": 2018,
+  "source_paper": "albania_diversification_brief.pdf",
+  "research_answer": "Plastics and Rubbers ranks first in diversification feasibility for Albania. What makes this notable is that it combines relatively high average product complexity with a strong feasibility score \u2014 meaning the products in this sector are more sophisticated than what Albania currently exports, yet they are still considered attainable given Albania's existing productive capabilities. This positions Plastics and Rubbers as a potentially high-reward diversification target compared to sectors where Albania's export base already sits.",
+  "supporting_quotes": [
+    "The sector ranks first in feasibility, with a high average complexity of its products."
+  ],
+  "data_points": [
+    {
+      "metric": "sector diversification feasibility ranking",
+      "value": "1st",
+      "year": "2018",
+      "country": "Albania",
+      "product": "Plastics and Rubbers"
+    },
+    {
+      "metric": "average product complexity",
+      "value": "high",
+      "year": "2018",
+      "country": "Albania",
+      "product": "Plastics and Rubbers"
+    }
+  ],
+  "confidence": "high"
+}

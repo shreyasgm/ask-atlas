@@ -1,0 +1,29 @@
+{
+  "question_id": "344",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.974800+00:00",
+  "paper_title": "Examining Beneficiation",
+  "paper_year": 2008,
+  "source_paper": "2008-5-cid-working-paper-162-examining-benefication.pdf",
+  "research_answer": "Forward linkages are significantly weaker for raw materials than for manufactured goods in predicting joint export patterns. The regression coefficient on forward linkage strength is 0.532 for raw material product pairs, compared to 0.908 for manufactures \u2014 a statistically significant difference. This is an important finding because beneficiation policies (policies that mandate or incentivize local processing of raw materials) are explicitly premised on the idea that raw material exporters have a natural advantage in their downstream industries. The data suggests the opposite: the production capabilities required to extract and export raw commodities appear to be less transferable to downstream processing than capabilities shared between manufactured goods.",
+  "supporting_quotes": [
+    "Both with the Leamer category and the Lall category most often associated with forward linkage-based policies, the coefficient on forward linkages is smaller than that for manufactures, and this difference is statistically significant."
+  ],
+  "data_points": [
+    {
+      "metric": "Forward linkage coefficient - raw materials",
+      "value": "0.532",
+      "year": "1995",
+      "country": "global",
+      "product": "raw materials"
+    },
+    {
+      "metric": "Forward linkage coefficient - manufactures",
+      "value": "0.908",
+      "year": "1995",
+      "country": "global",
+      "product": "manufactures"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,39 @@
+{
+  "question_id": "582",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.045928+00:00",
+  "paper_title": "Opportunity analysis of agriculture products in Sri Lanka: Measuring markets and feasibility",
+  "paper_year": 2016,
+  "source_paper": "agri_sector_opportunities_feb_2018.pdf",
+  "research_answer": "Sri Lanka's primary Cinnamon export destination is Mexico, which is a notable mismatch with broader global market trends. Globally, the EU and USA together account for over 60% of world imports across selected agricultural sectors, and Cinnamon is identified as one of the fastest-growing products in the EU market specifically. Meanwhile, Mexico is not among the five major market blocs (EU, USA, Middle East, East Asia, India) that represent 80.7% of world agricultural trade. This suggests Sri Lanka may be underexploiting the high-growth EU and US markets for Cinnamon, where demand momentum is strongest.",
+  "supporting_quotes": [
+    "Cinnamon is mainly Mexico",
+    "Mango, Vanilla, Ginger, Turmeric, and Cinnamon have the highest growth rates in the EU market.",
+    "Shrimp, Pepper, Mango, Vanilla, Ginger & Cinnamon have the highest growth rates",
+    "EU & USA: Almost all the products have their largest markets in the EU & USA"
+  ],
+  "data_points": [
+    {
+      "metric": "primary export destination",
+      "value": "Mexico",
+      "year": "2016",
+      "country": "Sri Lanka",
+      "product": "Cinnamon"
+    },
+    {
+      "metric": "market growth",
+      "value": "highest",
+      "year": "2012-2016",
+      "country": "EU",
+      "product": "Cinnamon"
+    },
+    {
+      "metric": "market growth",
+      "value": "highest globally",
+      "year": "2012-2016",
+      "country": "global",
+      "product": "Cinnamon"
+    }
+  ],
+  "confidence": "high"
+}

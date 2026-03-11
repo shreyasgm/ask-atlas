@@ -1,0 +1,37 @@
+{
+  "question_id": "594",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.050358+00:00",
+  "paper_title": "What is the Binding Constraint to Growth in Albania?",
+  "paper_year": 2017,
+  "source_paper": "alb_growth_diagnostic_report.pdf",
+  "research_answer": "Albania's position in the Product Space \u2014 the map of how products relate to each other through shared productive capabilities \u2014 puts it at a structural disadvantage for diversification. Albania's exports cluster in garments, footwear, scattered agricultural goods, wood and paper products, and minerals and metals. These product categories sit on the periphery of the Product Space and are not closely connected to higher-complexity products like chemicals, machinery, electrical goods, or transportation equipment, which occupy a denser, more interconnected core. Because moving into new products is easier when a country already exports something similar (i.e., the 'distance' is short), Albania's peripheral position means the 'jumps' required to reach more complex products are larger than those facing regional peers. When the distance to new products is calculated, Albania's path to diversification is measurably more difficult than that of other Western Balkan countries.",
+  "supporting_quotes": [
+    "Albania's exported products are clustered in garments and footwear (green), and scattered across agricultural products (yellow and orange), a few wood and paper-based products (red), and minerals and metals (brown). These products do not tend to be co-exported with higher complexity products like chemicals, machinery, electrical, or transportation products, which are located in the left half of the Product Space.",
+    "When one calculates the 'distance' to new products, Albania's path to diversification is more difficult than that of other countries in the region (Figure 9)."
+  ],
+  "data_points": [
+    {
+      "metric": "product space clustering",
+      "value": "garments, footwear, agricultural, wood/paper, minerals/metals",
+      "year": "2014",
+      "country": "Albania",
+      "product": null
+    },
+    {
+      "metric": "distance to complex products",
+      "value": "large \u2014 no co-export linkages with chemicals, machinery, electrical, transport",
+      "year": null,
+      "country": "Albania",
+      "product": null
+    },
+    {
+      "metric": "diversification difficulty vs regional peers",
+      "value": "higher than Western Balkans",
+      "year": null,
+      "country": "Albania",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

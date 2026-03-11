@@ -1,0 +1,41 @@
+{
+  "question_id": "364",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.981337+00:00",
+  "paper_title": "Constraints to Sustained and Inclusive Growth in Sri Lanka: An Initial Diagnosis and Key Topics for Discussion",
+  "paper_year": 2016,
+  "source_paper": "2016.01.07_hausmann_initial_constraints.pdf",
+  "research_answer": "The evidence suggests Sri Lanka's trade imbalance is a persistent and serious constraint on growth. The deficit in goods and services peaked at approximately 15% of GDP in both 2011 and 2015, with multiple spikes in the deficit historically coinciding with slowdowns in GDP per capita growth. This balance of payments pressure has also manifested in significant currency depreciation: the Sri Lankan Rupee weakened from roughly 110 LKR/USD in 2010 to around 145 LKR/USD by 2015 \u2014 a depreciation of about 32%. Compounding the problem, Sri Lanka's external debt stood at roughly 270% of exports and primary income in 2014, which is 119 percentage points above the level expected for a country at its income level. Together, these indicators point to a country that is structurally importing more than it earns from exports and other primary income sources, leaving it vulnerable to recurring currency crises.",
+  "supporting_quotes": [
+    "But growth is limited by the Balance of Payments... [showing] Growth in GDP per capita and Deficit in goods and services from 1990-2015, with multiple spikes in the deficit coinciding with growth slowdowns",
+    "Daily Exchange Rate (Sri Lankan Rupee to U.S. Dollar), 2010-2015... showing increase from 100-115 range to 140-145 range",
+    "External debt is already pretty high as a share of exports and primary income (including remittances)... Difference from expected value = +119 percentage points"
+  ],
+  "data_points": [
+    {
+      "metric": "Deficit in goods and services",
+      "value": "~15% of GDP",
+      "year": "2011, 2015",
+      "country": "Sri Lanka"
+    },
+    {
+      "metric": "Exchange rate LKR/USD",
+      "value": "~110 to ~145",
+      "year": "2010-2015",
+      "country": "Sri Lanka"
+    },
+    {
+      "metric": "External debt (% of exports and primary income)",
+      "value": "~270%",
+      "year": "2014",
+      "country": "Sri Lanka"
+    },
+    {
+      "metric": "External debt deviation from expected",
+      "value": "+119 percentage points",
+      "year": "2014",
+      "country": "Sri Lanka"
+    }
+  ],
+  "confidence": "high"
+}

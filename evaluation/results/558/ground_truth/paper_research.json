@@ -1,0 +1,37 @@
+{
+  "question_id": "558",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.036534+00:00",
+  "paper_title": "A Tale of Two Clusters: The Evolution of Ireland's Economic Complexity since 1995",
+  "paper_year": 2015,
+  "source_paper": "2_oclery.pdf",
+  "research_answer": "Ireland's complex and simpler sectors show very different dynamics in terms of stability and churn. High-complexity sectors such as chemicals, stone/glass, plastics, and machinery/electrical have experienced high and increasing churn \u2014 meaning frequent entry and exit of products in terms of RCA. In contrast, lower-complexity sectors like animals, food, vegetables, minerals, and wood show lower and in some cases declining churn, indicating greater stability and consolidation. This divergence is significant: the sectors that anchor Ireland's complexity credentials are highly volatile, with most sectors showing net negative product appearances after 2000 (positive 1995-2000 but negative thereafter). Meanwhile, Ireland's domestically-oriented, lower-complexity food and agricultural sectors are building more stable export bases. This raises questions about the durability of Ireland's complex export profile, which appears dependent on a relatively volatile foreign-driven industrial base.",
+  "supporting_quotes": [
+    "There was high entry and exit of many sectors, with increasing churn in high complexity sectors such as stone/glass, plastics, chemicals and machinery/electrical.",
+    "Churn is lower for animals and food, and declining for vegetables, minerals and wood.",
+    "In many cases the net appearances of new industries was positive during the period 1995-2000, yet turned negative in later years."
+  ],
+  "data_points": [
+    {
+      "metric": "churn - high complexity sectors",
+      "value": "high and increasing",
+      "year": "2000-2012",
+      "country": "Ireland",
+      "product": "chemicals, stone/glass, plastics, machinery/electrical"
+    },
+    {
+      "metric": "churn - low complexity sectors",
+      "value": "lower and declining",
+      "year": "2000-2012",
+      "country": "Ireland",
+      "product": "animals, food, vegetables, minerals, wood"
+    },
+    {
+      "metric": "net product appearances",
+      "value": "positive 1995-2000, negative post-2000",
+      "year": "1995-2012",
+      "country": "Ireland"
+    }
+  ],
+  "confidence": "high"
+}

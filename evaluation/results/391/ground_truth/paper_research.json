@@ -1,0 +1,22 @@
+{
+  "question_id": "391",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.993879+00:00",
+  "paper_title": "A Structural Ranking of Economic Complexity",
+  "paper_year": 2019,
+  "source_paper": "2019-11-cid-fellows-wp-119-structural-rank-ec.pdf",
+  "research_answer": "Economic complexity and GDP per capita capture related but distinct dimensions of a country's economy. Complexity rankings are tied to comparative advantage \u2014 what a country can produce relative to others \u2014 rather than absolute advantage, which more directly drives income levels. This means complexity reveals information about the depth and diversity of a country's productive capabilities that GDP per capita alone does not capture. In other words, two countries with similar income levels could have very different complexity scores if their export baskets differ in diversity and sophistication, and vice versa.",
+  "supporting_quotes": [
+    "This ranking is tied to comparative advantages as opposed to absolute advantages. Hence, it reveals information different from GDP per capita on the deep underlying economic capabilities of countries."
+  ],
+  "data_points": [
+    {
+      "metric": "ECI vs GDP per capita relationship",
+      "value": "Correlated but distinct; ECI captures comparative advantage-based capabilities",
+      "year": null,
+      "country": null,
+      "product": null
+    }
+  ],
+  "confidence": "medium"
+}

@@ -1,0 +1,46 @@
+{
+  "question_id": "531",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.030364+00:00",
+  "paper_title": "Global Imbalances in International Trade, Dynamics of Debt and Finance: Causes and Mitigation Measures",
+  "paper_year": 2025,
+  "source_paper": "2025-08-glwp-252-global-imbalances.pdf",
+  "research_answer": "The shift in economic complexity between China and the US since 1995 is striking. China's Economic Complexity Index (ECI) grew 3.5 times \u2014 from 0.424 in 1995 to 1.471 in 2023 \u2014 reflecting its dramatic transformation into a sophisticated manufacturing powerhouse. Meanwhile, the US moved in the opposite direction, with its ECI declining from 1.729 to 1.514 over the same period. The result is that by 2023, the two economies have nearly converged in complexity (US: 1.514 vs. China: 1.471), a remarkable shift given that China started at roughly one-quarter of the US complexity level in 1995. This convergence aligns with broader manufacturing trends: China went from controlling just 6% of global manufacturing value-added in the early 2000s to an estimated 26\u201330% today, while the US share of global manufacturing has fallen steadily. The ECI convergence suggests China is no longer competing primarily on low-cost, low-complexity goods \u2014 it has moved up the value chain to rival the US in the sophistication of its export basket.",
+  "supporting_quotes": [
+    "According to the data of the Growth Lab of Harvard University, compared to a decade prior, China's economy has become more complex, increasing its ECI by 3,5 times: from 0,424 in 1995 to 1,471 in 2023.",
+    "For the same period the US has become less complex by ECI, decreasing its ECI from 1,729 in 1995 to 1,514 in 2023.",
+    "Thus, the ECIs of USA and China are almost equal.",
+    "China currently holds the greatest share of global manufacturing value-added, with several sources estimating it controls between 26% and 30%."
+  ],
+  "data_points": [
+    {
+      "metric": "Economic Complexity Index",
+      "value": "0.424 \u2192 1.471",
+      "year": "1995 \u2192 2023",
+      "country": "China",
+      "product": null
+    },
+    {
+      "metric": "Economic Complexity Index",
+      "value": "1.729 \u2192 1.514",
+      "year": "1995 \u2192 2023",
+      "country": "United States",
+      "product": null
+    },
+    {
+      "metric": "share of global manufacturing value-added",
+      "value": "26\u201330%",
+      "year": "2024",
+      "country": "China",
+      "product": "all manufacturing"
+    },
+    {
+      "metric": "share of global manufacturing value-added",
+      "value": "6%",
+      "year": "early 2000s",
+      "country": "China",
+      "product": "all manufacturing"
+    }
+  ],
+  "confidence": "high"
+}

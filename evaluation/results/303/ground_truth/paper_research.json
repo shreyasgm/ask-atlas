@@ -1,0 +1,46 @@
+{
+  "question_id": "303",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.943251+00:00",
+  "paper_title": "Fresh Tomatoes: Ideas to Build a Productive Eco-System",
+  "paper_year": 2014,
+  "source_paper": "1408_tomatoes_value_chain_analysis_nicolas_ajzenman.pdf",
+  "research_answer": "Albania receives the lowest average price for fresh tomatoes across Europe and Asia, earning between $0.45 and $0.72 per kg \u2014 less than 60% of what higher-end markets command. To put this in context, average import prices in the broader European/Eurasian region range from $1.29/kg in Russia to $2.21/kg in Switzerland. So Albanian producers are being paid roughly a third of what the top-end markets pay. This extreme price discount reflects a combination of factors: Albania's exports go almost exclusively to lower-value neighboring markets (Kosovo, Serbia, Montenegro, Macedonia, Bulgaria, Greece), its production is highly atomized with no quality control or traceability, and its collectors operate on a spot-transaction basis with little market knowledge. In short, Albania is participating in the tomato trade but capturing very little of its value.",
+  "supporting_quotes": [
+    "the prices that Albanian producers get is very low - the lowest in Europe for some products like tomatoes",
+    "Albanian tomatoes are paid less than 60% of the price received by higher-end markets. It ranges from about $ 0.45/Kg to $/Kg 0.72 in the best case",
+    "the average import prices (which vary a lot throughout the year) range from a minimum of $/Kg 1.29 in Russia to a maximum of $/Kg 2.21 in Switzerland",
+    "Albania receives the lowest average price for its fresh tomatoes in Europe and Asia"
+  ],
+  "data_points": [
+    {
+      "metric": "Albanian export price range",
+      "value": "$0.45\u2013$0.72/kg",
+      "year": "2012",
+      "country": "Albania",
+      "product": "fresh tomatoes"
+    },
+    {
+      "metric": "price ratio vs. high-end markets",
+      "value": "less than 60%",
+      "year": "2012",
+      "country": "Albania",
+      "product": "fresh tomatoes"
+    },
+    {
+      "metric": "regional import price range",
+      "value": "$1.29\u2013$2.21/kg",
+      "year": "2012",
+      "country": "Russia to Switzerland",
+      "product": "fresh tomatoes"
+    },
+    {
+      "metric": "price rank",
+      "value": "lowest in Europe and Asia",
+      "year": "2012",
+      "country": "Albania",
+      "product": "fresh tomatoes"
+    }
+  ],
+  "confidence": "high"
+}

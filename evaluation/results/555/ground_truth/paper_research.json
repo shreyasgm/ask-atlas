@@ -1,0 +1,37 @@
+{
+  "question_id": "555",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.035577+00:00",
+  "paper_title": "A Tale of Two Clusters: The Evolution of Ireland's Economic Complexity since 1995",
+  "paper_year": 2015,
+  "source_paper": "2_oclery.pdf",
+  "research_answer": "Foreign multinationals are overwhelmingly dominant in Ireland's highest-complexity export sectors, with the gaps being especially stark in turnover. In chemicals and pharmaceuticals, foreign firms outstrip domestic firms by a factor of 20 in annual turnover and 5 in employees. In electronics and computers, despite Ireland having roughly twice as many domestic firms as foreign ones, foreign firms generate 21 times the turnover and employ 4 times as many people. Even in the food sector \u2014 which is more domestically oriented with 570 Irish firms versus just 37 foreign \u2014 foreign firms still generate higher per-firm turnover ($14m vs $12m). Overall, in 2011, a small number of foreign-dominated sectors accounted for fully one quarter of Ireland's total economy-wide gross value added.",
+  "supporting_quotes": [
+    "Foreign firms are dominant in terms of number of enterprises, number of employees (by a factor of 5) and annual turnover (by a factor of 20) for the chemical and pharmaceutical sectors.",
+    "While Ireland has approximately twice as many domestic firms as compared to foreign-owned firms in electronics/computers, foreign firms dominate in terms of employees (by a factor of 4) and turnover (by a factor of 21).",
+    "In 2011, a small number of sectors dominated by foreign-owned multinational enterprises accounted for one quarter of total economy-wide gross value added."
+  ],
+  "data_points": [
+    {
+      "metric": "foreign/domestic turnover ratio - pharma",
+      "value": "20:1",
+      "year": "2012",
+      "country": "Ireland",
+      "product": "chemicals, pharmaceuticals"
+    },
+    {
+      "metric": "foreign/domestic turnover ratio - electronics",
+      "value": "21:1",
+      "year": "2012",
+      "country": "Ireland",
+      "product": "electronics, computers"
+    },
+    {
+      "metric": "foreign share of gross value added",
+      "value": "25%",
+      "year": "2011",
+      "country": "Ireland"
+    }
+  ],
+  "confidence": "high"
+}

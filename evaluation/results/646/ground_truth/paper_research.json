@@ -1,0 +1,38 @@
+{
+  "question_id": "646",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.067287+00:00",
+  "paper_title": "Moving to the Adjacent Possible: Discovering Paths for Export Diversification in Rwanda",
+  "paper_year": 2015,
+  "source_paper": "hausmann_chauvin_rwanda_294.pdf",
+  "research_answer": "As of 2010, Rwanda's exports are dominated by two broad sectors that together account for over 70% of total export value. Mineral products are the single largest sector at 35.5% of total exports, followed closely by vegetable products at 34.9% \u2014 the latter capturing Rwanda's coffee and tea exports. This means Rwanda's entire export economy is essentially built on raw materials from the ground and unprocessed agricultural products. Machinery and electrical products, by contrast, represent just 4.3% of exports despite Rwanda having RCA in 4 such products, illustrating the very limited industrial base in the country's export portfolio.",
+  "supporting_quotes": [
+    "Mineral Products 11 66 125,611 35.5",
+    "Vegetable Products* 13 101 123,258 34.9",
+    "Machinery / Electrical 4 133 15,048 4.3"
+  ],
+  "data_points": [
+    {
+      "metric": "Share of total exports",
+      "value": "35.5%",
+      "year": "2010",
+      "country": "Rwanda",
+      "product": "Mineral Products"
+    },
+    {
+      "metric": "Share of total exports",
+      "value": "34.9%",
+      "year": "2010",
+      "country": "Rwanda",
+      "product": "Vegetable Products"
+    },
+    {
+      "metric": "Share of total exports",
+      "value": "4.3%",
+      "year": "2010",
+      "country": "Rwanda",
+      "product": "Machinery/Electrical"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,46 @@
+{
+  "question_id": "612",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.057162+00:00",
+  "paper_title": "How should Uganda grow?",
+  "paper_year": 2014,
+  "source_paper": "cid_working_paper_275.pdf",
+  "research_answer": "Based on Uganda's current position in the product space, the most viable near-term diversification opportunities fall into two tiers. The first \u2014 what might be called 'parsimonious' or low-distance moves \u2014 includes food processing products like margarine, confectionery, and jams, as well as agrochemicals. These are close to Uganda's existing capabilities in agriculture and require relatively modest capability jumps. The second tier, representing more strategic bets with higher complexity and opportunity value, includes construction and industrial materials such as plastics, metal products, and paper products. Food processing is identified as the closest community along Uganda's efficiency frontier above its current average complexity level, and Uganda already has some export presence there. Construction materials and equipment come next, offering sizable opportunity value without being prohibitively distant. Critically, both tiers align with markets where Uganda is already seeing export growth \u2014 particularly to neighboring African countries.",
+  "supporting_quotes": [
+    "Above Uganda's current average level of complexity, the closest community along the efficiency frontier is food processing. Further Uganda already has some presence in this community.",
+    "Construction materials and equipment is the next community along the efficiency frontier. Importantly, this community offers a sizable opportunity value without being prohibitively distant.",
+    "Parsimonious transformation \u2013 Examining the top ranking products we find that they are mostly processed inputs or outputs of the agricultural industry, that is, food processing and agrochemicals (Figure 29).",
+    "Strategic bets \u2013 Examining the top ranking products we see that they represent mostly construction and industrial materials such as plastics, metal and paper products (Figure 30)."
+  ],
+  "data_points": [
+    {
+      "metric": "nearest diversification opportunity (efficiency frontier)",
+      "value": "food processing",
+      "year": null,
+      "country": "Uganda",
+      "product": "food processing"
+    },
+    {
+      "metric": "second-tier diversification opportunity",
+      "value": "construction materials and equipment",
+      "year": null,
+      "country": "Uganda",
+      "product": "construction materials"
+    },
+    {
+      "metric": "top parsimonious products",
+      "value": "margarine, confectionery, jams, agrochemicals",
+      "year": null,
+      "country": "Uganda",
+      "product": "food processing, agrochemicals"
+    },
+    {
+      "metric": "top strategic bet products",
+      "value": "plastics, metals, paper, construction materials",
+      "year": null,
+      "country": "Uganda",
+      "product": "plastics, metals, paper"
+    }
+  ],
+  "confidence": "high"
+}

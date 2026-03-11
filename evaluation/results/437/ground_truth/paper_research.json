@@ -1,0 +1,38 @@
+{
+  "question_id": "437",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.008697+00:00",
+  "paper_title": "A Growth Diagnostic of Namibia",
+  "paper_year": 2022,
+  "source_paper": "2022-02-cid-wp-405-namibia-growth-diagnostic.pdf",
+  "research_answer": "Namibia's Economic Complexity Index (ECI) ranks among the lowest of its regional and international peers, and this has been a persistent feature for at least two decades \u2014 not a recent development. Among its peer group, only Angola ranks lower than Namibia in economic complexity. This consistently low ECI is rooted in structural features of Namibia's export basket: it is composed mostly of primary products, has low diversity, and the products it does export tend to have high ubiquity (meaning many other countries also export them). Notably, no product in Namibia's current export basket has a Product Complexity Index (PCI) above the global median, and the sectors that account for most of the country's export diversity \u2014 Agriculture and Mineral products \u2014 are themselves low-complexity sectors.",
+  "supporting_quotes": [
+    "Namibia's ECI is amongst the lowest of its regional and international peers, with an export basket composed mostly of primary products.",
+    "Low ECI has been a constant for the previous two decades, surpassing only Angola among the group of regional and international peers.",
+    "no product in its current export basket displays an average PCI above the global median, and the products that concentrate most of the country's diversity \u2013 Agriculture and Mineral products \u2013 tend to be of low complexity."
+  ],
+  "data_points": [
+    {
+      "metric": "ECI ranking among peers",
+      "value": "second lowest (above only Angola)",
+      "year": "2000-2018",
+      "country": "Namibia",
+      "product": null
+    },
+    {
+      "metric": "Products with PCI above global median",
+      "value": "zero",
+      "year": "2018",
+      "country": "Namibia",
+      "product": null
+    },
+    {
+      "metric": "Export diversity concentration",
+      "value": "Agriculture and Minerals (low complexity)",
+      "year": "2018",
+      "country": "Namibia",
+      "product": "Agriculture, Minerals"
+    }
+  ],
+  "confidence": "high"
+}

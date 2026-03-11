@@ -1,0 +1,31 @@
+{
+  "question_id": "353",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.977908+00:00",
+  "paper_title": "Reconfiguring Industrial Policy: A Framework with an Application to South Africa",
+  "paper_year": 2008,
+  "source_paper": "2008-5-cid-working-paper-168-south-africa-industrial-policy.pdf",
+  "research_answer": "This is one of the more counterintuitive outcomes of South Africa's Motor Industry Development Programme (MIDP). While the 30% tariff on finished vehicles (effectively 34% in calculations) would normally suppress imports, the IRCC duty rebate scheme simultaneously incentivizes OEMs to import vehicles to take advantage of the rebates earned through exports. These two forces \u2014 tariff-induced import suppression and rebate-induced import stimulation \u2014 have largely canceled each other out, leaving import volumes roughly unchanged compared to what they would have been without either mechanism. So despite a complex and costly policy architecture, the net trade balance impact on import penetration is essentially neutral.",
+  "supporting_quotes": [
+    "By rebating import tariffs, the IRCC scheme encourages OEMs to import vehicles. The import-repressing effect of the higher tariff is offset by the import-boosting effect of the duty rebate. The numbers indicate that these two countervailing effects on import volumes have roughly canceled each other out.",
+    "The results of such an exercise reveal that the MIDP has had a large impact on exports and virtually no impact on import penetration (relative to the counterfactual just discussed).",
+    "On the other hand, import tariffs on finished vehicles still remain high (at 30%), suggesting considerable consumer costs, and the fiscal cost of the duty rebates granted through the IRCC scheme is also quite significant."
+  ],
+  "data_points": [
+    {
+      "metric": "import tariff rate on finished vehicles",
+      "value": "30% (34% in practice)",
+      "year": null,
+      "country": "South Africa",
+      "product": "finished vehicles"
+    },
+    {
+      "metric": "net import volume effect",
+      "value": "neutral (offsetting effects)",
+      "year": null,
+      "country": "South Africa",
+      "product": "automobiles"
+    }
+  ],
+  "confidence": "high"
+}

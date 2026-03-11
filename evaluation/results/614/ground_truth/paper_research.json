@@ -1,0 +1,37 @@
+{
+  "question_id": "614",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.057787+00:00",
+  "paper_title": "How should Uganda grow?",
+  "paper_year": 2014,
+  "source_paper": "cid_working_paper_275.pdf",
+  "research_answer": "Uganda's export diversity profile reveals something important about Sub-Saharan Africa as a whole. Globally, Uganda's diversity is low \u2014 it exports a relatively narrow range of products. But when compared only to other Sub-Saharan African countries, it looks average. This means that low export diversity is the regional norm in SSA, not a Uganda-specific anomaly. Combined with the fact that Uganda's products are fairly ubiquitous \u2014 meaning they are produced by many countries and therefore tend to be less complex \u2014 this paints a picture of a region where most exporters are clustered in the same peripheral, low-complexity product space. The broader implication is that any SSA country seeking to stand out globally must break from regional norms by moving into more complex, less ubiquitous product categories.",
+  "supporting_quotes": [
+    "Uganda places in the upper left of the distribution; its diversity is fairly low compared to all countries, but average when compared to other SSA countries (shown in orange).",
+    "And in line with our theory, the products that Uganda produces are fairly ubiquitous."
+  ],
+  "data_points": [
+    {
+      "metric": "export diversity global comparison",
+      "value": "low",
+      "year": null,
+      "country": "Uganda",
+      "product": null
+    },
+    {
+      "metric": "export diversity SSA comparison",
+      "value": "average",
+      "year": null,
+      "country": "Uganda",
+      "product": null
+    },
+    {
+      "metric": "product ubiquity",
+      "value": "high (products produced by many countries)",
+      "year": null,
+      "country": "Uganda",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,47 @@
+{
+  "question_id": "478",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.020464+00:00",
+  "paper_title": "Economic Growth and Complexity in the UAE: Summary Report",
+  "paper_year": 2023,
+  "source_paper": "2023-05-UAE-growth-complexity-summary-report.pdf",
+  "research_answer": "The two periods represent a striking reversal. Between 2005 and 2012, essentially all of the UAE's export sectors \u2014 oil, non-oil goods, re-exports, and services \u2014 saw robust growth. Much of the non-oil goods momentum in that period was led by stone exports, with chemicals and metals also growing strongly from a low base. But between 2012 and 2016, oil, non-oil goods, and re-exports all fell or stagnated. Services were the exception \u2014 they maintained steady growth throughout the entire 2005\u20132019 period without the same boom-bust pattern. Post-2012, most non-oil goods sectors have remained more or less flat, suggesting that the earlier growth was partly tied to the commodity and construction boom rather than a durable structural shift in the UAE's export capabilities.",
+  "supporting_quotes": [
+    "From 2005 to 2012, all export sectors saw robust growth. Between 2012 and 2016, oil, non-oil, and re-exports all fell or stagnated.",
+    "Much of this growth has been concentrated in stone exports, especially between 2005 and 2012.",
+    "There has also been strong growth (albeit from a low base) in chemicals and metals, again the bulk of this growth coming between 2005 and 2012.",
+    "Post 2011-2012, we can see that most non-oil goods sector exports have more or less stagnated.",
+    "Non-oil non-re-exports are still stagnant overall. On the other hand, services exports have seen steady and consistent growth during the entire period."
+  ],
+  "data_points": [
+    {
+      "metric": "export sector performance",
+      "value": "robust growth",
+      "year": "2005-2012",
+      "country": "UAE",
+      "product": "all sectors"
+    },
+    {
+      "metric": "export sector performance",
+      "value": "stagnation/decline",
+      "year": "2012-2016",
+      "country": "UAE",
+      "product": "oil, non-oil, re-exports"
+    },
+    {
+      "metric": "service export performance",
+      "value": "steady growth",
+      "year": "2005-2019",
+      "country": "UAE",
+      "product": "services"
+    },
+    {
+      "metric": "non-oil goods export performance",
+      "value": "stagnation",
+      "year": "2012 onwards",
+      "country": "UAE",
+      "product": "non-oil goods"
+    }
+  ],
+  "confidence": "high"
+}

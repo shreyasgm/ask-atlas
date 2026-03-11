@@ -1,0 +1,38 @@
+{
+  "question_id": "536",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.031497+00:00",
+  "paper_title": "Global Imbalances in International Trade, Dynamics of Debt and Finance: Causes and Mitigation Measures",
+  "paper_year": 2025,
+  "source_paper": "2025-08-glwp-252-global-imbalances.pdf",
+  "research_answer": "The US tariffs introduced on Chinese goods starting in 2018 did reduce the bilateral trade deficit with China, but it remains very large. The US-China goods trade deficit peaked at $418.2 billion in 2018, the same year tariffs were introduced. By 2024, it had declined to $295.4 billion \u2014 a reduction of roughly $123 billion, or about 29%. However, this deficit still represents 24.4% of the entire US trade deficit, making China by far the single largest source of the US trade imbalance. Meanwhile, the overall US current account deficit actually widened to a record $1.13 trillion in 2024, growing 25.2% in a single year \u2014 suggesting that reducing the China-specific deficit has not arrested the broader US trade imbalance, possibly because imports shifted to other trading partners rather than being replaced by domestic production.",
+  "supporting_quotes": [
+    "The US trade deficit with China rose substantially after China's Accession to the World Trade Organisation in 2001 and reached its historical maximum $418,2 billion in 2018. After the US introduced higher tariffs on imports from China in 2018, the US-China trade balance deficit began to decline, eventually reaching $295.4 billion in 2024.",
+    "This deficit accounts for 24.4% of the total US trade deficit.",
+    "It widened by 25.2% in 2024 and reached its highest historical volume of $1.13 trillion or 3.9% of GDP."
+  ],
+  "data_points": [
+    {
+      "metric": "bilateral trade deficit (historical maximum)",
+      "value": "$418.2 billion",
+      "year": "2018",
+      "country": "United States",
+      "product": "all goods"
+    },
+    {
+      "metric": "bilateral trade deficit",
+      "value": "$295.4 billion / 24.4% of total US deficit",
+      "year": "2024",
+      "country": "United States",
+      "product": "all goods"
+    },
+    {
+      "metric": "current account deficit",
+      "value": "$1.13 trillion / 3.9% of GDP",
+      "year": "2024",
+      "country": "United States",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

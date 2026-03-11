@@ -1,0 +1,35 @@
+{
+  "question_id": "519",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.028172+00:00",
+  "paper_title": "The Devil's in the Dance: Elements of a Growth Diagnostic in Bolivia",
+  "paper_year": 2021,
+  "source_paper": "2025-05-glwp-247-bolivia-growth-diagnostic-2021.pdf",
+  "research_answer": "Bolivia's import structure makes it very difficult to cut imports without harming economic output. Since 2014, capital goods, raw materials, and intermediate products have consistently accounted for more than 80% of Bolivia's imports. These are inputs that businesses need to operate \u2014 cutting them would directly reduce productive capacity. This left Bolivia with very little room to compress imports in response to the post-2014 export decline, which is why imports remained sticky at an average of USD 9.7 billion per year from 2014 to 2019 even as exports fell sharply. Only the COVID-19 pandemic \u2014 which shut down mobility and economic activity \u2014 drove imports down to USD 7.1 billion in 2020. This structural rigidity in imports, combined with falling exports, was the main driver of Bolivia's sustained trade deficits between 2014 and 2020.",
+  "supporting_quotes": [
+    "Capital goods, raw materials, and intermediate products have been responsible for more than 80 percent of the country's imports since 2014, leaving a narrow margin for adjustment.",
+    "Imports remained stable at an average $9.7bn between 2014 and 2019.",
+    "As the pandemic response restricted mobility and work, the demand for imports shrank, falling to USD 7.1bn in 2020."
+  ],
+  "data_points": [
+    {
+      "metric": "share of capital goods, raw materials, intermediate products in imports",
+      "value": ">80%",
+      "year": "2014+",
+      "country": "Bolivia"
+    },
+    {
+      "metric": "average imports",
+      "value": "USD 9.7 billion",
+      "year": "2014-2019",
+      "country": "Bolivia"
+    },
+    {
+      "metric": "imports",
+      "value": "USD 7.1 billion",
+      "year": "2020",
+      "country": "Bolivia"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,52 @@
+{
+  "question_id": "592",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.049597+00:00",
+  "paper_title": "What is the Binding Constraint to Growth in Albania?",
+  "paper_year": 2017,
+  "source_paper": "alb_growth_diagnostic_report.pdf",
+  "research_answer": "Albania's export base is remarkably undiversified and has barely changed since the mid-1990s. As of 2014, roughly 80% of Albania's exports were concentrated in just four low-value, low-complexity categories: mineral products and metals (46%), footwear (18%), and garments (16%), with crude oil being the single largest export. What makes this particularly striking is that this concentration has remained essentially frozen for about two decades \u2014 there has been very little diversification since the mid-1990s. Albania also ranks as the lowest in the Western Balkans region on both export share of GDP and the percentage of firms that export, making it an outlier even among its regional peers.",
+  "supporting_quotes": [
+    "As of 2014, Albania's largest single export was crude oil. Mineral products and metals together accounted for 46% of Albania's exports, while footwear and garments made up 18% and 16% of exports, respectively. Together, these low value and low complexity goods make up 80% of Albania's exports.",
+    "There has been very little diversification of Albania's manufactured exports over the last two decades, as exports have remained heavily concentrated in these four categories since the mid-1990s.",
+    "Albania's exports are low as a share of GDP and only a small percentage of firms in Albania are exporters (Figure 5). On both of these measures, Albania is the lowest in the region based on the most recent data."
+  ],
+  "data_points": [
+    {
+      "metric": "export share - minerals and metals",
+      "value": "46%",
+      "year": "2014",
+      "country": "Albania",
+      "product": "minerals and metals"
+    },
+    {
+      "metric": "export share - footwear",
+      "value": "18%",
+      "year": "2014",
+      "country": "Albania",
+      "product": "footwear"
+    },
+    {
+      "metric": "export share - garments",
+      "value": "16%",
+      "year": "2014",
+      "country": "Albania",
+      "product": "garments"
+    },
+    {
+      "metric": "export concentration in low-value goods",
+      "value": "80%",
+      "year": "2014",
+      "country": "Albania",
+      "product": null
+    },
+    {
+      "metric": "diversification trend",
+      "value": "very limited change since mid-1990s",
+      "year": "1995-2014",
+      "country": "Albania",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

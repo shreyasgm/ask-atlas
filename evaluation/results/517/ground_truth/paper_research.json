@@ -1,0 +1,55 @@
+{
+  "question_id": "517",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.027807+00:00",
+  "paper_title": "The Devil's in the Dance: Elements of a Growth Diagnostic in Bolivia",
+  "paper_year": 2021,
+  "source_paper": "2025-05-glwp-247-bolivia-growth-diagnostic-2021.pdf",
+  "research_answer": "Bolivia's trade balance shifted from surplus to persistent deficit after 2014. Total exports fell dramatically \u2014 from USD 13.0 billion in 2014 to USD 8.9 billion in 2019 and USD 7.0 billion in 2020. Meanwhile, imports remained sticky, averaging USD 9.7 billion per year between 2014 and 2019, largely because over 80% of imports consist of capital goods, raw materials, and intermediate products that are difficult to cut without harming productive capacity. This mismatch meant Bolivia ran trade deficits from 2014 through 2020. Only the COVID-19 pandemic \u2014 by suppressing import demand to USD 7.1 billion in 2020 \u2014 helped narrow the gap, and by the first half of 2021, Bolivia had returned to an estimated trade surplus of USD 0.6 billion.",
+  "supporting_quotes": [
+    "Hence, Bolivia's exports fell from USD 13.0bn in 2014 to USD 8.9bn in 2019 and USD 7.0bn in 2020.",
+    "Imports remained stable at an average $9.7bn between 2014 and 2019.",
+    "Capital goods, raw materials, and intermediate products have been responsible for more than 80 percent of the country's imports since 2014, leaving a narrow margin for adjustment.",
+    "Bolivia has been incurring a trade deficit since after 2014 until 2020. Diminished import demand with the pandemic improved the current account, as the first semester of 2021 returned to an estimated trade surplus of USD 0.6bn.",
+    "As the pandemic response restricted mobility and work, the demand for imports shrank, falling to USD 7.1bn in 2020."
+  ],
+  "data_points": [
+    {
+      "metric": "total exports",
+      "value": "USD 13.0 billion",
+      "year": "2014",
+      "country": "Bolivia"
+    },
+    {
+      "metric": "total exports",
+      "value": "USD 8.9 billion",
+      "year": "2019",
+      "country": "Bolivia"
+    },
+    {
+      "metric": "total exports",
+      "value": "USD 7.0 billion",
+      "year": "2020",
+      "country": "Bolivia"
+    },
+    {
+      "metric": "average imports",
+      "value": "USD 9.7 billion",
+      "year": "2014-2019",
+      "country": "Bolivia"
+    },
+    {
+      "metric": "imports",
+      "value": "USD 7.1 billion",
+      "year": "2020",
+      "country": "Bolivia"
+    },
+    {
+      "metric": "trade surplus",
+      "value": "USD 0.6 billion",
+      "year": "2021 H1",
+      "country": "Bolivia"
+    }
+  ],
+  "confidence": "high"
+}

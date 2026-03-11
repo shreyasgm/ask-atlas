@@ -1,0 +1,34 @@
+{
+  "question_id": "460",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.015995+00:00",
+  "paper_title": "A Measure of Countries' Distance to Frontier Based on Comparative Advantage",
+  "paper_year": 2022,
+  "source_paper": "2022-09-cid-fellows-wp-135-countries-distance-to-frontier.pdf",
+  "research_answer": "Changes in a country's export complexity rank between 1995 and 2019 are meaningfully correlated with changes in several underlying economic fundamentals. The strongest associations are with changes in total factor productivity (TFP, correlation 0.41), capital per worker (0.40), and government effectiveness (0.39). These correlations are moderate rather than tight, suggesting that while upgrading productive capabilities in exports tends to accompany broader economic improvements, the relationship is not mechanical. Countries improving across these dimensions simultaneously \u2014 accumulating capital, raising productivity, and strengthening institutions \u2014 are most likely to see their export baskets converge toward the global frontier. Conversely, countries stagnating on these dimensions, such as Argentina, Russia, and South Africa, have seen flat or declining export complexity.",
+  "supporting_quotes": [
+    "Table S5 shows how the change from 1995 to 2019 in a country's rank correlates with changes in the country characteristics",
+    "By contrast, the export similarity with the frontier of more stagnant countries like Argentina, Russia, or South Africa remained constant or even declined (panel (c))."
+  ],
+  "data_points": [
+    {
+      "metric": "correlation of rank changes with TFP changes",
+      "value": "0.41",
+      "year": "1995-2019",
+      "country": "multiple"
+    },
+    {
+      "metric": "correlation of rank changes with capital per worker changes",
+      "value": "0.40",
+      "year": "1995-2019",
+      "country": "multiple"
+    },
+    {
+      "metric": "correlation of rank changes with government effectiveness changes",
+      "value": "0.39",
+      "year": "1995-2019",
+      "country": "multiple"
+    }
+  ],
+  "confidence": "high"
+}

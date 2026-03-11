@@ -1,0 +1,28 @@
+{
+  "question_id": "466",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.017574+00:00",
+  "paper_title": "A Simple Theory of Economic Development at the Extensive Industry Margin",
+  "paper_year": 2022,
+  "source_paper": "2022-09-cid-wp-416-extensive-industry-margin.pdf",
+  "research_answer": "The answer is nuanced and depends on what aspect of China's rise you're looking at. On one hand, competition with China in existing export markets had a positive effect on entry by other developing countries \u2014 the coefficient is +0.052, suggesting that competitive pressure from China encouraged these countries to upgrade and move into new industries. On the other hand, when China is already an established significant exporter in a specific industry, that industry is less likely to be entered by other countries (coefficient of -0.022). So China's rise created a push-and-pull dynamic: broader competitive pressure encouraged diversification, but direct Chinese presence in specific industries acted as a barrier to entry for others.",
+  "supporting_quotes": [
+    "Initially, while China is lagging behind, the rise of China has a positive effect on growth in other developing countries as it increases competition in their exporting industries and, hence, causes downward pressure on the wage rate in these countries.",
+    "Moreover, the fact that China is a significant exporter in a given industry is negatively associated with entry of other countries."
+  ],
+  "data_points": [
+    {
+      "metric": "effect of competition with China on entry",
+      "value": "+0.052***",
+      "year": "1992-2016",
+      "country": "multiple developing countries"
+    },
+    {
+      "metric": "effect of China being established exporter on others' entry",
+      "value": "-0.022**",
+      "year": "1992-2016",
+      "country": "multiple developing countries"
+    }
+  ],
+  "confidence": "high"
+}

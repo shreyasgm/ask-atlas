@@ -1,0 +1,54 @@
+{
+  "question_id": "589",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.048543+00:00",
+  "paper_title": "Opportunity analysis of agriculture products in Sri Lanka: Measuring markets and feasibility",
+  "paper_year": 2016,
+  "source_paper": "agri_sector_opportunities_feb_2018.pdf",
+  "research_answer": "Among spices analyzed, Cardamom and Nutmeg & Mace face negative overall growth in global markets, making them structurally declining categories globally. Clove is in a slightly better position but still shows slow growth on the world market alongside a low global volume \u2014 essentially a small, stagnant category. Sri Lanka's export data adds more nuance: Cardamom exports from Sri Lanka are actually growing (likely capturing market share from competitors even in a declining market), while Clove exports are not growing. By contrast, Cinnamon and Pepper \u2014 Sri Lanka's two largest spice exports \u2014 are both growing globally, with Cinnamon ranking among the fastest-growing products worldwide. This divergence suggests Sri Lanka should double down on Cinnamon and Pepper while carefully monitoring whether Cardamom's export growth can be sustained against a negative global demand backdrop.",
+  "supporting_quotes": [
+    "Cardamom, Nutmeg & Mace has negative overall growth in global markets.",
+    "Clove is growing slowly on the world market while also having a low global volume.",
+    "Cardamom exports are growing; Clove exports are not.",
+    "Largest exports are Cinnamon and Pepper. Both are growing, but Cinnamon is growing faster.",
+    "Shrimp, Pepper, Mango, Vanilla, Ginger & Cinnamon have the highest growth rates"
+  ],
+  "data_points": [
+    {
+      "metric": "market growth",
+      "value": "negative/shrinking",
+      "year": "2012-2016",
+      "country": "global",
+      "product": "Cardamom, Nutmeg & Mace"
+    },
+    {
+      "metric": "market growth",
+      "value": "slow, low volume",
+      "year": "2012-2016",
+      "country": "global",
+      "product": "Clove"
+    },
+    {
+      "metric": "export growth",
+      "value": "growing",
+      "year": "2012-2016",
+      "country": "Sri Lanka",
+      "product": "Cardamom"
+    },
+    {
+      "metric": "export growth",
+      "value": "not growing",
+      "year": "2012-2016",
+      "country": "Sri Lanka",
+      "product": "Clove"
+    },
+    {
+      "metric": "market growth",
+      "value": "among fastest globally",
+      "year": "2012-2016",
+      "country": "global",
+      "product": "Cinnamon"
+    }
+  ],
+  "confidence": "high"
+}

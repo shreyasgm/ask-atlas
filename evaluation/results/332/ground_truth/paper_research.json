@@ -1,0 +1,41 @@
+{
+  "question_id": "332",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.971041+00:00",
+  "paper_title": "South Africa's Export Predicament",
+  "paper_year": 2006,
+  "source_paper": "2006-08-glwp-06-south_africa_export_predicament.pdf",
+  "research_answer": "South Africa's production is concentrated on the periphery of the product space \u2014 areas with sparse connections to other products \u2014 and this has changed little from 1975 to 2000. There has been some recent movement into more central goods like filtering and purifying machines, furniture, and paper products, but on the whole, structural transformation has been minimal. Malaysia, by contrast, has undergone significant structural transformation over the same period, moving from peripheral goods into the dense electronics cluster in the product space. This matters enormously for future diversification: South Africa's open forest \u2014 the measure of nearby, reachable products \u2014 is currently lower than both Mexico's and Malaysia's, even though all three are traditionally natural resource exporters. And unlike Mexico and Malaysia, South Africa has seen its open forest declining since 2001, which does not bode well for future increases in export sophistication.",
+  "supporting_quotes": [
+    "These figures show that South Africa's production is largely located on the periphery of the product space. This is particularly true of earlier years, and there has been some recent movement to more central goods such as filtering & purifying machines for liquids and natural gasses (and parts thereof), furniture, and paper products. Yet on the whole, these figures show peripheral production with little structural transformation to new products in South Africa.",
+    "Compare this to the equivalent figures for Malaysia. Although that country has not moved heavily into the industrial core, there has been significant structural transformation, represented by rapid movement of production from peripheral goods to the cluster of electronics related goods in the upper-right portion of the space.",
+    "The improvement in open forest during the 1990s was significant, but its reversal has again placed South Africa's options for future structural transformation below those of Mexico and Malaysia, even though they are both also traditionally natural resource exporters."
+  ],
+  "data_points": [
+    {
+      "metric": "location in product space",
+      "value": "periphery, little transformation",
+      "year": "1975-2000",
+      "country": "South Africa"
+    },
+    {
+      "metric": "structural transformation",
+      "value": "significant move to electronics cluster",
+      "year": "1975-2000",
+      "country": "Malaysia"
+    },
+    {
+      "metric": "open forest comparison",
+      "value": "South Africa lower than Mexico and Malaysia",
+      "year": "2004",
+      "country": "South Africa, Mexico, Malaysia"
+    },
+    {
+      "metric": "open forest trend",
+      "value": "declining since 2001",
+      "year": "2001-2004",
+      "country": "South Africa"
+    }
+  ],
+  "confidence": "high"
+}

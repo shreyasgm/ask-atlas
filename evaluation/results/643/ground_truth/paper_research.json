@@ -1,0 +1,46 @@
+{
+  "question_id": "643",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.066569+00:00",
+  "paper_title": "Moving to the Adjacent Possible: Discovering Paths for Export Diversification in Rwanda",
+  "paper_year": 2015,
+  "source_paper": "hausmann_chauvin_rwanda_294.pdf",
+  "research_answer": "Rwanda's export basket is extraordinarily concentrated. Just three commodities \u2014 coffee, tea, and tin \u2014 have historically accounted for more than 80% of the country's total exports, and these same products continue to drive the bulk of export growth today. This extreme concentration is reflected in Rwanda having comparative advantage (RCA > 1) in fewer than 40 products as of 2010, and an average Product Complexity Index of -0.95, meaning the products Rwanda exports are roughly one standard deviation below the world average in complexity. With exports per capita below $50 \u2014 one of the lowest levels globally \u2014 Rwanda's trade profile is characteristic of a heavily commodity-dependent economy with very limited diversification.",
+  "supporting_quotes": [
+    "Three basic commodities \u2013 coffee, tea, and tin \u2013 made up more than 80 percent of the country's exports through its history and still drive the bulk of export growth today.",
+    "at less than US$50 per capita, Rwanda still has one of the lowest levels of exports in the world",
+    "As of 2010, Rwanda had RCA in less than 40 products across a number of communities.",
+    "Eliminate all products with a PCI below the existing average PCI of the products that Rwanda's exports (which is -0.95, meaning that on average, products exported by Rwanda are roughly one standard deviation below the average PCI of all products exported by countries in the world)."
+  ],
+  "data_points": [
+    {
+      "metric": "Share of exports from top 3 commodities",
+      "value": ">80%",
+      "year": "historical",
+      "country": "Rwanda",
+      "product": "Coffee, Tea, Tin"
+    },
+    {
+      "metric": "Exports per capita",
+      "value": "<$50",
+      "year": "2010",
+      "country": "Rwanda",
+      "product": "All"
+    },
+    {
+      "metric": "Number of products with RCA>1",
+      "value": "<40",
+      "year": "2010",
+      "country": "Rwanda",
+      "product": "All"
+    },
+    {
+      "metric": "Average PCI of exported products",
+      "value": "-0.95",
+      "year": "2010",
+      "country": "Rwanda",
+      "product": "All"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,30 @@
+{
+  "question_id": "635",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.064621+00:00",
+  "paper_title": "Growth Diagnostic: Paraguay",
+  "paper_year": 2007,
+  "source_paper": "growth_diagnostic_paraguay.pdf",
+  "research_answer": "Paraguay's probability of transitioning into new, previously un-exported products is remarkably low \u2014 even after accounting for its position in the product space. The unconditional probability of moving to a new product during the 1975\u20132000 period was only 1.3%. But beyond this already low baseline, statistical analysis shows that Paraguay-specific factors \u2014 things beyond just where the country sits in the product space \u2014 reduced that probability by more than half. In other words, Paraguay's poor structural transformation cannot be explained purely by the fact that it is in a sparse, disconnected part of the product space; there are additional country-level barriers that further suppress the ability to diversify into new products.",
+  "supporting_quotes": [
+    "Interestingly, in the case of Paraguay we see a statistically significant and negative dummy. That is, between 1975 and 2000 there was a statistically significant pattern of slow structural transformation, controlling for open forest.",
+    "The unconditional probability of transitioning to an un-exported product in this period is only 1.3%, so this means that country-specific factors in Paraguay other than their orientation in the product space are reducing the probability of moving to new products by over half!"
+  ],
+  "data_points": [
+    {
+      "metric": "product transition probability",
+      "value": "1.3% unconditional, reduced by over half by country-specific factors",
+      "year": "1975-2000",
+      "country": "Paraguay",
+      "product": null
+    },
+    {
+      "metric": "structural transformation coefficient",
+      "value": "-0.007 (significant at 1%)",
+      "year": "1975-2000",
+      "country": "Paraguay",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,40 @@
+{
+  "question_id": "565",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.039927+00:00",
+  "paper_title": "Structural Transformation and Competitiveness in Pakistan",
+  "paper_year": "2008",
+  "source_paper": "41661-01-pak-tacr.pdf",
+  "research_answer": "The capability gap analysis reveals that Pakistan's most impactful missing capabilities are in technical and business administration skills. If Pakistan could develop engine and machine assembler skills, it could potentially access markets worth $518 billion. General and operations management skills, if present, would unlock $327 billion in markets. Painter and transportation equipment skills would add another $244 billion in accessible markets. Beyond skills, non-traded input gaps are also significant: the absence of adequate water and sewage systems blocks access to grain farming (a $40 billion global market), while missing business support services prevent entry into analytical laboratory instrument manufacturing ($39 billion). Veterinary services gaps block animal production markets worth $17 billion. These findings show that Pakistan's export constraints are not just about being in the wrong part of the product space \u2014 specific missing capabilities are acting as bottlenecks that, if resolved, could unlock access to massive global markets. Sectors requiring only 1\u20132 missing capabilities (like farm machinery and equipment) are more feasibly targeted than those requiring 3 or more (like automobiles and pharmaceuticals).",
+  "supporting_quotes": [
+    "Technical and business administration skills are missing in Pakistan, and their presence might add significantly to Pakistan's feasible set.",
+    "Water, sewage and other systems: Grain farming (40 billion); Business support services: Analytical laboratory instrument manufacturing (39 billion); Veterinary services: Animal production, except cattle and poultry and eggs (17 billion)",
+    "Those sectors missing only one or two capabilities are more likely to appear in similar countries over time, and should therefore be more likely to emerge in Pakistan."
+  ],
+  "data_points": [
+    {
+      "metric": "market unlocked by engine/machine assembler skills",
+      "value": "$518 billion"
+    },
+    {
+      "metric": "market unlocked by general/operations manager skills",
+      "value": "$327 billion"
+    },
+    {
+      "metric": "market unlocked by water/sewage systems",
+      "product": "grain farming",
+      "value": "$40 billion"
+    },
+    {
+      "metric": "market unlocked by business support services",
+      "product": "analytical laboratory instruments",
+      "value": "$39 billion"
+    },
+    {
+      "metric": "capability threshold",
+      "easy": "1\u20132 missing capabilities",
+      "hard": "3+ missing capabilities"
+    }
+  ],
+  "confidence": "high"
+}

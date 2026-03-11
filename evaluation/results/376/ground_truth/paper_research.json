@@ -1,0 +1,37 @@
+{
+  "question_id": "376",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.988378+00:00",
+  "paper_title": "Jordan: The Elements of a Growth Strategy",
+  "paper_year": 2019,
+  "source_paper": "2019-02-28-cid-wp-346-jordan-growth-strategy-revised.pdf",
+  "research_answer": "Jordan's imports fell by 10% in total between 2014 and 2017. But when adjusted for inflation and population growth, the picture is even more severe: real per capita imports were 20% lower in 2017 than in 2014, and a striking 44% below their 2008 peak. This steep decline in real per capita import capacity reflects the combined impact of export stagnation, reduced foreign exchange earnings, and the broader economic slowdown driven by regional instability. Given that both exports and imports were contracting in this period, Jordan was experiencing a significant compression of its trade volumes on both sides of the ledger.",
+  "supporting_quotes": [
+    "Between 2014 and 2017, total imports fell by 10%",
+    "By 2017, they [imports] were 20% down from 2014 levels in real per capita terms, 44% below their 2008 peak."
+  ],
+  "data_points": [
+    {
+      "metric": "import decline",
+      "value": "10%",
+      "year": "2014-2017",
+      "country": "Jordan",
+      "product": "all imports"
+    },
+    {
+      "metric": "import decline vs 2014 (real per capita)",
+      "value": "20%",
+      "year": "2017",
+      "country": "Jordan",
+      "product": "all imports"
+    },
+    {
+      "metric": "import decline vs 2008 peak (real per capita)",
+      "value": "44%",
+      "year": "2017",
+      "country": "Jordan",
+      "product": "all imports"
+    }
+  ],
+  "confidence": "high"
+}

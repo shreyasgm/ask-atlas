@@ -1,0 +1,21 @@
+{
+  "question_id": "522",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.028731+00:00",
+  "paper_title": "Tackling Discrepancies in Trade Data: The Harvard Growth Lab International Trade Datasets",
+  "paper_year": 2025,
+  "source_paper": "2025-07-glwp-251-tackling-discrepancies-in-trade-data.pdf",
+  "research_answer": "It's a counterintuitive finding: while overall trade data coverage has genuinely improved from 1962 to 2023 \u2014 meaning more country pairs are reporting trade flows at all \u2014 the fraction of cases where the two sides of a trade relationship disagree by more than 25% has actually grown over time. So we have a situation where more countries are reporting, but those reports are increasingly inconsistent with each other. This suggests that improving the number of reporters doesn't automatically translate into better data quality, and that inconsistencies in reporting remain a persistent and worsening problem even as formal participation in trade data systems expands.",
+  "supporting_quotes": [
+    "The most striking pattern in Figure 1 is the rise in flows with large bilateral discrepancies (shown in green). Despite better coverage, the fraction of cases in which the two reports diverge by more than 25 percent has grown, underscoring that inconsistencies in reporting remain a persistent and worsening problem."
+  ],
+  "data_points": [
+    {
+      "metric": "Trend in high-discrepancy trade flows (>25%)",
+      "value": "Increasing",
+      "year": "1962-2023",
+      "country": "Global"
+    }
+  ],
+  "confidence": "high"
+}

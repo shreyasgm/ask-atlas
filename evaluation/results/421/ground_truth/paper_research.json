@@ -1,0 +1,37 @@
+{
+  "question_id": "421",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.003954+00:00",
+  "paper_title": "Implied Comparative Advantage",
+  "paper_year": 2020,
+  "source_paper": "2020-07-cid-wp-276-revised-implied-comparative-advantage.pdf",
+  "research_answer": "No \u2014 the evidence directly contradicts this core assumption of standard Ricardian models. These models typically assume that productivity parameters are uncorrelated across industries, meaning a country's likelihood of having comparative advantage in, say, motorcycle production should be completely independent of whether it has comparative advantage in car-making or coffee. But the data shows that revealed comparative advantage patterns are highly correlated across industries: the median industry-industry similarity score is 0.724 (with a mode of 0.74\u20130.75), well above the 0.5 that would be expected in a random, uncorrelated world. This non-random structure \u2014 where countries tend to be good at clusters of related industries \u2014 is precisely what the product space and economic complexity literature has been built to explain, and these findings provide formal statistical evidence that the Ricardian assumption of independence is empirically invalid.",
+  "supporting_quotes": [
+    "In addition, current Ricardian models assume that the relative productivity parameters are uncorrelated across industries. This implies that the likely productivity of a country in motorcycle production, for example, is equally independent of whether it currently has comparative advantage in car-making or in coffee. We provide evidence that appears to contradict this.",
+    "the distribution of these values is also roughly symmetric, but... distributed around a peak greater than 0.5 (median = 0.724, mode at 0.74-0.75)."
+  ],
+  "data_points": [
+    {
+      "metric": "Median industry-industry similarity",
+      "value": "0.724",
+      "year": "2016",
+      "country": "Multiple",
+      "product": "All HS4 products"
+    },
+    {
+      "metric": "Mode of industry similarity distribution",
+      "value": "0.74-0.75",
+      "year": "2016",
+      "country": "Multiple",
+      "product": "All HS4 products"
+    },
+    {
+      "metric": "Random baseline similarity",
+      "value": "0.50",
+      "year": "N/A",
+      "country": "N/A",
+      "product": "N/A"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,29 @@
+{
+  "question_id": "542",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.032604+00:00",
+  "paper_title": "Neighbors and the Evolution of the Comparative Advantage of Nations: Evidence of International Knowledge Diffusion?",
+  "paper_year": 2013,
+  "source_paper": "235_updated_bahar_hausmann.pdf",
+  "research_answer": "This is a counterintuitive finding: neighboring countries are much more similar in what they export to the rest of the world than in what they trade bilaterally with each other. The similarity in their global export baskets is not an artifact of intra-industry bilateral trade. Quantitatively, the rest-of-world (ROW) export similarity index explains 65 percentage points more of the variation in overall export similarity than the bilateral trade similarity index alone. When both measures are included in a regression, the ROW similarity coefficient (0.83\u20130.85) is roughly three times larger than the bilateral similarity coefficient (0.28\u20130.47). This suggests that neighboring countries develop similar productive capabilities and competitive advantages independently \u2014 consistent with knowledge and technology diffusion across borders \u2014 rather than simply specializing in complementary goods to trade with each other.",
+  "supporting_quotes": [
+    "neighbors are remarkably more similar in terms of what they export to the rest of the world than what they trade among themselves.",
+    "the similarity in exports that we find is not driven by intra-industry trade.",
+    "In terms of explaining the left-hand side variable, the ROW Similarity Index does a much better job, as can be seen in the difference between the R-squared between columns 2 and 1: an increase of 0.65."
+  ],
+  "data_points": [
+    {
+      "metric": "R-squared increase from ROW vs bilateral similarity",
+      "value": "0.65"
+    },
+    {
+      "metric": "ROW similarity coefficient in combined regression",
+      "value": "0.83\u20130.85"
+    },
+    {
+      "metric": "Bilateral similarity coefficient in combined regression",
+      "value": "0.28\u20130.47"
+    }
+  ],
+  "confidence": "high"
+}

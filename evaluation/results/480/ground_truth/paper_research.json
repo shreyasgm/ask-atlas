@@ -1,0 +1,23 @@
+{
+  "question_id": "480",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.020879+00:00",
+  "paper_title": "Economic Growth and Complexity in the UAE: Summary Report",
+  "paper_year": 2023,
+  "source_paper": "2023-05-UAE-growth-complexity-summary-report.pdf",
+  "research_answer": "Many of the UAE's non-oil goods exports that have shown growth \u2014 particularly metals, chemicals, and stone \u2014 are energy-intensive industries. This suggests that a significant part of the UAE's comparative advantage in these sectors may not stem from accumulated productive knowhow or diversified capabilities, but rather from access to cheap domestic energy. If that is the case, the UAE's competitiveness in these sectors is structurally tied to its energy cost advantage \u2014 and could be at risk if that advantage narrows. This finding also connects to the broader complexity picture: energy-intensive heavy industries tend to be moderate in complexity, and their competitiveness being energy-cost-driven rather than capability-driven means they may not generate the spillovers needed to move the UAE toward higher-complexity production.",
+  "supporting_quotes": [
+    "our analysis finds that many of these export sectors are in fact energy intensive and so may themselves be reflective of the UAE's low energy costs. This in turn may make a continued comparative advantage in heavy industries dependent on an ambitious domestic energy generation decarbonation agenda.",
+    "There has also been strong growth (albeit from a low base) in chemicals and metals, again the bulk of this growth coming between 2005 and 2012."
+  ],
+  "data_points": [
+    {
+      "metric": "export sector energy intensity",
+      "value": "energy intensive",
+      "year": "2005-2019",
+      "country": "UAE",
+      "product": "non-oil goods, particularly metals, chemicals, stone"
+    }
+  ],
+  "confidence": "medium"
+}

@@ -1,0 +1,30 @@
+{
+  "question_id": "703",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.079231+00:00",
+  "paper_title": "Towards a Strategy for Economic Growth in Uruguay",
+  "paper_year": 2005,
+  "source_paper": "towards-strategy-economic-growth-uruguay.pdf",
+  "research_answer": "The devaluations of Brazil (January 1999) and Argentina (December 2001) hit Uruguay with a double blow. First, they shifted relative prices sharply against Uruguayan goods. Second \u2014 and equally damaging \u2014 both events were accompanied by major collapses in domestic demand in those countries. Since Uruguay had oriented much of its tradable production toward Mercosur integration during the appreciated-RER years of the 1990s, it was acutely exposed to this regional demand shock. The result was a major reduction in regional demand for Uruguayan goods, compounding the price competitiveness loss. This episode illustrates the vulnerability of tying export strategy to regional markets with unstable macroeconomic conditions.",
+  "supporting_quotes": [
+    "This pattern was first broken in January 1999 when Brazil devalued and later in December 2001 when Argentina did the same. Both events involved in addition to a shift of relative prices, an important decline in aggregate demand in the two countries. As a consequence, Uruguay was hit by a major reduction in regional demand for its goods."
+  ],
+  "data_points": [
+    {
+      "metric": "currency devaluation",
+      "country": "Brazil",
+      "year": "January 1999"
+    },
+    {
+      "metric": "currency devaluation",
+      "country": "Argentina",
+      "year": "December 2001"
+    },
+    {
+      "metric": "impact on regional demand for Uruguayan goods",
+      "value": "major reduction",
+      "country": "Uruguay"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,47 @@
+{
+  "question_id": "329",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.970023+00:00",
+  "paper_title": "South Africa's Export Predicament",
+  "paper_year": 2006,
+  "source_paper": "2006-08-glwp-06-south_africa_export_predicament.pdf",
+  "research_answer": "South Africa's export performance has been remarkably poor even by the standards of other natural resource-dependent economies. From 1960 to 2004, exports per capita grew at just 0.64% per year, rising from $663.91 to $918.58 in constant USD \u2014 a near-stagnant performance over 44 years. When ranked against all countries with a population over 4 million and GDP per capita at least 25% of South Africa's, it places 50th out of 56 countries. What makes this especially striking is that countries like Argentina, Australia, Canada, and Malaysia \u2014 all natural resource exporters as of 1960 \u2014 vastly outperformed South Africa over the same period. So South Africa can't simply attribute its poor export growth to a 'resource curse' affecting all commodity exporters; the problem appears specific to South Africa's structural and compositional challenges.",
+  "supporting_quotes": [
+    "Exports per capita in constant USD in 2004 were $918.58, up from $663.91 in 1960, representing an annualized growth rate of only 0.64% p.a.",
+    "Considering all countries with a population over 4 million and GDP per capita of at least 25% of South Africa's (a relevant comparator group), South Africa is an outlier in terms of export performance, ranking 50th out of 56 countries.",
+    "Yet this poor export performance is low even among natural resource exporters... Each of these countries was a natural resource exporter as of 1960, and still vastly outperformed South Africa over the subsequent four decades."
+  ],
+  "data_points": [
+    {
+      "metric": "exports per capita",
+      "value": "$663.91",
+      "year": "1960",
+      "country": "South Africa"
+    },
+    {
+      "metric": "exports per capita",
+      "value": "$918.58",
+      "year": "2004",
+      "country": "South Africa"
+    },
+    {
+      "metric": "annualized export growth rate",
+      "value": "0.64% p.a.",
+      "year": "1960-2004",
+      "country": "South Africa"
+    },
+    {
+      "metric": "export performance ranking",
+      "value": "50th out of 56 countries",
+      "year": "1960-2004",
+      "country": "South Africa"
+    },
+    {
+      "metric": "comparative export performance",
+      "value": "vastly outperformed South Africa",
+      "year": "1960-2004",
+      "country": "Argentina, Australia, Canada, Malaysia"
+    }
+  ],
+  "confidence": "high"
+}

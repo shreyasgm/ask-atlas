@@ -1,0 +1,45 @@
+{
+  "question_id": "475",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.019584+00:00",
+  "paper_title": "Economic Growth and Complexity in the UAE: Summary Report",
+  "paper_year": 2023,
+  "source_paper": "2023-05-UAE-growth-complexity-summary-report.pdf",
+  "research_answer": "The 2014 oil price decline exposed a sharp structural divide between the two emirates. Abu Dhabi, whose economy is dominated by oil and oil-related activities, was pushed into recession. Dubai-Sharjah-Ajman, by contrast, whose economy revolves around services \u2014 wholesale and retail trade, transportation, logistics, and professional services \u2014 saw its non-oil sectors continue growing at around 3% per year through to COVID-19. This divergence reflects the much deeper diversification of Dubai's economic base away from hydrocarbons. The COVID-19 shock later illustrated the same structural difference from another angle: Abu Dhabi's recovery was led by metals and petrochemicals manufacturing, while Dubai's recovery was driven by logistics, wholesale/retail trade, and tourism \u2014 the very sectors most exposed to the pandemic but also most central to Dubai's identity as a global hub.",
+  "supporting_quotes": [
+    "Declines in oil prices after 2014 hit the Abu Dhabi economy more (pushing it into recession) than the Dubai-Sharjah-Ajman economy whose non-oil sectors continued to grow at 3% per year until COVID.",
+    "The economy of Abu Dhabi is somewhat dominated by oil and activities related to the oil industry... Dubai's economy is dominated by services, especially wholesale and retail trade but also transportation and logistics as well as some professional services.",
+    "The shock hit Abu Dhabi across many sectors and the recovery came from the manufacturing of metals and petrochemicals, whereas Dubai's logistics, wholesale and retail trade, and tourism industries were hit hardest, and these were also the sectors that led its recovery."
+  ],
+  "data_points": [
+    {
+      "metric": "non-oil sector growth rate in Dubai-Sharjah-Ajman",
+      "value": "3% per year",
+      "year": "2014-2020",
+      "country": "UAE (Dubai-Sharjah-Ajman)",
+      "product": "non-oil sectors"
+    },
+    {
+      "metric": "Abu Dhabi economy response to oil price decline",
+      "value": "recession",
+      "year": "2014 onwards",
+      "country": "UAE (Abu Dhabi)",
+      "product": "all sectors"
+    },
+    {
+      "metric": "recovery drivers during COVID-19",
+      "value": "metals, petrochemicals manufacturing",
+      "year": "2020 onwards",
+      "country": "UAE (Abu Dhabi)",
+      "product": "metals, petrochemicals"
+    },
+    {
+      "metric": "recovery drivers during COVID-19",
+      "value": "logistics, trade, tourism",
+      "year": "2020 onwards",
+      "country": "UAE (Dubai)",
+      "product": "logistics, wholesale/retail, tourism"
+    }
+  ],
+  "confidence": "high"
+}

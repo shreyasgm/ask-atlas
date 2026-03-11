@@ -1,0 +1,39 @@
+{
+  "question_id": "369",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.985009+00:00",
+  "paper_title": "Recommendations for Trade Adjustment Assistance in Sri Lanka",
+  "paper_year": 2017,
+  "source_paper": "2017.10.28_tradeassistance_harvardcid_v2.pdf",
+  "research_answer": "Sri Lanka's tariff system creates multiple overlapping biases that collectively suppress new industry development. First, extremely high effective rates of protection for some incumbent products \u2014 typically those whose producers are already established and can lobby for protection \u2014 crowd out investment in newer activities. Industries with existing presence tend to enjoy low customs duties, para-tariff exemptions, and rate stability, while potential new industries face much lower or even negative effective rates of protection, limiting their investment appeal. Second, the system is non-transparent, complex, and unpredictable, making it difficult for new entrants to plan investments. Third, exporters must still pay para-tariffs on imported inputs, which in many cases are actually higher than the customs duties themselves \u2014 a direct cost burden on export-oriented activity. Fourth, manufacturing inputs like rubber, plastic, metal, and fabric are themselves highly protected, raising production costs across the board. The net result is a tariff architecture that entrenches incumbents while making it harder for Sri Lanka to break into new export categories or global value chains.",
+  "supporting_quotes": [
+    "The extremely high effective rates of protection for some products creates a bias against investments in the production of other products. For industries that already have a presence in Sri Lanka and are able to lobby for protection, duties are generally low, para-tariffs are usually exempt, and rates are not subject to change. Much lower (or even negative) effective rates of protection for other products limit the space for investment in new economic activities.",
+    "The current tariff structure, which is non-transparent, complex and unpredictable, is one such cause.",
+    "Exporters must still pay para-tariffs on their imported inputs, which in many cases are much higher than the customs duties themselves.",
+    "Although protection tends to be the most extreme for food items, there are widespread materials of rubber, plastic, metal, and fabric, among others that are common inputs to manufacturing processes, that are made expensive by the current tariff system."
+  ],
+  "data_points": [
+    {
+      "metric": "effective rate of protection",
+      "value": "extremely high for some products, much lower or negative for others",
+      "year": "2017",
+      "country": "Sri Lanka",
+      "product": "varies by sector"
+    },
+    {
+      "metric": "para-tariff rates vs customs duties",
+      "value": "para-tariffs often higher than customs duties",
+      "year": "2017",
+      "country": "Sri Lanka",
+      "product": "imported inputs to exports"
+    },
+    {
+      "metric": "tariff protection level",
+      "value": "high for key manufacturing inputs",
+      "year": "2017",
+      "country": "Sri Lanka",
+      "product": "rubber, plastic, metal, fabric"
+    }
+  ],
+  "confidence": "high"
+}

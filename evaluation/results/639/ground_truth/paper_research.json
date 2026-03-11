@@ -1,0 +1,38 @@
+{
+  "question_id": "639",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.065538+00:00",
+  "paper_title": "Growth Diagnostic: Paraguay",
+  "paper_year": 2007,
+  "source_paper": "growth_diagnostic_paraguay.pdf",
+  "research_answer": "Paraguay's export growth has been episodic and almost entirely dependent on latching onto specific commodities enjoying favorable external conditions, rather than driven by broad-based structural transformation. The first major boom was from 1969 to 1977, when exports per capita more than doubled, fueled by agricultural exports \u2014 particularly soybeans, cotton, coffee, and wood, with coffee and wood growing ten-fold. The second boom ran from 1986 to 1989, driven almost exclusively by soybeans and cotton benefiting from surging international prices. When those prices reversed and cotton faced production problems, the boom ended and output per capita fell back to late-1970s levels. Since 2003, soybeans and, more recently, meat have led growth. This pattern \u2014 growth only when a lucky commodity is booming \u2014 is consistent with Paraguay's very low export sophistication and failure to diversify, and explains why long-run growth has been so poor.",
+  "supporting_quotes": [
+    "Between 1969 and 1977, exports per capita more than doubled, as shown in the figure below. This export boom was fueled by a basket of agricultural exports, such as soybeans and cotton, along with coffee and wood exports, which increased 10-fold.",
+    "There was another export boom from 1986 to 1989, almost entirely due to soybean and cotton exports, which enjoyed surging international prices and a significant positive supply response. A reversal in international prices, as well as production problems in cotton led to the end of the export and GDP with output per capita roughly on par with levels of the late 1970s before the Itaipu output spike.",
+    "Paraguay has exhibited low long-run growth. In the few instances when growth has been high it has been because the country was able to latch on to some dynamic export products."
+  ],
+  "data_points": [
+    {
+      "metric": "exports per capita growth",
+      "value": "doubled",
+      "year": "1969-1977",
+      "country": "Paraguay",
+      "product": "soybeans, cotton, coffee, wood"
+    },
+    {
+      "metric": "export boom period",
+      "value": "soybeans and cotton dominant",
+      "year": "1986-1989",
+      "country": "Paraguay",
+      "product": "soybeans, cotton"
+    },
+    {
+      "metric": "correlation between EXPY and growth",
+      "value": "low EXPY associated with low long-run growth",
+      "year": "1992-2003",
+      "country": "Paraguay",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

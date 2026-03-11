@@ -1,0 +1,37 @@
+{
+  "question_id": "659",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.070545+00:00",
+  "paper_title": "Shifting Gears: A Growth Diagnostic of Panama",
+  "paper_year": 2016,
+  "source_paper": "panama_growth_diagnostics_wp_325.pdf",
+  "research_answer": "Panama ranks among the highest in Latin America on the Economic Complexity Index (ECI), which reflects the sophistication of its current export basket relative to regional peers. Its income level in 2014 was roughly in line with what its ECI would predict. However, Panama's Complexity Outlook Index (COI) \u2014 which measures how well-positioned a country is to diversify into more complex products in the near future \u2014 is notably low. This combination is significant: Panama currently exports relatively sophisticated products compared to regional peers, but the structure of its product space offers limited nearby opportunities to jump into new, more complex sectors without first accumulating substantially new capabilities.",
+  "supporting_quotes": [
+    "relative to the region, Panama is located among the Latin American countries with the highest ECI, although its COI is low.",
+    "In 2014 Panama had a level of income that was slightly lower than would have been predicted by its ECI."
+  ],
+  "data_points": [
+    {
+      "metric": "ECI ranking among Latin America",
+      "value": "among the highest",
+      "year": "2014",
+      "country": "Panama",
+      "product": null
+    },
+    {
+      "metric": "COI (Complexity Outlook Index)",
+      "value": "low",
+      "year": "2014",
+      "country": "Panama",
+      "product": null
+    },
+    {
+      "metric": "ECI vs income alignment",
+      "value": "income slightly below ECI prediction",
+      "year": "2014",
+      "country": "Panama",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

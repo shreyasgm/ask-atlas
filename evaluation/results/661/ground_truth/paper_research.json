@@ -1,0 +1,66 @@
+{
+  "question_id": "661",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.070992+00:00",
+  "paper_title": "Shifting Gears: A Growth Diagnostic of Panama",
+  "paper_year": 2016,
+  "source_paper": "panama_growth_diagnostics_wp_325.pdf",
+  "research_answer": "Panama's sectors span an enormous range of complexity. At the bottom are agriculture and fishing with an Industry Complexity Index (ICI) of -2.1, and mining at -1.3 \u2014 both requiring few and widely-available capabilities. Construction sits at 0.8. The biggest structural upgrades are in services: hotels and restaurants score 1.2, retail and wholesale 1.8, logistics/transport/communications 2.5, and information services top the scale at 4.2. To put this in perspective, moving economic activity from agriculture (ICI -2.1) to the information sector (ICI 4.2) represents a gap of more than 6 index points in complexity. This matters because Panama's agriculture sector still employs 16% of the workforce despite contributing only 3.1% of GDP in 2015, while industry and services are roughly 7 times more productive per worker than agriculture.",
+  "supporting_quotes": [
+    "Moving the provinces of Panama out of low-skill sectors that require a relatively low and ubiquitous number of capabilities such as agriculture and fishing (ECI -2.1), mining (-1.3) and construction (0.8); while stirring the wheel towards more complex sector that demand the combination of numerous capabilities such as Hotels and Restaurants (1.2), Retail and Wholesale (1.8), Logistic, transport and communications (2.5), or information (4.2) will demand a strong skill upgrade.",
+    "Agriculture, forestry and fishing also lost relative weight within GDP, from 6.2% to 3.1%.",
+    "Using WDI data for Agriculture, Industry and Services, we computed an indicator of productivity by dividing the share of GDP by sector into its share in employment. Figure 7 portrays an economy with productivity in industry and services about seven times higher than agriculture."
+  ],
+  "data_points": [
+    {
+      "metric": "Industry Complexity Index - agriculture/fishing",
+      "value": "-2.1",
+      "year": "2014",
+      "country": "Panama",
+      "product": "agriculture/fishing"
+    },
+    {
+      "metric": "Industry Complexity Index - mining",
+      "value": "-1.3",
+      "year": "2014",
+      "country": "Panama",
+      "product": "mining"
+    },
+    {
+      "metric": "Industry Complexity Index - construction",
+      "value": "0.8",
+      "year": "2014",
+      "country": "Panama",
+      "product": "construction"
+    },
+    {
+      "metric": "Industry Complexity Index - hotels/restaurants",
+      "value": "1.2",
+      "year": "2014",
+      "country": "Panama",
+      "product": "hotels/restaurants"
+    },
+    {
+      "metric": "Industry Complexity Index - logistics/transport/communications",
+      "value": "2.5",
+      "year": "2014",
+      "country": "Panama",
+      "product": "logistics/transport"
+    },
+    {
+      "metric": "Industry Complexity Index - information",
+      "value": "4.2",
+      "year": "2014",
+      "country": "Panama",
+      "product": "information services"
+    },
+    {
+      "metric": "productivity ratio (industry/services vs agriculture)",
+      "value": "7:1",
+      "year": "2015",
+      "country": "Panama",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,49 @@
+{
+  "question_id": "457",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.015102+00:00",
+  "paper_title": "A Measure of Countries' Distance to Frontier Based on Comparative Advantage",
+  "paper_year": 2022,
+  "source_paper": "2022-09-cid-fellows-wp-135-countries-distance-to-frontier.pdf",
+  "research_answer": "The distance-to-frontier ranking, which is based purely on comparative advantage in trade data, correlates remarkably well with a range of standard economic development measures. Its correlation with GDP per capita is 0.83 \u2014 matching exactly the correlation with capital per worker (0.83) and close to government effectiveness (0.86), R&D intensity (0.80), and human capital (0.77). What's striking is that a measure derived entirely from a country's export structure \u2014 with no direct input of income, investment, or policy data \u2014 achieves predictive accuracy on par with fundamental drivers of growth like physical and human capital. This suggests export complexity serves as a powerful summary statistic of a country's productive capabilities.",
+  "supporting_quotes": [
+    "The ranking is very robust and highly correlated with GDP per capita (~.83).",
+    "log(RD) is the 19-year centered moving average of a country's log share of GDP invested in R&D",
+    "GE is 'government effectiveness' from the Worldwide Governance Indicators",
+    "log(HC) is the log Human Capital Index",
+    "log(K/L) is the log capital stock per capita"
+  ],
+  "data_points": [
+    {
+      "metric": "rank correlation with GDP per capita",
+      "value": "0.83",
+      "year": "2019",
+      "country": "multiple"
+    },
+    {
+      "metric": "rank correlation with capital per worker",
+      "value": "0.83",
+      "year": "2019",
+      "country": "multiple"
+    },
+    {
+      "metric": "rank correlation with government effectiveness",
+      "value": "0.86",
+      "year": "2019",
+      "country": "multiple"
+    },
+    {
+      "metric": "rank correlation with R&D intensity",
+      "value": "0.80",
+      "year": "2019",
+      "country": "multiple"
+    },
+    {
+      "metric": "rank correlation with human capital",
+      "value": "0.77",
+      "year": "2019",
+      "country": "multiple"
+    }
+  ],
+  "confidence": "high"
+}

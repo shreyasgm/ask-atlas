@@ -1,0 +1,46 @@
+{
+  "question_id": "590",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.048865+00:00",
+  "paper_title": "Opportunity analysis of agriculture products in Sri Lanka: Measuring markets and feasibility",
+  "paper_year": 2016,
+  "source_paper": "agri_sector_opportunities_feb_2018.pdf",
+  "research_answer": "The US market is notably dynamic \u2014 most selected products show high or very high growth rates there between 2012\u20132016, making it a broadly favorable destination by growth metrics. The products with the very largest US market sizes are Shrimp, Tomatoes, Bell Pepper, Cut Flowers, and Plantains & Bananas. Bell Pepper is particularly notable as most of its global market growth is actually being driven by the US. Shrimp combines a very large US market with considerable growth, making it arguably the strongest single opportunity. Tomatoes have a large US market but show only moderate growth there (and are shrinking in the EU). The US market's broad growth momentum across most product categories \u2014 unlike the more selective EU market \u2014 makes it an attractive and relatively lower-risk diversification destination for agricultural exporters.",
+  "supporting_quotes": [
+    "Most of the products have high or very high growth rates in the US market.",
+    "In particular, Shrimp, Tomatoes, Bell Pepper, Cut Flowers, and Plantains & Bananas have very large markets in the US.",
+    "Bell Pepper: Moderate market sizes in EU, US and globally; most growth coming from US",
+    "Tomatoes: Large world market but low growth (moderate in US and shrinking in EU)"
+  ],
+  "data_points": [
+    {
+      "metric": "market growth",
+      "value": "high or very high for most products",
+      "year": "2012-2016",
+      "country": "USA",
+      "product": "selected agricultural products"
+    },
+    {
+      "metric": "largest US markets",
+      "value": "very large",
+      "year": "2016",
+      "country": "USA",
+      "product": "Shrimp, Tomatoes, Bell Pepper, Cut Flowers, Plantains & Bananas"
+    },
+    {
+      "metric": "growth driver",
+      "value": "most growth from US",
+      "year": "2012-2016",
+      "country": "USA",
+      "product": "Bell Pepper"
+    },
+    {
+      "metric": "market growth",
+      "value": "moderate",
+      "year": "2012-2016",
+      "country": "USA",
+      "product": "Tomatoes"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,22 @@
+{
+  "question_id": "684",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.075757+00:00",
+  "paper_title": "Engaging Overseas Sri Lankans to Facilitate Export Diversification",
+  "paper_year": 2018,
+  "source_paper": "srilanka_export_diversification_thesis.pdf",
+  "research_answer": "There is empirical evidence that diaspora populations do increase trade flows with their countries of origin, though the effect operates primarily through imports rather than exports. A study in Canada found that a 10% increase in diaspora population from a given country leads to a 3% increase in Canadian imports from that country of origin. This suggests diaspora networks create demand for home-country goods in destination markets \u2014 a trade-creation effect. The implication for export diversification strategies is that diaspora communities act not only as potential investors or returnees, but also as embedded market-access channels that can facilitate export growth even before formal trade relationships are established.",
+  "supporting_quotes": [
+    "A study in Canada found that increasing a diaspora population by 10% resulted in an increase in imports from their country of origin by 3%"
+  ],
+  "data_points": [
+    {
+      "metric": "import elasticity to diaspora",
+      "value": "10% diaspora increase \u2192 3% import increase",
+      "year": "unknown",
+      "country": "Canada",
+      "product": "all"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,38 @@
+{
+  "question_id": "439",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.009330+00:00",
+  "paper_title": "A Growth Diagnostic of Namibia",
+  "paper_year": 2022,
+  "source_paper": "2022-02-cid-wp-405-namibia-growth-diagnostic.pdf",
+  "research_answer": "Namibia's product space position paints a challenging picture for future diversification. Most of Namibia's exported products lie at the periphery of the product space and are distant from each other, which means there are very few nearby products that Namibia could feasibly jump into using its existing capabilities. This is captured by Namibia's Complexity Outlook Index (COI), which is low \u2014 indicating few absent complex products that are close enough to Namibia's current know-how to be reachable in the near term. Moreover, when looking at density (a measure of how close Namibia is to exporting each non-exported product) across all export categories, Namibia scores lower than the average of its regional and international peers in every single category. Together, these metrics suggest that the structural barriers to upgrading into more complex exports are significant.",
+  "supporting_quotes": [
+    "Most of Namibian export products lie at the periphery of the product space and distant from each other, which leaves very few potential nearby jumps.",
+    "The country's Complexity Outlook Index (COI), which captures the number of absent complex products that demand knowhow and productive capabilities that are similar to those in place, shows that Namibia has few complex products within a short distance.",
+    "the average density by export category, which is lower for Namibia for all export categories than for the average of its regional and international peers."
+  ],
+  "data_points": [
+    {
+      "metric": "Product space position",
+      "value": "periphery, products distant from each other",
+      "year": "2018",
+      "country": "Namibia",
+      "product": null
+    },
+    {
+      "metric": "Complexity Outlook Index (COI)",
+      "value": "low",
+      "year": "2018",
+      "country": "Namibia",
+      "product": null
+    },
+    {
+      "metric": "Density vs. peers by export category",
+      "value": "lower than peers in all categories",
+      "year": "2018",
+      "country": "Namibia",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,52 @@
+{
+  "question_id": "452",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.013949+00:00",
+  "paper_title": "A Measure of Countries' Distance to Frontier Based on Comparative Advantage",
+  "paper_year": 2022,
+  "source_paper": "2022-09-cid-fellows-wp-135-countries-distance-to-frontier.pdf",
+  "research_answer": "Based on a distance-to-frontier ranking that measures how similar a country's export basket is to the technological frontier (defined by the US, Japan, and Germany), the top five most complex exporters in 2019 are Japan (score 1.57), South Korea (1.41), Germany (1.38), Switzerland (1.34), and Czech Republic (1.29). Notably, Czech Republic outranks many larger economies, reflecting the deep manufacturing integration of Eastern European countries into global supply chains. This ranking correlates very strongly with GDP per capita (0.83), meaning export complexity and economic prosperity tend to go hand in hand.",
+  "supporting_quotes": [
+    "JPN 1.57 1 KOR 1.41 2 DEU 1.38 3 CHE 1.34 4 CZE 1.29 5",
+    "The ranking is very robust and highly correlated with GDP per capita (~.83)."
+  ],
+  "data_points": [
+    {
+      "metric": "distance to frontier score and rank",
+      "value": "1.57, rank 1",
+      "year": "2019",
+      "country": "Japan"
+    },
+    {
+      "metric": "distance to frontier score and rank",
+      "value": "1.41, rank 2",
+      "year": "2019",
+      "country": "South Korea"
+    },
+    {
+      "metric": "distance to frontier score and rank",
+      "value": "1.38, rank 3",
+      "year": "2019",
+      "country": "Germany"
+    },
+    {
+      "metric": "distance to frontier score and rank",
+      "value": "1.34, rank 4",
+      "year": "2019",
+      "country": "Switzerland"
+    },
+    {
+      "metric": "distance to frontier score and rank",
+      "value": "1.29, rank 5",
+      "year": "2019",
+      "country": "Czech Republic"
+    },
+    {
+      "metric": "rank correlation with GDP per capita",
+      "value": "0.83",
+      "year": "2019",
+      "country": "multiple"
+    }
+  ],
+  "confidence": "high"
+}

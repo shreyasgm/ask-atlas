@@ -1,0 +1,75 @@
+{
+  "question_id": "473",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.019081+00:00",
+  "paper_title": "Economic Growth and Complexity in the UAE: Summary Report",
+  "paper_year": 2023,
+  "source_paper": "2023-05-UAE-growth-complexity-summary-report.pdf",
+  "research_answer": "The UAE's ECI has been relatively flat between 2005 and 2019 despite notable non-oil export growth, and the explanation runs on several levels. First, the UAE has below-world-average complexity overall due to its large oil export base. Second, even in sectors that are generally considered complex \u2014 like machinery \u2014 the UAE tends to produce and export the less complex, lower-PCI products within those categories. Third, the services where the UAE has genuine comparative advantage (transport at RCA 1.99, travel at 1.71, construction at 1.85) are precisely the lower-complexity services, with PCIs of -1.30, -1.80, and similar low values respectively. Meanwhile, high-complexity services like financial services (PCI 1.95) and intellectual property (PCI 3.84) have very low RCAs of 0.28 and 0.17, meaning the UAE hasn't yet built competitive strength in them. In short, export volume has grown but the composition hasn't shifted toward meaningfully more complex products.",
+  "supporting_quotes": [
+    "One such metric is the ECI (Economic Complexity Index), which has been relatively stagnant for the UAE between 2005 and 2019, despite this period displaying rapid growth even in non-oil exports.",
+    "As a large oil exporter, the UAE has a complexity score that is below the world average.",
+    "First, the UAE has relatively less presence in broad sectors that tend to be complex on average (e.g., machinery).",
+    "In addition, even when it has a presence in more complex broad sectors, the UAE tends to produce less complex products in those broad sectors.",
+    "the UAE's services strengths (from a relative point of view) are in the lower complexity services of transport, travel, and construction."
+  ],
+  "data_points": [
+    {
+      "metric": "Economic Complexity Index (ECI)",
+      "value": "stagnant",
+      "year": "2005-2019",
+      "country": "UAE",
+      "product": "all products"
+    },
+    {
+      "metric": "ECI relative to world average",
+      "value": "below average",
+      "year": "2005-2019",
+      "country": "UAE",
+      "product": "all products"
+    },
+    {
+      "metric": "RCA in transport",
+      "value": "1.99",
+      "year": "2019",
+      "country": "UAE",
+      "product": "transport services"
+    },
+    {
+      "metric": "PCI in transport",
+      "value": "-1.30",
+      "year": "2019",
+      "country": "UAE",
+      "product": "transport services"
+    },
+    {
+      "metric": "RCA in financial services",
+      "value": "0.28",
+      "year": "2019",
+      "country": "UAE",
+      "product": "financial services"
+    },
+    {
+      "metric": "PCI in financial services",
+      "value": "1.95",
+      "year": "2019",
+      "country": "UAE",
+      "product": "financial services"
+    },
+    {
+      "metric": "RCA in intellectual property/charges",
+      "value": "0.17",
+      "year": "2019",
+      "country": "UAE",
+      "product": "intellectual property"
+    },
+    {
+      "metric": "PCI in intellectual property/charges",
+      "value": "3.84",
+      "year": "2019",
+      "country": "UAE",
+      "product": "intellectual property"
+    }
+  ],
+  "confidence": "high"
+}

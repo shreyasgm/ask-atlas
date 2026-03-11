@@ -1,0 +1,39 @@
+{
+  "question_id": "546",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.033323+00:00",
+  "paper_title": "Neighbors and the Evolution of the Comparative Advantage of Nations: Evidence of International Knowledge Diffusion?",
+  "paper_year": 2013,
+  "source_paper": "235_updated_bahar_hausmann.pdf",
+  "research_answer": "China led all countries in absolute product diversification during the 1980s, adding 17 non-primary-resource-based (NPRB) products to its export basket between 1980 and 1990 \u2014 representing 7% of the 234 NPRB products it was not yet exporting with meaningful intensity at the start of the decade. The broader research context is significant here: the neighbor effect on product adoption is particularly strong for NPRB products and for non-OECD countries (like China in 1980), and the effect is consistently significant in East Asia & the Pacific. China's neighbors \u2014 including Japan, South Korea, Taiwan, and Hong Kong \u2014 were already established exporters of many manufactured goods, particularly garments and textiles, which were the dominant product category being adopted globally in that decade (7 of the top 10 most-adopted NPRB products in 1980\u20131990 were garments and textiles). This pattern is consistent with China learning from and following the export trajectories of its more industrialized neighbors.",
+  "supporting_quotes": [
+    "China, at the top of the list, added 17 NPRB products to its export basket in the period 1980-1990, or 7% of the 234 products that at the time were being exported with an RCA below 0.1.",
+    "Seven out of the top ten products for the NPRB categories are garments and textiles in the period 1980-1990.",
+    "The 'neighbor effect' is statistically significant for East Asia & the Pacific, Latin America and the Caribbean and Sub-Saharan Africa, in both specifications.",
+    "the estimator for \u03b2 is statistically significant only for the non OECD countries, as opposed to OECD countries."
+  ],
+  "data_points": [
+    {
+      "metric": "NPRB products added by China",
+      "value": "17",
+      "country": "China",
+      "year": "1980\u20131990"
+    },
+    {
+      "metric": "Share of eligible products diversified",
+      "value": "7%",
+      "country": "China",
+      "year": "1980\u20131990"
+    },
+    {
+      "metric": "Top product category adopted globally (NPRB)",
+      "value": "Garments and textiles (7 of top 10)",
+      "year": "1980\u20131990"
+    },
+    {
+      "metric": "Neighbor effect significance in East Asia",
+      "value": "statistically significant"
+    }
+  ],
+  "confidence": "medium"
+}

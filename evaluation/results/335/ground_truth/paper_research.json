@@ -1,0 +1,45 @@
+{
+  "question_id": "335",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.971851+00:00",
+  "paper_title": "South Africa's Export Predicament",
+  "paper_year": 2006,
+  "source_paper": "2006-08-glwp-06-south_africa_export_predicament.pdf",
+  "research_answer": "Agriculture's appeal comes from two reinforcing product-space advantages: proximity and strategic value. Agricultural, food, and animal products are much closer to South Africa's current export basket than textiles and clothing \u2014 an average distance of roughly 0.7 hectares versus 1.4 hectares for textiles. More importantly, agriculture offers far higher strategic value for future structural transformation, contributing roughly 12,000 units to South Africa's open forest compared to only about 1,500 for textiles and clothing. This means that by developing capabilities in agriculture, South Africa unlocks pathways to many more adjacent products in the future. Textiles and clothing, by contrast, sit in a peripheral, weakly connected cluster in the product space. The result is that agriculture scores at the top or near the top across balanced, low-hanging-fruit, and even labor-absorbing strategies \u2014 making it arguably the most robust sectoral priority for South Africa's structural transformation.",
+  "supporting_quotes": [
+    "Comparing these two categories of products in terms of distance and strategic value, we see in this case that a sectoral view does show some meaningful differences: agriculture, animals, and food products are much nearer to South Africa's current productive structure (Figure 25), and are also of a much higher strategic value for South Africa (Figure 26) when compared to clothing and textiles.",
+    "Figure 25 Average Distance from South Africa's Export Package, 2004: Agriculture, animals, food [~0.7] vs. Textiles and Clothing [~1.4]",
+    "Figure 26 Average Strategic Value for South Africa's future Structural Transformation, 2004: Agriculture, animals, food, etc [~12,000] vs. Textiles and Clothing [~1,500]"
+  ],
+  "data_points": [
+    {
+      "metric": "average distance from export basket",
+      "value": "~0.7",
+      "year": "2004",
+      "country": "South Africa",
+      "product": "agriculture/food/animal products"
+    },
+    {
+      "metric": "average distance from export basket",
+      "value": "~1.4",
+      "year": "2004",
+      "country": "South Africa",
+      "product": "textiles and clothing"
+    },
+    {
+      "metric": "average strategic value (open forest contribution)",
+      "value": "~12,000",
+      "year": "2004",
+      "country": "South Africa",
+      "product": "agriculture/food/animal products"
+    },
+    {
+      "metric": "average strategic value (open forest contribution)",
+      "value": "~1,500",
+      "year": "2004",
+      "country": "South Africa",
+      "product": "textiles and clothing"
+    }
+  ],
+  "confidence": "high"
+}

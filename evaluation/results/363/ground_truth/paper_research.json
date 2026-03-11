@@ -1,0 +1,39 @@
+{
+  "question_id": "363",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.981023+00:00",
+  "paper_title": "Constraints to Sustained and Inclusive Growth in Sri Lanka: An Initial Diagnosis and Key Topics for Discussion",
+  "paper_year": 2016,
+  "source_paper": "2016.01.07_hausmann_initial_constraints.pdf",
+  "research_answer": "Thailand's export transformation is one of the most dramatic examples of economic diversification in the developing world. In 1962, Thailand's exports totaled just $1.36 billion and were concentrated in primary commodities like rubber and rice. By 2010, total exports had grown to approximately $187 billion \u2014 a roughly 137-fold increase \u2014 and the composition had fundamentally shifted toward electronics, machinery, and transport equipment. This transformation unfolded over roughly five decades and took Thailand from a commodity-exporting agrarian economy to a sophisticated manufacturing exporter, a trajectory that Sri Lanka has so far not replicated.",
+  "supporting_quotes": [
+    "Thailand's exports in 1962... [showing rubber, rice, cement dominant] vs Thailand's exports in 2010 [showing electronics, machinery, transport equipment dominant]... exports growing from $1.36B USD to approximately $187B USD"
+  ],
+  "data_points": [
+    {
+      "metric": "Total exports",
+      "value": "$1.36B",
+      "year": "1962",
+      "country": "Thailand"
+    },
+    {
+      "metric": "Total exports",
+      "value": "$187B",
+      "year": "2010",
+      "country": "Thailand"
+    },
+    {
+      "metric": "Export composition 1962",
+      "value": "Rubber, rice, cement (primary commodities)",
+      "year": "1962",
+      "country": "Thailand"
+    },
+    {
+      "metric": "Export composition 2010",
+      "value": "Electronics, machinery, transport equipment",
+      "year": "2010",
+      "country": "Thailand"
+    }
+  ],
+  "confidence": "high"
+}

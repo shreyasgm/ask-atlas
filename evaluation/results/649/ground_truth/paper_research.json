@@ -1,0 +1,38 @@
+{
+  "question_id": "649",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.068064+00:00",
+  "paper_title": "Moving to the Adjacent Possible: Discovering Paths for Export Diversification in Rwanda",
+  "paper_year": 2015,
+  "source_paper": "hausmann_chauvin_rwanda_294.pdf",
+  "research_answer": "The regional trade gap in chemicals represents the single largest opportunity among the identified frontier product categories. East African neighbors import $1.2 billion worth of chemical products, agrochemicals, and medicaments annually, while the region exports only $86 million of these goods \u2014 leaving a gap of over $1.1 billion. This dwarfs the gaps in other categories: machinery and electrical products show $888 million in regional imports versus just $38 million in regional exports, and construction materials show roughly $700 million in regional imports versus about $100 million in regional exports. Taken together, these three categories alone represent over $2.7 billion in regional import demand that is largely being met from outside the region, creating a substantial opportunity for any East African producer \u2014 including Rwanda \u2014 that can competitively supply these goods.",
+  "supporting_quotes": [
+    "The regional imports of the 14 frontier products on this category amount to US$ 1.2 billion wile exports from the region are only US$ 86 million, representing a large opportunity for any regional producer who can competitively supply these products.",
+    "The 17 frontier products in this category account for US$888 million of regional imports and only US$38 million of exports from the region.",
+    "The region imports close to $700 million of these goods, and exports roughly US$ 100 million."
+  ],
+  "data_points": [
+    {
+      "metric": "Regional import gap - Chemicals",
+      "value": "$1.2 billion imports vs $86 million exports",
+      "year": "2010",
+      "country": "East Africa",
+      "product": "Chemicals, agrochemicals, medicaments"
+    },
+    {
+      "metric": "Regional import gap - Machinery",
+      "value": "$888 million imports vs $38 million exports",
+      "year": "2010",
+      "country": "East Africa",
+      "product": "Machinery/Electrical"
+    },
+    {
+      "metric": "Regional import gap - Construction materials",
+      "value": "$700 million imports vs $100 million exports",
+      "year": "2010",
+      "country": "East Africa",
+      "product": "Construction materials, paper"
+    }
+  ],
+  "confidence": "high"
+}

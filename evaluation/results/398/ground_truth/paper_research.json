@@ -1,0 +1,40 @@
+{
+  "question_id": "398",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.996312+00:00",
+  "paper_title": "A Roadmap for Investment Promotion and Export Diversification: The Case of Jordan",
+  "paper_year": 2019,
+  "source_paper": "2020-01-cid-wp-374-roadmap-jordan-revised-march.pdf",
+  "research_answer": "Services are a standout feature of Jordan's export profile. By 2016, services accounted for nearly 45% of total Jordanian exports \u2014 a proportion that is notably higher than that of benchmark countries. This wasn't always the case: Jordanian service exports grew from just $1.7 billion in 1995 to $4.8 billion in 2008, and then continued expanding to $7.1 billion by 2014, even shrugging off most of the impact of the 2008\u20132009 Global Financial Crisis. This resilience and scale of services exports distinguishes Jordan from many of its regional peers.",
+  "supporting_quotes": [
+    "By 2016, services accounted for nearly 45% of total Jordanian exports, a proportion that is relatively higher than that of benchmark countries.",
+    "From 1995 to 2008, Jordanian service exports grew steadily from US$ 1.7 billion to US$ 4.8 billion. Despite the strong impacts of the 2008-2009 Global Financial Crisis on the global economy, Jordanian service exports only experienced a minor hiccup thereafter, and eventually grew to US$ 7.1 billion in 2014."
+  ],
+  "data_points": [
+    {
+      "metric": "services share of total exports",
+      "value": "45%",
+      "year": "2016",
+      "country": "Jordan"
+    },
+    {
+      "metric": "service exports",
+      "value": "1.7 billion USD",
+      "year": "1995",
+      "country": "Jordan"
+    },
+    {
+      "metric": "service exports",
+      "value": "4.8 billion USD",
+      "year": "2008",
+      "country": "Jordan"
+    },
+    {
+      "metric": "service exports",
+      "value": "7.1 billion USD",
+      "year": "2014",
+      "country": "Jordan"
+    }
+  ],
+  "confidence": "high"
+}

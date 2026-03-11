@@ -1,0 +1,38 @@
+{
+  "question_id": "597",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.051427+00:00",
+  "paper_title": "What is the Binding Constraint to Growth in Albania?",
+  "paper_year": 2017,
+  "source_paper": "alb_growth_diagnostic_report.pdf",
+  "research_answer": "Albania's garment and footwear exports \u2014 which together represent 34% of total goods exports as of 2014 \u2014 are deeply embedded in the Italian fason (outsourced manufacturing) model. The sector was originally established through Italian FDI in the 1990s and Albanian producers remain highly reliant on Italian companies as their primary clients. This buyer concentration means that Albanian firms are essentially operating as subcontractors rather than independent exporters with control over their own market relationships, pricing, or product development. The WEF Global Competitiveness Index data reinforces this picture, flagging Albania's lack of control of international distribution and weak value chain integration as key business sophistication deficiencies \u2014 consistent with a sector where Italian clients dictate terms and Albanian firms have limited autonomy in the export relationship.",
+  "supporting_quotes": [
+    "for most garments and footwear (Figure 12), for which Albanian producers in the 'fason' sector remain highly reliant on Italian companies as clients.",
+    "Italian foreign direct investment (FDI) had already helped to establish the fason sector (textiles and footwear) in Albania.",
+    "Low business sophistication can be seen once again in the weakness of value chains, absence of developed industry clusters, and lack of control of international distribution, among other indicators."
+  ],
+  "data_points": [
+    {
+      "metric": "export share - garments and footwear combined",
+      "value": "34%",
+      "year": "2014",
+      "country": "Albania",
+      "product": "garments and footwear"
+    },
+    {
+      "metric": "buyer concentration - fason sector",
+      "value": "high reliance on Italian companies",
+      "year": null,
+      "country": "Albania",
+      "product": "garments and footwear"
+    },
+    {
+      "metric": "FDI origin - fason sector",
+      "value": "Italy (1990s)",
+      "year": "1990s",
+      "country": "Albania",
+      "product": "textiles and footwear"
+    }
+  ],
+  "confidence": "high"
+}

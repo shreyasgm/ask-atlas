@@ -1,0 +1,29 @@
+{
+  "question_id": "395",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.995209+00:00",
+  "paper_title": "A Roadmap for Investment Promotion and Export Diversification: The Case of Jordan",
+  "paper_year": 2019,
+  "source_paper": "2020-01-cid-wp-374-roadmap-jordan-revised-march.pdf",
+  "research_answer": "Jordan's Economic Complexity Index (ECI) is actually lower than what would be expected given its income per capita level. This is significant because research shows that the gap between a country's complexity and its income level is predictive of future growth: countries whose complexity exceeds what their income would predict tend to grow faster, while countries like Jordan \u2014 where income is relatively higher than complexity would suggest \u2014 tend to grow more slowly. In other words, Jordan's productive structure is not as sophisticated as its current income level implies, which is a warning sign for future growth trajectories.",
+  "supporting_quotes": [
+    "Jordan shows an ECI index that is lower than what can be expected for its income per capita level.",
+    "Countries with an economic complexity greater than predicted by their level of income tend to grow faster than countries with higher income than predicted by their current level of economic complexity.",
+    "In both cases, Jordan is poorly ranked relative to its comparable countries and, more broadly, to the rest of the world."
+  ],
+  "data_points": [
+    {
+      "metric": "ECI relative to income per capita",
+      "value": "below expected",
+      "year": "2015",
+      "country": "Jordan"
+    },
+    {
+      "metric": "ECI ranking",
+      "value": "poorly ranked vs. peers and world",
+      "year": "2015",
+      "country": "Jordan"
+    }
+  ],
+  "confidence": "high"
+}

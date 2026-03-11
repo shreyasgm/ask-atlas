@@ -1,0 +1,38 @@
+{
+  "question_id": "438",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.009055+00:00",
+  "paper_title": "A Growth Diagnostic of Namibia",
+  "paper_year": 2022,
+  "source_paper": "2022-02-cid-wp-405-namibia-growth-diagnostic.pdf",
+  "research_answer": "Not really. While Namibia's net exports multiplied by a factor of 7 between 2000 and 2018 \u2014 driven mostly by diamonds, copper, zinc, and gold \u2014 this impressive export growth did not translate into greater economic complexity. The ECI remained consistently low throughout the entire period. The growth was concentrated in primary commodity exports, which are low-complexity products with high ubiquity. Furthermore, despite the volume of export growth, Namibia did not achieve substantive gains in global market shares for its main products, with trajectories remaining highly volatile. So the export boom was largely a price and demand-driven phenomenon tied to the global commodity super-cycle, rather than a reflection of Namibia building new, more complex productive capabilities.",
+  "supporting_quotes": [
+    "until 2018, net exports multiplied by a factor of 7, driven mostly by higher demand for diamonds, copper, zinc, and gold, and outperforming most of its peers.",
+    "growth in exports has not been accompanied with substantive growth in market shares of its main products, with highly volatile trajectories.",
+    "Low ECI has been a constant for the previous two decades, surpassing only Angola among the group of regional and international peers."
+  ],
+  "data_points": [
+    {
+      "metric": "Net exports growth",
+      "value": "7x",
+      "year": "2000-2018",
+      "country": "Namibia",
+      "product": "diamonds, copper, zinc, gold"
+    },
+    {
+      "metric": "ECI trend",
+      "value": "consistently low",
+      "year": "2000-2018",
+      "country": "Namibia",
+      "product": null
+    },
+    {
+      "metric": "Global market share growth",
+      "value": "volatile, no substantive growth",
+      "year": "2000-2018",
+      "country": "Namibia",
+      "product": "minerals"
+    }
+  ],
+  "confidence": "high"
+}

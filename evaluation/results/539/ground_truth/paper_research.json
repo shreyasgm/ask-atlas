@@ -1,0 +1,29 @@
+{
+  "question_id": "539",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.032054+00:00",
+  "paper_title": "Neighbors and the Evolution of the Comparative Advantage of Nations: Evidence of International Knowledge Diffusion?",
+  "paper_year": 2013,
+  "source_paper": "235_updated_bahar_hausmann.pdf",
+  "research_answer": "Yes \u2014 the neighbor effect operates on both the extensive margin (adding new products) and the intensive margin (growing existing ones). For products a country already exports, having a neighbor with a revealed comparative advantage (RCA above 1) in that product is associated with annual RCA growth of 1.5%\u20131.7%, which compounds to a 16\u201318% cumulative increase over a decade. In nominal export value terms, the effect is even larger: having a neighbor that exports a product is correlated with 4%\u20135% higher annual export value growth for that product. So neighbors don't just help countries discover new export opportunities \u2014 they also accelerate the deepening of existing comparative advantages.",
+  "supporting_quotes": [
+    "For existing products, having a neighbor with comparative advantage in them is associated with a growth of exports that is higher by 1.5 percent per annum.",
+    "Panel B shows that having a neighbor with RCA>1 is associated with a future annual growth of RCA of 1.5%-1.7% for that product in the next ten year period (or 16 - 18% cumulative).",
+    "Having a neighbor that exports a product is correlated with an increase in the annual growth of exports for that product of 4% to 5%."
+  ],
+  "data_points": [
+    {
+      "metric": "Additional annual RCA growth from neighbor with RCA>1",
+      "value": "1.5%\u20131.7%"
+    },
+    {
+      "metric": "Cumulative RCA growth over 10 years",
+      "value": "16%\u201318%"
+    },
+    {
+      "metric": "Additional annual export value growth from neighbor with RCA>1",
+      "value": "4%\u20135%"
+    }
+  ],
+  "confidence": "high"
+}

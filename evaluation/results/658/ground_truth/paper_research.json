@@ -1,0 +1,45 @@
+{
+  "question_id": "658",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.070323+00:00",
+  "paper_title": "Shifting Gears: A Growth Diagnostic of Panama",
+  "paper_year": 2016,
+  "source_paper": "panama_growth_diagnostics_wp_325.pdf",
+  "research_answer": "Between 2003 and 2012, Panama's export basket was moving in a favorable direction: it was diversifying into products with lower average ubiquity, meaning goods that fewer other countries could produce. This is a positive signal because it suggests Panama was accumulating relatively rare capabilities. However, after 2012 both trends reversed sharply. By 2014, Panama's export diversification had fallen back to its 1990 level, and average ubiquity had reverted to 2003 levels \u2014 effectively erasing a decade of progress. Even with this reversal, Panama still sits around the middle of Latin American countries on diversification, but remains well below most high-income OECD countries.",
+  "supporting_quotes": [
+    "The Panamanian export basket did not only diversify from 2003 to 2012, but it did so into products that fewer other countries were able to make (i.e. with a decreasing average ubiquity). Based on our previous reflection, this was good news for the economy in the long run.",
+    "Unfortunately, since 2012 both trends reversed, and by 2014 Panama's diversification and average ubiquity were back at 1990 and 2003 levels, respectively.",
+    "In spite of the reverse in trend, in 2014 Panama had a mid-level of export diversification relative to other countries in Latin America. However, it was still lower than most of high income OECD countries."
+  ],
+  "data_points": [
+    {
+      "metric": "diversification trend",
+      "value": "positive (lower ubiquity)",
+      "year": "2003-2012",
+      "country": "Panama",
+      "product": "aggregate exports"
+    },
+    {
+      "metric": "diversification level by 2014",
+      "value": "reverted to 1990 levels",
+      "year": "2014",
+      "country": "Panama",
+      "product": "aggregate exports"
+    },
+    {
+      "metric": "ubiquity level by 2014",
+      "value": "reverted to 2003 levels",
+      "year": "2014",
+      "country": "Panama",
+      "product": "aggregate exports"
+    },
+    {
+      "metric": "export diversification ranking",
+      "value": "mid-level in Latin America, below OECD",
+      "year": "2014",
+      "country": "Panama",
+      "product": "aggregate exports"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,33 @@
+{
+  "question_id": "628",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.062797+00:00",
+  "paper_title": "Learning to Engage New Investors for Economic Diversification: PDIA in action in Sri Lanka",
+  "paper_year": 2017,
+  "source_paper": "diversification_investors_cidwp_336_updated_v2.pdf",
+  "research_answer": "Even though solar panel manufacturing scores positively on both economic impact and investor interest for Sri Lanka, there are structural challenges that complicate its viability. First, solar manufacturing is capital-intensive, meaning it would not generate the large headcounts that Sri Lanka's Board of Investment (BOI) typically requires \u2014 specifically, the BOI mandates that investors employ 500 workers to qualify for incentives like access to land in dedicated zones. Second, the high cost of electricity in Sri Lanka was identified as a major production constraint for solar manufacturing, which is particularly ironic given that solar panels are energy products. These two factors \u2014 capital intensity limiting labor creation and high input energy costs \u2014 create a difficult environment for attracting this type of FDI despite its apparent strategic fit.",
+  "supporting_quotes": [
+    "They were concerned that because solar manufacturing is a capital-intensive sector, it would not be successful in Sri Lanka. They worried that it would not be considered for BOI incentives (which include access to land in dedicated zones), given that the BOI requires that investors employ 500 workers.",
+    "The price of electricity was identified as a major constraint and something the team would need to take into consideration as it moved ahead."
+  ],
+  "data_points": [
+    {
+      "metric": "sector characteristic",
+      "value": "capital-intensive",
+      "country": "Sri Lanka",
+      "product": "solar panel manufacturing"
+    },
+    {
+      "metric": "BOI employment threshold",
+      "value": "500 workers required",
+      "country": "Sri Lanka"
+    },
+    {
+      "metric": "production constraint",
+      "value": "high electricity price",
+      "country": "Sri Lanka",
+      "product": "solar panels"
+    }
+  ],
+  "confidence": "high"
+}

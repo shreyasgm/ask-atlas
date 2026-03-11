@@ -1,0 +1,22 @@
+{
+  "question_id": "429",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.006210+00:00",
+  "paper_title": "Accelerating Growth in Albania through Targeted Investment Promotion",
+  "paper_year": 2020,
+  "source_paper": "2020-11-policy-note-albania-targeted-investment-promotion.pdf",
+  "research_answer": "Albania's growth in agriculture, seafood, and processed food exports was ranked 16th fastest in the world between 2012 and 2016, according to the Atlas of Economic Complexity. This is a striking result for a small Balkan economy, suggesting that Albania has been rapidly building export capacity in these sectors relative to all other countries globally.",
+  "supporting_quotes": [
+    "Over the period from 2012 to 2016, for example, the growth rate of Albania's agriculture, seafood and processed food exports was the 16th fastest in the world according to the Atlas of Economic Complexity."
+  ],
+  "data_points": [
+    {
+      "metric": "Global export growth ranking",
+      "value": "16th fastest",
+      "year": "2012-2016",
+      "country": "Albania",
+      "product": "agriculture, seafood, and processed food"
+    }
+  ],
+  "confidence": "high"
+}

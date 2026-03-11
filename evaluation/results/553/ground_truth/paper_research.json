@@ -1,0 +1,35 @@
+{
+  "question_id": "553",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.034909+00:00",
+  "paper_title": "A Tale of Two Clusters: The Evolution of Ireland's Economic Complexity since 1995",
+  "paper_year": 2015,
+  "source_paper": "2_oclery.pdf",
+  "research_answer": "Ireland's pattern of product appearances and disappearances reveals a concerning shift in complexity. Between 2002 and 2008, the mean complexity of newly appearing products (those gaining RCA) was rising \u2014 Ireland was successfully entering more sophisticated industries. But since 2008, the complexity of new product appearances has been falling, meaning Ireland is gaining RCA in less complex products. At the same time, disappearances have been increasing across almost all sectors, with chemicals and electronics \u2014 Ireland's most complex industries \u2014 showing particularly high rates of exit. Lower-complexity sectors like food, animals, and agriculture have been gaining products since 2005 while losing fewer. Together, this paints a picture of a post-2008 complexity downshift: Ireland is exiting high-complexity niches faster than it is entering them, and its new product gains are concentrated in less sophisticated areas.",
+  "supporting_quotes": [
+    "After a sustained rise in the mean complexity of product appearances between 2002 and 2008, after 2008 the complexity of new products exported with RCA has been falling.",
+    "Almost all sectors have seen an increase in the number of disappearances in recent years, in particular chemicals and electronics.",
+    "Lower complexity sectors such as foodstuffs, animals and agriculture have shown an increase in the number of products exported with RCA since 2005."
+  ],
+  "data_points": [
+    {
+      "metric": "mean complexity of product appearances",
+      "value": "rising 2002-2008, falling post-2008",
+      "year": "2002-2012",
+      "country": "Ireland"
+    },
+    {
+      "metric": "disappearances - chemicals and electronics",
+      "value": "increasing",
+      "year": "2000-2012",
+      "country": "Ireland"
+    },
+    {
+      "metric": "appearances - food, animals, agriculture",
+      "value": "increasing since 2005",
+      "year": "2005-2012",
+      "country": "Ireland"
+    }
+  ],
+  "confidence": "high"
+}

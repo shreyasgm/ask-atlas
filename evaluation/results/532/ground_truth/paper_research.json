@@ -1,0 +1,46 @@
+{
+  "question_id": "532",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.030557+00:00",
+  "paper_title": "Global Imbalances in International Trade, Dynamics of Debt and Finance: Causes and Mitigation Measures",
+  "paper_year": 2025,
+  "source_paper": "2025-08-glwp-252-global-imbalances.pdf",
+  "research_answer": "The US began running trade deficits in advanced technology products for the first time on record in 2002 \u2014 a watershed moment that reflects the broader hollowing out of US manufacturing. The US manufacturing sector's share of GDP has fallen from over 27% in the early 1950s to just 10% in 2024, and manufacturing employment has dropped from a peak of 38.5% of total employment in 1944 to only 8% in April 2025. As production moved offshore, the US lost ground in complex manufactured goods even as its overall ECI declined from 1.729 in 1995 to 1.514 in 2023. Meanwhile, China rapidly filled the gap, growing its ECI 3.5 times over the same period and expanding its share of global manufacturing value-added from 6% in the early 2000s to 26\u201330% today. The consequence is visible in trade data: the US now runs a goods trade deficit of $1.21 trillion annually, partially offset by a services surplus of $295.2 billion. The technology trade deficit signals that the US deindustrialization trend has reached even into its historically strongest export categories.",
+  "supporting_quotes": [
+    "As result, by 2002, for the first time on record, the United States began running trade deficits in advanced technology products.",
+    "As a result, the US manufacturing sector's share of GDP has steadily declined from over 27% in the early 1950s to 10% in 2024.",
+    "employment in manufacturing as a share of total employment in the US has steadily declined from its maximum of 38.5% in 1944 to its historical minimum of 8% in April 2025.",
+    "China currently holds the greatest share of global manufacturing value-added, with several sources estimating it controls between 26% and 30%."
+  ],
+  "data_points": [
+    {
+      "metric": "trade balance in advanced technology products",
+      "value": "deficit (first time on record)",
+      "year": "2002",
+      "country": "United States",
+      "product": "advanced technology products"
+    },
+    {
+      "metric": "manufacturing share of GDP",
+      "value": "27% \u2192 10%",
+      "year": "1950s \u2192 2024",
+      "country": "United States",
+      "product": "all manufacturing"
+    },
+    {
+      "metric": "manufacturing employment share",
+      "value": "38.5% \u2192 8%",
+      "year": "1944 \u2192 2025",
+      "country": "United States",
+      "product": "all manufacturing"
+    },
+    {
+      "metric": "trade deficit on goods",
+      "value": "$1.21 trillion",
+      "year": "2024",
+      "country": "United States",
+      "product": "goods"
+    }
+  ],
+  "confidence": "high"
+}

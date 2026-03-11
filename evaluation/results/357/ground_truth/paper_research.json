@@ -1,0 +1,22 @@
+{
+  "question_id": "357",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.979351+00:00",
+  "paper_title": "Reconfiguring Industrial Policy: A Framework with an Application to South Africa",
+  "paper_year": 2008,
+  "source_paper": "2008-5-cid-working-paper-168-south-africa-industrial-policy.pdf",
+  "research_answer": "Surprisingly, no \u2014 at least not in terms of productive capabilities. The know-how required to cut and polish diamonds or manufacture jewelry is fundamentally different from what is needed to mine diamond ore. Mining involves geological knowledge, extraction engineering, and logistics, while cutting and polishing require highly specialized artisanal and optical skills, precision craftsmanship, and an entirely different industrial base. This is a concrete example of low product space 'relatedness' \u2014 two products that seem connected by a shared raw material actually sit far apart in terms of the capabilities needed to produce them. A country like South Africa that dominates diamond mining cannot automatically translate that position into competitiveness in downstream diamond processing or jewelry without deliberately building a distinct set of capabilities.",
+  "supporting_quotes": [
+    "For example, the skills involved in cutting and polishing diamonds and in the jewelry industry are quite different from those involved in mining diamond ore."
+  ],
+  "data_points": [
+    {
+      "metric": "product space relatedness",
+      "value": "low capability overlap between mining and downstream processing",
+      "year": null,
+      "country": "South Africa",
+      "product": "diamonds / jewelry"
+    }
+  ],
+  "confidence": "high"
+}

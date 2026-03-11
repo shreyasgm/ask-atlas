@@ -1,0 +1,36 @@
+{
+  "question_id": "415",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.002031+00:00",
+  "paper_title": "Implied Comparative Advantage",
+  "paper_year": 2020,
+  "source_paper": "2020-07-cid-wp-276-revised-implied-comparative-advantage.pdf",
+  "research_answer": "Product space density \u2014 measuring how close an industry is to a country's existing export basket \u2014 is a stronger predictor of current comparative advantage than country space density, which measures how much similar countries export the same product. For 1995 international trade data, product space density alone explains 63.6% of the variation in export intensity across country-product pairs, while country space density alone explains 49.3%. Together, they explain 65.4%, meaning the two dimensions are complementary but product space carries more weight. Both are highly statistically significant (p<0.001) with coefficients close to unity, suggesting that the two mechanisms are operating simultaneously and independently to shape a country's export structure.",
+  "supporting_quotes": [
+    "Table 4 shows that both the PS and CS density terms are highly significant (p < 0.001), with coefficients very close to unity... the terms also explain a very large fraction of the variance of the country-product export intensity, though the PS density generates a significantly higher R\u00b2 values than the CS density."
+  ],
+  "data_points": [
+    {
+      "metric": "R\u00b2 for Product Space density alone",
+      "value": "0.636",
+      "year": "1995",
+      "country": "119 countries",
+      "product": "All HS4 products"
+    },
+    {
+      "metric": "R\u00b2 for Country Space density alone",
+      "value": "0.493",
+      "year": "1995",
+      "country": "119 countries",
+      "product": "All HS4 products"
+    },
+    {
+      "metric": "R\u00b2 for both PS and CS density together",
+      "value": "0.654",
+      "year": "1995",
+      "country": "119 countries",
+      "product": "All HS4 products"
+    }
+  ],
+  "confidence": "high"
+}

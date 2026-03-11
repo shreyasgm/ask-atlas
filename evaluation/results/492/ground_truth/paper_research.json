@@ -1,0 +1,30 @@
+{
+  "question_id": "492",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.023097+00:00",
+  "paper_title": "Export-led Growth",
+  "paper_year": 2024,
+  "source_paper": "2024-07-glwp-231-export-led-growth.pdf",
+  "research_answer": "The key difference lies in export basket transformation. East Asian countries, including China, managed rapid changes to their export baskets and increased their global export shares in new industries \u2014 achieving fast growth as a result. Latin American countries like Chile, Colombia, and Peru did everything conventionally right: they stabilized inflation, opened their economies to international trade (with negligible tariffs and numerous free trade agreements), and liberalized capital flows. Yet they were unable to diversify their export baskets and achieve sustained growth. This divergence suggests that trade openness alone is insufficient \u2014 what matters is whether countries can move into new, more complex products. The evidence on Economic Complexity Index (ECI) changes reinforces this: only the fastest-growing developing countries significantly improved their ECI between 1990 and 2019, while others fell behind. Sustained fast-growing economies are distinguished precisely by substantially changing their export basket toward new, more complex products.",
+  "supporting_quotes": [
+    "Countries in East Asia \u2013 including China \u2014 have managed rapid changes to their export baskets, increased their global export shares in new industries and achieved fast growth. In Latin America, by contrast, even good performers like Chile, Colombia and Peru stabilised inflation, opened their economies to international trade (tariffs are negligible and they have signed numerous free trade agreements) and capital flows. Yet, they have been unable to diversify their export baskets and achieve sustained growth.",
+    "sustained fast-growing economies change the composition of their export basket substantially towards new, more complex products."
+  ],
+  "data_points": [
+    {
+      "metric": "export basket diversification and growth",
+      "value": "rapid diversification vs. stagnation",
+      "year": "1980s-2020s",
+      "country": "East Asia/China vs. Chile, Colombia, Peru",
+      "product": "multiple industries"
+    },
+    {
+      "metric": "ECI change by growth quintile",
+      "value": "top quintile improved significantly; bottom three quintiles fell behind",
+      "year": "1990-2019",
+      "country": "developing countries",
+      "product": "export basket composition"
+    }
+  ],
+  "confidence": "high"
+}

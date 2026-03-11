@@ -1,0 +1,52 @@
+{
+  "question_id": "624",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.061511+00:00",
+  "paper_title": "The Exposure of U.S. Manufacturing Industries to Exchange Rates",
+  "paper_year": 2018,
+  "source_paper": "cidrfwp92.pdf",
+  "research_answer": "Both deficits are substantial and roughly comparable in scale \u2014 the U.S. manufacturing trade deficit with China and with all other countries each exceed 2% of GDP. This is a non-obvious finding because public debate often focuses exclusively on the China deficit. The data suggest the U.S. has a systemic manufacturing competitiveness challenge that extends well beyond its bilateral relationship with China. One structural factor reinforcing the China-specific deficit is that U.S. income growth triggers especially large increases in Chinese imports: the income elasticity for imports from China is 4.13, compared to 2.48 for the world average and just 1.75 for other countries. So while the headline deficit sizes are similar, the China deficit is more dynamically tied to U.S. economic growth and thus may be harder to reduce through demand-side adjustments alone.",
+  "supporting_quotes": [
+    "It shows that the U.S. deficits with both China and with other countries exceed 2 percent of GDP.",
+    "Comparing overlapping HS categories across the three tables, the average income elasticities are 2.48 for imports from the world, 4.13 for imports from China",
+    "and 1.75 for imports from other countries."
+  ],
+  "data_points": [
+    {
+      "metric": "manufacturing trade deficit with China",
+      "value": ">2% of GDP",
+      "year": "2008-2015",
+      "country": "United States",
+      "product": null
+    },
+    {
+      "metric": "manufacturing trade deficit with rest of world",
+      "value": ">2% of GDP",
+      "year": "2008-2015",
+      "country": "United States",
+      "product": null
+    },
+    {
+      "metric": "income elasticity of imports from China",
+      "value": "4.13",
+      "year": null,
+      "country": "United States",
+      "product": null
+    },
+    {
+      "metric": "income elasticity of imports from world",
+      "value": "2.48",
+      "year": null,
+      "country": "United States",
+      "product": null
+    },
+    {
+      "metric": "income elasticity of imports from non-China",
+      "value": "1.75",
+      "year": null,
+      "country": "United States",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

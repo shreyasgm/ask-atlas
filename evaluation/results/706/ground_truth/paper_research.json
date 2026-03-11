@@ -1,0 +1,34 @@
+{
+  "question_id": "706",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.079738+00:00",
+  "paper_title": "Towards a Strategy for Economic Growth in Uruguay",
+  "paper_year": 2005,
+  "source_paper": "towards-strategy-economic-growth-uruguay.pdf",
+  "research_answer": "Looking at the top US exports from these three Latin American countries reveals a striking pattern: virtually every major non-traditional export success was shaped by deliberate public policy. Brazil's leading exports include aircraft (shaped by explicit industrial policy with trade restrictions and subsidies) and steel (also subject to direct industrial support). Chile's top exports include grapes and fish (both boosted by publicly funded R&D and dissemination) and forestry products (with a long history of subsidized plantations). Mexico's dominant exports \u2014 motor vehicles and electronics \u2014 are essentially the creation of the maquiladora program and NAFTA tariff preferences. In dollar terms, Mexico's motor vehicles alone ($15.8 billion) dwarf Chile's entire top-5 export list. The common thread is that scratching below the surface of each success story reveals industrial policies, sectoral supports, export subsidies, or preferential tariff arrangements as enabling conditions.",
+  "supporting_quotes": [
+    "Brazil aircraft 1,435 [million dollars]; shoes 1,069; non-crude petroleum 689; steel 485; chemical woodpulp 465. Chile copper 457; grapes 396; fish 377; lumber 144; wood 142. Mexico motor vehicles 15,771; crude oil 11,977; computers & peripherals 6,411; ignition wiring sets 5,576; trucks 4,853.",
+    "Practically all of the export successes have been shaped in some part by public policies. Aircraft and steel in Brazil were the subject of explicit industrial policies, through trade restrictions and subsidies. In Chile, grapes and fish were boosted early on by publicly funded R&D and dissemination activities, and forestry products have a long history of subsidized plantations. In Mexico, motor vehicles and electronics are the creation of the maquila program and tariff preferences granted under the NAFTA."
+  ],
+  "data_points": [
+    {
+      "metric": "top export to US",
+      "country": "Brazil",
+      "product": "aircraft",
+      "value": "$1,435M"
+    },
+    {
+      "metric": "top export to US",
+      "country": "Mexico",
+      "product": "motor vehicles",
+      "value": "$15,771M"
+    },
+    {
+      "metric": "top export to US",
+      "country": "Chile",
+      "product": "copper",
+      "value": "$457M"
+    }
+  ],
+  "confidence": "high"
+}

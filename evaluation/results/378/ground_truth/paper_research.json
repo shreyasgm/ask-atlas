@@ -1,0 +1,38 @@
+{
+  "question_id": "378",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.989099+00:00",
+  "paper_title": "Jordan: The Elements of a Growth Strategy",
+  "paper_year": 2019,
+  "source_paper": "2019-02-28-cid-wp-346-jordan-growth-strategy-revised.pdf",
+  "research_answer": "This is a genuinely counterintuitive finding. Jordan's exports grew at nearly 17% per year between 2000 and 2008, and the country made significant market share gains in garments, chemicals, and agricultural goods. Yet its Economic Complexity Index \u2014 which measures the sophistication and diversity of a country's export basket \u2014 has been on a declining trend for two decades. This divergence suggests that Jordan's export growth was driven more by volume and price effects in relatively less-complex product categories than by a genuine upgrading into more sophisticated, knowledge-intensive exports. It also implies that the market share gains in garments, agriculture, and basic chemicals, while meaningful, did not represent a shift toward the kinds of complex, high-know-how products that raise ECI. The falling ECI signals a structural vulnerability: Jordan's export base may not be diversifying into the more complex products that typically correlate with sustained long-run growth.",
+  "supporting_quotes": [
+    "Jordan's ECI, as measured by its goods exports, has been falling over the last 20 years.",
+    "This went beyond a mere commodity boom: it entailed significant gains in market share for Jordan's exports, in particular, for garments, chemicals, and agricultural goods.",
+    "both the economic boom and the ensuing slowdown were export-driven"
+  ],
+  "data_points": [
+    {
+      "metric": "Economic Complexity Index trend",
+      "value": "falling",
+      "year": "1995-2015",
+      "country": "Jordan",
+      "product": "goods"
+    },
+    {
+      "metric": "export growth CAGR (nominal)",
+      "value": "17.3%",
+      "year": "2000-2008",
+      "country": "Jordan",
+      "product": "all exports"
+    },
+    {
+      "metric": "market share gains",
+      "value": "significant",
+      "year": "2000-2008",
+      "country": "Jordan",
+      "product": "garments, chemicals, agricultural goods"
+    }
+  ],
+  "confidence": "high"
+}

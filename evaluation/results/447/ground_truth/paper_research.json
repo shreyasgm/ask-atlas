@@ -1,0 +1,37 @@
+{
+  "question_id": "447",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.012447+00:00",
+  "paper_title": "What Will It Take for Jordan to Grow?",
+  "paper_year": 2022,
+  "source_paper": "2022-03-cid-wp-411-what-will-it-take-for-jordan-to-grow-final.pdf",
+  "research_answer": "The gap between Jordan's actual and predicted exports to Israel is striking. In 2018, Jordan's actual exports to Israel were under $100 million, while a gravity model \u2014 which estimates trade flows based on economic size and proximity \u2014 predicted exports of over $400 million. This means Jordan is exporting less than a quarter of what its geographic and economic relationship with Israel would suggest. Gravity model analysis also shows that Jordan generally over-exports to most of its large trading partners but under-exports specifically to Israel, suggesting that non-economic barriers are suppressing what could be a much more significant trade relationship. Notably, product-level analysis identifies pharmaceuticals like serums and vaccines as potential growth areas for Jordanian exports to Israel.",
+  "supporting_quotes": [
+    "Whereas actual exports to Israel in 2018 (as captured by UN COMTRADE) were under US$100 million, predicted exports were upward of US$400 million.",
+    "Jordan appears to over-export to most of its large trading partners versus the model's prediction, and under-export to only a few, most notably Israel.",
+    "serums and vaccines may have potential to grow in Israel or France."
+  ],
+  "data_points": [
+    {
+      "metric": "actual exports to Israel",
+      "value": "<$100 million",
+      "year": "2018",
+      "country": "Jordan",
+      "product": "all goods"
+    },
+    {
+      "metric": "gravity model predicted exports to Israel",
+      "value": ">$400 million",
+      "year": "2018",
+      "country": "Jordan"
+    },
+    {
+      "metric": "potential pharmaceutical exports",
+      "value": "identified opportunity",
+      "year": "2018",
+      "country": "Jordan",
+      "product": "serums and vaccines"
+    }
+  ],
+  "confidence": "high"
+}

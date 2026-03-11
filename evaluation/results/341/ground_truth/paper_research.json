@@ -1,0 +1,44 @@
+{
+  "question_id": "341",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.973768+00:00",
+  "paper_title": "Examining Beneficiation",
+  "paper_year": 2008,
+  "source_paper": "2008-5-cid-working-paper-162-examining-benefication.pdf",
+  "research_answer": "The data shows a clear and counterintuitive pattern: raw sugar exporters are far more likely to develop exports in garments \u2014 an apparently unrelated sector \u2014 than in confectionery, which is the direct downstream product of sugar. At any given point, two-thirds of raw sugar exporters also export apparel, while only one-third export confectionery. Even more striking, when looking at transitions over a 5-year window, only 3% of raw sugar exporters who lacked confectionery exports in 1995 developed them by 2000, compared to 30% who transitioned into garments. This implies that the productive capabilities needed to export raw sugar (e.g., tropical climate, agricultural labor, basic processing) are more compatible with labor-intensive garment manufacturing than with the food processing skills required for confectionery.",
+  "supporting_quotes": [
+    "Only one third of raw sugar exporters also export that natural resource's downstream industry: confectionary products. But two thirds export manufactured apparel.",
+    "Only 3% of raw sugar exporters who did not export confectionary products in 1995 were able to discover that sector by 2000, whereas the percentage of transitions from sugar to garments was 30%."
+  ],
+  "data_points": [
+    {
+      "metric": "Joint exporting with confectionery",
+      "value": "33%",
+      "year": "1995",
+      "country": "global sample",
+      "product": "sugar and confectionery"
+    },
+    {
+      "metric": "Joint exporting with apparel",
+      "value": "67%",
+      "year": "1995",
+      "country": "global sample",
+      "product": "sugar and apparel"
+    },
+    {
+      "metric": "5-year transition into confectionery",
+      "value": "3%",
+      "year": "1995-2000",
+      "country": "global sample",
+      "product": "confectionery"
+    },
+    {
+      "metric": "5-year transition into garments",
+      "value": "30%",
+      "year": "1995-2000",
+      "country": "global sample",
+      "product": "garments"
+    }
+  ],
+  "confidence": "high"
+}

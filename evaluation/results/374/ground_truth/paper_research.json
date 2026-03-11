@@ -1,0 +1,37 @@
+{
+  "question_id": "374",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.987315+00:00",
+  "paper_title": "Jordan: The Elements of a Growth Strategy",
+  "paper_year": 2019,
+  "source_paper": "2019-02-28-cid-wp-346-jordan-growth-strategy-revised.pdf",
+  "research_answer": "By 2017, Jordan's goods exports had massively underperformed projections. They came in 20% below what the IMF's 2014 Article IV forecast had projected, and a full 33% below what the IMF had forecast in its 2012 Article IV review. This gap reflects not just cyclical weakness but the compounding effects of regional conflict disrupting trade routes after 2014 \u2014 a shock that neither the 2012 nor 2014 forecasts had anticipated at that scale. The actual cumulative decline of 8.2% in nominal exports (11.5% in real terms) between 2014 and 2017, combined with stagnation in the preceding period, explains why the divergence from trend projections was so severe.",
+  "supporting_quotes": [
+    "By the end of 2017, total exports of goods were 20% lower than the IMF Article IV 2014 forecast; and 33% below the Article IV 2012 forecast.",
+    "After 2014, the intensification of armed conflicts in the region and the interruption of important trade routes caused exports to plummet by a cumulative 8.2% (11.5% in constant dollars)."
+  ],
+  "data_points": [
+    {
+      "metric": "export shortfall vs 2014 forecast",
+      "value": "20%",
+      "year": "2017",
+      "country": "Jordan",
+      "product": "goods"
+    },
+    {
+      "metric": "export shortfall vs 2012 forecast",
+      "value": "33%",
+      "year": "2017",
+      "country": "Jordan",
+      "product": "goods"
+    },
+    {
+      "metric": "cumulative export decline (nominal)",
+      "value": "8.2%",
+      "year": "2014-2017",
+      "country": "Jordan",
+      "product": "all exports"
+    }
+  ],
+  "confidence": "high"
+}

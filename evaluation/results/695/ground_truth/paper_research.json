@@ -1,0 +1,29 @@
+{
+  "question_id": "695",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.077837+00:00",
+  "paper_title": "Structural Transformation in Chile",
+  "paper_year": 2007,
+  "source_paper": "structural_transformation_in_chile.pdf",
+  "research_answer": "The products that do the most to pull up Chile's EXPY \u2014 its export sophistication score \u2014 are primarily processed natural resource goods: chemical wood pulp, swine meat, fish and meat flours, fibreboard, kaolin-coated paper, crustaceans, and newsprint. These are notably still resource-adjacent products rather than complex manufactures. This matters because it reveals that even Chile's sophistication 'bright spots' are located within the same general peripheral neighborhood of the product space \u2014 forestry, seafood, and livestock processing. The country has not developed significant capabilities in truly high-complexity manufactured goods. This is consistent with the broader finding that Chile's efficient frontier in the density-sophistication space is dominated by raw materials, animal products, and other agriculture, confirming that the most reachable next steps for Chile remain firmly within the natural resource orbit.",
+  "supporting_quotes": [
+    "What are the products in Chile's export basket pulling up EXPY? These are shown in the following table. Product: Chemical wood pulp, soda or sulphat (17050), Meat of swine, fresh, chilled or fr (23580), Flours, etc, of meat, fish, etc, un (15610), Fibreboard of wood or other ligneou (19161), Paper..., coated with kaolin (china (23570), Crustaceans... and other aquatic in (21056), Newsprint, in rolls or sheets (20758)",
+    "Chile's efficient frontier is dominated by raw materials, animal products, and other agriculture."
+  ],
+  "data_points": [
+    {
+      "metric": "top EXPY contributing products",
+      "value": "chemical wood pulp, swine meat, fish/meat flour, fibreboard, coated paper, crustaceans, newsprint",
+      "year": "2004",
+      "country": "Chile",
+      "product": "chemical wood pulp, meat, fibreboard, paper, crustaceans, fish"
+    },
+    {
+      "metric": "frontier products by sophistication",
+      "value": "raw materials, animal products, agriculture",
+      "year": "2004",
+      "country": "Chile"
+    }
+  ],
+  "confidence": "high"
+}

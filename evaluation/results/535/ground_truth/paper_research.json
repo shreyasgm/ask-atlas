@@ -1,0 +1,53 @@
+{
+  "question_id": "535",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.031309+00:00",
+  "paper_title": "Global Imbalances in International Trade, Dynamics of Debt and Finance: Causes and Mitigation Measures",
+  "paper_year": 2025,
+  "source_paper": "2025-08-glwp-252-global-imbalances.pdf",
+  "research_answer": "China's rise in global manufacturing has been extraordinary, and projections suggest it will accelerate further. In the early 2000s, China accounted for just 6% of global manufacturing value-added, while the US led with 25%, followed by Japan at 11% and Germany at 8%. By 2024, China had overtaken all of them, controlling an estimated 26\u201330% of global manufacturing value-added. UNIDO projects that by 2030, China's share will climb to 45% \u2014 with particular concern around advanced technology sectors \u2014 while the US share is expected to fall to just 11%. This means China is on track to control nearly as much global manufacturing as the US, Japan, and Germany combined did at the height of Western industrial dominance. The trajectory also aligns with China's ECI nearly matching the US by 2023, confirming that this isn't just a volume story but a complexity story too.",
+  "supporting_quotes": [
+    "for much of the 20th century and into the early 2000s, the United States was responsible for 25% of global manufacturing value-added, while Japan and Germany followed with 11% and 8%, respectively.",
+    "In total, high-income countries accounted for 75% of global industrial output, while China was responsible for just 6%.",
+    "China currently holds the greatest share of global manufacturing value-added, with several sources estimating it controls between 26% and 30%.",
+    "UNIDO estimates that by 2030, China will continue to gain ground in manufacturing industries, most worryingly in advanced technologies, increasing its share to 45%. UNIDO estimated that the United States will hold 11% of the global share."
+  ],
+  "data_points": [
+    {
+      "metric": "share of global manufacturing value-added",
+      "value": "6%",
+      "year": "early 2000s",
+      "country": "China",
+      "product": "all manufacturing"
+    },
+    {
+      "metric": "share of global manufacturing value-added",
+      "value": "26\u201330%",
+      "year": "2024",
+      "country": "China",
+      "product": "all manufacturing"
+    },
+    {
+      "metric": "projected share of global manufacturing value-added",
+      "value": "45%",
+      "year": "2030",
+      "country": "China",
+      "product": "all manufacturing"
+    },
+    {
+      "metric": "projected share of global manufacturing value-added",
+      "value": "11%",
+      "year": "2030",
+      "country": "United States",
+      "product": "all manufacturing"
+    },
+    {
+      "metric": "share of global manufacturing value-added",
+      "value": "US: 25%, Japan: 11%, Germany: 8%",
+      "year": "early 2000s",
+      "country": "United States, Japan, Germany",
+      "product": "all manufacturing"
+    }
+  ],
+  "confidence": "high"
+}

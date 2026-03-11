@@ -1,0 +1,30 @@
+{
+  "question_id": "679",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.074553+00:00",
+  "paper_title": "Public\u2013Private Dialogs to Spur Export-led Growth: The Case of Productivity Taskforces in Namibia",
+  "paper_year": 2025,
+  "source_paper": "public-private-dialogs-to-spur-export-led-growth.pdf",
+  "research_answer": "Namibia's low Economic Complexity Index reflects limited knowledge agglomeration \u2014 meaning the country lacks the dense, overlapping industrial capabilities that make it easy to diversify into new, complex products. This has a direct implication for export strategy: because feasibility depends on how close a new product is to a country's existing productive knowledge, Namibia has few nearby 'stepping stones' in the product space to jump to more complex industries. As a result, working within relatively well-established sectors offers more realistic near-term returns than targeting sophisticated industries that may make theoretical sense for long-term diversification but are too distant from current capabilities. High-value fruits \u2014 grapes, dates, and berries \u2014 fit this logic well: they score lower on complexity and higher on feasibility compared to most products that would be identified as complexity-upgrading targets. They represent achievable wins within Namibia's current productive structure rather than a leap to more complex activities.",
+  "supporting_quotes": [
+    "Namibia's low levels of knowledge agglomeration and scarce opportunities for productive diversification implied that working in relatively well-established sectors would yield more realistic returns in the short term than focusing on more complex yet less feasible industries that were part of a longer-term diversification strategy.",
+    "Figure 1 shows that products comprised within this category \u2013 grapes, dates, and berries \u2013 were less complex and more feasible than most products recommended in the economic complexity report."
+  ],
+  "data_points": [
+    {
+      "metric": "Economic Complexity Index",
+      "value": "low",
+      "year": "2021",
+      "country": "Namibia",
+      "product": null
+    },
+    {
+      "metric": "Product Complexity Index",
+      "value": "low-medium (below average recommended products)",
+      "year": "2021",
+      "country": "Namibia",
+      "product": "grapes, dates, berries"
+    }
+  ],
+  "confidence": "high"
+}

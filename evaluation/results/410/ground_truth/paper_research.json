@@ -1,0 +1,38 @@
+{
+  "question_id": "410",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.000436+00:00",
+  "paper_title": "Does Birthplace Diversity Affect Economic Complexity? Cross-country Evidence",
+  "paper_year": 2020,
+  "source_paper": "2020-03-cid-fellows-wp-125-diversity-economic-complexity.pdf",
+  "research_answer": "This 'wealth transfer' or 'complexity transfer' hypothesis has been tested directly by including a control for the origin-country economic complexity of migrants \u2014 i.e., accounting for whether immigrants simply transplant their home country's productive knowledge. Even after this control, the relationship between birthplace diversity and destination-country ECI remains positive and statistically significant. Additionally, instrumental variable estimates using gravity-model-predicted migration flows are actually larger than ordinary least squares estimates, suggesting that if anything, standard OLS understates the true causal effect due to attenuation bias rather than overstating it due to reverse causality. The effect also survives controlling for historical diversity from 1960, ruling out confounding from earlier immigrant generations.",
+  "supporting_quotes": [
+    "Once we include simultaneously the birthplace diversity index and the origin-specific term, the partial correlation between birthplace diversity and economic complexity remains positive and statistically significant.",
+    "Moreover, all the 2SLS point estimates are larger than the OLS estimates presented in Table 3 when we instrument both endogenous variables, suggesting the correction of an attenuation bias.",
+    "However, the estimates for current immigration diversity over the subsample of countries belonging to the 2nd tercile are positive and significant, in particular among highly educated immigrants."
+  ],
+  "data_points": [
+    {
+      "metric": "Birthplace diversity coefficient (with origin ECI control)",
+      "value": "positive and significant",
+      "year": "1990-2000",
+      "country": "Multiple",
+      "product": null
+    },
+    {
+      "metric": "2SLS vs OLS coefficient comparison",
+      "value": "2SLS estimates larger (attenuation bias correction)",
+      "year": "1990-2000",
+      "country": "Multiple (2nd ECI tercile)",
+      "product": null
+    },
+    {
+      "metric": "Current diversity effect (controlling for 1960 diversity)",
+      "value": "positive and significant",
+      "year": "1990-2000",
+      "country": "2nd ECI tercile developing countries",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

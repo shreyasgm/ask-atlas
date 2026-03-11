@@ -1,0 +1,31 @@
+{
+  "question_id": "372",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.986469+00:00",
+  "paper_title": "Recommendations for Trade Adjustment Assistance in Sri Lanka",
+  "paper_year": 2017,
+  "source_paper": "2017.10.28_tradeassistance_harvardcid_v2.pdf",
+  "research_answer": "Sri Lanka's economic growth has outpaced its export growth for an extended period, which is a structurally dangerous pattern. When domestic demand and GDP expand faster than export revenues, the country needs more foreign exchange to pay for imports than it earns from exports, generating recurring balance of payments pressures. The underlying issue is that Sri Lanka has essentially outgrown its existing economic structure \u2014 the same narrow export base that supported earlier growth stages is no longer sufficient to sustain a larger economy \u2014 but it has not diversified into new export industries to fill the gap. The lack of FDI inflows into new export sectors, combined with a tariff structure that discourages new industry formation, means growth has become increasingly import-intensive without a corresponding expansion of export capacity.",
+  "supporting_quotes": [
+    "The economy has consistently expanded faster than exports have grown, leading to cyclical balance of payments crises.",
+    "Sri Lanka has, in effect, outgrown its economic structure, but it has lacked the inflows of FDI needed to establish new export industries.",
+    "Sri Lanka has seen virtually no significant diversification of exports over the last 25 years, and especially little diversification into manufactured goods linked through global value chains, which have spurred growth elsewhere in Asia."
+  ],
+  "data_points": [
+    {
+      "metric": "GDP growth vs export growth",
+      "value": "GDP growing faster than exports, causing cyclical balance of payments crises",
+      "year": "ongoing pattern through 2017",
+      "country": "Sri Lanka",
+      "product": "all exports"
+    },
+    {
+      "metric": "FDI inflows for new export industries",
+      "value": "insufficient to establish new export sectors",
+      "year": "2017",
+      "country": "Sri Lanka",
+      "product": "new export sectors"
+    }
+  ],
+  "confidence": "high"
+}

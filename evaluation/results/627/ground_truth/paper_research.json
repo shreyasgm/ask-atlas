@@ -1,0 +1,35 @@
+{
+  "question_id": "627",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.062467+00:00",
+  "paper_title": "Learning to Engage New Investors for Economic Diversification: PDIA in action in Sri Lanka",
+  "paper_year": 2017,
+  "source_paper": "diversification_investors_cidwp_336_updated_v2.pdf",
+  "research_answer": "Among the sectors evaluated for Sri Lanka's FDI promotion strategy, solar panels and airport hotels scored positively on both economic impact and market opportunity/investor interest. Solar panels fell under the broader 'Computer, electronic and optical products' category and rated well on both dimensions. Airport hotels were part of the tourism sector, which showed both significant impact potential and large market opportunity. Logistics, by contrast, showed an asymmetric profile \u2014 scoring low on economic impact for Sri Lanka but high on market opportunity and investor interest \u2014 making it a more selective case. This suggests that solar panels and tourism/hospitality represent the strongest dual-benefit sectors for Sri Lanka's export diversification push.",
+  "supporting_quotes": [
+    "Solar panels featured as a specific sector in the general sector 'Computer, electronic and optical products', and scored positively in terms of both 'impact for the Sri Lankan economy' and 'market opportunity and investor interest'.",
+    "Airport hotels were part of the tourism sector, which has both potential for significant impact in Sri Lanka and a large market opportunity and investor interest.",
+    "Logistics was not seen as having a very large impact on the Sri Lankan economy but did score highly in terms of market opportunity and investor interest."
+  ],
+  "data_points": [
+    {
+      "metric": "sector score on economic impact and market opportunity",
+      "value": "positive on both dimensions",
+      "country": "Sri Lanka",
+      "product": "solar panels"
+    },
+    {
+      "metric": "sector score on economic impact and market opportunity",
+      "value": "significant impact and large market opportunity",
+      "country": "Sri Lanka",
+      "product": "airport hotels"
+    },
+    {
+      "metric": "sector score on economic impact and market opportunity",
+      "value": "low impact, high market opportunity",
+      "country": "Sri Lanka",
+      "product": "logistics"
+    }
+  ],
+  "confidence": "high"
+}

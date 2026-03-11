@@ -1,0 +1,34 @@
+{
+  "question_id": "530",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.030183+00:00",
+  "paper_title": "Tackling Discrepancies in Trade Data: The Harvard Growth Lab International Trade Datasets",
+  "paper_year": 2025,
+  "source_paper": "2025-07-glwp-251-tackling-discrepancies-in-trade-data.pdf",
+  "research_answer": "For long-run analysis going back to the 1970s, SITC Revision 2 is the better choice in terms of temporal coverage, spanning 1976 to 2023 \u2014 nearly a half-century of data. HS1992, by contrast, only covers 1995 to 2023, giving you less than three decades. The trade-off is in product granularity: HS1992 offers six-digit product-level detail, which is considerably more granular than SITC's four-digit level. For economic complexity analysis, finer product granularity generally means more precise measurement of export baskets and comparative advantage. So researchers face a classic tension: SITC gives you longer time series for tracking structural transformation and complexity trends, while HS1992 gives you sharper product-level resolution for more recent periods. The choice should be driven by whether temporal depth or product specificity matters more for the research question at hand.",
+  "supporting_quotes": [
+    "SITC Revision 2 (Standard International Trade Classification): Features four-digit product-level granularity covering 1976\u20132023.",
+    "HS1992 (Harmonized System, 1992 Vintage): Features six-digit product-level granularity covering 1995\u20132023."
+  ],
+  "data_points": [
+    {
+      "metric": "SITC Rev. 2 time coverage",
+      "value": "1976-2023",
+      "country": "Global"
+    },
+    {
+      "metric": "SITC Rev. 2 product granularity",
+      "value": "4-digit"
+    },
+    {
+      "metric": "HS1992 time coverage",
+      "value": "1995-2023",
+      "country": "Global"
+    },
+    {
+      "metric": "HS1992 product granularity",
+      "value": "6-digit"
+    }
+  ],
+  "confidence": "high"
+}

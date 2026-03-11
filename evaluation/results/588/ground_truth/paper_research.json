@@ -1,0 +1,46 @@
+{
+  "question_id": "588",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.048187+00:00",
+  "paper_title": "Opportunity analysis of agriculture products in Sri Lanka: Measuring markets and feasibility",
+  "paper_year": 2016,
+  "source_paper": "agri_sector_opportunities_feb_2018.pdf",
+  "research_answer": "The Middle East is smaller overall than the EU, USA, and East Asian markets in absolute import volume for selected agricultural products. However, it stands out for its rapid growth across most selected products between 2012\u20132016, making it one of the most dynamic regional markets by growth rate. The highest market opportunities in the Middle East are in Tomatoes, Plantains & Bananas, and Shrimp \u2014 combining meaningful market size with high growth. Spice exporters should note that Cardamom, Nutmeg & Mace, and Turmeric are specifically oriented toward the Middle East as their primary destination. The Middle East thus represents a high-growth, mid-scale opportunity particularly attractive for producers of perishable staples and spices.",
+  "supporting_quotes": [
+    "However, the Middle East market is smaller overall than the other markets (US, EU, EA).",
+    "Most of the selected products are growing rapidly in the Middle East market.",
+    "Comparatively, Tomatoes, Plantains & Bananas, and Shrimp have the highest market opportunities in the Middle East.",
+    "Middle East: Cardamom, Nutmeg & Mace, and Turmeric"
+  ],
+  "data_points": [
+    {
+      "metric": "relative market size",
+      "value": "smaller than EU, USA, East Asia",
+      "year": "2016",
+      "country": "Middle East",
+      "product": "selected agricultural products"
+    },
+    {
+      "metric": "market growth",
+      "value": "rapid across most products",
+      "year": "2012-2016",
+      "country": "Middle East",
+      "product": "selected agricultural products"
+    },
+    {
+      "metric": "highest market opportunity",
+      "value": "top 3",
+      "year": "2012-2016",
+      "country": "Middle East",
+      "product": "Tomatoes, Plantains & Bananas, Shrimp"
+    },
+    {
+      "metric": "primary export destination",
+      "value": "Middle East",
+      "year": "2016",
+      "country": "global",
+      "product": "Cardamom, Nutmeg & Mace, Turmeric"
+    }
+  ],
+  "confidence": "high"
+}

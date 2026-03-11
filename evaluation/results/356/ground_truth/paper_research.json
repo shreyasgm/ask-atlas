@@ -1,0 +1,22 @@
+{
+  "question_id": "356",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.979041+00:00",
+  "paper_title": "Reconfiguring Industrial Policy: A Framework with an Application to South Africa",
+  "paper_year": 2008,
+  "source_paper": "2008-5-cid-working-paper-168-south-africa-industrial-policy.pdf",
+  "research_answer": "Mining is often characterized as an economic dead-end in complexity frameworks because it typically requires limited transferable know-how. However, the South African case illustrates an important nuance: the operational demands of mining generate highly transferable industrial capabilities. Specifically, mining operations require sophisticated engineering solutions for pumps, valves, and specialized capital equipment designed to perform under extreme conditions. These capabilities \u2014 precision engineering, materials science, industrial design \u2014 are applicable across many other industries globally, not just in mining. This suggests that rather than treating mining as a sector to escape, South Africa could leverage the engineering and manufacturing knowledge embedded in its mining supply chain as a platform for diversifying into higher-complexity capital goods exports.",
+  "supporting_quotes": [
+    "Meanwhile, the needs of mining generate a host of skills and capabilities in the design and production of high performance pumps and valves and other capital equipment for the mining industry. These capacities can be further applied and developed not only in mining but in many other industries worldwide."
+  ],
+  "data_points": [
+    {
+      "metric": "capability spillover from mining",
+      "value": "high cross-industry applicability",
+      "year": null,
+      "country": "South Africa",
+      "product": "pumps, valves, capital equipment"
+    }
+  ],
+  "confidence": "high"
+}

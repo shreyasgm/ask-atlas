@@ -1,0 +1,43 @@
+{
+  "question_id": "656",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.069789+00:00",
+  "paper_title": "Shifting Gears: A Growth Diagnostic of Panama",
+  "paper_year": 2016,
+  "source_paper": "panama_growth_diagnostics_wp_325.pdf",
+  "research_answer": "The two have moved in starkly opposite directions. Services exports per capita grew 3.5 times between 1998 and 2014, accelerating especially after 2005. Goods exports, by contrast, had a brief period of modest growth \u2014 up 25% between 2000 and 2008 \u2014 but then fell sharply, declining 38% from 2008 to 2014. By 2014, goods exports per capita were actually 23% below their year-2000 level. So over the long run, Panama's goods export base has shrunk while services have surged, widening an already large gap between the two.",
+  "supporting_quotes": [
+    "Service exports per capita have steadily increased in time, while exports of goods remained stagnant. Between 2000-2008, goods exports per capita increased 25%, but during the next six years decreased 38%; ending 23% below their initial value. To the contrary, exports of services per capita have expanded continuously, in particular from 2005 onwards, growing by a factor of 3.5 times."
+  ],
+  "data_points": [
+    {
+      "metric": "services exports per capita growth factor",
+      "value": "3.5x",
+      "year": "1998-2014",
+      "country": "Panama",
+      "product": "services"
+    },
+    {
+      "metric": "goods exports per capita change 2000-2008",
+      "value": "+25%",
+      "year": "2000-2008",
+      "country": "Panama",
+      "product": "goods"
+    },
+    {
+      "metric": "goods exports per capita change 2008-2014",
+      "value": "-38%",
+      "year": "2008-2014",
+      "country": "Panama",
+      "product": "goods"
+    },
+    {
+      "metric": "goods exports per capita net change from 2000",
+      "value": "-23%",
+      "year": "2014",
+      "country": "Panama",
+      "product": "goods"
+    }
+  ],
+  "confidence": "high"
+}

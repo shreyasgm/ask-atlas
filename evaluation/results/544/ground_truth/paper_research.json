@@ -1,0 +1,19 @@
+{
+  "question_id": "544",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.032966+00:00",
+  "paper_title": "Neighbors and the Evolution of the Comparative Advantage of Nations: Evidence of International Knowledge Diffusion?",
+  "paper_year": 2013,
+  "source_paper": "235_updated_bahar_hausmann.pdf",
+  "research_answer": "The neighbor effect on product adoption is statistically significant in East Asia & the Pacific, Latin America and the Caribbean, and Sub-Saharan Africa. These are all predominantly developing-country regions, consistent with the broader finding that neighbor effects are driven by non-OECD economies. The geographic clustering of export diversification in these regions \u2014 where what one country learns to export is strongly influenced by what its neighbors already export \u2014 has important implications for thinking about regional industrial development. It also aligns with observed real-world patterns like the spread of garment and textile manufacturing across East and South Asia, or regional export convergence in Latin America.",
+  "supporting_quotes": [
+    "The 'neighbor effect' is statistically significant for East Asia & the Pacific, Latin America and the Caribbean and Sub-Saharan Africa, in both specifications."
+  ],
+  "data_points": [
+    {
+      "metric": "Regions with significant neighbor effects",
+      "value": "East Asia & Pacific, Latin America & Caribbean, Sub-Saharan Africa"
+    }
+  ],
+  "confidence": "high"
+}

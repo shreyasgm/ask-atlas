@@ -1,0 +1,28 @@
+{
+  "question_id": "527",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.029645+00:00",
+  "paper_title": "Tackling Discrepancies in Trade Data: The Harvard Growth Lab International Trade Datasets",
+  "paper_year": 2025,
+  "source_paper": "2025-07-glwp-251-tackling-discrepancies-in-trade-data.pdf",
+  "research_answer": "African countries are most likely to be non-reporting in international trade datasets. Without a mirroring procedure \u2014 which infers a country's trade from what its trading partners report on the other side of each transaction \u2014 no product-level trade data would be available for these economies at all. This is a significant gap for trade and economic complexity analysis, since African nations' export baskets, diversification levels, and revealed comparative advantages would simply be invisible in standard datasets. The recovery of this data through mirroring has been validated against IMF Balance of Payments statistics, giving confidence that the inferred values are reasonably accurate, but it underscores how heavily African trade data depends on partner-country reporting rather than self-reporting.",
+  "supporting_quotes": [
+    "The map shows that non-reporting countries are most prevalent in regions such as Africa; without the mirroring procedure, no product-level data would be available for these economies.",
+    "Our recovered export values (Panel C) and import values (Panel D) are highly correlated with the IMF Balance of Payments (BoP) statistics across countries, with both sets of values being of similar magnitude."
+  ],
+  "data_points": [
+    {
+      "metric": "Region with most non-reporting countries",
+      "value": "Africa",
+      "year": "2023",
+      "country": "Africa"
+    },
+    {
+      "metric": "Validation method for recovered data",
+      "value": "High correlation with IMF Balance of Payments",
+      "year": "2023",
+      "country": "Non-reporting countries"
+    }
+  ],
+  "confidence": "high"
+}

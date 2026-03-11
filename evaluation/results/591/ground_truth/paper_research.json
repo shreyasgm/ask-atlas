@@ -1,0 +1,55 @@
+{
+  "question_id": "591",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.049245+00:00",
+  "paper_title": "Opportunity analysis of agriculture products in Sri Lanka: Measuring markets and feasibility",
+  "paper_year": 2016,
+  "source_paper": "agri_sector_opportunities_feb_2018.pdf",
+  "research_answer": "East Asia (China, Japan, South Korea, Singapore, Hong Kong) represents 15.4% of world imports for selected agricultural products \u2014 significantly smaller than the EU (42%) and US (18.8%), but still a substantial market at $14.9 billion. Its product composition differs meaningfully from Western markets. The largest East Asian markets are concentrated in seafood \u2014 Shrimp and Cuttlefish/Octopus & Bivalves \u2014 rather than fruits, vegetables, or spices that dominate Western demand. Three products are primarily oriented toward East Asia rather than other markets: Cassava, Live Fish, and Sea Cucumber. By growth rate, Pineapple, Cinnamon, Vanilla, Plantains & Bananas, Live Plants, and Strawberries are growing fastest in East Asia. However, a key warning: the Pepper market is shrinking in East Asia, and Sea Cucumber \u2014 despite being a targeted development product \u2014 also has a shrinking East Asian market. This market therefore rewards seafood exporters and some tropical fruits while being a poor fit for spice exporters focused on Pepper.",
+  "supporting_quotes": [
+    "East Asian Market (China, Japan, South Korea, Singapore, Hong Kong) 14.9 [USD, bn], 15.4% [of world]",
+    "The largest East Asian markets are for Shrimp and Cuttlefish, Octopus & Bivalves.",
+    "East Asia: Cassava, Live Fish, and Sea Cucumber",
+    "While Pineapple, Cinnamon, Vanilla, Plantains & Bananas, Live Plants, and Strawberries have the highest growth rates [in East Asia].",
+    "Pepper: Moderate size and high-to-moderate growth in EU, US, ME; Shrinking in EA",
+    "MoPI targeted the development of the Sea Cucumber projects for the East Asian market. However, this product has a shrinking market in East Asia, which should be considered."
+  ],
+  "data_points": [
+    {
+      "metric": "share of world imports",
+      "value": "15.4%",
+      "year": "2016",
+      "country": "East Asia",
+      "product": "selected agricultural sectors"
+    },
+    {
+      "metric": "largest East Asian markets",
+      "value": "seafood dominated",
+      "year": "2016",
+      "country": "East Asia",
+      "product": "Shrimp, Cuttlefish, Octopus & Bivalves"
+    },
+    {
+      "metric": "primary export destination",
+      "value": "East Asia",
+      "year": "2016",
+      "country": "global",
+      "product": "Cassava, Live Fish, Sea Cucumber"
+    },
+    {
+      "metric": "highest growth rates",
+      "value": "fastest growing",
+      "year": "2012-2016",
+      "country": "East Asia",
+      "product": "Pineapple, Cinnamon, Vanilla, Plantains & Bananas, Live Plants, Strawberries"
+    },
+    {
+      "metric": "market growth",
+      "value": "shrinking",
+      "year": "2012-2016",
+      "country": "East Asia",
+      "product": "Pepper, Sea Cucumber"
+    }
+  ],
+  "confidence": "high"
+}

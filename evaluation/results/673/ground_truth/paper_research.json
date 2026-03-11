@@ -1,0 +1,46 @@
+{
+  "question_id": "673",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.073357+00:00",
+  "paper_title": "Public\u2013Private Dialogs to Spur Export-led Growth: The Case of Productivity Taskforces in Namibia",
+  "paper_year": 2025,
+  "source_paper": "public-private-dialogs-to-spur-export-led-growth.pdf",
+  "research_answer": "Namibia's fishing sector has had a dramatic arc. From the early 2000s through 2013, fish product exports grew at a compounded annual rate of over 3%, making fishing a cornerstone of the economy \u2014 consistently contributing around 3% of GDP since 2007 and accounting for over 10% of total annual exports between 2000 and 2018. Growth then stagnated from 2013 to 2019, mirroring a worldwide slowdown in international export growth. But after 2019, the sector experienced a sharp collapse: exports fell by over 35% between 2019 and 2021. This is particularly striking given that globally, fish product revenues and production volumes have sharply increased since the pandemic ended, and fish prices rose between 2021 and 2023 \u2014 suggesting demand outpaced supply worldwide. Namibia's export decline thus appears to reflect domestic constraints rather than weak global demand.",
+  "supporting_quotes": [
+    "Fishing is a critical industry in Namibia, consistently contributing around 3% to the nation's GDP since 2007 and accounting for over 10% of total annual exports from 2000 to 2018.",
+    "The exports of fish products in Namibia consistently increased at an annual compounded growth rate of over 3% between the early 2000s and 2013, when they peaked. They stagnated between 2013 and 2019, a period of worldwide slowdown of international export growth. Yet after 2019, the fishing industry experienced a dramatic export collapse: over 35% between 2019 and 2021.",
+    "Worldwide revenues and the production volume for processed and fresh products have sharply increased since the end of the pandemic.",
+    "However, prices for fishing products had also increased between 2021 and 2023, suggesting that the surge in production was lower that of demand."
+  ],
+  "data_points": [
+    {
+      "metric": "share of total exports",
+      "value": "10%+",
+      "year": "2000-2018",
+      "country": "Namibia",
+      "product": "fish products"
+    },
+    {
+      "metric": "CAGR of fish exports",
+      "value": "3%+",
+      "year": "2000-2013",
+      "country": "Namibia",
+      "product": "fish products"
+    },
+    {
+      "metric": "export collapse",
+      "value": "35%+",
+      "year": "2019-2021",
+      "country": "Namibia",
+      "product": "fish products"
+    },
+    {
+      "metric": "global fish prices",
+      "value": "increased",
+      "year": "2021-2023",
+      "country": "global",
+      "product": "fish"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,37 @@
+{
+  "question_id": "609",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.056162+00:00",
+  "paper_title": "How should Uganda grow?",
+  "paper_year": 2014,
+  "source_paper": "cid_working_paper_275.pdf",
+  "research_answer": "Uganda's export complexity varies dramatically by destination. Exports to Europe are dominated by agriculture \u2014 essentially raw or minimally processed primary commodities. Exports to Asia and the Middle East are slightly more diverse, including fish and animal products alongside agriculture. But the African market stands out as by far the most diversified destination, where Uganda's exports include machinery, construction materials and equipment, chemicals, and food processing in addition to agricultural goods. This pattern reveals a striking insight: Uganda is already exporting more complex products, but almost exclusively within the regional African market. This suggests that regional trade is serving as an incubator for Uganda's more sophisticated exports, and that growth in African import demand \u2014 projected to be among the fastest globally \u2014 could be a critical pathway for Uganda to upgrade its export complexity.",
+  "supporting_quotes": [
+    "Exports to Europe are dominated by agriculture, whereas exports to Asia and the Middle East also include fish and animal products. But the local African market is by far the most diversified and also includes exports of machinery, construction materials and equipment, chemicals, and food processing (Figure 24).",
+    "Uganda would do well to continue diversifying its exports towards SSA and Asia, as these are expected to be the fastest growing import markets."
+  ],
+  "data_points": [
+    {
+      "metric": "export composition to Europe",
+      "value": "agriculture-dominated",
+      "year": null,
+      "country": "Uganda",
+      "product": "agriculture"
+    },
+    {
+      "metric": "export composition to Africa",
+      "value": "diversified: machinery, construction, chemicals, food processing",
+      "year": null,
+      "country": "Uganda",
+      "product": "machinery, construction materials, chemicals, food processing"
+    },
+    {
+      "metric": "fastest-growing import markets",
+      "value": "Sub-Saharan Africa and Asia",
+      "year": null,
+      "country": null,
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

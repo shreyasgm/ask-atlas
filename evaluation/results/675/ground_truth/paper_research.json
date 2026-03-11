@@ -1,0 +1,61 @@
+{
+  "question_id": "675",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.073767+00:00",
+  "paper_title": "Public\u2013Private Dialogs to Spur Export-led Growth: The Case of Productivity Taskforces in Namibia",
+  "paper_year": 2025,
+  "source_paper": "public-private-dialogs-to-spur-export-led-growth.pdf",
+  "research_answer": "Namibia's two main high-value fruit exports have had quite different trajectories. Grapes, which represent about 70% of Namibia's fruit production, have been exported since 2000 and grew continuously until 2014, after which they declined. However, the sector has recently rebounded strongly: grape exports grew 40% between 2020 and 2022, and then a further 21% in 2023 alone. Harvested area also expanded significantly, up 28% (about 2,000 hectares) between 2018 and 2022. Dates are a much newer and smaller export story \u2014 producers only began exporting significant volumes in 2014 \u2014 but they achieved a fourfold increase in exports by 2019, and harvested area more than tripled between 2017 and 2022. Together, these trends suggest the sector is in a phase of renewed momentum after earlier setbacks, with grapes driving volume and dates showing rapid growth from a low base.",
+  "supporting_quotes": [
+    "According to FAO production estimates, table grapes were 70% of fruit production in 2020 in Namibia. Grape growers have constantly increased their exports since they started in 2000, though they have declined since 2014.",
+    "Between 2018 and 2022, grape farms registered an increase of two thousand hectares or 28% in harvested area. Gross exports increased by 40% between 2020 and 2022.",
+    "In 2023, gross exports of grapes increased by 21% versus the previous year.",
+    "On the other hand, date producers started exporting significant amounts of produce in 2014 and had experienced a fourfold increase in exports by 2019.",
+    "Similarly, the harvested area for dates \u2013 although at a much lower scale \u2013 more than tripled between 2017 and 2022."
+  ],
+  "data_points": [
+    {
+      "metric": "share of fruit production",
+      "value": "70%",
+      "year": "2020",
+      "country": "Namibia",
+      "product": "table grapes"
+    },
+    {
+      "metric": "gross export increase",
+      "value": "40%",
+      "year": "2020-2022",
+      "country": "Namibia",
+      "product": "grapes"
+    },
+    {
+      "metric": "gross export increase",
+      "value": "21%",
+      "year": "2023",
+      "country": "Namibia",
+      "product": "grapes"
+    },
+    {
+      "metric": "harvested area increase",
+      "value": "28% (2,000 hectares)",
+      "year": "2018-2022",
+      "country": "Namibia",
+      "product": "grapes"
+    },
+    {
+      "metric": "export growth multiplier",
+      "value": "4x",
+      "year": "2014-2019",
+      "country": "Namibia",
+      "product": "dates"
+    },
+    {
+      "metric": "harvested area multiplier",
+      "value": "3x",
+      "year": "2017-2022",
+      "country": "Namibia",
+      "product": "dates"
+    }
+  ],
+  "confidence": "high"
+}

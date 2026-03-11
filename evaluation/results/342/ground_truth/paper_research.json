@@ -1,0 +1,44 @@
+{
+  "question_id": "342",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.974113+00:00",
+  "paper_title": "Examining Beneficiation",
+  "paper_year": 2008,
+  "source_paper": "2008-5-cid-working-paper-162-examining-benefication.pdf",
+  "research_answer": "Across all the empirical measures tested, factor intensities \u2014 particularly whether two products share similar labor and human capital requirements \u2014 are far stronger predictors of joint export patterns than forward linkages (i.e., whether one product is an input into another). The regression coefficients tell the story clearly: the LEAMER factor intensity measure has a coefficient of about 4.95 on the probability that two countries jointly export a pair of products, while forward linkages have a coefficient of only 0.615. The LALL technological sophistication measure also dominates forward linkages with a coefficient of 3.4. In practical terms, moving from the weakest to the strongest forward linkage in the dataset shifts the joint-exporting probability by only about one-tenth of a standard deviation \u2014 a negligible economic effect. These findings are robust across multiple time periods from 1975 to 2000. Notably, capital intensity is the one factor measure that is NOT significant, which is consistent with capital being internationally mobile, while labor and human capital are not.",
+  "supporting_quotes": [
+    "Going from the 1st percentile in forward linkage strength (-0.197, from footwear manufacturing to stationary and related manufacturing) to the 99th percentile in forward linkage strength (3.13, from leather products to footwear) has an effect on distance of only 2, which is barely 1/10th of one standard deviation. Compare this to the impact of the pair of products having the same broad factor intensities (LEAMER) or technological sophistication (LALL), which have a relationship with (contemporaneous) distance of 5 and 3.4, respectively.",
+    "It is also interesting to note that all of our measures of factor intensities are significant, with the exception of K. This is consistent with the intuition that capital is the most internationally mobile factor and therefore the least important in determining international patterns of production."
+  ],
+  "data_points": [
+    {
+      "metric": "Forward linkage coefficient",
+      "value": "0.615",
+      "year": "1995",
+      "country": "global",
+      "product": "all"
+    },
+    {
+      "metric": "LEAMER factor intensity coefficient",
+      "value": "4.951",
+      "year": "1995",
+      "country": "global",
+      "product": "all"
+    },
+    {
+      "metric": "LALL technological sophistication coefficient",
+      "value": "3.422",
+      "year": "1995",
+      "country": "global",
+      "product": "all"
+    },
+    {
+      "metric": "Capital intensity (K) coefficient",
+      "value": "insignificant",
+      "year": "1995",
+      "country": "global",
+      "product": "all"
+    }
+  ],
+  "confidence": "high"
+}

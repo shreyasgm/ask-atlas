@@ -1,0 +1,38 @@
+{
+  "question_id": "368",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.984506+00:00",
+  "paper_title": "Recommendations for Trade Adjustment Assistance in Sri Lanka",
+  "paper_year": 2017,
+  "source_paper": "2017.10.28_tradeassistance_harvardcid_v2.pdf",
+  "research_answer": "Sri Lanka's export performance has significantly lagged behind regional peers, and the core problem is stalled diversification. Over the last 25 years, Sri Lanka has seen virtually no significant diversification of exports \u2014 particularly into manufactured goods linked through global value chains, which have been the primary engine of growth for other Asian economies. As a result, exports have failed to grow at anywhere near the pace of neighboring countries. This has created a structural imbalance: the broader economy has consistently expanded faster than exports have grown, setting off cyclical balance of payments crises. In essence, Sri Lanka has outgrown its economic structure without developing new export industries to sustain that growth.",
+  "supporting_quotes": [
+    "Sri Lanka has seen virtually no significant diversification of exports over the last 25 years, and especially little diversification into manufactured goods linked through global value chains, which have spurred growth elsewhere in Asia.",
+    "In recent years, exports have failed to grow at anywhere near the pace of other countries in the region, and that is because export diversification has fundamentally stalled.",
+    "The economy has consistently expanded faster than exports have grown, leading to cyclical balance of payments crises."
+  ],
+  "data_points": [
+    {
+      "metric": "export diversification",
+      "value": "virtually no significant diversification",
+      "year": "2017 assessment of past 25 years",
+      "country": "Sri Lanka",
+      "product": "manufactured goods in global value chains"
+    },
+    {
+      "metric": "export growth rate",
+      "value": "slower than regional peers",
+      "year": "recent years (pre-2017)",
+      "country": "Sri Lanka",
+      "product": "all exports"
+    },
+    {
+      "metric": "GDP growth vs export growth",
+      "value": "GDP growing faster than exports",
+      "year": "ongoing pattern",
+      "country": "Sri Lanka",
+      "product": "all exports"
+    }
+  ],
+  "confidence": "high"
+}

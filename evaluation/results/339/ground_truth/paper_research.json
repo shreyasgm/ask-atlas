@@ -1,0 +1,43 @@
+{
+  "question_id": "339",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.973140+00:00",
+  "paper_title": "South Africa's Export Predicament",
+  "paper_year": 2006,
+  "source_paper": "2006-08-glwp-06-south_africa_export_predicament.pdf",
+  "research_answer": "There is a significant mismatch. The DTI's industrial strategy nominally targets 854 out of 1,241 HS 4-digit products \u2014 about 69% of all products \u2014 which means it is not highly focused at the product level despite being framed in sectoral terms. The products it omits are, tellingly, largely inside the efficient frontier: they are both far from South Africa's current productive structure and offer little strategic value for future transformation. In other words, the omitted products are the ones that would be hardest to develop and least useful as stepping stones. Meanwhile, the strategy includes sectors like textiles, clothing, and aerospace, which score poorly or negatively across most product-space-informed strategic criteria. Agriculture \u2014 which scores highest or near-highest across multiple diversification strategies \u2014 receives comparatively less emphasis despite being closer to South Africa's current capabilities and offering far greater strategic value.",
+  "supporting_quotes": [
+    "The first point of note is that even though this strategy is prioritized in terms of sectors, the strategy is not highly focused at the product level, as 854 products out of a total of 1241 in the HS-4digit system are targeted.",
+    "Figure 27 shows where these omitted products lie in South Africa's open forest in terms of the distance/strategic value tradeoff. As can be seen, these omitted products are largely inside the efficient frontier, meaning that they are both far away from South Africa's current productive structure, and they offer little in terms of providing capabilities valuable for future structural transformation.",
+    "We see that, consistent with the findings in Section 3, the clothing and textiles sector scores quite low unless an extremely high weight is placed on unskilled labor intensity, and even in that case these sectors score below agriculture. In addition, the aerospace sector consistently scores quite low."
+  ],
+  "data_points": [
+    {
+      "metric": "products targeted by DTI strategy",
+      "value": "854 out of 1,241 (69%)",
+      "year": "2004",
+      "country": "South Africa"
+    },
+    {
+      "metric": "omitted products location",
+      "value": "largely inside efficient frontier (far and low strategic value)",
+      "year": "2004",
+      "country": "South Africa"
+    },
+    {
+      "metric": "agriculture sector score (low-hanging fruit)",
+      "value": "0.68 (highest)",
+      "year": "2004",
+      "country": "South Africa",
+      "product": "agriculture"
+    },
+    {
+      "metric": "clothing sector score (low-hanging fruit)",
+      "value": "-0.42 (lowest)",
+      "year": "2004",
+      "country": "South Africa",
+      "product": "clothing"
+    }
+  ],
+  "confidence": "high"
+}

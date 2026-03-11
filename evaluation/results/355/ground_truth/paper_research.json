@@ -1,0 +1,30 @@
+{
+  "question_id": "355",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.978647+00:00",
+  "paper_title": "Reconfiguring Industrial Policy: A Framework with an Application to South Africa",
+  "paper_year": 2008,
+  "source_paper": "2008-5-cid-working-paper-168-south-africa-industrial-policy.pdf",
+  "research_answer": "The challenge reflects a classic coordination trap in value chain development. OEMs need a well-developed domestic supplier base to be globally competitive \u2014 importing components from great distances imposes significant logistics costs that erode their competitiveness. However, first-tier suppliers that could serve those OEMs require large-scale operations to be viable, and they are reluctant to invest at that scale in South Africa if it means being dependent on a single OEM customer. That concentration risk leaves them exposed \u2014 if the OEM reduces production or exits, the supplier has no alternative buyers. Without multiple OEMs committing simultaneously, no individual supplier wants to move first, and without suppliers, OEMs remain uncompetitive. This mutual dependency means neither side resolves the impasse independently, making it a structural barrier to deepening South Africa's auto value chain.",
+  "supporting_quotes": [
+    "Many (but not necessarily all) of the OEMs can see a path of scaling up to a level at which they can be competitive, but they are in need of a well-developed domestic supplier base for this to become a reality (in view of the logistics cost of importing components from great distances).",
+    "Potential first-tier suppliers themselves, on the other hand, have to operate at large scale to meet the needs of the OEMs, but they are hesitant to make the investment in South Africa if that means that they will be tied to a single OEM and therefore left hostage."
+  ],
+  "data_points": [
+    {
+      "metric": "constraint type for OEMs",
+      "value": "supplier base deficiency",
+      "year": null,
+      "country": "South Africa",
+      "product": "automobiles"
+    },
+    {
+      "metric": "investment constraint for suppliers",
+      "value": "customer concentration risk",
+      "year": null,
+      "country": "South Africa",
+      "product": "auto parts"
+    }
+  ],
+  "confidence": "high"
+}

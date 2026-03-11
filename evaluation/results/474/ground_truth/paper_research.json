@@ -1,0 +1,31 @@
+{
+  "question_id": "474",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.019324+00:00",
+  "paper_title": "Economic Growth and Complexity in the UAE: Summary Report",
+  "paper_year": 2023,
+  "source_paper": "2023-05-UAE-growth-complexity-summary-report.pdf",
+  "research_answer": "The UAE's Complexity Outlook Index (COI) score is low, particularly when compared to its peers. The COI is a measure of how close a country's existing productive capabilities are to more complex products it doesn't yet export \u2014 essentially a measure of opportunity. Research shows that countries with lower COI scores find it harder to make jumps to more complex products. For the UAE, this reflects the fact that its existing knowhow is structurally 'far away' from more complex industries. In practical terms, this means the UAE's current export base \u2014 strong in trade, transport, travel, re-exports, and energy-intensive goods \u2014 does not naturally neighbor the kinds of complex manufacturing or knowledge-intensive services that would lift its ECI. This creates a compounding challenge: stagnant complexity today, combined with limited product-space proximity to complexity tomorrow.",
+  "supporting_quotes": [
+    "The UAE overall has a low COI score especially compared to its peers.",
+    "Previous research has shown that countries with lower COI scores tend to find it more difficult to make jumps to more complex products.",
+    "An additional challenge is that the UAE's existing knowhow is far away from (i.e., not very related to) more complex industries."
+  ],
+  "data_points": [
+    {
+      "metric": "Complexity Outlook Index (COI)",
+      "value": "low",
+      "year": "2005-2019",
+      "country": "UAE",
+      "product": "all products"
+    },
+    {
+      "metric": "distance to complex products",
+      "value": "far away",
+      "year": "2005-2019",
+      "country": "UAE",
+      "product": "complex products generally"
+    }
+  ],
+  "confidence": "high"
+}

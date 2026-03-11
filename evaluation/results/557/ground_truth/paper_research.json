@@ -1,0 +1,30 @@
+{
+  "question_id": "557",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.036232+00:00",
+  "paper_title": "A Tale of Two Clusters: The Evolution of Ireland's Economic Complexity since 1995",
+  "paper_year": 2015,
+  "source_paper": "2_oclery.pdf",
+  "research_answer": "Despite Ireland's declining complexity trend, its position in the Product Space is not without opportunity. Ireland's Opportunity Value \u2014 a measure of how well-positioned a country is to move into nearby complex products \u2014 is roughly as expected for its wealth level, indicating reasonably good structural positioning. Crucially, a large range of complex industries sit close to Ireland's current products in the Product Space. One concrete pathway identified is diversification into varied machinery sectors, which are in close proximity to Ireland's existing domestic cluster. These machinery sectors could then serve as a stepping stone toward even higher-complexity products like measurement instruments, which sit further along in the Product Space. This suggests a sequenced diversification strategy rooted in Ireland's existing, domestically-grounded capabilities rather than relying on the more isolated foreign-owned high-tech cluster.",
+  "supporting_quotes": [
+    "Ireland's Opportunity Value is more or less as expected for its level of wealth, confirming that it is in a reasonably good position to move into nearby more complex industries.",
+    "In Ireland's case, a large range of complex industries are close to current products and hence Ireland is well-positioned in the Product Space to increase its aggregate complexity level.",
+    "Diversification into varied machinery sectors which are at close proximity to the current domestic cluster could be a stepping stone to higher complexity measurement instruments towards the left-hand side of the Product Space."
+  ],
+  "data_points": [
+    {
+      "metric": "Opportunity Value",
+      "value": "as expected for wealth level",
+      "year": "2012",
+      "country": "Ireland"
+    },
+    {
+      "metric": "potential diversification pathway",
+      "value": "machinery \u2192 measurement instruments",
+      "year": "2012",
+      "country": "Ireland",
+      "product": "machinery, measurement instruments"
+    }
+  ],
+  "confidence": "high"
+}

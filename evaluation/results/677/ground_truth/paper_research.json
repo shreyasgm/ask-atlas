@@ -1,0 +1,39 @@
+{
+  "question_id": "677",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.074162+00:00",
+  "paper_title": "Public\u2013Private Dialogs to Spur Export-led Growth: The Case of Productivity Taskforces in Namibia",
+  "paper_year": 2025,
+  "source_paper": "public-private-dialogs-to-spur-export-led-growth.pdf",
+  "research_answer": "Egypt and South Africa have been the main drivers of Africa's fruit export boom to China, largely due to favorable conditions: Egypt shares climate similarities with Namibia, while South Africa has strong commercial agriculture capabilities. Beyond these two leaders, Zimbabwe \u2014 another Southern African country \u2014 successfully entered the Chinese fruit market and achieved 200% export growth between 2016 and 2020, demonstrating that smaller African economies can also penetrate this market. More broadly, China, India, and Vietnam have all significantly increased their fruit imports from Africa over the previous decade, suggesting Asia represents a high-potential growth frontier for African fruit exporters. Namibia, despite having comparable climate conditions to some of these successful exporters, had not yet entered Asian markets at the time due to productivity constraints.",
+  "supporting_quotes": [
+    "Egypt and South Africa were the main drivers of the African fruit export boom to China. South Africa is a relevant point of comparison for Namibia because of the shared history and multiple similarities. Conversely, Egypt's climate conditions are quite similar to those of Namibia.",
+    "Other countries in Southern Africa, like Zimbabwe, managed to enter the Chinese fruit markets \u2013 which resulted in a 200% export growth between 2016 and 2020.",
+    "Several Asian countries presented high-potential opportunities for Africa. China, India, and Vietnam had significantly increased fruit imports from Africa in the previous decade.",
+    "However, the country was not in the same position to start exporting to the Asian markets, which was related to productivity constraints."
+  ],
+  "data_points": [
+    {
+      "metric": "export growth to China",
+      "value": "200%",
+      "year": "2016-2020",
+      "country": "Zimbabwe",
+      "product": "fruit"
+    },
+    {
+      "metric": "leading African fruit exporters to China",
+      "value": "Egypt, South Africa",
+      "year": "2010-2020",
+      "country": "Africa",
+      "product": "fruit"
+    },
+    {
+      "metric": "African fruit import growth",
+      "value": "significantly increased",
+      "year": "2010-2020",
+      "country": "China, India, Vietnam",
+      "product": "fruit"
+    }
+  ],
+  "confidence": "high"
+}

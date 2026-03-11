@@ -1,0 +1,29 @@
+{
+  "question_id": "705",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.079559+00:00",
+  "paper_title": "Towards a Strategy for Economic Growth in Uruguay",
+  "paper_year": 2005,
+  "source_paper": "towards-strategy-economic-growth-uruguay.pdf",
+  "research_answer": "Uruguay's rice sector appears to be genuinely competitive at a global level, not merely a beneficiary of regional preferences. By 2000, Uruguay achieved rice productivity of 6,400 kilograms per hectare \u2014 one of the highest in the world \u2014 and 96 percent of seed used was of national origin, indicating a domestically developed, self-sufficient production system. This level of productivity suggests real comparative advantage built on technical capability rather than just policy protection. The regional Mercosur preference for selling into Brazil's protected market is an additional windfall on top of this underlying competitiveness.",
+  "supporting_quotes": [
+    "in the year 2000, productivity reached 6,400 kilograms per hectare, one of the highest in the world, with 96% of the seed used being of national origin."
+  ],
+  "data_points": [
+    {
+      "metric": "rice productivity",
+      "value": "6,400 kg/hectare",
+      "year": "2000",
+      "country": "Uruguay",
+      "product": "rice"
+    },
+    {
+      "metric": "domestic seed utilization",
+      "value": "96%",
+      "year": "2000",
+      "country": "Uruguay",
+      "product": "rice"
+    }
+  ],
+  "confidence": "high"
+}

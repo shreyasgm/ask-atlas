@@ -1,0 +1,31 @@
+{
+  "question_id": "569",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.041167+00:00",
+  "paper_title": "Structural Transformation and Competitiveness in Pakistan",
+  "paper_year": "2008",
+  "source_paper": "41661-01-pak-tacr.pdf",
+  "research_answer": "Yes \u2014 and this is one of the more positive findings in the analysis. Many labor-intensive products are relatively close to Pakistan's current location in the product space. Examples include nursery and forestry products and animal products, which require capabilities similar to those Pakistan already has. This is genuinely good news given Pakistan's large labor force and employment challenges. The contrast with South Africa is instructive: in South Africa, sectors intensive in unskilled labor are actually very far from current production in the product space, meaning diversification into job-creating industries would require much larger capability leaps. Pakistan's proximity to labor-intensive sectors means that \u2014 at least in terms of productive capabilities \u2014 there is a plausible path to export diversification that could also address employment. The caveat is that many of these labor-intensive nearby options are relatively unsophisticated and small in global market terms, so while they're accessible, they won't by themselves drive a major upgrade in export complexity.",
+  "supporting_quotes": [
+    "Although relatively unsophisticated, many of these products are very near to Pakistan's current location in the product space, such as nursery & forestry products and animal products. Overall, labor-intensive products are relatively nearby for Pakistan, which is good news for the country.",
+    "Compare this to another country with an even larger unemployment problem: South Africa. In that country, sectors intensive in unskilled labor are very far away from current production."
+  ],
+  "data_points": [
+    {
+      "metric": "labor-intensive sector proximity",
+      "country": "Pakistan",
+      "finding": "Relatively high \u2014 nearby in product space"
+    },
+    {
+      "metric": "labor-intensive sector proximity",
+      "country": "South Africa",
+      "finding": "Very far from current production"
+    },
+    {
+      "metric": "example nearby labor-intensive products",
+      "country": "Pakistan",
+      "products": "nursery/forestry products, animal products"
+    }
+  ],
+  "confidence": "high"
+}

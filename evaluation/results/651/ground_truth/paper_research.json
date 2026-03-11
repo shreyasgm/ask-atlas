@@ -1,0 +1,30 @@
+{
+  "question_id": "651",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.068586+00:00",
+  "paper_title": "Moving to the Adjacent Possible: Discovering Paths for Export Diversification in Rwanda",
+  "paper_year": 2015,
+  "source_paper": "hausmann_chauvin_rwanda_294.pdf",
+  "research_answer": "Rwanda's export basket is almost exclusively composed of non-perishable edibles \u2014 products that can tolerate slow or unreliable access to markets. This pattern is a direct reflection of the country's geographic and logistical constraints as a landlocked nation. Products like coffee, tea, and minerals can sit in transit for extended periods without spoiling, whereas fresh produce, dairy, flowers, or other perishables require fast market access. The dominance of non-perishables in Rwanda's exports is therefore not just a reflection of what the country produces, but of what it can actually get to market competitively given its transportation situation. This constraint also helps explain why Rwanda sends less than 10% of exports to nearby East African neighbors despite lower transport costs \u2014 even short regional journeys may be too slow for perishable goods.",
+  "supporting_quotes": [
+    "Consistent with our claim that transportation infrastructure is one of the key constraints, Rwanda's current export portfolio features almost exclusively non-perishable edibles, which do not rely on fast access to markets.",
+    "Meanwhile, exports to the nearby markets of East Africa, which could incur lower transportation costs, account for only 10 percent of Rwanda's total exports."
+  ],
+  "data_points": [
+    {
+      "metric": "Export composition characteristic",
+      "value": "Almost exclusively non-perishable",
+      "year": "2010",
+      "country": "Rwanda",
+      "product": "All"
+    },
+    {
+      "metric": "Share of exports to East Africa",
+      "value": "<10%",
+      "year": "2010",
+      "country": "Rwanda",
+      "product": "All"
+    }
+  ],
+  "confidence": "medium"
+}

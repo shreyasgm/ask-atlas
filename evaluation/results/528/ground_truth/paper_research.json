@@ -1,0 +1,43 @@
+{
+  "question_id": "528",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.029818+00:00",
+  "paper_title": "Tackling Discrepancies in Trade Data: The Harvard Growth Lab International Trade Datasets",
+  "paper_year": 2025,
+  "source_paper": "2025-07-glwp-251-tackling-discrepancies-in-trade-data.pdf",
+  "research_answer": "WCO correlation tables describe which product codes map to which other codes across classification revisions, but they have a critical limitation: they don't provide the economic weights needed to accurately distribute trade values when products are split or merged into multiple categories. In the real world, many product codes have many-to-many relationships across vintages \u2014 a single HS2007 code might map to four different HS1992 codes. Without knowing what share of trade value should go to each destination code, researchers are forced to make an arbitrary choice. Comtrade's default approach is to use a 1:1 mapping, assigning 100% of the trade value to a single target code. But this can be dramatically wrong: for example, Comtrade assigns 100% of integrated circuits code 854231 (HS2007) to a single HS1992 code, while a data-driven method finds only 23% belongs there, with 68% actually belonging to a different code that Comtrade omits entirely. The cumulative effect is that about 16% of world trade is weighted differently under data-driven approaches versus Comtrade's default when converting a single classification vintage.",
+  "supporting_quotes": [
+    "Although correlation tables are provided to harmonize vintages, they describe only the mappings between product codes and do not provide the economic weights needed to accurately distribute traded values when products are split or merged.",
+    "Comtrade maps product code 854231 in HS2007 to a single HS1992 product code, 854219... Comtrade allocates the entire value (100%) to code 854219... whereas the LT method assigns only 23% to 854219 and directs the largest share (68%) to code 854211\u2014'Monolithic integrated circuits, digital,' which Comtrade omits entirely.",
+    "across the conversion from HS2007 to HS1992, we estimate that approximately 16% of world trade in the conversion is weighted differently under our method compared to Comtrade's default approach."
+  ],
+  "data_points": [
+    {
+      "metric": "Missing information in WCO tables",
+      "value": "Economic weights for many-to-many mappings",
+      "country": "Global"
+    },
+    {
+      "metric": "Comtrade allocation of HS2007 code 854231 to code 854219",
+      "value": "100%",
+      "product": "Electronic integrated circuits"
+    },
+    {
+      "metric": "Data-driven allocation to code 854219",
+      "value": "23%",
+      "product": "Electronic integrated circuits"
+    },
+    {
+      "metric": "Data-driven allocation to code 854211 (omitted by Comtrade)",
+      "value": "68%",
+      "product": "Electronic integrated circuits"
+    },
+    {
+      "metric": "Share of world trade weighted differently (LT vs Comtrade)",
+      "value": "16%",
+      "year": "2007",
+      "country": "Global"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,54 @@
+{
+  "question_id": "516",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.027620+00:00",
+  "paper_title": "The Devil's in the Dance: Elements of a Growth Diagnostic in Bolivia",
+  "paper_year": 2021,
+  "source_paper": "2025-05-glwp-247-bolivia-growth-diagnostic-2021.pdf",
+  "research_answer": "Bolivia is highly exposed to a decline in natural gas revenues on multiple fronts. First, gas is the single largest export product, accounting for 31% of all exports as recently as 2019. Second, gas exports are extremely price-sensitive: they lost 69% of their value in just two years after their 2014 peak, even though production volumes couldn't be easily reduced (since the only alternative to exporting gas is flaring it). Third, and most critically, Bolivia faces a resource depletion timeline: at current rates of consumption, proven gas reserves could be exhausted by 2028. Even with reduced consumption, reserves might last only until around 2036. With hydrocarbons actually down 1% in the first half of 2021 while minerals surged 97%, the structural shift away from gas may already be underway \u2014 but Bolivia has not yet built alternative export capacity to replace it.",
+  "supporting_quotes": [
+    "In 2019, mineral resources accounted for 54% of Bolivia's USD 8.9bn exports, of which USD 2.7bn (31% of exports) stemmed from petroleum gas alone.",
+    "From their peak in 2014, gas exports lost 69 percent of their value in two years.",
+    "Gas production was not able to compensate for the fall in prices by reducing production, as the alternative to continuing to export gas is to flare the gas, generating no value.",
+    "At current rates of gas depletion, Bolivia risks exhausting its proven reserves by 2028, with estimates noting that reduced consumption may stretch reserves for an additional 8 years.",
+    "Mineral exports have grown 97 percent over the same period, while hydrocarbon exports are down one percent."
+  ],
+  "data_points": [
+    {
+      "metric": "petroleum gas share of exports",
+      "value": "31%",
+      "year": "2019",
+      "country": "Bolivia",
+      "product": "petroleum gas"
+    },
+    {
+      "metric": "gas export value decline",
+      "value": "69%",
+      "year": "2014-2016",
+      "country": "Bolivia",
+      "product": "natural gas"
+    },
+    {
+      "metric": "gas reserve depletion timeline",
+      "value": "by 2028",
+      "year": "2021 projection",
+      "country": "Bolivia",
+      "product": "natural gas"
+    },
+    {
+      "metric": "gas reserve depletion (reduced consumption)",
+      "value": "by 2036",
+      "year": "2021 projection",
+      "country": "Bolivia",
+      "product": "natural gas"
+    },
+    {
+      "metric": "hydrocarbon export growth (H1 2021 vs H1 2020)",
+      "value": "-1%",
+      "year": "2021 H1",
+      "country": "Bolivia",
+      "product": "hydrocarbons"
+    }
+  ],
+  "confidence": "high"
+}

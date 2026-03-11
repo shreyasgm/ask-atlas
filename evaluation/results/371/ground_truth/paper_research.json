@@ -1,0 +1,39 @@
+{
+  "question_id": "371",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.985943+00:00",
+  "paper_title": "Recommendations for Trade Adjustment Assistance in Sri Lanka",
+  "paper_year": 2017,
+  "source_paper": "2017.10.28_tradeassistance_harvardcid_v2.pdf",
+  "research_answer": "A well-designed tariff rationalization in Sri Lanka would pursue two simultaneous goals: lowering overall nominal rates of protection (especially on inputs to production) and reducing the variance in effective rates of protection across industries. One practical approach would be to consolidate the import duty and external para-tariffs into a single external tariff, then simplify this into a set of tariff bands. This would reduce the spread of nominal protection while preserving the relative ranking of which industries receive the most protection \u2014 a politically important feature. For industries that currently rely on tariff protection, the adjustment would be cushioned by a key offsetting mechanism: as tariffs on inputs fall, production costs for those same industries would decline, partially compensating for lost nominal protection. This offsetting effect could be very large for some firms. Critically, tariff protection is described as a second-best solution \u2014 the deeper constraints facing protected industries (productivity, competitiveness) are better addressed through targeted government-industry collaboration than through blunt tariff instruments.",
+  "supporting_quotes": [
+    "A smart rationalization plan must remove the bias the system creates against new industries by lowering overall nominal rates of protection (especially on potential inputs to production) and reducing the variance of effective rates of protection.",
+    "If the import duty and external para-tariffs were to be rolled into one single external tariff and simplified into a number of tariff bands, it would be a fairly straightforward exercise to reduce the spread of nominal protection while maintaining the ranking of what industries get the most protection.",
+    "Tariff rationalization should itself support the adjustment of many firms and industries by lowering input costs... Some industries that see their nominal tariff protection reduced over time will simultaneously see the prices of many of their inputs fall. This will offset some of the lost nominal protection for many industries, and this offsetting effect could be very large for some firms.",
+    "Any industries lean on tariff protection as a second-best solution to deeper constraints to productivity growth and competitiveness. Versus tariff protection, which is an extremely blunt instrument, there are almost always more targeted actions that government can take in collaboration with self-organized industries in order to resolve biggest issues that industries face to doing business."
+  ],
+  "data_points": [
+    {
+      "metric": "nominal rates of protection and variance of effective rates",
+      "value": "should be lowered and reduced respectively",
+      "year": "2017",
+      "country": "Sri Lanka",
+      "product": "all products, especially inputs"
+    },
+    {
+      "metric": "tariff structure consolidation",
+      "value": "consolidate into bands to reduce spread while preserving ranking",
+      "year": "2017",
+      "country": "Sri Lanka",
+      "product": "all imports"
+    },
+    {
+      "metric": "input cost changes from tariff rationalization",
+      "value": "prices of protected inputs will fall, offsetting effect could be very large",
+      "year": "2017",
+      "country": "Sri Lanka",
+      "product": "manufacturing inputs (rubber, plastic, metal, fabric)"
+    }
+  ],
+  "confidence": "high"
+}

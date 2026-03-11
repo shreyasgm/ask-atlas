@@ -1,0 +1,46 @@
+{
+  "question_id": "596",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.051047+00:00",
+  "paper_title": "What is the Binding Constraint to Growth in Albania?",
+  "paper_year": 2017,
+  "source_paper": "alb_growth_diagnostic_report.pdf",
+  "research_answer": "Return migration has been a surprisingly important channel through which Albania has acquired productive knowhow and accessed new export markets. In agriculture, return migrants from Greece introduced commercial practices and technologies \u2014 including greenhouses \u2014 that pulled Albanian workers from subsistence farming into formal commercial agriculture, driving productivity gains. This knowhow transfer was linked to the near-doubling of fruit and vegetable exports between 2012 and 2014 (from $36M to $66M). In herbs and spices, return migrants from the United States enabled Albanian companies to discover and access U.S. and European markets \u2014 an effect also visible in firm surveys that found a strong correlation between U.S. export capability and returning Albanian-American diaspora members. Meanwhile, Italian FDI (not diaspora-driven) was responsible for establishing the fason textile and footwear sector in the 1990s. The pattern suggests that personal networks and embedded market knowledge, rather than just capital, are a key mechanism for knowhow transfer into Albania's export sector.",
+  "supporting_quotes": [
+    "Businesses run by return migrants pulled Albanians from self-employment and subsistence agriculture into formal employment and commercial agriculture, oftentimes through the introduction of simple, but powerful innovations such as greenhouses.",
+    "Herbs and spices Return migration from the U.S. allowed companies to discover new markets",
+    "Interestingly, firm surveys conducted by CID revealed a strong link between firms that were able to export to the U.S. market and returned members of the Albanian diaspora who had spent time living in the United States.",
+    "Fruits and vegetable exports almost doubled between 2012 and 2014 (from $36 to $66 million, in constant USD), led by growth in tomatoes and apples, as well as nuts."
+  ],
+  "data_points": [
+    {
+      "metric": "knowhow transfer - agriculture",
+      "value": "return migrants from Greece introduced greenhouses and commercial agriculture",
+      "year": null,
+      "country": "Albania",
+      "product": "agriculture"
+    },
+    {
+      "metric": "knowhow transfer - herbs and spices",
+      "value": "return migrants from US enabled new market access",
+      "year": null,
+      "country": "Albania",
+      "product": "herbs and spices"
+    },
+    {
+      "metric": "fruits and vegetable exports",
+      "value": "$36M to $66M",
+      "year": "2012-2014",
+      "country": "Albania",
+      "product": "fruits and vegetables"
+    },
+    {
+      "metric": "US export capability link to diaspora",
+      "value": "strong correlation",
+      "year": null,
+      "country": "Albania",
+      "product": null
+    }
+  ],
+  "confidence": "high"
+}

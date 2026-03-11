@@ -1,0 +1,29 @@
+{
+  "question_id": "424",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.004733+00:00",
+  "paper_title": "Implied Comparative Advantage",
+  "paper_year": 2020,
+  "source_paper": "2020-07-cid-wp-276-revised-implied-comparative-advantage.pdf",
+  "research_answer": "The most closely related product pairs in international trade are dominated by machinery and electrical equipment. The single most similar pair is gaskets and ship propellers, with a similarity score of 0.982, followed by electrical furnaces and specialized machines at 0.977. This strong clustering of machinery products aligns with earlier economic complexity research showing that machinery and capital equipment industries form a densely interconnected core of the product space \u2014 countries that export one type of machine tend to have the capabilities to export many others. This makes intuitive sense: manufacturing complex machinery requires overlapping sets of engineering knowledge, precision manufacturing capabilities, and supply chain access that generalize across many specific product categories.",
+  "supporting_quotes": [
+    "The list of most similar product pairs contains a mix of different categories, though the lower half of the list is dominated by machinery and electrical products. This matches the observation in Hausmann et al. (2014) that such industries are highly interconnected."
+  ],
+  "data_points": [
+    {
+      "metric": "Similarity (Gaskets - Ship propellers)",
+      "value": "0.982",
+      "year": "2016",
+      "country": "Multiple",
+      "product": "Machinery"
+    },
+    {
+      "metric": "Similarity (Furnaces - Specialized machines)",
+      "value": "0.977",
+      "year": "2016",
+      "country": "Multiple",
+      "product": "Machinery"
+    }
+  ],
+  "confidence": "high"
+}

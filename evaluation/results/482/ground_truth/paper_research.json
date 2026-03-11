@@ -1,0 +1,45 @@
+{
+  "question_id": "482",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.021257+00:00",
+  "paper_title": "From Products to Capabilities: Constructing a Genotypic Product Space",
+  "paper_year": 2024,
+  "source_paper": "2024-06-glwp-230-genotypic_ps.pdf",
+  "research_answer": "The gap is striking. Poland, the most diversified country in the sample, exports across 56 out of 88 industries. Angola, at the other extreme, exports in just one industry \u2014 Oil and Gas Extraction. This isn't just a trade statistic; it reflects a massive difference in underlying productive capabilities. Angola has only 138 occupational capabilities, while the Netherlands \u2014 the most capability-rich country \u2014 has nearly 400. Countries with fewer than roughly 270 capabilities tend to have very few industries, and diversification only accelerates meaningfully beyond that threshold. So the diversification gap between countries like Poland and Angola reflects a deep structural divide in the complexity of their economies.",
+  "supporting_quotes": [
+    "The most diversified country is Poland, exporting 56 out of 88 industries. Angola, on the other hand, is only active in one industry (Oil and Gas Extraction).",
+    "Similarly, we see a large variation in the completeness of countries' capability endowments, ranging from Angola, with just 138 occupations to the Netherlands, where industries can access over 400 occupations.",
+    "At low levels of diversification, i.e., among countries with \u223c 270 capabilities or less, industrial diversification grows only little with the number of capabilities."
+  ],
+  "data_points": [
+    {
+      "metric": "Industries exported - most diversified",
+      "value": "56",
+      "year": "2002-2016",
+      "country": "Poland",
+      "product": "All industries"
+    },
+    {
+      "metric": "Industries exported - least diversified",
+      "value": "1",
+      "year": "2002-2016",
+      "country": "Angola",
+      "product": "Oil and Gas Extraction"
+    },
+    {
+      "metric": "Capability completeness - lowest",
+      "value": "138 occupations",
+      "year": "2002",
+      "country": "Angola",
+      "product": "All"
+    },
+    {
+      "metric": "Capability completeness - highest",
+      "value": "397 occupations",
+      "year": "2002",
+      "country": "Netherlands",
+      "product": "All"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,30 @@
+{
+  "question_id": "314",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.949642+00:00",
+  "paper_title": "Final Recommendations of the International Panel on ASGISA",
+  "paper_year": 2008,
+  "source_paper": "161.pdf",
+  "research_answer": "South Africa has historically specialized in a poorly connected part of the product space \u2014 meaning its existing export basket sits far from many other products in terms of the capabilities and know-how required to produce them. In the product space framework, moving into new export categories is easier when a country's current exports are 'nearby' \u2014 sharing capabilities with many other products. A poorly connected position makes structural transformation harder because there are fewer adjacent opportunities to jump into. However, more recent trends offer some cause for optimism: South Africa appears to have been moving toward denser, better-connected parts of the product space, suggesting that future diversification may be more feasible than it has been historically.",
+  "supporting_quotes": [
+    "Using new techniques we analyzed the position of South Africa and found that it has traditionally specialized in a poorly connected part of the product space, making structural transformation harder.",
+    "Recent trends in diversification of the South African economy suggest that future progress should be easier, given that South Africa has moved to products in denser parts of the product space."
+  ],
+  "data_points": [
+    {
+      "metric": "product space connectivity",
+      "value": "poorly connected (historically)",
+      "year": "historical",
+      "country": "South Africa",
+      "product": "all exports"
+    },
+    {
+      "metric": "product space density",
+      "value": "increasing",
+      "year": "recent years",
+      "country": "South Africa",
+      "product": "all exports"
+    }
+  ],
+  "confidence": "medium"
+}

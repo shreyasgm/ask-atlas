@@ -1,0 +1,47 @@
+{
+  "question_id": "523",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.028910+00:00",
+  "paper_title": "Tackling Discrepancies in Trade Data: The Harvard Growth Lab International Trade Datasets",
+  "paper_year": 2025,
+  "source_paper": "2025-07-glwp-251-tackling-discrepancies-in-trade-data.pdf",
+  "research_answer": "Product classification conversions can significantly distort sector-level trade measurements, and electronics is the clearest example. When converting trade data from HS2007 to the reference standard of HS1992, the electronics chapter undergoes the most extensive reallocation of any sector: its share of world trade drops from 13.4% under HS2007 to 12.2% after concordance to HS1992, as several codes get reassigned to other chapters like machinery. That's a 1.2 percentage point shift \u2014 not trivial for a sector that represents over an eighth of world trade. The problem runs deeper at the product level: within electronics, revised product codes (codes that were merged, split, or entirely redefined) represent a value equivalent to 7% of world trade, meaning more than half the electronics chapter's trade value is touched by reclassification. Standard concordance methods like Comtrade's 1:1 mapping can dramatically misallocate this trade \u2014 for example, allocating 100% of a major integrated circuits code to a single HS1992 category when data-driven methods suggest only 23% belongs there.",
+  "supporting_quotes": [
+    "Notably, the electronics chapter undergoes the most extensive reallocation: under HS2007, it accounts for 13.4% of world trade in the year 2007, but this share falls to 12.2% after concordance to HS1992, as several codes are reassigned to other chapters, such as machinery.",
+    "the electronics chapter, which accounts for approximately 12% of world trade in 2007, includes revised codes\u2014defined as codes that were merged, split, or entirely redefined\u2014that represent a value equivalent to 7% of world trade.",
+    "Comtrade allocates the entire value (100%) to code 854219... whereas the LT method assigns only 23% to 854219 and directs the largest share (68%) to code 854211."
+  ],
+  "data_points": [
+    {
+      "metric": "Electronics share of world trade under HS2007",
+      "value": "13.4%",
+      "year": "2007",
+      "product": "Electronics (HS Chapter 85)"
+    },
+    {
+      "metric": "Electronics share after concordance to HS1992",
+      "value": "12.2%",
+      "year": "2007",
+      "product": "Electronics (HS Chapter 85)"
+    },
+    {
+      "metric": "Share of world trade in electronics with revised codes",
+      "value": "7%",
+      "year": "2007",
+      "product": "Electronics"
+    },
+    {
+      "metric": "LT method allocation to code 854219 for HS2007 code 854231",
+      "value": "23%",
+      "year": "2007",
+      "product": "Electronic integrated circuits"
+    },
+    {
+      "metric": "Comtrade allocation to code 854219 for HS2007 code 854231",
+      "value": "100%",
+      "year": "2007",
+      "product": "Electronic integrated circuits"
+    }
+  ],
+  "confidence": "high"
+}

@@ -1,0 +1,45 @@
+{
+  "question_id": "359",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.979877+00:00",
+  "paper_title": "Constraints to Sustained and Inclusive Growth in Sri Lanka: An Initial Diagnosis and Key Topics for Discussion",
+  "paper_year": 2016,
+  "source_paper": "2016.01.07_hausmann_initial_constraints.pdf",
+  "research_answer": "Sri Lanka holds an impressive 28% global share of tea exports \u2014 the largest of any country \u2014 but the competitive dynamics of tea are problematic for Sri Lanka's economic trajectory. Its main competitors are countries with dramatically lower income levels: Kenya at $1,300 GDP per capita and India at $1,600, compared to Sri Lanka's $3,800. This means Sri Lanka is competing in a labor-intensive commodity against countries that have a structural cost advantage. With tea making up 12% of Sri Lanka's export basket, continued dependence on this product at its current income level raises serious questions about long-run cost competitiveness, since wages in Sri Lanka are naturally higher than those of its key rivals.",
+  "supporting_quotes": [
+    "Tea: Low income competitors... Global Share of Tea Exports (Net) in 2014 [showing Sri Lanka 28%, China 24%, India 14%, Kenya 15%] and GDP per capita showing Sri Lanka at ~$3,800, Kenya at ~$1,300, India at ~$1,600"
+  ],
+  "data_points": [
+    {
+      "metric": "Global tea export share",
+      "value": "28%",
+      "year": "2014",
+      "country": "Sri Lanka"
+    },
+    {
+      "metric": "GDP per capita",
+      "value": "$3,800",
+      "year": "2014",
+      "country": "Sri Lanka"
+    },
+    {
+      "metric": "GDP per capita",
+      "value": "$1,300",
+      "year": "2014",
+      "country": "Kenya"
+    },
+    {
+      "metric": "GDP per capita",
+      "value": "$1,600",
+      "year": "2014",
+      "country": "India"
+    },
+    {
+      "metric": "Tea share of total exports",
+      "value": "12%",
+      "year": "2014",
+      "country": "Sri Lanka"
+    }
+  ],
+  "confidence": "high"
+}

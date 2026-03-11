@@ -1,0 +1,46 @@
+{
+  "question_id": "358",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:04.979596+00:00",
+  "paper_title": "Constraints to Sustained and Inclusive Growth in Sri Lanka: An Initial Diagnosis and Key Topics for Discussion",
+  "paper_year": 2016,
+  "source_paper": "2016.01.07_hausmann_initial_constraints.pdf",
+  "research_answer": "Sri Lanka's export basket has barely changed since the mid-1990s. In both 1995 and 2014, the country's exports were dominated by the same products: garments (women's undergarments, t-shirts, suits, sweaters), tea, and rubber products. As of 2014, Sri Lanka exported $11.1B total, with tea alone accounting for 12% of exports, women's undergarments 5%, and t-shirts 4%. This roughly two-decade stagnation in export composition is a striking sign of failed diversification \u2014 the country has not meaningfully moved up the value chain or into new product categories despite significant time passing.",
+  "supporting_quotes": [
+    "Sri Lanka's export basket has changed little since mid-1990s... [comparing 1995 and 2014 exports showing dominance of Women's undergarments, T-shirts, Tea at both periods]",
+    "Exports, 2014... $11.1B USD total... [treemap showing Women's undergarments 5%, Tea 12%, T-shirts 4%, Women's suits 4%, Sweaters/pullovers 3%, Gloves/mittens 2%, etc.]"
+  ],
+  "data_points": [
+    {
+      "metric": "Total exports",
+      "value": "$11.1B",
+      "year": "2014",
+      "country": "Sri Lanka"
+    },
+    {
+      "metric": "Tea share of exports",
+      "value": "12%",
+      "year": "2014",
+      "country": "Sri Lanka"
+    },
+    {
+      "metric": "Women's undergarments share",
+      "value": "5%",
+      "year": "2014",
+      "country": "Sri Lanka"
+    },
+    {
+      "metric": "T-shirts share",
+      "value": "4%",
+      "year": "2014",
+      "country": "Sri Lanka"
+    },
+    {
+      "metric": "Export stagnation period",
+      "value": "~20 years",
+      "year": "1995-2014",
+      "country": "Sri Lanka"
+    }
+  ],
+  "confidence": "high"
+}

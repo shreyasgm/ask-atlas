@@ -1,0 +1,44 @@
+{
+  "question_id": "603",
+  "source": "growth_lab_paper",
+  "timestamp": "2026-03-11T17:23:05.053749+00:00",
+  "paper_title": "Diversification in the Industrial Sector of Albania: Identifying Strategic Areas",
+  "paper_year": 2018,
+  "source_paper": "albania_diversification_brief.pdf",
+  "research_answer": "Albania's gap lies specifically in processed and prepared foods. While the country already exports meaningful volumes of raw agricultural products like fruits, vegetables, and seafood, it largely skips the value-added step of processing these into prepared food products. This is significant because prepared and processed foods rank highly in terms of diversification potential for Albania and also carry relatively low diversification risk \u2014 meaning they are both attainable given existing capabilities and valuable to pursue. The fact that Albania has the raw agricultural base but hasn't moved up the value chain into processed foods represents a concrete and under-exploited opportunity.",
+  "supporting_quotes": [
+    "Albania already produces many products in this sector; for example, it already exports different types of fruits, vegetables, and seafood in significant quantities.",
+    "However, it does not produce many prepared or processed foods, which ranked highly for their potential to Albania and lower risk in diversification."
+  ],
+  "data_points": [
+    {
+      "metric": "current exports in Agriculture and Foodstuffs",
+      "value": "significant quantities",
+      "year": "2016",
+      "country": "Albania",
+      "product": "fruits, vegetables, seafood"
+    },
+    {
+      "metric": "current exports in processed foods",
+      "value": "low/limited",
+      "year": "2016",
+      "country": "Albania",
+      "product": "prepared or processed foods"
+    },
+    {
+      "metric": "diversification potential",
+      "value": "high",
+      "year": "2018",
+      "country": "Albania",
+      "product": "prepared or processed foods"
+    },
+    {
+      "metric": "diversification risk",
+      "value": "low",
+      "year": "2018",
+      "country": "Albania",
+      "product": "prepared or processed foods"
+    }
+  ],
+  "confidence": "high"
+}
