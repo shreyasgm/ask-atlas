@@ -32,7 +32,7 @@ graph TB
 
     subgraph GCP["Google Cloud Platform (Cloud Run)"]
         direction TB
-        API["FastAPI + Uvicorn<br/>2 workers · SSE streaming<br/>120s request timeout"]
+        API["FastAPI + Uvicorn<br/>4 workers · SSE streaming<br/>120s request timeout"]
         subgraph Agent["AtlasTextToSQL"]
             direction LR
             LG["LangGraph StateGraph<br/>Agent loop + 3 pipelines:<br/>SQL · GraphQL · Docs"]
@@ -76,7 +76,7 @@ graph TB
 |-------|-------------|
 | **Frontend** | React 19, TypeScript 5.9, Vite 7, Tailwind CSS 4, react-markdown, KaTeX |
 | **Backend** | Python 3.12, FastAPI, LangGraph, LangChain, SQLAlchemy, httpx, sqlglot |
-| **LLM** | OpenAI (default), with Anthropic and Google as swappable providers |
+| **LLM** | OpenAI (default), Anthropic, Google — multi-provider fallback via LiteLLM Router |
 | **Database** | PostgreSQL (Atlas trade data on AWS RDS, app state on Cloud SQL) |
 | **Infra** | Google Cloud Run, Firebase Hosting, Cloud Build, GitHub Actions CI/CD |
 | **Testing** | pytest (4 tiers: unit/DB/integration/eval), Vitest (frontend) |

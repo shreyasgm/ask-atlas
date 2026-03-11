@@ -128,7 +128,7 @@ graph TB
 
     subgraph GCP["Google Cloud Platform (Cloud Run)"]
         direction TB
-        API["FastAPI + Uvicorn<br/>2 workers · SSE streaming<br/>120s request timeout"]
+        API["FastAPI + Uvicorn<br/>4 workers · SSE streaming<br/>120s request timeout"]
         subgraph Agent["AtlasTextToSQL"]
             direction LR
             LG["LangGraph StateGraph<br/>Agent loop + 3 pipelines:<br/>SQL · GraphQL · Docs"]
@@ -520,6 +520,22 @@ PROMPT_MODEL_ASSIGNMENTS = {         # Maps each prompt to "frontier" or "lightw
     "document_selection": "lightweight",
     "documentation_synthesis": "lightweight",
 }
+
+# --- LiteLLM Router: multi-provider fallback chains ---
+FRONTIER_FALLBACK_MODELS = [         # Tried in order; only providers with configured API keys are used
+    {"model_name": "frontier", "litellm_params": {"model": "openai/gpt-5.4"}},
+    {"model_name": "frontier", "litellm_params": {"model": "anthropic/claude-sonnet-4-6"}},
+]
+LIGHTWEIGHT_FALLBACK_MODELS = [
+    {"model_name": "lightweight", "litellm_params": {"model": "openai/gpt-5-mini"}},
+    {"model_name": "lightweight", "litellm_params": {"model": "anthropic/claude-haiku-4-5"}},
+    {"model_name": "lightweight", "litellm_params": {"model": "gemini/gemini-3-flash-preview"}},
+    {"model_name": "lightweight", "litellm_params": {"model": "openai/gpt-5-nano"}},
+]
+LITELLM_ROUTING_STRATEGY = "simple-shuffle"
+LITELLM_COOLDOWN_TIME = 5            # seconds to skip a failing provider
+LITELLM_ALLOWED_FAILS = 2            # failures before cooldown triggers
+LITELLM_NUM_RETRIES = 2              # retries per request before fallback
 ```
 
 **`Settings`** (Pydantic BaseSettings, loaded from `.env`):
@@ -544,10 +560,18 @@ PROMPT_MODEL_ASSIGNMENTS = {         # Maps each prompt to "frontier" or "lightw
 | `max_results_per_query` | `15` | Max rows returned per query |
 | `cors_origins` | `""` | Additional CORS origins (comma-separated) |
 | `enable_langsmith` | `True` | LangSmith tracing toggle |
+| `frontier_fallback_models` | from `model_config.py` | LiteLLM Router fallback chain for frontier tier |
+| `lightweight_fallback_models` | from `model_config.py` | LiteLLM Router fallback chain for lightweight tier |
+| `litellm_routing_strategy` | `"simple-shuffle"` | LiteLLM routing strategy |
+| `litellm_cooldown_time` | `5` | Seconds to skip a failing provider |
+| `litellm_allowed_fails` | `2` | Failures before provider cooldown triggers |
+| `litellm_num_retries` | `2` | Retries per request before trying next fallback |
 
-**`create_llm(model, provider, **kwargs)`** — Factory function routing to `ChatOpenAI`, `ChatAnthropic`, or `ChatGoogleGenerativeAI` based on the provider string.
+**`create_llm(model, provider, **kwargs)`** — Factory function routing to `ChatOpenAI`, `ChatAnthropic`, or `ChatGoogleGenerativeAI` based on the provider string. Used for direct single-provider instantiation.
 
-**`get_prompt_model(prompt_key)`** — Looks up the model tier for a prompt key in `prompt_model_assignments` and returns the corresponding frontier or lightweight LLM instance.
+**`create_router_llm(tier, **kwargs)`** — Returns a `ChatLiteLLMRouter`-backed model with automatic multi-provider fallback. Builds a `litellm.Router` from the fallback model list for the given tier (frontier or lightweight), filtering to only providers whose API keys are configured. Handles provider cooldown, retries, and failover transparently.
+
+**`get_prompt_model(prompt_key)`** — Looks up the model tier for a prompt key in `prompt_model_assignments` and returns the corresponding LLM instance via `create_router_llm()` (multi-provider fallback).
 
 ### Prompts (`src/prompts/`)
 
@@ -1179,6 +1203,13 @@ Steps:
 | **Ground Truth** | Ground truth data available | Weighted: factual_correctness (0.35) + data_accuracy (0.30) + completeness (0.20) + reasoning_quality (0.15). Scale: 1-5. | Weighted score >= 3.5 |
 | **Refusal** | `expected_behavior` field set | `appropriate_refusal` (bool) + `graceful` (bool) + score (1-5) | Score >= 4 |
 | **Plausibility** | Neither of above | Real-world reasonableness, correct magnitude, realistic rankings. Score 1-5. | Score >= 4 |
+| **Paper Research** | `eval_mode: "paper_research"` | Research quality assessment for paper-sourced questions. Scale: 1-5. | Score >= 3.5 |
+| **Link Judge** | Atlas links present | Binary pass/fail per link: URL correctness, label accuracy, appropriate link type | All links pass |
+
+**Recent eval enhancements:**
+- **Failure taxonomy** — Judge verdicts include categorized failure modes (e.g., `wrong_product_code`, `missing_data`, `incorrect_aggregation`) for systematic error analysis.
+- **Binary link judge** — Atlas visualization links are evaluated with a binary pass/fail judge (replacing the earlier Likert scoring) for clearer signal.
+- **Paper research mode** — Dedicated eval mode for questions sourced from academic papers, with research-quality scoring criteria.
 
 ### Reports (`evaluation/report.py`)
 

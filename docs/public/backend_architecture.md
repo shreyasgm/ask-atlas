@@ -1122,26 +1122,38 @@ class AtlasAgentState(TypedDict):
 
 ### New Files
 
-| File | Purpose | Est. Lines |
-|------|---------|-----------|
-| `src/graph.py` | Graph construction: `build_atlas_graph()`, all node wiring, edge definitions, compile. Single entry point for the graph. | ~200 |
-| `src/agent_node.py` | Agent node function, dynamic tool binding, mode resolution, system prompt assembly. | ~150 |
-| `src/graphql_pipeline.py` | All GraphQL pipeline nodes: `extract_graphql_question`, `plan_query` (combined classification + entity extraction), `resolve_ids` (includes inline Atlas link generation), `build_and_execute_graphql`, `format_graphql_results`. Pydantic schemas with description constants. Planning and ID selection LLM chains. | ~700 |
-| `src/graphql_client.py` | `AtlasGraphQLClient` (httpx), `GraphQLBudgetTracker`, `CircuitBreaker`, GraphQL query template builders. | ~350 |
-| `src/atlas_links.py` | `generate_atlas_links()` helper function (called inline from `resolve_ids`, not a graph node). Deterministic URL builders, product classification registry, query-type→link dispatch, `AtlasLink` dataclass, frontier country list. | ~200 |
-| `src/docs_pipeline.py` | Docs pipeline nodes: `extract_docs_question`, `select_docs`, `synthesize_docs`, `format_docs_results`. `DocsToolInput` schema. Document manifest loader. Selection and synthesis LLM chains. | ~250 |
-| `src/graphql_subagent.py` | GraphQL correction sub-agent: ReAct loop with 5 tools (`execute_graphql_template`, `execute_graphql_freeform`, `explore_catalog`, `introspect_schema`, `report_results`). Built as a compiled StateGraph invoked via function call from the `graphql_correction_agent` graph node. | ~400 |
-| `src/feedback.py` | Feedback store: `FeedbackStore` ABC with `InMemoryFeedbackStore` and `PostgresFeedbackStore` implementations. Per-turn thumbs up/down ratings with optional comments. | ~200 |
-| `src/token_usage.py` | Token usage tracking, cost estimation, and per-step timing. `make_usage_record_from_callback()`, `make_usage_record_from_msg()`, `node_timer()` context manager. | ~200 |
+| File | Purpose | Lines |
+|------|---------|-------|
+| `src/graph.py` | Graph construction: `build_atlas_graph()`, all node wiring, edge definitions, compile. Single entry point for the graph. | 415 |
+| `src/agent_node.py` | Agent node function, dynamic tool binding, mode resolution, system prompt assembly. | 245 |
+| `src/graphql_pipeline.py` | All GraphQL pipeline nodes: `extract_graphql_question`, `plan_query` (combined classification + entity extraction), `resolve_ids` (includes inline Atlas link generation), `build_and_execute_graphql`, `format_graphql_results`. Pydantic schemas with description constants. Planning and ID selection LLM chains. | 3,603 |
+| `src/graphql_client.py` | `AtlasGraphQLClient` (httpx), `GraphQLBudgetTracker`, `CircuitBreaker`, GraphQL query template builders. | 455 |
+| `src/atlas_links.py` | `generate_atlas_links()` helper function (called inline from `resolve_ids`, not a graph node). Deterministic URL builders, product classification registry, query-type→link dispatch, `AtlasLink` dataclass, frontier country list. | 821 |
+| `src/docs_pipeline.py` | Docs pipeline nodes: `extract_docs_question`, `select_docs`, `synthesize_docs`, `format_docs_results`. `DocsToolInput` schema. Document manifest loader. Selection and synthesis LLM chains. | 571 |
+| `src/graphql_subagent.py` | GraphQL correction sub-agent: ReAct loop with 5 tools (`execute_graphql_template`, `execute_graphql_freeform`, `explore_catalog`, `introspect_schema`, `report_results`). Built as a compiled StateGraph invoked via function call from the `graphql_correction_agent` graph node. | 1,083 |
+| `src/sql_subagent.py` | SQL sub-agent: ReAct loop with 4 tools (`execute_sql`, `explore_schema`, `lookup_products`, `report_results`). | 1,243 |
+| `src/feedback.py` | Feedback store: `FeedbackStore` ABC with `InMemoryFeedbackStore` and `PostgresFeedbackStore` implementations. Per-turn thumbs up/down ratings with optional comments. | 338 |
+| `src/token_usage.py` | Token usage tracking, cost estimation, and per-step timing. `make_usage_record_from_callback()`, `make_usage_record_from_msg()`, `node_timer()` context manager. | 551 |
+| `src/model_config.py` | Non-secret LLM configuration: model names, providers, LiteLLM Router fallback chains, routing strategy, per-prompt model assignments, model pricing. | 154 |
 
-### Documentation Files
+### Documentation Files (`src/docs/`)
 
-| File | Purpose | Est. Size |
-|------|---------|-----------|
-| `src/docs/metrics_glossary.md` | Comprehensive metric definitions (issue #50 content) | ~200 lines |
-| `src/docs/trade_methodology.md` | Atlas data methodology, research paper summary (issue #50 content) | ~400 lines |
-| `src/docs/country_page_reproduction.md` | SQL patterns for Atlas country page visualizations (issue #50 content) | ~300 lines |
-| `src/docs/data_coverage.md` | Year availability, services vs goods, known gaps (issue #50 content) | ~150 lines |
+| File | Purpose | Lines |
+|------|---------|-------|
+| `src/docs/classification_systems.md` | Product classification systems (HS92, HS12, HS22, SITC) | 354 |
+| `src/docs/country_entities.md` | Country entity resolution and naming conventions | 311 |
+| `src/docs/country_page_reproduction.md` | SQL patterns for Atlas country page visualizations | 1,068 |
+| `src/docs/data_coverage.md` | Year availability, services vs goods, known gaps | 185 |
+| `src/docs/explore_page_reproduction.md` | SQL patterns for Atlas Explore page visualizations | 637 |
+| `src/docs/graphql_api_guide.md` | GraphQL API usage guide and query patterns | 587 |
+| `src/docs/growth_dynamics.md` | Growth dynamics methodology and metrics | 428 |
+| `src/docs/inflation_and_valuation.md` | Inflation adjustment and trade valuation | 229 |
+| `src/docs/metrics_glossary.md` | Comprehensive metric definitions (ECI, RCA, COI, etc.) | 754 |
+| `src/docs/new_products_methodology.md` | New products identification methodology | 319 |
+| `src/docs/product_space_and_relatedness.md` | Product space network and relatedness metrics | 648 |
+| `src/docs/services_trade.md` | Services trade data coverage and methodology | 373 |
+| `src/docs/strategic_approaches.md` | Strategic diversification approaches | 405 |
+| `src/docs/trade_methodology.md` | Atlas data methodology, research paper summary | 290 |
 
 ### Modified Files
 
@@ -1215,6 +1227,8 @@ The system defines two model types:
 
 Each prompt in the system is assigned one of these two model types. The assignment is configurable per-prompt via `PROMPT_MODEL_ASSIGNMENTS` in `model_config.py`, so any prompt can be switched between frontier and lightweight without code changes.
 
+**Multi-provider routing:** At runtime, `get_prompt_model()` resolves each prompt's model tier via `create_router_llm()`, which returns a `ChatLiteLLMRouter`-backed model. Each tier has a fallback chain defined in `model_config.py` (`FRONTIER_FALLBACK_MODELS`, `LIGHTWEIGHT_FALLBACK_MODELS`). The LiteLLM Router automatically handles provider failover, cooldown, and retries — only providers whose API keys are configured are included in the fallback chain.
+
 ### Per-Prompt Model Assignment
 
 **Configuration in `model_config.py`:**
@@ -1242,23 +1256,37 @@ PROMPT_MODEL_ASSIGNMENTS = {
     "document_selection":          "lightweight",   # Prompt 8
     "documentation_synthesis":     "lightweight",   # Prompt 9
 }
+
+# --- LiteLLM Router: multi-provider fallback chains ---
+FRONTIER_FALLBACK_MODELS = [
+    {"model_name": "frontier", "litellm_params": {"model": "openai/gpt-5.4"}},
+    {"model_name": "frontier", "litellm_params": {"model": "anthropic/claude-sonnet-4-6"}},
+]
+LIGHTWEIGHT_FALLBACK_MODELS = [
+    {"model_name": "lightweight", "litellm_params": {"model": "openai/gpt-5-mini"}},
+    {"model_name": "lightweight", "litellm_params": {"model": "anthropic/claude-haiku-4-5"}},
+    {"model_name": "lightweight", "litellm_params": {"model": "gemini/gemini-3-flash-preview"}},
+    {"model_name": "lightweight", "litellm_params": {"model": "openai/gpt-5-nano"}},
+]
+LITELLM_ROUTING_STRATEGY = "simple-shuffle"
+LITELLM_COOLDOWN_TIME = 5
+LITELLM_ALLOWED_FAILS = 2
+LITELLM_NUM_RETRIES = 2
 ```
 
-At runtime, each node resolves its LLM by looking up its prompt key in `PROMPT_MODEL_ASSIGNMENTS` and instantiating the corresponding model type (frontier or lightweight). This is handled by a helper function in `src/config.py`:
+At runtime, each node resolves its LLM by looking up its prompt key in `PROMPT_MODEL_ASSIGNMENTS` and calling `create_router_llm()` for the corresponding tier. This returns a `ChatLiteLLMRouter`-backed model with automatic multi-provider fallback. The helper function in `src/config.py`:
 
 ```python
 def get_prompt_model(prompt_key: str) -> BaseChatModel:
     """Get the LLM instance for a specific prompt.
 
     Looks up the model type assignment for the given prompt key
-    and returns the corresponding frontier or lightweight model.
+    and returns a ChatLiteLLMRouter with automatic fallback.
     """
     settings = get_settings()
     assignment = settings.prompt_model_assignments[prompt_key]
-    if assignment == "frontier":
-        return create_llm(settings.frontier_model, settings.frontier_model_provider)
-    else:
-        return create_llm(settings.lightweight_model, settings.lightweight_model_provider)
+    tier = "frontier" if assignment == "frontier" else "lightweight"
+    return create_router_llm(tier)
 ```
 
 This means any prompt can be promoted to the frontier model (e.g., if classification accuracy needs improvement, set `"graphql_classification": "frontier"`) or demoted to the lightweight model (e.g., if SQL generation works well enough with a cheaper model, set `"sql_generation": "lightweight"`) — all via configuration, no code changes.
@@ -1340,7 +1368,9 @@ Mocked LLM + mocked HTTP. Run with `pytest -m "not db and not integration and no
 | Docs tool does not affect query budget | Call `docs_tool` 5 times, then `query_tool` | `queries_executed == 1` (only SQL counted) |
 | Context passing | Agent calls `docs_tool` then `query_tool` with `context` field populated | Verify `pipeline_context` reaches `sql_query_agent`; verify `extract_products` uses only `pipeline_question` (not context) |
 
-### 12.2 Tier 2 — Component Evaluation (real LLM, no LLM-as-judge)
+### 12.2 Tier 2 — Component Evaluation (real LLM, no LLM-as-judge) — **Planned**
+
+> **Status:** This tier is designed but not yet implemented. The eval datasets and collection tooling described below are planned deliverables (see §12.6).
 
 Run with `pytest -m "integration"`. Real LLM calls against curated test sets with known correct answers. No judge needed — compare predicted vs. expected values.
 
@@ -1361,7 +1391,9 @@ Run with `pytest -m "integration"`. Real LLM calls against curated test sets wit
 - Compare result sets (not just text comparison) — captures semantic equivalence
 - This catches cases where different SQL produces the same correct result
 
-### 12.3 Tier 3 — Trajectory Evaluation (new)
+### 12.3 Tier 3 — Trajectory Evaluation — **Planned**
+
+> **Status:** This tier is designed but not yet implemented. Tool sequence annotation and trajectory evaluation infrastructure are planned.
 
 Verify the agent uses the RIGHT tool, not just gets the right answer. Uses LangChain's `agentevals` library.
 
@@ -1445,18 +1477,18 @@ Detailed collection workflows, ground truth policies, curation tooling, and coll
 
 #### Evaluation Deliverables
 
-| File | Purpose |
-|---|---|
-| `evaluation/classification_eval.json` | Classification ground truth (~60 questions) |
-| `evaluation/entity_extraction_eval.json` | Entity extraction ground truth (~30 questions) |
-| `evaluation/id_resolution_eval.json` | ID resolution ground truth (~45 questions) |
-| `evaluation/graphql_eval_collection_guide.md` | Collection guide for GraphQL-specific e2e questions |
-| `evaluation/annotate_tool_expectations.py` | Rule-based + LLM tool routing annotation |
-| `evaluation/generate_classification_eval.py` | Classification eval set generation |
-| `evaluation/analyze_coverage_gaps.py` | Coverage gap analysis and reporting |
-| `evaluation/refresh_ground_truth.py` | Ground truth refresh pipeline |
-| `evaluation/judge.py` (updated) | `TrajectoryVerdict` mode, `data_source_appropriateness` dimension |
-| `evaluation/run_agent_evals.py` (updated) | Capture tool call sequences from graph state |
+| File | Purpose | Status |
+|---|---|---|
+| `evaluation/judge.py` | LLM-as-judge with ground truth, plausibility, and refusal modes; failure taxonomy; binary link judge | Implemented |
+| `evaluation/run_agent_evals.py` | Agent eval runner, captures tool call sequences from graph state | Implemented |
+| `evaluation/classification_eval.json` | Classification ground truth (~60 questions) | **Planned** |
+| `evaluation/entity_extraction_eval.json` | Entity extraction ground truth (~30 questions) | **Planned** |
+| `evaluation/id_resolution_eval.json` | ID resolution ground truth (~45 questions) | **Planned** |
+| `evaluation/graphql_eval_collection_guide.md` | Collection guide for GraphQL-specific e2e questions | **Planned** |
+| `evaluation/annotate_tool_expectations.py` | Rule-based + LLM tool routing annotation | **Planned** |
+| `evaluation/generate_classification_eval.py` | Classification eval set generation | **Planned** |
+| `evaluation/analyze_coverage_gaps.py` | Coverage gap analysis and reporting | **Planned** |
+| `evaluation/refresh_ground_truth.py` | Ground truth refresh pipeline | **Planned** |
 
 ---
 
