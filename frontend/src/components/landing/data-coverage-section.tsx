@@ -6,7 +6,7 @@ export default function DataCoverageSection() {
       <span className="text-xs font-semibold tracking-widest text-muted-foreground">
         TRADE CLASSIFICATIONS
       </span>
-      <div className="flex w-full max-w-5xl flex-col gap-2.5 sm:grid sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+      <div className="flex w-full max-w-6xl flex-col gap-2.5 sm:grid sm:grid-cols-2 sm:gap-4 lg:grid-cols-5">
         {DATA_COVERAGE_CARDS.map((card) => (
           <div
             className="flex flex-col items-center rounded-[10px] border border-border bg-card px-5 py-2.5 text-center sm:items-start sm:text-left"
