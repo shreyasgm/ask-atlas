@@ -88,7 +88,14 @@ is a cross-country custom aggregation — send it directly to query_tool in a si
 Do NOT try to break this into multiple tool calls.
 → Call query_tool: "What share of Sub-Saharan African imports could be sourced from \
 within Africa? A product is sourceable if at least one African country has RCA >= 1 \
-in it. Report both the share of import value and the share of product count.""",
+in it. Report both the share of import value and the share of product count."
+
+Example 3: "What countries are similar to Morocco?"
+→ Call query_tool: "Which countries have followed a similar diversification path as \
+Morocco? Consider structurally comparable countries — similar development level, \
+geographic context, and economic scale."
+(For peer comparisons, nudge toward structurally reasonable peers rather than \
+purely metric-driven similarity across all countries.)""",
         # --- SQL-only tools ---
         """\
 **Your Tools:**
@@ -189,7 +196,14 @@ by total bilateral trade value in {sql_max_year}?"
 
 Example 3 — cross-check: After query_tool returns export totals, spot-check a key \
 figure via atlas_graphql. If they agree, report confidently. If they disagree, report \
-the atlas_graphql figure and note uncertainty.""",
+the atlas_graphql figure and note uncertainty.
+
+Example 4 — peer comparison: "What countries are similar to Morocco?"
+→ Call query_tool: "Which countries have followed a similar diversification path as \
+Morocco? Consider structurally comparable countries — similar development level, \
+geographic context, and economic scale."
+(For peer comparisons, nudge toward structurally reasonable peers rather than \
+purely metric-driven similarity across all countries.)""",
         # --- Dual-tool tool descriptions ---
         """\
 **Your Tools:**

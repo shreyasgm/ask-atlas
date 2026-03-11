@@ -429,6 +429,66 @@ class TestToolNameReferences:
 # ---------------------------------------------------------------------------
 
 
+class TestTimePeriodSchemaSelection:
+    """Verify time-period-aware schema selection in PRODUCT_EXTRACTION_PROMPT."""
+
+    def test_prompt_contains_time_period_guidance(self):
+        assert "before 2012" in prompts.PRODUCT_EXTRACTION_PROMPT
+
+    def test_prompt_references_hs92_start_year(self):
+        assert "hs92 from 1995" in prompts.PRODUCT_EXTRACTION_PROMPT
+
+    def test_explicit_schema_override_is_step_zero(self):
+        """Explicit classification must be checked before time-period inference."""
+        prompt = prompts.PRODUCT_EXTRACTION_PROMPT
+        explicit_pos = prompt.index("Specifies a classification explicitly")
+        time_range_pos = prompt.index("time range starting before 2012")
+        assert explicit_pos < time_range_pos
+
+    def test_ambiguous_time_range_example_keeps_hs12(self):
+        """Regression guard: 'last decade' should stay on hs12."""
+        prompt = prompts.PRODUCT_EXTRACTION_PROMPT
+        assert "last decade" in prompt
+        # The example should show hs12 as the selected schema
+        decade_pos = prompt.index("last decade")
+        # Find the nearest example response after "last decade"
+        nearby = prompt[decade_pos : decade_pos + 500]
+        assert "hs12" in nearby
+
+
+class TestPeerComparisonGuidance:
+    """Verify peer comparison guidance in prompts."""
+
+    def test_sql_subagent_has_peer_comparison_section(self):
+        assert "Peer Country Comparisons" in prompts.SQL_SUBAGENT_PROMPT
+
+    def test_sql_subagent_has_structurally_reasonable(self):
+        assert "structurally reasonable" in prompts.SQL_SUBAGENT_PROMPT
+
+    def test_sql_generation_has_peer_guidance(self):
+        assert "Peer/similar country comparisons" in prompts.SQL_GENERATION_PROMPT
+
+    def test_sql_generation_no_composite_scores(self):
+        assert (
+            "do NOT invent multi-component composite scores"
+            in prompts.SQL_GENERATION_PROMPT
+        )
+
+    def test_product_extraction_group_tables_mentions_peers(self):
+        """requires_group_tables guidance should mention peer/similar country queries."""
+        prompt = prompts.PRODUCT_EXTRACTION_PROMPT
+        # Find the group detection section
+        group_section_start = prompt.index("requires_group_tables=true")
+        group_section = prompt[group_section_start : group_section_start + 500]
+        assert "similar" in group_section or "peer" in group_section
+
+    def test_sql_only_agent_has_peer_example(self):
+        assert "peer comparisons" in prompts.SQL_ONLY_SYSTEM_PROMPT
+
+    def test_dual_tool_agent_has_peer_example(self):
+        assert "peer comparisons" in prompts.DUAL_TOOL_SYSTEM_PROMPT
+
+
 class TestProductExtractionEscaping:
     def test_double_braces_present(self):
         assert "{{" in prompts.PRODUCT_EXTRACTION_PROMPT

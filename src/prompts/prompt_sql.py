@@ -37,6 +37,7 @@ Technical metrics:
   * Market Share: A country's exports of a product as a percentage of total global exports of that product in the same year.  Calculated as: (Country's exports of product X) / (Total global exports of product X) * 100%.
   * New Products: Products where a country has newly developed comparative advantage. The `is_new` and `product_status` columns in `country_product_year_*` are NOT populated — you must compute new products from raw export values. The method: (1) average each country-product export_value over the first 3 years of the window, (2) compute RCA from those averages across ALL countries and products, (3) repeat for the last 3 years, (4) a product is "new" if start-period RCA < 0.5 AND end-period RCA >= 1. The default window is ~15 years but use whatever the user asks for. This works with any schema (hs92, hs12, sitc) — just use the appropriate schema's `country_product_year_4` table and matching `classification.product_*` table for product names. Note: hs12 data starts in 2012, so the max window there is ~11 years. All 4-digit products are eligible (including natural resources). See the few-shot example for the full SQL pattern.
   * CAGR (Compound Annual Growth Rate): Compute from export values at two points in time. Default to a 5-year window if the user does not specify. Formula: (POWER(end_value / start_value, 1.0 / n_years) - 1) * 100. Do NOT use country_product_lookback tables (they are empty).
+  * Peer/similar country comparisons: Identify structurally comparable countries (similar development level, geographic context, scale) before analyzing the requested dimension. You may propose peers based on your knowledge of development economics, then validate with classification tables (location_country.incomelevel_enum, location_group_member for region, country_year for population/GDP). Use simple, interpretable comparison metrics — do NOT invent multi-component composite scores with arbitrary weights.
 
 Only use the tables and columns provided. Here is the relevant table information:
 {table_info}
@@ -195,11 +196,12 @@ Available schemas:
 **Important:** HS22 has data from 2022-2024 only. For earlier periods, use hs12 or hs92. services_bilateral tables exist but are currently empty — do not route queries there.
 
 **Schema selection decision tree:**
-1. Explicitly says "goods" or names a goods product (e.g., "cars", "coffee")? → Goods schema only (default: hs12). Do NOT include services.
-2. Explicitly says "services" or names a service category (e.g., "tourism", "transport")? → services_unilateral. Note: bilateral services trade data (between two specific countries) is not available in the SQL database.
-3. Asks about "total exports/imports", "all exports", "top products", "export basket", "biggest exports", "market share in global trade", "trade balance", "overall exports/imports", "export destinations", "trading partners", or aggregate trade? → BOTH goods (default: hs12) AND services.
-4. Specifies a classification (e.g., "HS 2012", "SITC")? → That specific schema.
-5. Otherwise → default to hs12.
+0. Specifies a classification explicitly (e.g., "HS 2012", "HS 1992", "SITC")? → Use that specific schema. This overrides all other rules.
+1. Does the question specify or imply a time range starting before 2012 (e.g., "last 15 years", "since 2005", "from 2000 to 2020", "over two decades")? → Use hs92 instead of hs12 for the goods schema. Schema start years: hs12 from 2012, hs92 from 1995, sitc from 1962. The current latest data year is 2024. If the implied start year is before 1995, use sitc. If the range is ambiguous but fits within hs12 (e.g., "last decade" from 2024 = 2014, which fits hs12), keep the hs12 default.
+2. Explicitly says "goods" or names a goods product (e.g., "cars", "coffee")? → Goods schema only (default: hs12, or hs92 if step 1 applies). Do NOT include services.
+3. Explicitly says "services" or names a service category (e.g., "tourism", "transport")? → services_unilateral. Note: bilateral services trade data (between two specific countries) is not available in the SQL database.
+4. Asks about "total exports/imports", "all exports", "top products", "export basket", "biggest exports", "market share in global trade", "trade balance", "overall exports/imports", "export destinations", "trading partners", or aggregate trade? → BOTH goods (default: hs12, or hs92 if step 1 applies) AND services.
+5. Otherwise → default to hs12 (or hs92 if step 1 applies).
 
 Additional rules:
 - Never return more than two schemas unless explicitly required.
@@ -221,7 +223,9 @@ Additional rules:
 - Set requires_group_tables=true when the question refers to a geographic or economic aggregate:
   continents (Asia, Africa, Europe), trade blocs (EU, ASEAN, Mercosur, NAFTA, OPEC),
   income groups (Low Income, High Income), sub-regions (Sub-Saharan Africa, Southeast Asia,
-  Western Europe), world totals, or any multi-country group.
+  Western Europe), world totals, or any multi-country group,
+  or involves finding similar/peer countries for comparison (these queries
+  need income level and region data for filtering).
 - Single countries → requires_group_tables=false.
 - When in doubt, set requires_group_tables=false.
 
@@ -334,6 +338,26 @@ Response: {{
     "countries": []
 }}
 Reason: "EU" is a political group, not a single country. Specific goods product → hs12 only.
+
+Question: "What countries have followed a similar diversification path as Morocco in the last 15 years?"
+Response: {{
+    "classification_schemas": ["hs92"],
+    "products": [],
+    "requires_product_lookup": false,
+    "requires_group_tables": true,
+    "countries": [{{"name": "Morocco", "iso3_code": "MAR"}}]
+}}
+Reason: "Last 15 years" from 2024 = ~2009. hs12 starts from 2012, so hs92 (from 1995) is needed. Finding peer/similar countries requires group tables for income and region filtering.
+
+Question: "How has Brazil's export basket changed over the last decade?"
+Response: {{
+    "classification_schemas": ["hs12", "services_unilateral"],
+    "products": [],
+    "requires_product_lookup": false,
+    "requires_group_tables": false,
+    "countries": [{{"name": "Brazil", "iso3_code": "BRA"}}]
+}}
+Reason: "Last decade" from 2024 = ~2014, which fits within hs12 (starts 2012). "Export basket" → both goods and services.
 """
 
 # --- PRODUCT_CODE_SELECTION_PROMPT ---
@@ -597,6 +621,51 @@ Czechia, Finland, France, Germany, Italy, Japan, Netherlands, Singapore, South K
 Sweden, Switzerland, UK, USA. Note: this may apply to these countries if an earlier \
 time period is chosen when they weren't yet at the frontier (e.g. China grew into the \
 technological frontier only in the last decade or so).
+
+### Peer Country Comparisons
+
+When asked which countries are "similar to" a given country, have followed a \
+"similar path", or could be considered peers:
+
+**Note:** This section applies to open-ended peer discovery ("Which countries are \
+similar to Morocco?"), NOT to direct comparisons between named countries \
+("Compare Brazil and India's ECI") — for those, just query both countries directly.
+
+**Step 1 — Identify a reasonable peer pool.** Think about what makes countries \
+genuinely comparable for the question at hand. Consider development level, \
+geographic and economic context, and scale. For example, Morocco (upper-middle \
+income, North Africa, ~37M people) has more meaningful peers in countries like \
+Tunisia, Jordan, or Colombia than in France or Latvia.
+
+You may propose candidate peers based on your understanding of development \
+economics and trade patterns, then validate and refine using the database. \
+Use classification tables to confirm or adjust your initial hypotheses:
+- `classification.location_country.incomelevel_enum` for income level
+- `classification.location_group_member` for region/continent membership
+- `country_year.population` and `country_year.gdp` for scale
+
+The goal is structurally reasonable comparisons — not mechanical filtering \
+on exact thresholds.
+
+When the user specifies their own criteria (e.g., "in the same region"), \
+honor those instead of applying defaults.
+
+**Step 2 — Answer the question.** Use whatever analytical approach best fits \
+the user's question. Keep the comparison metric simple and interpretable. \
+Do NOT invent multi-component composite scores with arbitrary weights — a \
+single clear metric is more trustworthy than a weighted blend of ad-hoc \
+measures.
+
+**Step 3 — Present results with context.** Include each peer's region, \
+income level, population, and ECI so the user can judge whether the \
+comparison is reasonable.
+
+**Available tables for peer context:**
+- `classification.location_country`: `incomelevel_enum` \
+(high / upper middle / lower middle / low)
+- `classification.location_group_member`: group_type = 'wdi_region', \
+'continent', 'subregion', 'wdi_income_level'; columns: group_name, country_id
+- `country_year`: gdp, population, eci, coi, diversity
 
 ## Query Planning and CTE Strategy
 
