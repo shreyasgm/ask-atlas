@@ -309,6 +309,18 @@ wouldn't arrive at without the research
 - Avoid simple single-number lookups like "What is X's ECI?" — aim for synthesis
 - Each question must be self-contained
 
+**IMPORTANT — Include temporal context in every question:**
+The ground truth answers reference data from specific years. Questions MUST include \
+the relevant year or time period so the answering system queries the right data. Use \
+the year(s) from the claim's data_points to anchor each question temporally.
+- Use the data_points year(s) for the claim(s) behind each question. If data_points \
+span a range (e.g., "2005–2012"), use that range. If they share one year, use it.
+- If no data_points have a year, fall back to the paper_year as default.
+- Integrate years naturally — e.g., "As of 2014, how diversified were Albania's \
+exports?" or "Between 2005 and 2012, how did Peru's ECI compare to...?"
+- Use past tense when referring to a specific historical year.
+- Convert relative temporal language ("over the past decade") to absolute years.
+
 **How many questions to generate:**
 You decide based on how much trade/complexity content the claims contain:
 - Paper with trade_relevance "high": generate up to {max_questions} questions
