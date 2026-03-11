@@ -165,12 +165,12 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
-      // Timeout after 30s if no response (e.g. backend down)
+      // Timeout after 120s if no response (e.g. cold-start on Cloud Run)
       let timedOut = false;
       const timeoutId = setTimeout(() => {
         timedOut = true;
         controller.abort();
-      }, 30_000);
+      }, 120_000);
 
       const userMsg = createMessage('user', trimmed);
       const assistantMsg = createMessage('assistant', '', true);

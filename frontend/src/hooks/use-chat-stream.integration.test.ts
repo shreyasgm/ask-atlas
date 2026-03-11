@@ -189,7 +189,7 @@ describe('useChatStream integration (async SSE)', () => {
     });
   });
 
-  it('timeout after 30s shows error', async () => {
+  it('timeout after 120s shows error', async () => {
     vi.useFakeTimers();
 
     // Fetch that never resolves but rejects on abort (like a real hanging server)
@@ -208,9 +208,9 @@ describe('useChatStream integration (async SSE)', () => {
       result.current.sendMessage('hello');
     });
 
-    // Fire the 30s timeout (advanceTimersByTimeAsync processes microtasks)
+    // Fire the 120s timeout (advanceTimersByTimeAsync processes microtasks)
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(30_000);
+      await vi.advanceTimersByTimeAsync(120_000);
     });
 
     expect(result.current.error).toBe('Request timed out. The server may be unavailable.');
