@@ -3,6 +3,7 @@ import { memo, useMemo } from 'react';
 import type { ChatMessage, EntitiesData, PipelineStep, QueryAggregateStats } from '@/types/chat';
 import { useFeedback } from '@/hooks/use-feedback';
 import AssistantMessage from './assistant-message';
+import CopyButton from './copy-button';
 import FeedbackButtons from './feedback-buttons';
 import PipelineStepper from './pipeline-stepper';
 import QueryContextCard from './query-context-card';
@@ -71,15 +72,18 @@ export default memo(function MessageList({
                 }
               />
               {!msg.isStreaming && !msg.interrupted && turnIndexMap.has(msg.id) && (
-                <FeedbackButtons
-                  feedback={feedbackMap.get(turnIndexMap.get(msg.id)!)}
-                  onSubmit={(rating, comment) =>
-                    submitFeedback(turnIndexMap.get(msg.id)!, rating, comment)
-                  }
-                  onUpdate={(id, rating, comment) =>
-                    updateFeedback(id, turnIndexMap.get(msg.id)!, rating, comment)
-                  }
-                />
+                <div className="flex items-start gap-2">
+                  <FeedbackButtons
+                    feedback={feedbackMap.get(turnIndexMap.get(msg.id)!)}
+                    onSubmit={(rating, comment) =>
+                      submitFeedback(turnIndexMap.get(msg.id)!, rating, comment)
+                    }
+                    onUpdate={(id, rating, comment) =>
+                      updateFeedback(id, turnIndexMap.get(msg.id)!, rating, comment)
+                    }
+                  />
+                  {msg.content && <CopyButton content={msg.content} />}
+                </div>
               )}
             </div>
           );
