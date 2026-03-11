@@ -89,7 +89,9 @@ class UsageTracker:
         """Estimate total cost in USD (sum of per-pass costs)."""
         total = 0.0
         for tok in self._by_pass.values():
-            inp_price, out_price = _PRICING.get(str(tok.get("model", "")), _DEFAULT_PRICING)
+            inp_price, out_price = _PRICING.get(
+                str(tok.get("model", "")), _DEFAULT_PRICING
+            )
             total += (tok["input"] * inp_price + tok["output"] * out_price) / 1_000_000
         return total
 

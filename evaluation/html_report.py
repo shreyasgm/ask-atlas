@@ -111,7 +111,11 @@ def _load_enriched_data(run_dir: Path) -> dict[str, Any]:
 
         # Load paper research
         pr_path = (
-            EVALUATION_BASE_DIR / "results" / qid / "ground_truth" / "paper_research.json"
+            EVALUATION_BASE_DIR
+            / "results"
+            / qid
+            / "ground_truth"
+            / "paper_research.json"
         )
         if pr_path.exists():
             try:

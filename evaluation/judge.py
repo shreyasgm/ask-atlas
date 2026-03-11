@@ -824,8 +824,7 @@ _PAPER_RESEARCH_SYSTEM_TEXT = (
     "but the agent can only work with Atlas trade data. A data-driven "
     "answer that captures the right trends from Atlas data for the "
     "relevant time period is a good answer, even if it cannot reproduce "
-    "the paper's full narrative."
-    + _FAILURE_TAXONOMY_PROMPT_SECTION
+    "the paper's full narrative." + _FAILURE_TAXONOMY_PROMPT_SECTION
 )
 
 _PAPER_RESEARCH_HUMAN_TEXT = (

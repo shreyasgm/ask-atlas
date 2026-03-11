@@ -678,7 +678,9 @@ def report_to_markdown(report: dict[str, Any]) -> str:
     dims = report.get("dimension_averages", {})
     if dims:
         lines.append("\n## Dimension Pass Rates\n")
-        lines.append("_Only ground_truth, web_research, and paper_research questions contribute._\n")
+        lines.append(
+            "_Only ground_truth, web_research, and paper_research questions contribute._\n"
+        )
         lines.append("| Dimension | Pass Rate |")
         lines.append("|-----------|-----------|")
         for dim, rate in dims.items():
