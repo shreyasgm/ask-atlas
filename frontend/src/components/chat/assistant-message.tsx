@@ -31,6 +31,7 @@ const MARKDOWN_COMPONENTS: Components = {
   th: (props) => (
     <th
       className="border-b bg-muted px-3 py-2 text-left text-sm font-semibold text-muted-foreground"
+      scope="col"
       {...props}
     />
   ),

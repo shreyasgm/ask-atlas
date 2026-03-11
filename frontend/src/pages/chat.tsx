@@ -42,7 +42,7 @@ export default function ChatPage() {
   }, [clearChatStream, resetAll]);
 
   return (
-    <div className="h-screen bg-background text-foreground">
+    <main className="h-screen bg-background text-foreground" id="main-content">
       <ChatWorkspace
         activeThreadId={threadId}
         conversations={conversations}
@@ -63,6 +63,6 @@ export default function ChatPage() {
         pipelineSteps={pipelineSteps}
         queryStats={queryStats}
       />
-    </div>
+    </main>
   );
 }

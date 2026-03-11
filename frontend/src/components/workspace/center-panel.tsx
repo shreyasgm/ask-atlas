@@ -59,6 +59,7 @@ export default memo(function CenterPanel({
 
   return (
     <div className="flex min-w-0 flex-1 flex-col">
+      <h1 className="sr-only">Ask Atlas Chat</h1>
       <ChatTopBar onClear={onClear} onToggleSidebar={onToggleSidebar} title={chatTitle} />
       <TradeTogglesBar
         onModeChange={onModeChange}

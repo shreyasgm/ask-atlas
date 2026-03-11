@@ -17,13 +17,18 @@ export default memo(function CopyButton({ content }: CopyButtonProps) {
   }, [copied]);
 
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(content).then(() => setCopied(true));
+    navigator.clipboard.writeText(content).then(
+      () => setCopied(true),
+      () => {
+        /* Clipboard API unavailable or denied — fail silently */
+      },
+    );
   }, [content]);
 
   return (
     <button
       aria-label={copied ? 'Copied' : 'Copy response as Markdown'}
-      className={`rounded p-1 transition-colors ${
+      className={`rounded p-2 transition-colors ${
         copied ? 'text-success' : 'text-muted-foreground/40 hover:text-muted-foreground'
       }`}
       onClick={handleCopy}

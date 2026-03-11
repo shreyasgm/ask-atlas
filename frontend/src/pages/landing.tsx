@@ -8,7 +8,7 @@ export default function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
-      <main className="flex flex-1 flex-col items-center">
+      <main className="flex flex-1 flex-col items-center" id="main-content">
         <HeroSection />
         <QuickStartSection />
         <DataCoverageSection />

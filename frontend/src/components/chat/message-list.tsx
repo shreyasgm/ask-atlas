@@ -47,8 +47,8 @@ export default memo(function MessageList({
   }, [messages]);
 
   return (
-    <div aria-live="polite" className="flex-1 overflow-y-auto px-4 py-4 sm:py-6" role="log">
-      <div className="mx-auto flex max-w-2xl flex-col gap-4">
+    <div className="flex-1 overflow-y-auto px-4 py-4 sm:py-6" role="log">
+      <div aria-live="polite" className="mx-auto flex max-w-2xl flex-col gap-4">
         <WelcomeMessage />
         {messages.map((msg, index) => {
           if (msg.role === 'user') {

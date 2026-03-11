@@ -119,7 +119,10 @@ export default function LeftSidebar({
 
       {/* Search */}
       <div className="px-3 pb-3">
-        <div className="flex items-center gap-2 rounded-md border border-border px-2.5 py-1.5">
+        <div
+          className="flex items-center gap-2 rounded-md border border-border px-2.5 py-1.5"
+          role="search"
+        >
           <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           <input
             aria-label="Search conversations"
@@ -181,6 +184,8 @@ function ConversationItem({
   onDelete: (threadId: string) => void;
   onSelect: (threadId: string) => void;
 }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
   return (
     <div
       className={cn(
@@ -209,19 +214,45 @@ function ConversationItem({
           </p>
         </div>
       </Link>
-      <button
-        aria-label="Delete conversation"
-        className="absolute top-1.5 right-1.5 hidden rounded p-0.5 text-muted-foreground group-hover:block hover:bg-destructive/10 hover:text-destructive focus-visible:block focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-        onClick={(e) => {
-          e.stopPropagation();
-          if (window.confirm('Delete this conversation?')) {
-            onDelete(conversation.threadId);
-          }
-        }}
-        type="button"
-      >
-        <Trash2 className="h-3 w-3" />
-      </button>
+      {confirmDelete ? (
+        <div className="absolute top-0.5 right-1 flex items-center gap-1">
+          <button
+            aria-label="Confirm delete"
+            className="rounded bg-destructive px-1.5 py-1 text-[10px] font-medium text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(conversation.threadId);
+              setConfirmDelete(false);
+            }}
+            type="button"
+          >
+            Delete
+          </button>
+          <button
+            aria-label="Cancel delete"
+            className="rounded px-1.5 py-1 text-[10px] font-medium text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            onClick={(e) => {
+              e.stopPropagation();
+              setConfirmDelete(false);
+            }}
+            type="button"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <button
+          aria-label="Delete conversation"
+          className="absolute top-1 right-1 hidden rounded p-1.5 text-muted-foreground group-hover:block hover:bg-destructive/10 hover:text-destructive focus-visible:block focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          onClick={(e) => {
+            e.stopPropagation();
+            setConfirmDelete(true);
+          }}
+          type="button"
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
+      )}
     </div>
   );
 }

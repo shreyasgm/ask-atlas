@@ -87,7 +87,7 @@ export default memo(function FeedbackButtons({
       <div className="flex items-center gap-1">
         <button
           aria-label="Thumbs up"
-          className={`rounded p-1 transition-colors ${
+          className={`rounded p-2 transition-colors ${
             feedback?.rating === 'up'
               ? 'text-success'
               : 'text-muted-foreground/40 hover:text-muted-foreground'
@@ -102,7 +102,7 @@ export default memo(function FeedbackButtons({
         </button>
         <button
           aria-label="Thumbs down"
-          className={`rounded p-1 transition-colors ${
+          className={`rounded p-2 transition-colors ${
             feedback?.rating === 'down'
               ? 'text-destructive'
               : 'text-muted-foreground/40 hover:text-muted-foreground'
@@ -119,6 +119,7 @@ export default memo(function FeedbackButtons({
       {showCommentInput && (
         <div className="flex items-center gap-2">
           <input
+            aria-label="Feedback comment"
             autoFocus
             className="flex-1 rounded border border-border bg-background px-2 py-1 text-xs text-foreground placeholder:text-muted-foreground focus:ring-1 focus:ring-ring focus:outline-none"
             onChange={(e) => setComment(e.target.value)}

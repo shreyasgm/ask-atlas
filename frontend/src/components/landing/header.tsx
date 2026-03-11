@@ -38,6 +38,7 @@ export default function Header() {
 
       {/* Mobile hamburger */}
       <button
+        aria-expanded={menuOpen}
         aria-label={menuOpen ? 'Close menu' : 'Open menu'}
         className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:text-foreground sm:hidden"
         onClick={() => setMenuOpen((prev) => !prev)}

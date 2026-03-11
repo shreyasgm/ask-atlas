@@ -95,6 +95,20 @@ export default function ChatWorkspace({
     setSidebarExpanded((prev) => !prev);
   }, []);
 
+  // Close mobile sidebar on Escape
+  useEffect(() => {
+    if (isDesktop || !sidebarExpanded) {
+      return;
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSidebarExpanded(false);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isDesktop, sidebarExpanded]);
+
   return (
     <div className="relative flex h-full overflow-hidden">
       {/* Mobile backdrop when sidebar is open */}

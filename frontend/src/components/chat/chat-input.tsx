@@ -71,7 +71,7 @@ export default function ChatInput({ disabled, isStreaming, onSend, onStop }: Cha
           </button>
         )}
       </form>
-      <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
+      <p className="mt-1.5 text-center text-xs text-muted-foreground">
         Responses may contain inaccuracies. Verify independently.
       </p>
     </div>

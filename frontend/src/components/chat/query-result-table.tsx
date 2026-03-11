@@ -15,7 +15,7 @@ export default function QueryResultTable({ columns, rows }: QueryResultTableProp
         <thead>
           <tr className="border-b bg-muted">
             {columns.map((col) => (
-              <th className="px-3 py-2 font-semibold text-muted-foreground" key={col}>
+              <th className="px-3 py-2 font-semibold text-muted-foreground" key={col} scope="col">
                 {col}
               </th>
             ))}
