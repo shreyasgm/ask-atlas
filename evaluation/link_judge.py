@@ -2,16 +2,18 @@
 """LLM-as-judge: evaluate agent-generated Atlas links against ground truth URLs.
 
 Separate from the answer quality judge (judge.py). Produces independent link
-quality scores across four dimensions:
+quality verdicts across four dimensions (binary pass/fail):
 
-- **Link Presence** (0.35): Was at least one well-formed Atlas link generated?
-- **Content Relevance** (0.30): Does the linked page show the data needed to
+- **Link Presence**: Was at least one well-formed Atlas link generated?
+- **Content Relevance**: Does the linked page show the data needed to
   verify the answer?
-- **Entity Correctness** (0.25): Are the correct countries and products referenced?
-- **Parameter Accuracy** (0.10): Are years, trade direction, product level, and
+- **Entity Correctness**: Are the correct countries and products referenced?
+- **Parameter Accuracy**: Are years, trade direction, product level, and
   classification correct?
 
-Same thresholds as the main judge: pass >= 3.5, partial >= 2.5, fail < 2.5.
+Scoring version 2: binary pass/fail per dimension (replacing Likert 1-5).
+Verdict: >=3 pass = "pass" (capped to "partial" if link_presence or
+content_relevance fails), 2 = "partial", <2 = "fail".
 """
 
 from __future__ import annotations
@@ -36,74 +38,80 @@ LINK_DIMENSION_WEIGHTS = {
 }
 
 
-class LinkDimensionScore(BaseModel):
-    score: int = Field(..., ge=1, le=5, description="Score from 1 (worst) to 5 (best)")
-    reasoning: str = Field(..., description="Brief justification for this score")
+class LinkDimensionPass(BaseModel):
+    passed: bool = Field(..., description="Whether this dimension passes")
+    reasoning: str = Field(..., description="Brief justification")
 
 
 class LinkVerdict(BaseModel):
-    """Structured verdict from the link quality judge."""
+    """Structured verdict from the link quality judge (binary pass/fail)."""
 
-    link_presence: LinkDimensionScore = Field(
+    link_presence: LinkDimensionPass = Field(
         ...,
-        description="Was at least one well-formed Atlas link generated?",
+        description="PASS if a well-formed Atlas link exists. FAIL if no link or malformed.",
     )
-    content_relevance: LinkDimensionScore = Field(
+    content_relevance: LinkDimensionPass = Field(
         ...,
-        description="Does the linked page show the data needed to verify the answer?",
+        description="PASS if linked page shows data relevant to the answer. FAIL if irrelevant page.",
     )
-    entity_correctness: LinkDimensionScore = Field(
+    entity_correctness: LinkDimensionPass = Field(
         ...,
-        description="Are the correct countries and products referenced in the link?",
+        description="PASS if correct countries/products in link. FAIL if primary entity wrong.",
     )
-    parameter_accuracy: LinkDimensionScore = Field(
+    parameter_accuracy: LinkDimensionPass = Field(
         ...,
-        description="Are years, trade direction, product level, classification correct?",
+        description="PASS if year, trade direction, product level correct or close. FAIL if fundamentally wrong.",
     )
     overall_comment: str = Field(
         ..., description="One-sentence summary of the link evaluation"
     )
 
     @property
-    def weighted_score(self) -> float:
-        scores = {
-            "link_presence": self.link_presence.score,
-            "content_relevance": self.content_relevance.score,
-            "entity_correctness": self.entity_correctness.score,
-            "parameter_accuracy": self.parameter_accuracy.score,
-        }
+    def pass_count(self) -> int:
         return sum(
-            scores[k] * LINK_DIMENSION_WEIGHTS[k] for k in LINK_DIMENSION_WEIGHTS
+            1
+            for d in (
+                self.link_presence,
+                self.content_relevance,
+                self.entity_correctness,
+                self.parameter_accuracy,
+            )
+            if d.passed
         )
 
     @property
     def verdict(self) -> Literal["pass", "partial", "fail"]:
-        ws = self.weighted_score
-        if ws >= 3.5:
+        pc = self.pass_count
+        if pc >= 3:
+            # Cap at "partial" if a critical link dimension failed
+            if not self.link_presence.passed or not self.content_relevance.passed:
+                return "partial"
             return "pass"
-        if ws >= 2.5:
+        if pc == 2:
             return "partial"
         return "fail"
 
     def to_dict(self) -> dict:
+        pc = self.pass_count
         return {
             "link_presence": {
-                "score": self.link_presence.score,
+                "passed": self.link_presence.passed,
                 "reasoning": self.link_presence.reasoning,
             },
             "content_relevance": {
-                "score": self.content_relevance.score,
+                "passed": self.content_relevance.passed,
                 "reasoning": self.content_relevance.reasoning,
             },
             "entity_correctness": {
-                "score": self.entity_correctness.score,
+                "passed": self.entity_correctness.passed,
                 "reasoning": self.entity_correctness.reasoning,
             },
             "parameter_accuracy": {
-                "score": self.parameter_accuracy.score,
+                "passed": self.parameter_accuracy.passed,
                 "reasoning": self.parameter_accuracy.reasoning,
             },
-            "weighted_score": round(self.weighted_score, 3),
+            "pass_count": pc,
+            "weighted_score": float(pc),  # backward compat
             "verdict": self.verdict,
             "overall_comment": self.overall_comment,
         }
@@ -118,44 +126,30 @@ You are an expert evaluator for the Harvard Growth Lab's Atlas of Economic Compl
 (https://atlas.hks.harvard.edu). Your task is to evaluate whether the agent-generated \
 Atlas link(s) correctly point to a page that lets the user verify the agent's answer.
 
-## Scoring Rubric (1-5 each)
+## Scoring Rubric (PASS/FAIL each)
 
-### Link Presence (weight 0.35)
-- **5**: A well-formed Atlas link exists with proper URL structure and parameters.
-- **4**: Link exists with minor formatting issues but is functional.
-- **3**: Link exists but is generic/incomplete (e.g., treemap with no country specified, \
-or country page root with no subpage).
-- **2**: Link exists but is malformed or points to a non-existent page.
-- **1**: No Atlas link was generated at all.
+### Link Presence
+**PASS** if a well-formed Atlas link exists with proper URL structure and parameters \
+(minor formatting issues OK if functional). \
+**FAIL** if no Atlas link was generated, or the link is malformed/points to a non-existent page.
 
-### Content Relevance (weight 0.30)
+### Content Relevance
 Does the linked page contain the data needed to verify the answer? It does not matter \
 whether it is a country page or explore page — only whether the page shows the relevant data.
-- **5**: The page directly shows the exact data referenced in the answer (e.g., answer \
-mentions top exports, link goes to export-basket or treemap for that country).
-- **4**: The page shows the right type of data but requires minor navigation (e.g., \
-scrolling, changing a dropdown) to find the exact data point.
-- **3**: The page shows related but not exactly matching data (e.g., answer is about \
-ECI but link goes to export-basket).
-- **2**: The page is tangentially related (right country, wrong data type entirely).
-- **1**: The page is irrelevant to the answer.
+**PASS** if the page shows data relevant to the answer (exact data or close enough that \
+minor navigation like scrolling or changing a dropdown reaches the data). \
+**FAIL** if the page is irrelevant or only tangentially related to the answer.
 
-### Entity Correctness (weight 0.25)
-Are the correct country/countries and products referenced in the link?
-- **5**: All entities (countries, products) in the link exactly match what the answer discusses.
-- **4**: Main entity is correct but a secondary one is wrong or missing.
-- **3**: Some entities match but others are wrong or missing.
-- **2**: The primary entity is wrong (e.g., wrong country).
-- **1**: Completely wrong entities.
+### Entity Correctness
+**PASS** if the correct primary countries and products are referenced in the link \
+(secondary entities may be missing but primary must be correct). \
+**FAIL** if the primary entity is wrong (e.g., wrong country).
 
-### Parameter Accuracy (weight 0.10)
-Are years, trade direction (export/import), product level, and classification correct?
-- **5**: All parameters match (year, trade direction, product level, classification).
-- **4**: One minor parameter differs (e.g., year off by 1-2 years).
-- **3**: Parameters are mostly right but with notable differences (e.g., wrong \
-trade direction, significantly wrong year).
-- **2**: Multiple parameters are wrong.
-- **1**: Parameters are fundamentally wrong or missing.
+### Parameter Accuracy
+**PASS** if year, trade direction, product level, and classification are correct or close \
+(e.g., year off by 1-2 years is acceptable). \
+**FAIL** if parameters are fundamentally wrong (e.g., wrong trade direction, year off by \
+more than 2 years, wrong product level).
 
 ## Atlas Page Reference
 
@@ -269,7 +263,7 @@ async def judge_links(
     question: str,
     agent_links: list[dict],
     ground_truth_url: str | None,
-    model: str = "gpt-5-mini",
+    model: str = "gpt-5.4",
     provider: str = "openai",
 ) -> dict:
     """Evaluate agent-generated Atlas links against a ground truth URL.
