@@ -3,12 +3,14 @@ import { memo, useCallback, useEffect, useState } from 'react';
 import type { FeedbackState } from '@/types/chat';
 
 interface FeedbackButtonsProps {
+  children?: React.ReactNode;
   feedback?: FeedbackState;
   onSubmit: (rating: 'down' | 'up', comment?: string) => void;
   onUpdate: (id: number, rating: 'down' | 'up', comment?: string) => void;
 }
 
 export default memo(function FeedbackButtons({
+  children,
   feedback,
   onSubmit,
   onUpdate,
@@ -115,13 +117,14 @@ export default memo(function FeedbackButtons({
             fill={feedback?.rating === 'down' ? 'currentColor' : 'none'}
           />
         </button>
+        {children}
       </div>
       {showCommentInput && (
-        <div className="flex items-center gap-2">
+        <div className="flex w-full max-w-md items-center gap-2">
           <input
             aria-label="Feedback comment"
             autoFocus
-            className="flex-1 rounded border border-border bg-background px-2 py-1 text-xs text-foreground placeholder:text-muted-foreground focus:ring-1 focus:ring-ring focus:outline-none"
+            className="flex-1 rounded border border-border bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:ring-1 focus:ring-ring focus:outline-none"
             onChange={(e) => setComment(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="What was wrong or expected? (optional)"
@@ -129,7 +132,7 @@ export default memo(function FeedbackButtons({
             value={comment}
           />
           <button
-            className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground hover:bg-primary/90"
+            className="shrink-0 rounded bg-primary px-3 py-1.5 text-xs text-primary-foreground hover:bg-primary/90"
             onClick={handleCommentSubmit}
             type="button"
           >

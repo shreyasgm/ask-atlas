@@ -72,18 +72,17 @@ export default memo(function MessageList({
                 }
               />
               {!msg.isStreaming && !msg.interrupted && turnIndexMap.has(msg.id) && (
-                <div className="flex items-start gap-2">
-                  <FeedbackButtons
-                    feedback={feedbackMap.get(turnIndexMap.get(msg.id)!)}
-                    onSubmit={(rating, comment) =>
-                      submitFeedback(turnIndexMap.get(msg.id)!, rating, comment)
-                    }
-                    onUpdate={(id, rating, comment) =>
-                      updateFeedback(id, turnIndexMap.get(msg.id)!, rating, comment)
-                    }
-                  />
+                <FeedbackButtons
+                  feedback={feedbackMap.get(turnIndexMap.get(msg.id)!)}
+                  onSubmit={(rating, comment) =>
+                    submitFeedback(turnIndexMap.get(msg.id)!, rating, comment)
+                  }
+                  onUpdate={(id, rating, comment) =>
+                    updateFeedback(id, turnIndexMap.get(msg.id)!, rating, comment)
+                  }
+                >
                   {msg.content && <CopyButton content={msg.content} />}
-                </div>
+                </FeedbackButtons>
               )}
             </div>
           );
