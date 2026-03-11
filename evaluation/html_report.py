@@ -397,6 +397,22 @@ function renderDashboard() {
     stats.push({ label: dim.replace(/_/g, ' '), value: pct + '%', sub: 'pass rate' });
   }
 
+  // Failure category summary cards
+  const fc = REPORT.failure_categories || {};
+  const fcEntries = Object.entries(fc);
+  if (fcEntries.length > 0) {
+    const fcColors = {
+      fabricated_data: '#dc2626', wrong_entity_or_metric: '#d97706',
+      numeric_inaccuracy: '#ea580c', missing_required_data: '#0891b2',
+      unsupported_embellishment: '#7c3aed', scope_refusal_failure: '#be185d',
+      methodology_error: '#4338ca'
+    };
+    for (const [cat, data] of fcEntries) {
+      const color = fcColors[cat] || '#64748b';
+      stats.push({ label: cat.replace(/_/g, ' '), value: data.count, sub: data.pct + '% of failures' });
+    }
+  }
+
   // Per-mode summary cards
   const bjm = REPORT.by_judge_mode || {};
   for (const [mode, ms] of Object.entries(bjm)) {
@@ -408,7 +424,9 @@ function renderDashboard() {
   // Link judge aggregate
   const lja = REPORT.link_judge_aggregate || {};
   if (lja.count) {
-    stats.push({ label: 'Link Judge', value: (lja.avg_weighted_score || 0).toFixed(2), sub: lja.count + ' links · ' + (lja.pass_rate || 0) + '% pass' });
+    const ljaAvg = lja.avg_pass_count != null ? lja.avg_pass_count : (lja.avg_weighted_score || 0);
+    const ljaMax = lja.avg_pass_count != null ? '4' : '5';
+    stats.push({ label: 'Link Judge', value: ljaAvg.toFixed(1) + '/' + ljaMax, sub: lja.count + ' links · ' + (lja.pass_rate || 0) + '% pass' });
   }
 
   const el = document.getElementById('dashboard');
@@ -823,6 +841,26 @@ function buildVerdictSummary(q) {
     html += '<p style="font-size:13px;margin-top:8px;">' + esc(q.judge_comment) + '</p>';
   }
 
+  // Failure category badge
+  if (jd.failure_category) {
+    const fcColors = {
+      fabricated_data: '#dc2626', wrong_entity_or_metric: '#d97706',
+      numeric_inaccuracy: '#ea580c', missing_required_data: '#0891b2',
+      unsupported_embellishment: '#7c3aed', scope_refusal_failure: '#be185d',
+      methodology_error: '#4338ca'
+    };
+    const color = fcColors[jd.failure_category] || '#64748b';
+    html += '<div style="margin-top:8px;">';
+    html += '<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;color:#fff;background:' + color + ';">' + esc(jd.failure_category.replace(/_/g, ' ')) + '</span>';
+    if (jd.secondary_failure_categories && jd.secondary_failure_categories.length > 0) {
+      for (const sec of jd.secondary_failure_categories) {
+        const secColor = fcColors[sec] || '#64748b';
+        html += ' <span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;color:' + secColor + ';background:#f1f5f9;border:1px solid ' + secColor + ';">' + esc(sec.replace(/_/g, ' ')) + '</span>';
+      }
+    }
+    html += '</div>';
+  }
+
   // Refusal evaluation
   if (hasRefusal) {
     html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e2e8f0;">';
@@ -842,20 +880,32 @@ function buildLinkJudgeSection(q) {
   if (!lj) return '';
 
   const verdictClass = lj.verdict === 'pass' ? 'verdict-pass' : lj.verdict === 'partial' ? 'verdict-partial' : 'verdict-fail';
-  let html = '<div class="detail-section"><h4>Link Judge <span class="badge ' + verdictClass + '" style="vertical-align:middle;">' + esc(lj.verdict) + '</span> <span style="font-size:11px;color:#94a3b8;text-transform:none;letter-spacing:0;font-weight:400;">(' + (lj.weighted_score || 0).toFixed(2) + '/5)</span></h4><div class="content">';
+  const scoreLabel = lj.pass_count != null
+    ? (lj.pass_count + '/4')
+    : ((lj.weighted_score || 0).toFixed(2) + '/5');
+  let html = '<div class="detail-section"><h4>Link Judge <span class="badge ' + verdictClass + '" style="vertical-align:middle;">' + esc(lj.verdict) + '</span> <span style="font-size:11px;color:#94a3b8;text-transform:none;letter-spacing:0;font-weight:400;">(' + scoreLabel + ')</span></h4><div class="content">';
 
-  // Dimension score bars
+  // Dimension pass/fail badges (v2) or score bars (v1 legacy)
   const linkDims = ['link_presence', 'content_relevance', 'entity_correctness', 'parameter_accuracy'];
-  const dimEntries = linkDims.filter(d => lj[d] && lj[d].score != null);
+  const dimEntries = linkDims.filter(d => lj[d] && (lj[d].passed != null || lj[d].score != null));
   if (dimEntries.length > 0) {
     html += '<div class="dim-bars">';
     for (const d of dimEntries) {
       const v = lj[d];
-      const score = v.score;
-      const pct = score / 5 * 100;
-      const cls = score >= 4 ? 'high' : score >= 3 ? 'mid' : 'low';
       const label = d.replace(/_/g, ' ');
-      html += '<div class="dim-bar"><span class="dim-label">' + esc(label) + '</span><div class="bar-bg"><div class="bar-fill ' + cls + '" style="width:' + pct + '%"></div></div><span class="dim-score">' + score + '/5</span></div>';
+      if (v.passed != null) {
+        // Binary pass/fail badge
+        const cls = v.passed ? 'high' : 'low';
+        const pct = v.passed ? 100 : 0;
+        const badge = v.passed ? 'PASS' : 'FAIL';
+        html += '<div class="dim-bar"><span class="dim-label">' + esc(label) + '</span><div class="bar-bg"><div class="bar-fill ' + cls + '" style="width:' + pct + '%"></div></div><span class="dim-score" style="color:' + (v.passed ? '#22c55e' : '#ef4444') + ';font-weight:700;">' + badge + '</span></div>';
+      } else {
+        // Legacy 1-5 score bar
+        const score = v.score;
+        const pct = score / 5 * 100;
+        const cls = score >= 4 ? 'high' : score >= 3 ? 'mid' : 'low';
+        html += '<div class="dim-bar"><span class="dim-label">' + esc(label) + '</span><div class="bar-bg"><div class="bar-fill ' + cls + '" style="width:' + pct + '%"></div></div><span class="dim-score">' + score + '/5</span></div>';
+      }
     }
     html += '</div>';
     // Dimension reasoning

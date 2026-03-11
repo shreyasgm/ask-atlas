@@ -97,6 +97,30 @@ def _load_web_research(question_id: str) -> str | None:
         return None
 
 
+def _load_paper_research(question_id: str) -> tuple[str | None, list[str] | None]:
+    """Load paper research answer and quotes for a question.
+
+    Returns:
+        Tuple of (research_answer, supporting_quotes), or (None, None) if unavailable.
+    """
+    path = (
+        EVALUATION_BASE_DIR
+        / "results"
+        / question_id
+        / "ground_truth"
+        / "paper_research.json"
+    )
+    if not path.exists():
+        return None, None
+    try:
+        data = load_json_file(path)
+        answer = data.get("research_answer")
+        quotes = data.get("supporting_quotes")
+        return answer, quotes
+    except Exception:
+        return None, None
+
+
 async def _start_web_research(
     question_ids: list[str] | None,
     questions_meta: dict[str, dict],
@@ -275,9 +299,17 @@ async def _judge_all(
         meta = questions_meta.get(qid, {})
         expected_behavior = meta.get("expected_behavior")
         ground_truth = _load_ground_truth(qid)
+
+        # Paper research (higher priority than web research)
+        paper_research_answer, paper_research_quotes = (
+            _load_paper_research(qid) if ground_truth is None else (None, None)
+        )
+
         web_research = (
             _load_web_research(qid)
-            if ground_truth is None and expected_behavior is None
+            if ground_truth is None
+            and paper_research_answer is None
+            and expected_behavior is None
             else None
         )
 
@@ -293,19 +325,16 @@ async def _judge_all(
 
         async with semaphore:
             try:
-                mode = (
-                    "ground_truth"
-                    if ground_truth is not None
-                    else (
-                        "refusal"
-                        if expected_behavior is not None
-                        else (
-                            "web_research"
-                            if web_research is not None
-                            else "plausibility"
-                        )
-                    )
-                )
+                if ground_truth is not None:
+                    mode = "ground_truth"
+                elif paper_research_answer is not None:
+                    mode = "paper_research"
+                elif expected_behavior is not None:
+                    mode = "refusal"
+                elif web_research is not None:
+                    mode = "web_research"
+                else:
+                    mode = "plausibility"
                 logging.info(f"Question {qid}: judging ({mode})...")
                 tools_used = result.get("tools_used")
                 question_text = meta.get("text", result.get("question_text", ""))
@@ -315,6 +344,8 @@ async def _judge_all(
                     ground_truth_data=ground_truth,
                     expected_behavior=expected_behavior,
                     web_research_answer=web_research,
+                    paper_research_answer=paper_research_answer,
+                    paper_research_quotes=paper_research_quotes,
                     model=judge_model,
                     provider=judge_provider,
                     tools_used=tools_used,
@@ -388,6 +419,10 @@ def _append_history(
         for mode, ms in by_jm.items()
     }
 
+    # Failure category summary (just category → count, no question IDs)
+    fc_raw = report.get("failure_categories", {})
+    fc_summary = {cat: data["count"] for cat, data in fc_raw.items()} if fc_raw else {}
+
     entry = {
         "timestamp": run_dir_name,
         "scoring_version": 2,
@@ -407,6 +442,7 @@ def _append_history(
         "avg_cost_usd": cost_analysis.get("avg_cost_per_question_usd"),
         "budget_violations": budget_violations.get("total_violations", 0),
         "by_judge_mode": by_judge_mode_summary,
+        "failure_categories": fc_summary,
     }
     history_path = EVALUATION_BASE_DIR / "runs" / "history.jsonl"
     with open(history_path, "a") as f:
@@ -444,8 +480,8 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--judge-model",
         type=str,
-        default="gpt-5-mini",
-        help="LLM model for the judge (default: gpt-5-mini)",
+        default="gpt-5.4",
+        help="LLM model for the judge (default: gpt-5.4)",
     )
     parser.add_argument(
         "--judge-provider",

@@ -14,6 +14,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from failure_taxonomy import FailureCategory
 from utils import get_timestamp, logging
 
 # Budget thresholds — flag questions exceeding these limits
@@ -81,11 +82,16 @@ def _dimension_averages(verdicts: list[dict]) -> dict[str, float]:
 
 
 def _aggregate_link_scores(link_verdicts: list[dict]) -> dict[str, Any]:
-    """Compute aggregate statistics for link judge verdicts."""
+    """Compute aggregate statistics for link judge verdicts.
+
+    Handles both v2 (binary pass/fail with ``pass_count``) and legacy v1
+    (Likert 1-5 with ``weighted_score``).
+    """
     if not link_verdicts:
         return {
             "count": 0,
-            "avg_weighted_score": 0,
+            "avg_pass_count": 0,
+            "avg_weighted_score": 0,  # backward compat
             "pass_rate": 0,
             "pass_count": 0,
             "partial_count": 0,
@@ -93,7 +99,8 @@ def _aggregate_link_scores(link_verdicts: list[dict]) -> dict[str, Any]:
             "dimension_averages": {},
         }
 
-    scores = [v["weighted_score"] for v in link_verdicts if "weighted_score" in v]
+    # Use pass_count (v2) with fallback to weighted_score (v1)
+    scores = [v.get("pass_count", v.get("weighted_score", 0)) for v in link_verdicts]
     pass_count = sum(1 for v in link_verdicts if v.get("verdict") == "pass")
     partial_count = sum(1 for v in link_verdicts if v.get("verdict") == "partial")
     fail_count = sum(1 for v in link_verdicts if v.get("verdict") == "fail")
@@ -106,16 +113,23 @@ def _aggregate_link_scores(link_verdicts: list[dict]) -> dict[str, Any]:
     ]
     dim_avgs = {}
     for dim in dims:
-        dim_scores = [
-            v[dim]["score"]
-            for v in link_verdicts
-            if isinstance(v.get(dim), dict) and "score" in v[dim]
-        ]
-        dim_avgs[dim] = round(sum(dim_scores) / len(dim_scores), 2) if dim_scores else 0
+        passes: list[bool] = []
+        for v in link_verdicts:
+            d = v.get(dim)
+            if not isinstance(d, dict):
+                continue
+            if "passed" in d:
+                passes.append(d["passed"])
+            elif "score" in d:
+                # Legacy Likert: treat score >= 4 as pass
+                passes.append(d["score"] >= 4)
+        dim_avgs[dim] = round(sum(passes) / len(passes), 3) if passes else 0.0
 
+    avg = round(sum(scores) / len(scores), 3) if scores else 0
     return {
         "count": len(link_verdicts),
-        "avg_weighted_score": round(sum(scores) / len(scores), 3) if scores else 0,
+        "avg_pass_count": avg,
+        "avg_weighted_score": avg,  # backward compat alias
         "pass_count": pass_count,
         "partial_count": partial_count,
         "fail_count": fail_count,
@@ -409,6 +423,51 @@ def _check_budget_violations(run_results: list[dict[str, Any]]) -> dict[str, Any
     }
 
 
+def _aggregate_failure_categories(
+    verdicts: list[dict],
+    per_question: list[dict],
+) -> dict[str, Any]:
+    """Aggregate failure categories across failing/partial verdicts.
+
+    Args:
+        verdicts: List of judge verdict dicts.
+        per_question: List of per-question report entries (to get question IDs).
+
+    Returns:
+        Dict mapping category → {count, pct, question_ids}, sorted by count desc.
+    """
+    all_categories = [c.value for c in FailureCategory]
+    cat_counts: dict[str, list[str]] = {c: [] for c in all_categories}
+
+    # Build verdict→qid mapping from per_question entries
+    for entry in per_question:
+        details = entry.get("judge_details", {})
+        verdict = details.get("verdict", entry.get("verdict", "n/a"))
+        if verdict == "pass":
+            continue
+        qid = entry.get("question_id", "")
+        primary = details.get("failure_category")
+        if primary and primary in cat_counts:
+            cat_counts[primary].append(qid)
+        for sec in details.get("secondary_failure_categories", []):
+            if sec in cat_counts and sec != primary:
+                cat_counts[sec].append(qid)
+
+    # Filter to categories that actually appeared
+    total_failing = sum(1 for v in verdicts if v.get("verdict") in ("fail", "partial"))
+    result = {}
+    for cat in sorted(cat_counts.keys(), key=lambda c: -len(cat_counts[c])):
+        qids = cat_counts[cat]
+        if not qids:
+            continue
+        result[cat] = {
+            "count": len(qids),
+            "pct": round(len(qids) / total_failing * 100, 1) if total_failing else 0,
+            "question_ids": qids,
+        }
+    return result
+
+
 def _detect_pipeline(run: dict[str, Any]) -> str:
     """Detect which pipeline a question used based on tools_used.
 
@@ -494,6 +553,7 @@ def generate_report(
             "judge_details": verdict,
             "cost_usd": run_cost.get("total_cost_usd") if run_cost else None,
             "pipeline_used": pipeline_used,
+            "failure_category": verdict.get("failure_category"),
         }
         if link_verdict:
             entry["link_judge"] = link_verdict
@@ -548,6 +608,11 @@ def generate_report(
         ],
         "per_question": per_question,
     }
+
+    # Failure category aggregation
+    failure_cats = _aggregate_failure_categories(all_verdicts, per_question)
+    if failure_cats:
+        report["failure_categories"] = failure_cats
 
     # Link judge aggregate (only when link verdicts exist)
     if all_link_verdicts:
@@ -622,6 +687,17 @@ def report_to_markdown(report: dict[str, Any]) -> str:
             )
             lines.append(f"| {dim.replace('_', ' ').title()} | {pct}% |")
 
+    # Failure Categories
+    fc = report.get("failure_categories", {})
+    if fc:
+        lines.append("\n## Failure Categories\n")
+        lines.append("| Category | Count | % of Failures |")
+        lines.append("|----------|-------|---------------|")
+        for cat, data in fc.items():
+            lines.append(
+                f"| {cat.replace('_', ' ').title()} | {data['count']} | {data['pct']}% |"
+            )
+
     # Link Judge Summary
     lj = report.get("link_judge_aggregate", {})
     if lj and lj.get("count"):
@@ -629,18 +705,24 @@ def report_to_markdown(report: dict[str, Any]) -> str:
         lines.append("| Metric | Value |")
         lines.append("|--------|-------|")
         lines.append(f"| Links evaluated | {lj['count']} |")
-        lines.append(f"| Avg weighted score | {lj['avg_weighted_score']} / 5.0 |")
+        avg_pc = lj.get("avg_pass_count", lj.get("avg_weighted_score", 0))
+        lines.append(f"| Avg Pass Count | {avg_pc} / 4 |")
         lines.append(f"| Pass rate | {lj['pass_rate']}% |")
         lines.append(
             f"| Pass / Partial / Fail | {lj['pass_count']} / {lj['partial_count']} / {lj['fail_count']} |"
         )
         lj_dims = lj.get("dimension_averages", {})
         if lj_dims:
-            lines.append("\n### Link Dimension Averages\n")
-            lines.append("| Dimension | Avg Score |")
+            lines.append("\n### Link Dimension Pass Rates\n")
+            lines.append("| Dimension | Pass Rate |")
             lines.append("|-----------|-----------|")
-            for dim, score in lj_dims.items():
-                lines.append(f"| {dim.replace('_', ' ').title()} | {score} / 5.0 |")
+            for dim, rate in lj_dims.items():
+                pct = (
+                    round(rate * 100, 1)
+                    if isinstance(rate, float) and rate <= 1
+                    else rate
+                )
+                lines.append(f"| {dim.replace('_', ' ').title()} | {pct}% |")
 
     # By category
     by_cat = report.get("by_category", {})
