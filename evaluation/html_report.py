@@ -1472,6 +1472,8 @@ _REVIEW_CSS = """\
 .review-panel .btn-secondary:hover { background: #c7d2fe; }
 .review-panel .btn-success { background: #059669; color: #fff; }
 .review-panel .btn-success:hover { background: #047857; }
+.review-panel .btn-danger { background: #dc2626; color: #fff; }
+.review-panel .btn-danger:hover { background: #b91c1c; }
 .review-panel .btn:disabled { opacity: .5; cursor: not-allowed; }
 .review-panel .status-msg { font-size: 12px; color: #059669; }
 .review-panel .error-msg { font-size: 12px; color: #dc2626; }
@@ -1685,6 +1687,12 @@ function buildReviewPanel(q) {
   html += ' <span id="rejudge-status-' + esc(qid) + '"></span>';
   html += '</div>';
 
+  // Delete question button
+  html += '<div style="margin-top:12px;padding-top:12px;border-top:1px solid #fca5a5;">';
+  html += '<button class="btn btn-danger" id="delete-btn-' + esc(qid) + '" onclick="deleteQuestion(\\'' + esc(qid) + '\\')">Delete question from eval set</button>';
+  html += ' <span id="delete-status-' + esc(qid) + '"></span>';
+  html += '</div>';
+
   html += '</div>'; // close review-panel
   html += '</div>'; // close review-drawer
   return html;
@@ -1821,6 +1829,51 @@ async function rejudge(qid) {
     statusEl.innerHTML = '<span class="error-msg">' + esc(e.message) + '</span>';
     showToast('Re-judge error: ' + e.message, 'error');
   } finally {
+    btn.disabled = false;
+  }
+}
+
+function recalcAggregates() {
+  const qs = REPORT.per_question || [];
+  const judged = qs.filter(q => q.verdict);
+  const count = judged.length;
+  const passCount = judged.filter(q => q.verdict === 'pass').length;
+  const partialCount = judged.filter(q => q.verdict === 'partial').length;
+  const failCount = judged.filter(q => q.verdict === 'fail').length;
+  const passRate = count > 0 ? Math.round((passCount / count) * 1000) / 10 : 0;
+  const totalPC = judged.reduce((s, q) => s + (q.pass_count != null ? q.pass_count : (q.weighted_score || 0)), 0);
+  const avgPC = count > 0 ? Math.round((totalPC / count) * 10) / 10 : 0;
+
+  REPORT.aggregate = Object.assign(REPORT.aggregate || {}, {
+    count: qs.length,
+    pass_count: passCount,
+    partial_count: partialCount,
+    fail_count: failCount,
+    pass_rate: passRate,
+    avg_pass_count: avgPC,
+  });
+}
+
+async function deleteQuestion(qid) {
+  if (!confirm('Permanently delete question ' + qid + ' from the eval set?\\n\\nThis will remove it from eval_questions.json and delete its results folder. This cannot be undone.')) {
+    return;
+  }
+  const btn = document.getElementById('delete-btn-' + qid);
+  const statusEl = document.getElementById('delete-status-' + qid);
+  btn.disabled = true;
+  statusEl.innerHTML = '<span class="spinner"></span> Deleting...';
+  try {
+    const result = await apiCall('DELETE', '/api/question/' + qid);
+    // Remove from local REPORT data
+    REPORT.per_question = (REPORT.per_question || []).filter(q => String(q.question_id) !== String(qid));
+    recalcAggregates();
+    renderDashboard();
+    renderQuestions(getFilteredQuestions());
+    updateReviewBanner();
+    showToast('Question ' + qid + ' deleted (' + result.eval_questions_count + ' questions remaining)', 'success');
+  } catch(e) {
+    statusEl.innerHTML = '<span class="error-msg">' + esc(e.message) + '</span>';
+    showToast('Delete error: ' + e.message, 'error');
     btn.disabled = false;
   }
 }

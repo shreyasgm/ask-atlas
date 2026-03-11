@@ -11,6 +11,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -348,6 +349,63 @@ async def rejudge_question(qid: str) -> dict[str, Any]:
         "weighted_score": verdict.get("weighted_score"),
         "judge_details": verdict,
         "link_verdict": link_verdict,
+    }
+
+
+@app.delete("/api/question/{qid}")
+async def delete_question(qid: str) -> dict[str, Any]:
+    """Permanently delete a question from eval_questions.json, its results folder, and the run report.
+
+    This removes:
+    1. The question entry from eval_questions.json
+    2. The results/{qid}/ folder (ground truth files)
+    3. The question from the current run's report.json (per_question list)
+    """
+    # 1. Remove from eval_questions.json
+    eq_path = EVALUATION_BASE_DIR / "eval_questions.json"
+    if not eq_path.exists():
+        raise HTTPException(status_code=500, detail="eval_questions.json not found")
+
+    eq_data = load_json_file(eq_path)
+    original_count = len(eq_data.get("questions", []))
+    eq_data["questions"] = [
+        q for q in eq_data.get("questions", []) if str(q["id"]) != str(qid)
+    ]
+    new_count = len(eq_data["questions"])
+
+    if new_count == original_count:
+        raise HTTPException(
+            status_code=404, detail=f"Question {qid} not found in eval_questions.json"
+        )
+
+    save_json_file(eq_path, eq_data)
+    logging.info(
+        f"Question {qid}: removed from eval_questions.json ({original_count} → {new_count})"
+    )
+
+    # 2. Remove results folder
+    results_dir = EVALUATION_BASE_DIR / "results" / str(qid)
+    results_deleted = False
+    if results_dir.exists():
+        shutil.rmtree(results_dir)
+        results_deleted = True
+        logging.info(f"Question {qid}: deleted results folder {results_dir}")
+
+    # 3. Remove from current run's report.json
+    report = _load_report()
+    report["per_question"] = [
+        q
+        for q in report.get("per_question", [])
+        if str(q.get("question_id")) != str(qid)
+    ]
+    _save_report(report)
+    logging.info(f"Question {qid}: removed from run report")
+
+    return {
+        "status": "ok",
+        "question_id": qid,
+        "eval_questions_count": new_count,
+        "results_deleted": results_deleted,
     }
 
 
