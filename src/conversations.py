@@ -93,7 +93,11 @@ class ConversationStore(ABC):
 
     @abstractmethod
     async def list_by_session(
-        self, session_id: str, *, limit: int = 50, offset: int = 0,
+        self,
+        session_id: str,
+        *,
+        limit: int = 50,
+        offset: int = 0,
     ) -> tuple[list[ConversationRow], bool]:
         """List conversations for a session, ordered by updated_at DESC.
 
@@ -142,7 +146,11 @@ class InMemoryConversationStore(ConversationStore):
         return row
 
     async def list_by_session(
-        self, session_id: str, *, limit: int = 50, offset: int = 0,
+        self,
+        session_id: str,
+        *,
+        limit: int = 50,
+        offset: int = 0,
     ) -> tuple[list[ConversationRow], bool]:
         rows = [r for r in self._data.values() if r.session_id == session_id]
         rows.sort(key=lambda r: r.updated_at, reverse=True)
@@ -207,16 +215,25 @@ class PostgresConversationStore(ConversationStore):
                 assert row is not None
                 return self._row_to_conversation(row)
         except Exception:
-            logger.warning("ConversationStore.create failed for %s", thread_id, exc_info=True)
+            logger.warning(
+                "ConversationStore.create failed for %s", thread_id, exc_info=True
+            )
             # Return a synthetic row so callers don't crash
             now = datetime.now(UTC)
             return ConversationRow(
-                id=thread_id, session_id=session_id, title=title,
-                created_at=now, updated_at=now,
+                id=thread_id,
+                session_id=session_id,
+                title=title,
+                created_at=now,
+                updated_at=now,
             )
 
     async def list_by_session(
-        self, session_id: str, *, limit: int = 50, offset: int = 0,
+        self,
+        session_id: str,
+        *,
+        limit: int = 50,
+        offset: int = 0,
     ) -> tuple[list[ConversationRow], bool]:
         """List conversations with pagination.
 
@@ -259,7 +276,9 @@ class PostgresConversationStore(ConversationStore):
                     return None
                 return self._row_to_conversation(row)
         except Exception:
-            logger.warning("ConversationStore.get failed for %s", thread_id, exc_info=True)
+            logger.warning(
+                "ConversationStore.get failed for %s", thread_id, exc_info=True
+            )
             return None
 
     async def delete(self, thread_id: str) -> None:
@@ -270,7 +289,9 @@ class PostgresConversationStore(ConversationStore):
                     (thread_id,),
                 )
         except Exception:
-            logger.warning("ConversationStore.delete failed for %s", thread_id, exc_info=True)
+            logger.warning(
+                "ConversationStore.delete failed for %s", thread_id, exc_info=True
+            )
 
     async def update_timestamp(self, thread_id: str) -> None:
         try:
@@ -281,5 +302,7 @@ class PostgresConversationStore(ConversationStore):
                 )
         except Exception:
             logger.warning(
-                "ConversationStore.update_timestamp failed for %s", thread_id, exc_info=True,
+                "ConversationStore.update_timestamp failed for %s",
+                thread_id,
+                exc_info=True,
             )

@@ -1215,7 +1215,12 @@ class TestGetThreadMessages:
 
         response = client.get("/api/threads/t1/messages")
         data = response.json()
-        assert set(data.keys()) == {"messages", "overrides", "turn_summaries", "turn_metadata"}
+        assert set(data.keys()) == {
+            "messages",
+            "overrides",
+            "turn_summaries",
+            "turn_metadata",
+        }
 
     def test_response_includes_turn_summaries_when_present(
         self, client: TestClient

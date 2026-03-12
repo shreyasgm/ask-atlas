@@ -489,7 +489,9 @@ async def create_thread() -> dict:
 
 @router.get("/threads")
 async def list_threads(
-    request: Request, limit: int = 50, offset: int = 0,
+    request: Request,
+    limit: int = 50,
+    offset: int = 0,
 ) -> ConversationListResponse:
     """List conversations for a session with pagination."""
     session_id = request.headers.get("x-session-id")
@@ -502,7 +504,9 @@ async def list_threads(
     if store is None:
         return ConversationListResponse(conversations=[], has_more=False)
     rows, has_more = await store.list_by_session(
-        session_id, limit=limit, offset=offset,
+        session_id,
+        limit=limit,
+        offset=offset,
     )
     return ConversationListResponse(
         conversations=[
@@ -537,7 +541,8 @@ def _build_turn_metadata(ts: dict) -> TurnMetadataResponse:
 
 @router.get("/threads/{thread_id}/messages")
 async def get_thread_messages(
-    thread_id: str, include_turns: bool = True,
+    thread_id: str,
+    include_turns: bool = True,
 ) -> ThreadMessagesResponse:
     """Retrieve message history and trade overrides for a thread from LangGraph state.
 
