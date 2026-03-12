@@ -93,7 +93,16 @@ export function useConversations(): UseConversationsReturn {
       if (append) {
         setConversations((prev) => [...prev, ...mapped]);
       } else {
-        setConversations(mapped);
+        // Use functional update to preserve optimistic entries that were
+        // inserted while this fetch was in-flight.  Without this, a slow
+        // initial fetch overwrites the optimistic insert and the new
+        // conversation disappears from the sidebar until streaming
+        // finishes and refresh() runs.
+        setConversations((prev) => {
+          const fetchedIds = new Set(mapped.map((c) => c.threadId));
+          const optimistic = prev.filter((c) => c.optimistic && !fetchedIds.has(c.threadId));
+          return [...optimistic, ...mapped];
+        });
       }
       setHasMore(data.has_more);
       offsetRef.current = offset + mapped.length;
@@ -166,7 +175,7 @@ export function useConversations(): UseConversationsReturn {
       }
       const now = new Date().toISOString();
       const title = questionText ? deriveTitle(questionText) : null;
-      return [{ createdAt: now, threadId, title, updatedAt: now }, ...prev];
+      return [{ createdAt: now, optimistic: true, threadId, title, updatedAt: now }, ...prev];
     });
   }, []);
 

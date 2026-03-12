@@ -196,6 +196,8 @@ export interface TurnSummary {
 
 export interface ConversationSummary {
   createdAt: string;
+  /** True for client-side entries not yet confirmed by the server. */
+  optimistic?: boolean;
   threadId: string;
   title: string | null;
   updatedAt: string;
