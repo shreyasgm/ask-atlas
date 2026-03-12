@@ -1,4 +1,5 @@
 import { Globe, Menu } from 'lucide-react';
+import ThemeToggle from '@/components/ui/theme-toggle';
 
 interface ChatTopBarProps {
   onClear: () => void;
@@ -22,18 +23,23 @@ export default function ChatTopBar({ onClear, onToggleSidebar, title }: ChatTopB
         <Globe className="h-5 w-5 text-primary" />
         <span className="text-sm font-bold text-foreground">Ask Atlas</span>
       </div>
-      {/* Spacer to balance hamburger on mobile */}
-      <div className="w-9 lg:hidden" />
+      {/* Theme toggle on mobile (sidebar not visible) */}
+      <div className="lg:hidden">
+        <ThemeToggle />
+      </div>
 
-      {/* Desktop: title + clear button */}
+      {/* Desktop: title + actions */}
       <h2 className="hidden truncate text-sm font-medium lg:block">{title}</h2>
-      <button
-        className="hidden shrink-0 text-sm text-muted-foreground transition-colors hover:text-foreground lg:block"
-        onClick={onClear}
-        type="button"
-      >
-        Clear
-      </button>
+      <div className="hidden items-center gap-1 lg:flex">
+        <ThemeToggle />
+        <button
+          className="shrink-0 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          onClick={onClear}
+          type="button"
+        >
+          Clear
+        </button>
+      </div>
     </div>
   );
 }

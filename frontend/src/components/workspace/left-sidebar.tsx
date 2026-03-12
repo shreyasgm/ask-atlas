@@ -2,6 +2,7 @@ import { ChevronLeft, Globe, Menu, MessageSquare, Plus, Search, Trash2 } from 'l
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import type { ConversationSummary } from '@/types/chat';
+import ThemeToggle from '@/components/ui/theme-toggle';
 import { cn } from '@/lib/utils';
 
 interface LeftSidebarProps {
@@ -83,6 +84,9 @@ export default function LeftSidebar({
         >
           <Plus className="h-4 w-4" />
         </button>
+        <div className="mt-auto mb-3">
+          <ThemeToggle compact />
+        </div>
       </div>
     );
   }
@@ -168,6 +172,11 @@ export default function LeftSidebar({
             ))}
           </div>
         )}
+      </div>
+
+      {/* Footer: theme toggle */}
+      <div className="border-t border-border px-3 py-2">
+        <ThemeToggle />
       </div>
     </div>
   );

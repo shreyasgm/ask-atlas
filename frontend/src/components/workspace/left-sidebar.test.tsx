@@ -87,30 +87,35 @@ describe('LeftSidebar - expanded', () => {
   it('delete button calls onDeleteConversation after confirm', async () => {
     const user = userEvent.setup();
     const onDeleteConversation = vi.fn();
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderSidebar({ onDeleteConversation });
 
     const item = screen
       .getByText('Top exports of Brazil')
       .closest('[data-testid="conversation-item"]') as HTMLElement;
-    const deleteBtn = within(item).getByRole('button', { name: /delete/i });
+    const deleteBtn = within(item).getByRole('button', { name: /delete conversation/i });
     await user.click(deleteBtn);
 
-    expect(window.confirm).toHaveBeenCalled();
+    // Inline confirm/cancel buttons appear after first click
+    const confirmBtn = within(item).getByRole('button', { name: /confirm delete/i });
+    await user.click(confirmBtn);
+
     expect(onDeleteConversation).toHaveBeenCalledWith('thread-1');
   });
 
   it('delete button does not call onDeleteConversation when confirm is cancelled', async () => {
     const user = userEvent.setup();
     const onDeleteConversation = vi.fn();
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
     renderSidebar({ onDeleteConversation });
 
     const item = screen
       .getByText('Top exports of Brazil')
       .closest('[data-testid="conversation-item"]') as HTMLElement;
-    const deleteBtn = within(item).getByRole('button', { name: /delete/i });
+    const deleteBtn = within(item).getByRole('button', { name: /delete conversation/i });
     await user.click(deleteBtn);
+
+    // Click "Cancel" instead of "Confirm delete"
+    const cancelBtn = within(item).getByRole('button', { name: /cancel delete/i });
+    await user.click(cancelBtn);
 
     expect(onDeleteConversation).not.toHaveBeenCalled();
   });

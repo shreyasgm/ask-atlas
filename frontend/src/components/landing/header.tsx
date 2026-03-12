@@ -2,6 +2,7 @@ import { Globe, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
+import ThemeToggle from '@/components/ui/theme-toggle';
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -31,21 +32,25 @@ export default function Header() {
         >
           Atlas
         </a>
+        <ThemeToggle />
         <Button asChild size="sm">
           <Link to="/chat">Start Chatting</Link>
         </Button>
       </nav>
 
-      {/* Mobile hamburger */}
-      <button
-        aria-expanded={menuOpen}
-        aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-        className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:text-foreground sm:hidden"
-        onClick={() => setMenuOpen((prev) => !prev)}
-        type="button"
-      >
-        {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </button>
+      {/* Mobile: theme toggle + hamburger */}
+      <div className="flex items-center gap-1 sm:hidden">
+        <ThemeToggle />
+        <button
+          aria-expanded={menuOpen}
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
+          onClick={() => setMenuOpen((prev) => !prev)}
+          type="button"
+        >
+          {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+      </div>
 
       {/* Mobile dropdown */}
       {menuOpen && (
