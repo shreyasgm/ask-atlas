@@ -31,6 +31,7 @@ export default function HeroSection() {
         <Search className="h-[18px] w-[18px] shrink-0 text-muted-foreground" />
         <input
           aria-label="Ask about global trade data"
+          autoFocus
           className="h-[52px] flex-1 bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground/60"
           onChange={(e) => setQuery(e.target.value)}
           placeholder="What were India's top exports in 2020?"

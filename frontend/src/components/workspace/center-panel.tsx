@@ -82,8 +82,10 @@ export default memo(function CenterPanel({
       <div className="border-t border-border">
         <div className="mx-auto w-full max-w-2xl px-4 py-4">
           <ChatInput
+            autoFocus
             disabled={isStreaming}
             isStreaming={isStreaming}
+            key={threadId}
             onSend={onSend}
             onStop={onStop}
           />

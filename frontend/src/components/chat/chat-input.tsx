@@ -3,13 +3,20 @@ import { ArrowUp, Square } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 interface ChatInputProps {
+  autoFocus?: boolean;
   disabled: boolean;
   isStreaming: boolean;
   onSend: (text: string) => void;
   onStop: () => void;
 }
 
-export default function ChatInput({ disabled, isStreaming, onSend, onStop }: ChatInputProps) {
+export default function ChatInput({
+  autoFocus,
+  disabled,
+  isStreaming,
+  onSend,
+  onStop,
+}: ChatInputProps) {
   const [value, setValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -42,6 +49,7 @@ export default function ChatInput({ disabled, isStreaming, onSend, onStop }: Cha
       >
         <input
           aria-label="Ask about trade data"
+          autoFocus={autoFocus}
           className="h-11 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground sm:text-sm"
           disabled={disabled || isStreaming}
           onChange={(e) => setValue(e.target.value)}
