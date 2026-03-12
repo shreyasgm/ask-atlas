@@ -1,8 +1,7 @@
 name: Deploy
 
 on:
-  push:
-    tags: ['v*']
+  workflow_dispatch: # temporarily disabled for history rewrite tag push
 
 # This workflow incurs GCP costs. It does nothing until you configure
 # GitHub secrets (see bottom of file).
