@@ -126,7 +126,7 @@ export default function LeftSidebar({
           <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           <input
             aria-label="Search conversations"
-            className="w-full bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
+            className="w-full bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground sm:text-xs"
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search..."
             type="text"

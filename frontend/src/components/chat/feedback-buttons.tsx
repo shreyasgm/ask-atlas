@@ -124,7 +124,7 @@ export default memo(function FeedbackButtons({
           <input
             aria-label="Feedback comment"
             autoFocus
-            className="flex-1 rounded border border-border bg-background px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:ring-1 focus:ring-ring focus:outline-none"
+            className="flex-1 rounded border border-border bg-background px-2.5 py-1.5 text-base text-foreground placeholder:text-muted-foreground focus:ring-1 focus:ring-ring focus:outline-none sm:text-xs"
             onChange={(e) => setComment(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="What was wrong or expected? (optional)"

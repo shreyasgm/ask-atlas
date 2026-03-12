@@ -42,7 +42,7 @@ export default function ChatInput({ disabled, isStreaming, onSend, onStop }: Cha
       >
         <input
           aria-label="Ask about trade data"
-          className="h-11 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          className="h-11 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground sm:text-sm"
           disabled={disabled || isStreaming}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
