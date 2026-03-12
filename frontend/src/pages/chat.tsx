@@ -6,9 +6,12 @@ import { useTradeToggles } from '@/hooks/use-trade-toggles';
 
 export default function ChatPage() {
   const {
+    addOptimisticConversation,
     conversations,
     deleteConversation,
+    hasMore,
     isLoading: conversationsLoading,
+    loadMore,
     refresh,
   } = useConversations();
 
@@ -27,7 +30,11 @@ export default function ChatPage() {
     sendMessage: sendRaw,
     stopStreaming,
     threadId,
-  } = useChatStream({ onConversationChange: refresh, onOverridesLoaded: setOverrides });
+  } = useChatStream({
+    onConversationChange: refresh,
+    onOptimisticConversation: addOptimisticConversation,
+    onOverridesLoaded: setOverrides,
+  });
 
   const handleSend = useCallback(
     (question: string) => {
@@ -46,6 +53,7 @@ export default function ChatPage() {
       <ChatWorkspace
         activeThreadId={threadId}
         conversations={conversations}
+        conversationsHasMore={hasMore}
         conversationsLoading={conversationsLoading}
         entitiesData={entitiesData}
         error={error}
@@ -54,6 +62,7 @@ export default function ChatPage() {
         messages={messages}
         onClear={handleClear}
         onDeleteConversation={deleteConversation}
+        onLoadMoreConversations={loadMore}
         onModeChange={setMode}
         onSchemaChange={setSchema}
         onSend={handleSend}

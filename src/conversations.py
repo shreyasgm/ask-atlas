@@ -92,8 +92,14 @@ class ConversationStore(ABC):
         """Create a conversation. Idempotent — returns existing if already present."""
 
     @abstractmethod
-    async def list_by_session(self, session_id: str) -> list[ConversationRow]:
-        """List conversations for a session, ordered by updated_at DESC."""
+    async def list_by_session(
+        self, session_id: str, *, limit: int = 50, offset: int = 0,
+    ) -> tuple[list[ConversationRow], bool]:
+        """List conversations for a session, ordered by updated_at DESC.
+
+        Returns:
+            Tuple of (rows, has_more) where has_more indicates more pages exist.
+        """
 
     @abstractmethod
     async def get(self, thread_id: str) -> ConversationRow | None:
@@ -135,10 +141,14 @@ class InMemoryConversationStore(ConversationStore):
         self._data[thread_id] = row
         return row
 
-    async def list_by_session(self, session_id: str) -> list[ConversationRow]:
+    async def list_by_session(
+        self, session_id: str, *, limit: int = 50, offset: int = 0,
+    ) -> tuple[list[ConversationRow], bool]:
         rows = [r for r in self._data.values() if r.session_id == session_id]
         rows.sort(key=lambda r: r.updated_at, reverse=True)
-        return rows
+        page = rows[offset : offset + limit]
+        has_more = len(rows) > offset + limit
+        return page, has_more
 
     async def get(self, thread_id: str) -> ConversationRow | None:
         return self._data.get(thread_id)
@@ -164,6 +174,9 @@ class PostgresConversationStore(ConversationStore):
         pool: An open ``psycopg_pool.AsyncConnectionPool``.
     """
 
+    # Connection acquisition timeout — fail fast instead of blocking 30s
+    _CONN_TIMEOUT: float = 5.0
+
     def __init__(self, pool) -> None:
         self._pool = pool
 
@@ -179,53 +192,94 @@ class PostgresConversationStore(ConversationStore):
     async def create(
         self, thread_id: str, session_id: str, title: str | None
     ) -> ConversationRow:
-        async with self._pool.connection() as conn:
-            cur = await conn.execute(
-                """
-                INSERT INTO conversations (id, session_id, title)
-                VALUES (%s, %s, %s)
-                ON CONFLICT (id) DO UPDATE SET updated_at = NOW()
-                RETURNING id, session_id, title, created_at, updated_at
-                """,
-                (thread_id, session_id, title),
+        try:
+            async with self._pool.connection(timeout=self._CONN_TIMEOUT) as conn:
+                cur = await conn.execute(
+                    """
+                    INSERT INTO conversations (id, session_id, title)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (id) DO UPDATE SET updated_at = NOW()
+                    RETURNING id, session_id, title, created_at, updated_at
+                    """,
+                    (thread_id, session_id, title),
+                )
+                row = await cur.fetchone()
+                assert row is not None
+                return self._row_to_conversation(row)
+        except Exception:
+            logger.warning("ConversationStore.create failed for %s", thread_id, exc_info=True)
+            # Return a synthetic row so callers don't crash
+            now = datetime.now(UTC)
+            return ConversationRow(
+                id=thread_id, session_id=session_id, title=title,
+                created_at=now, updated_at=now,
             )
-            row = await cur.fetchone()
-            assert row is not None
-            return self._row_to_conversation(row)
 
-    async def list_by_session(self, session_id: str) -> list[ConversationRow]:
-        async with self._pool.connection() as conn:
-            cur = await conn.execute(
-                "SELECT id, session_id, title, created_at, updated_at "
-                "FROM conversations WHERE session_id = %s "
-                "ORDER BY updated_at DESC",
-                (session_id,),
+    async def list_by_session(
+        self, session_id: str, *, limit: int = 50, offset: int = 0,
+    ) -> tuple[list[ConversationRow], bool]:
+        """List conversations with pagination.
+
+        Returns:
+            Tuple of (rows, has_more).
+        """
+        try:
+            async with self._pool.connection(timeout=self._CONN_TIMEOUT) as conn:
+                cur = await conn.execute(
+                    "SELECT id, session_id, title, created_at, updated_at "
+                    "FROM conversations WHERE session_id = %s "
+                    "ORDER BY updated_at DESC "
+                    "LIMIT %s OFFSET %s",
+                    (session_id, limit + 1, offset),
+                )
+                rows = await cur.fetchall()
+                has_more = len(rows) > limit
+                return (
+                    [self._row_to_conversation(r) for r in rows[:limit]],
+                    has_more,
+                )
+        except Exception:
+            logger.warning(
+                "ConversationStore.list_by_session failed for session %s",
+                session_id,
+                exc_info=True,
             )
-            rows = await cur.fetchall()
-            return [self._row_to_conversation(r) for r in rows]
+            return [], False
 
     async def get(self, thread_id: str) -> ConversationRow | None:
-        async with self._pool.connection() as conn:
-            cur = await conn.execute(
-                "SELECT id, session_id, title, created_at, updated_at "
-                "FROM conversations WHERE id = %s",
-                (thread_id,),
-            )
-            row = await cur.fetchone()
-            if row is None:
-                return None
-            return self._row_to_conversation(row)
+        try:
+            async with self._pool.connection(timeout=self._CONN_TIMEOUT) as conn:
+                cur = await conn.execute(
+                    "SELECT id, session_id, title, created_at, updated_at "
+                    "FROM conversations WHERE id = %s",
+                    (thread_id,),
+                )
+                row = await cur.fetchone()
+                if row is None:
+                    return None
+                return self._row_to_conversation(row)
+        except Exception:
+            logger.warning("ConversationStore.get failed for %s", thread_id, exc_info=True)
+            return None
 
     async def delete(self, thread_id: str) -> None:
-        async with self._pool.connection() as conn:
-            await conn.execute(
-                "DELETE FROM conversations WHERE id = %s",
-                (thread_id,),
-            )
+        try:
+            async with self._pool.connection(timeout=self._CONN_TIMEOUT) as conn:
+                await conn.execute(
+                    "DELETE FROM conversations WHERE id = %s",
+                    (thread_id,),
+                )
+        except Exception:
+            logger.warning("ConversationStore.delete failed for %s", thread_id, exc_info=True)
 
     async def update_timestamp(self, thread_id: str) -> None:
-        async with self._pool.connection() as conn:
-            await conn.execute(
-                "UPDATE conversations SET updated_at = NOW() WHERE id = %s",
-                (thread_id,),
+        try:
+            async with self._pool.connection(timeout=self._CONN_TIMEOUT) as conn:
+                await conn.execute(
+                    "UPDATE conversations SET updated_at = NOW() WHERE id = %s",
+                    (thread_id,),
+                )
+        except Exception:
+            logger.warning(
+                "ConversationStore.update_timestamp failed for %s", thread_id, exc_info=True,
             )

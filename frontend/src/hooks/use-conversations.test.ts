@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ConversationSummary } from '@/types/chat';
-import { useConversations } from './use-conversations';
+import { deriveTitle, useConversations } from './use-conversations';
 
 vi.mock('@/config', () => ({ API_BASE_URL: '' }));
 
@@ -9,7 +9,7 @@ vi.mock('@/utils/session', () => ({
   getSessionId: () => 'test-session-id',
 }));
 
-const CONVERSATIONS_RESPONSE = [
+const CONVERSATIONS_BACKEND = [
   {
     created_at: '2025-02-20T10:00:00Z',
     thread_id: 'thread-1',
@@ -23,6 +23,14 @@ const CONVERSATIONS_RESPONSE = [
     updated_at: '2025-02-19T09:30:00Z',
   },
 ];
+
+function paginatedResponse(conversations = CONVERSATIONS_BACKEND, hasMore = false) {
+  return { conversations, has_more: hasMore };
+}
+
+function mockFetchOk(data: unknown) {
+  return { json: () => Promise.resolve(data), ok: true };
+}
 
 const EXPECTED_CONVERSATIONS: Array<ConversationSummary> = [
   {
@@ -41,14 +49,16 @@ const EXPECTED_CONVERSATIONS: Array<ConversationSummary> = [
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  vi.useRealTimers();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('useConversations', () => {
   it('starts with empty conversations and loading true', () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve([]),
-      ok: true,
-    });
+    globalThis.fetch = vi.fn().mockResolvedValue(mockFetchOk(paginatedResponse([])));
 
     const { result } = renderHook(() => useConversations());
     expect(result.current.conversations).toEqual([]);
@@ -56,10 +66,7 @@ describe('useConversations', () => {
   });
 
   it('fetches conversations on mount with X-Session-Id header', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve(CONVERSATIONS_RESPONSE),
-      ok: true,
-    });
+    globalThis.fetch = vi.fn().mockResolvedValue(mockFetchOk(paginatedResponse()));
 
     const { result } = renderHook(() => useConversations());
 
@@ -67,17 +74,18 @@ describe('useConversations', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(globalThis.fetch).toHaveBeenCalledWith('/api/threads', {
-      headers: { 'X-Session-Id': 'test-session-id' },
-    });
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      '/api/threads?limit=50&offset=0',
+      expect.objectContaining({
+        headers: { 'X-Session-Id': 'test-session-id' },
+      }),
+    );
     expect(result.current.conversations).toEqual(EXPECTED_CONVERSATIONS);
+    expect(result.current.hasMore).toBe(false);
   });
 
   it('handles fetch failure gracefully with empty list', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 500,
-    });
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 });
 
     const { result } = renderHook(() => useConversations());
 
@@ -103,14 +111,8 @@ describe('useConversations', () => {
   it('deleteConversation calls DELETE and removes from local state', async () => {
     globalThis.fetch = vi
       .fn()
-      .mockResolvedValueOnce({
-        json: () => Promise.resolve(CONVERSATIONS_RESPONSE),
-        ok: true,
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 204,
-      });
+      .mockResolvedValueOnce(mockFetchOk(paginatedResponse()))
+      .mockResolvedValueOnce({ ok: true, status: 204 });
 
     const { result } = renderHook(() => useConversations());
 
@@ -130,19 +132,13 @@ describe('useConversations', () => {
     expect(result.current.conversations[0].threadId).toBe('thread-2');
   });
 
-  it('refresh re-fetches the conversation list', async () => {
-    const updatedResponse = [CONVERSATIONS_RESPONSE[0]];
+  it('refresh re-fetches the conversation list after debounce', async () => {
+    const updatedResponse = paginatedResponse([CONVERSATIONS_BACKEND[0]]);
 
     globalThis.fetch = vi
       .fn()
-      .mockResolvedValueOnce({
-        json: () => Promise.resolve(CONVERSATIONS_RESPONSE),
-        ok: true,
-      })
-      .mockResolvedValueOnce({
-        json: () => Promise.resolve(updatedResponse),
-        ok: true,
-      });
+      .mockResolvedValueOnce(mockFetchOk(paginatedResponse()))
+      .mockResolvedValueOnce(mockFetchOk(updatedResponse));
 
     const { result } = renderHook(() => useConversations());
 
@@ -150,31 +146,27 @@ describe('useConversations', () => {
       expect(result.current.conversations).toHaveLength(2);
     });
 
+    // Trigger debounced refresh — it will fire after ~500ms real time
     act(() => {
       result.current.refresh();
     });
 
-    await waitFor(() => {
-      expect(result.current.conversations).toHaveLength(1);
-    });
+    // Wait for the debounced fetch to complete
+    await waitFor(
+      () => {
+        expect(result.current.conversations).toHaveLength(1);
+      },
+      { timeout: 2000 },
+    );
   });
 
   it('re-fetches on delete failure to restore state', async () => {
     globalThis.fetch = vi
       .fn()
-      .mockResolvedValueOnce({
-        json: () => Promise.resolve(CONVERSATIONS_RESPONSE),
-        ok: true,
-      })
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-      })
+      .mockResolvedValueOnce(mockFetchOk(paginatedResponse()))
+      .mockResolvedValueOnce({ ok: false, status: 500 })
       // Re-fetch after failure
-      .mockResolvedValueOnce({
-        json: () => Promise.resolve(CONVERSATIONS_RESPONSE),
-        ok: true,
-      });
+      .mockResolvedValueOnce(mockFetchOk(paginatedResponse()));
 
     const { result } = renderHook(() => useConversations());
 
@@ -190,5 +182,94 @@ describe('useConversations', () => {
     await waitFor(() => {
       expect(result.current.conversations).toHaveLength(2);
     });
+  });
+
+  it('addOptimisticConversation inserts with derived title', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(mockFetchOk(paginatedResponse()));
+
+    const { result } = renderHook(() => useConversations());
+
+    await waitFor(() => {
+      expect(result.current.conversations).toHaveLength(2);
+    });
+
+    act(() => {
+      result.current.addOptimisticConversation(
+        'thread-new',
+        'Top exports of Brazil. What about Argentina?',
+      );
+    });
+
+    expect(result.current.conversations).toHaveLength(3);
+    expect(result.current.conversations[0].threadId).toBe('thread-new');
+    expect(result.current.conversations[0].title).toBe('Top exports of Brazil.');
+  });
+
+  it('addOptimisticConversation with no question text uses null title', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(mockFetchOk(paginatedResponse()));
+
+    const { result } = renderHook(() => useConversations());
+
+    await waitFor(() => {
+      expect(result.current.conversations).toHaveLength(2);
+    });
+
+    act(() => {
+      result.current.addOptimisticConversation('thread-new');
+    });
+
+    expect(result.current.conversations).toHaveLength(3);
+    expect(result.current.conversations[0].title).toBeNull();
+  });
+
+  it('addOptimisticConversation does not add duplicates', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(mockFetchOk(paginatedResponse()));
+
+    const { result } = renderHook(() => useConversations());
+
+    await waitFor(() => {
+      expect(result.current.conversations).toHaveLength(2);
+    });
+
+    act(() => {
+      result.current.addOptimisticConversation('thread-1');
+    });
+
+    expect(result.current.conversations).toHaveLength(2);
+  });
+});
+
+describe('deriveTitle', () => {
+  it('returns short message as-is', () => {
+    expect(deriveTitle('Hello world')).toBe('Hello world');
+  });
+
+  it('extracts first sentence ending with period', () => {
+    expect(deriveTitle('Top exports of Brazil. What about Argentina?')).toBe(
+      'Top exports of Brazil.',
+    );
+  });
+
+  it('extracts first sentence ending with question mark', () => {
+    expect(deriveTitle('What are exports? Tell me more.')).toBe('What are exports?');
+  });
+
+  it('extracts first sentence ending with exclamation', () => {
+    expect(deriveTitle('Show me data! Now please.')).toBe('Show me data!');
+  });
+
+  it('truncates long messages on word boundary', () => {
+    const long = 'What are the top twenty exported products from Brazil in 2020';
+    const result = deriveTitle(long, 30);
+    expect(result.length).toBeLessThanOrEqual(30);
+    expect(result).toBe('What are the top twenty...');
+  });
+
+  it('returns empty string for empty input', () => {
+    expect(deriveTitle('')).toBe('');
+  });
+
+  it('returns whitespace for whitespace-only input', () => {
+    expect(deriveTitle('   ').trim()).toBe('');
   });
 });

@@ -113,10 +113,11 @@ class TestInMemoryConversationStore:
         await store.create("t1", "s1", "First")
         await store.create("t2", "s1", "Second")
         await store.create("t3", "s2", "Other session")
-        rows = await store.list_by_session("s1")
+        rows, has_more = await store.list_by_session("s1")
         assert len(rows) == 2
         ids = {r.id for r in rows}
         assert ids == {"t1", "t2"}
+        assert has_more is False
 
     @pytest.mark.asyncio
     async def test_list_by_session_ordered_by_updated_desc(
@@ -126,7 +127,7 @@ class TestInMemoryConversationStore:
         await store.create("t2", "s1", "Second")
         # Touch t1 so it becomes more recent
         await store.update_timestamp("t1")
-        rows = await store.list_by_session("s1")
+        rows, _ = await store.list_by_session("s1")
         assert rows[0].id == "t1"
         assert rows[1].id == "t2"
 
@@ -134,8 +135,22 @@ class TestInMemoryConversationStore:
     async def test_list_by_session_empty(
         self, store: InMemoryConversationStore
     ) -> None:
-        rows = await store.list_by_session("no-session")
+        rows, has_more = await store.list_by_session("no-session")
         assert rows == []
+        assert has_more is False
+
+    @pytest.mark.asyncio
+    async def test_list_by_session_pagination(
+        self, store: InMemoryConversationStore
+    ) -> None:
+        for i in range(5):
+            await store.create(f"t{i}", "s1", f"Chat {i}")
+        rows, has_more = await store.list_by_session("s1", limit=3)
+        assert len(rows) == 3
+        assert has_more is True
+        rows2, has_more2 = await store.list_by_session("s1", limit=3, offset=3)
+        assert len(rows2) == 2
+        assert has_more2 is False
 
     @pytest.mark.asyncio
     async def test_delete_existing(self, store: InMemoryConversationStore) -> None:
@@ -167,5 +182,5 @@ class TestInMemoryConversationStore:
         row2 = await store.create("t1", "s1", "Duplicate")
         # Should return the existing row
         assert row2.title == "Original"
-        rows = await store.list_by_session("s1")
+        rows, _ = await store.list_by_session("s1")
         assert len(rows) == 1

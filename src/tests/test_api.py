@@ -997,7 +997,8 @@ class TestListThreads:
     def test_empty_session_returns_empty_list(self, client: TestClient) -> None:
         response = client.get("/api/threads", headers={"X-Session-Id": "s1"})
         assert response.status_code == 200
-        assert response.json() == []
+        body = response.json()
+        assert body == {"conversations": [], "has_more": False}
 
     def test_returns_conversations_for_session(self, client: TestClient) -> None:
         import asyncio
@@ -1011,10 +1012,12 @@ class TestListThreads:
         )
         response = client.get("/api/threads", headers={"X-Session-Id": "s1"})
         assert response.status_code == 200
-        data = response.json()
+        body = response.json()
+        data = body["conversations"]
         assert len(data) == 2
         ids = {c["thread_id"] for c in data}
         assert ids == {"t1", "t2"}
+        assert body["has_more"] is False
 
     def test_does_not_leak_other_sessions(self, client: TestClient) -> None:
         import asyncio
@@ -1023,7 +1026,7 @@ class TestListThreads:
         asyncio.get_event_loop().run_until_complete(store.create("t1", "s1", "Mine"))
         asyncio.get_event_loop().run_until_complete(store.create("t2", "s2", "Theirs"))
         response = client.get("/api/threads", headers={"X-Session-Id": "s1"})
-        data = response.json()
+        data = response.json()["conversations"]
         assert len(data) == 1
         assert data[0]["thread_id"] == "t1"
 
@@ -1033,7 +1036,10 @@ class TestListThreads:
         store = _state.conversation_store
         asyncio.get_event_loop().run_until_complete(store.create("t1", "s1", "Chat"))
         response = client.get("/api/threads", headers={"X-Session-Id": "s1"})
-        item = response.json()[0]
+        body = response.json()
+        assert "conversations" in body
+        assert "has_more" in body
+        item = body["conversations"][0]
         assert "thread_id" in item
         assert "title" in item
         assert "created_at" in item
@@ -1209,7 +1215,7 @@ class TestGetThreadMessages:
 
         response = client.get("/api/threads/t1/messages")
         data = response.json()
-        assert set(data.keys()) == {"messages", "overrides", "turn_summaries"}
+        assert set(data.keys()) == {"messages", "overrides", "turn_summaries", "turn_metadata"}
 
     def test_response_includes_turn_summaries_when_present(
         self, client: TestClient
@@ -1251,6 +1257,7 @@ class TestGetThreadMessages:
         mock_agent.aget_state = AsyncMock(return_value=mock_state)
         _state.atlas_sql.agent = mock_agent
 
+        # Default (include_turns=true) returns full summaries + metadata
         response = client.get("/api/threads/t1/messages")
         data = response.json()
         assert len(data["turn_summaries"]) == 1
@@ -1260,6 +1267,18 @@ class TestGetThreadMessages:
         assert ts["queries"][0]["sql"] == "SELECT * FROM t"
         assert ts["total_rows"] == 1
         assert ts["total_execution_time_ms"] == 42
+        assert len(data["turn_metadata"]) == 1
+
+        # With include_turns=false, only lightweight metadata is returned
+        response = client.get("/api/threads/t1/messages?include_turns=false")
+        data = response.json()
+        assert data["turn_summaries"] == []
+        assert len(data["turn_metadata"]) == 1
+        tm = data["turn_metadata"][0]
+        assert tm["has_queries"] is True
+        assert tm["query_count"] == 1
+        assert tm["total_rows"] == 1
+        assert tm["total_execution_time_ms"] == 42
 
     def test_response_empty_turn_summaries_when_absent(
         self, client: TestClient
@@ -1281,6 +1300,7 @@ class TestGetThreadMessages:
         response = client.get("/api/threads/t1/messages")
         data = response.json()
         assert data["turn_summaries"] == []
+        assert data["turn_metadata"] == []
 
 
 # ---------------------------------------------------------------------------

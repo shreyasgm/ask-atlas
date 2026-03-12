@@ -185,6 +185,7 @@ class AsyncCheckpointerManager:
                 )
                 await pool.open()
                 self._pool = pool
+
                 saver = AsyncPostgresSaver(conn=pool)
                 await saver.setup()
                 await setup_app_tables(self._db_url)

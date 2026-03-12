@@ -9,8 +9,10 @@ interface LeftSidebarProps {
   activeThreadId: string | null;
   conversations: Array<ConversationSummary>;
   expanded: boolean;
+  hasMore?: boolean;
   isLoading: boolean;
   onDeleteConversation: (threadId: string) => void;
+  onLoadMore?: () => void;
   onNewChat: () => void;
   onSelectConversation: (threadId: string) => void;
   onToggle: () => void;
@@ -47,8 +49,10 @@ export default function LeftSidebar({
   activeThreadId,
   conversations,
   expanded,
+  hasMore,
   isLoading,
   onDeleteConversation,
+  onLoadMore,
   onNewChat,
   onSelectConversation,
   onToggle,
@@ -170,6 +174,15 @@ export default function LeftSidebar({
                 onSelect={onSelectConversation}
               />
             ))}
+            {hasMore && !searchQuery && (
+              <button
+                className="mt-2 w-full rounded-md py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                onClick={onLoadMore}
+                type="button"
+              >
+                Load more
+              </button>
+            )}
           </div>
         )}
       </div>

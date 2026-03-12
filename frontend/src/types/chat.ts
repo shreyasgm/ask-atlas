@@ -44,6 +44,8 @@ export interface ChatMessage {
   pipelineSteps?: Array<PipelineStep>;
   queryResults: Array<QueryResult>;
   role: 'assistant' | 'user';
+  /** Index into turn_summaries — set on restored messages for lazy detail loading. */
+  turnIndex?: number;
 }
 
 export interface PipelineStep {
@@ -197,6 +199,19 @@ export interface ConversationSummary {
   threadId: string;
   title: string | null;
   updatedAt: string;
+}
+
+export interface TurnMetadata {
+  entities: Record<string, unknown> | null;
+  has_atlas_links: boolean;
+  has_docs_consulted: boolean;
+  has_graphql_summaries: boolean;
+  has_pipeline_steps: boolean;
+  has_queries: boolean;
+  query_count: number;
+  total_execution_time_ms: number;
+  total_graphql_time_ms: number;
+  total_rows: number;
 }
 
 export interface FeedbackState {

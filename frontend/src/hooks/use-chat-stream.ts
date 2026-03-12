@@ -8,6 +8,7 @@ import type {
   PipelineStep,
   QueryAggregateStats,
   TradeOverrides,
+  TurnMetadata,
   TurnSummary,
 } from '@/types/chat';
 import { API_BASE_URL } from '@/config';
@@ -16,6 +17,7 @@ import { getSessionId } from '@/utils/session';
 
 interface UseChatStreamOptions {
   onConversationChange?: () => void;
+  onOptimisticConversation?: (threadId: string, questionText?: string) => void;
   onOverridesLoaded?: (o: TradeOverrides) => void;
 }
 
@@ -23,6 +25,7 @@ interface UseChatStreamReturn {
   clearChat: () => void;
   entitiesData: EntitiesData | null;
   error: null | string;
+  fetchTurnDetail: (messageId: string, turnIndex: number) => Promise<void>;
   isRestoredThread: boolean;
   isStreaming: boolean;
   messages: Array<ChatMessage>;
@@ -142,6 +145,8 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
   const pipelineStepsCache = useRef<Map<string, Array<Array<PipelineStep>>>>(new Map());
   const onConversationChangeRef = useRef(options?.onConversationChange);
   onConversationChangeRef.current = options?.onConversationChange;
+  const onOptimisticConversationRef = useRef(options?.onOptimisticConversation);
+  onOptimisticConversationRef.current = options?.onOptimisticConversation;
   const onOverridesLoadedRef = useRef(options?.onOverridesLoaded);
   onOverridesLoadedRef.current = options?.onOverridesLoaded;
 
@@ -184,6 +189,15 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
       const body: Record<string, string> = { question: trimmed };
       if (threadId) {
         body.thread_id = threadId;
+      } else {
+        // New conversation — generate thread ID client-side so we can
+        // optimistically insert into the sidebar before the fetch starts.
+        const newThreadId = crypto.randomUUID();
+        body.thread_id = newThreadId;
+        setThreadId(newThreadId);
+        historyLoaded.current = newThreadId;
+        navigate(`/chat/${newThreadId}`, { replace: true });
+        onOptimisticConversationRef.current?.(newThreadId, trimmed);
       }
       if (overrides?.schema) {
         body.override_schema = overrides.schema;
@@ -550,10 +564,9 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
                 // — messages for this thread are being streamed live.
                 historyLoaded.current = id;
                 navigate(`/chat/${id}`, { replace: true });
-                // Refresh the sidebar so the new conversation appears early
-                // (the backend creates the row via a background task that
-                // completes well before this network round-trip finishes).
-                onConversationChangeRef.current?.();
+                // Optimistically insert the new conversation into the sidebar
+                // without triggering a full fetch.
+                onOptimisticConversationRef.current?.(id);
                 break;
               }
 
@@ -738,15 +751,21 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
           createMessage(m.role === 'human' ? 'user' : 'assistant', m.content),
         );
 
-        // Hydrate right panel from turn_summaries if present
+        // Check for full turn_summaries (backwards compat / include_turns=true)
         const turnSummaries: Array<TurnSummary> =
           !Array.isArray(data) &&
           Array.isArray((data as { turn_summaries?: unknown }).turn_summaries)
             ? (data as { turn_summaries: Array<TurnSummary> }).turn_summaries
             : [];
 
+        // Check for lightweight turn_metadata (default mode)
+        const turnMetadataList: Array<TurnMetadata> =
+          !Array.isArray(data) && Array.isArray((data as { turn_metadata?: unknown }).turn_metadata)
+            ? (data as { turn_metadata: Array<TurnMetadata> }).turn_metadata
+            : [];
+
         if (turnSummaries.length > 0) {
-          // Pair summaries with assistant messages (1:1 by index)
+          // Full hydration from turn_summaries (backwards compat)
           const assistantMessages = loaded.filter((m) => m.role === 'assistant');
           for (let i = 0; i < Math.min(assistantMessages.length, turnSummaries.length); i++) {
             const ts = turnSummaries[i];
@@ -759,15 +778,12 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
                 sql: q.sql,
               }));
             }
-            // Hydrate atlas links from turn summary
             if (ts.atlas_links && ts.atlas_links.length > 0) {
               assistantMessages[i].atlasLinks = ts.atlas_links;
             }
-            // Hydrate docs consulted from turn summary
             if (ts.docs_consulted && ts.docs_consulted.length > 0) {
               assistantMessages[i].docsConsulted = ts.docs_consulted;
             }
-            // Hydrate graphql summaries from turn summary, enriched with call details
             if (ts.graphql_summaries && ts.graphql_summaries.length > 0) {
               const callDetails = ts.graphql_call_details ?? [];
               assistantMessages[i].graphqlSummaries = ts.graphql_summaries.map((gs, gi) => ({
@@ -785,7 +801,6 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
                 resolvedParams: callDetails[gi]?.resolved_params ?? null,
               }));
             }
-            // Hydrate pipeline steps from persisted turn summary (page refresh)
             if (ts.pipeline_steps && ts.pipeline_steps.length > 0) {
               assistantMessages[i].pipelineSteps = ts.pipeline_steps.map((ps) => ({
                 detail: ps.detail,
@@ -799,7 +814,6 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
             }
           }
 
-          // Set entities from the last summary that has them
           const lastWithEntities = [...turnSummaries].reverse().find((ts) => ts.entities !== null);
           if (lastWithEntities?.entities) {
             setEntitiesData({
@@ -819,7 +833,6 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
             });
           }
 
-          // Set query stats from totals across all summaries
           const totalRows = turnSummaries.reduce((sum, ts) => sum + ts.total_rows, 0);
           const totalExecMs = turnSummaries.reduce(
             (sum, ts) => sum + ts.total_execution_time_ms,
@@ -839,6 +852,61 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
               totalRows,
               totalTimeMs: 0,
             });
+          }
+        } else if (turnMetadataList.length > 0) {
+          // Lightweight mode: hydrate basic info from metadata, details loaded on-demand
+          const assistantMessages = loaded.filter((m) => m.role === 'assistant');
+
+          // Hydrate entities from the last metadata that has them
+          const lastWithEntities = [...turnMetadataList]
+            .reverse()
+            .find((tm) => tm.entities !== null);
+          if (lastWithEntities?.entities) {
+            const ent = lastWithEntities.entities as {
+              countries?: Array<{ iso3_code: string; name: string }>;
+              products: Array<{ codes: Array<string>; name: string; schema: string }>;
+              schemas: Array<string>;
+            };
+            setEntitiesData({
+              countries: (ent.countries ?? []).map((c) => ({
+                iso3Code: c.iso3_code,
+                name: c.name,
+              })),
+              docsConsulted: [],
+              graphqlClassification: null,
+              graphqlEntities: null,
+              lookupCodes: '',
+              products: ent.products,
+              resolutionNotes: [],
+              schemas: ent.schemas,
+            });
+          }
+
+          // Set aggregate query stats from metadata
+          const totalRows = turnMetadataList.reduce((sum, tm) => sum + tm.total_rows, 0);
+          const totalExecMs = turnMetadataList.reduce(
+            (sum, tm) => sum + tm.total_execution_time_ms,
+            0,
+          );
+          const totalQueries = turnMetadataList.reduce((sum, tm) => sum + tm.query_count, 0);
+          const totalGraphqlTimeMs = turnMetadataList.reduce(
+            (sum, tm) => sum + tm.total_graphql_time_ms,
+            0,
+          );
+          if (totalQueries > 0 || totalGraphqlTimeMs > 0) {
+            setQueryStats({
+              totalExecutionTimeMs: totalExecMs,
+              totalGraphqlQueries: 0,
+              totalGraphqlTimeMs: totalGraphqlTimeMs,
+              totalQueries,
+              totalRows,
+              totalTimeMs: 0,
+            });
+          }
+
+          // Mark assistant messages with turnIndex for lazy loading
+          for (let i = 0; i < assistantMessages.length; i++) {
+            assistantMessages[i].turnIndex = i;
           }
         }
 
@@ -900,10 +968,86 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
     };
   }, []);
 
+  // Lazy-load a single turn's full details on demand
+  const fetchTurnDetail = useCallback(
+    async (messageId: string, turnIndex: number) => {
+      const tid = threadId ?? urlThreadId;
+      if (!tid) {
+        return;
+      }
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/threads/${tid}/turns/${turnIndex}`, {
+          headers: { 'X-Session-Id': getSessionId() },
+        });
+        if (!response.ok) {
+          return;
+        }
+        const ts: TurnSummary = await response.json();
+
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.id !== messageId) {
+              return m;
+            }
+            const updated = { ...m, turnIndex: undefined };
+            if (ts.queries.length > 0) {
+              updated.queryResults = ts.queries.map((q) => ({
+                columns: q.columns,
+                executionTimeMs: q.execution_time_ms,
+                rowCount: q.row_count,
+                rows: q.rows,
+                sql: q.sql,
+              }));
+            }
+            if (ts.atlas_links && ts.atlas_links.length > 0) {
+              updated.atlasLinks = ts.atlas_links;
+            }
+            if (ts.docs_consulted && ts.docs_consulted.length > 0) {
+              updated.docsConsulted = ts.docs_consulted;
+            }
+            if (ts.graphql_summaries && ts.graphql_summaries.length > 0) {
+              const callDetails = ts.graphql_call_details ?? [];
+              updated.graphqlSummaries = ts.graphql_summaries.map((gs, gi) => ({
+                apiTarget: gs.api_target,
+                classification: {
+                  apiTarget: gs.api_target,
+                  isRejected: gs.classification.is_rejected,
+                  queryType: gs.classification.query_type,
+                  rejectionReason: gs.classification.rejection_reason,
+                },
+                entities: gs.entities,
+                executionTimeMs: gs.execution_time_ms,
+                links: gs.links,
+                query: callDetails[gi]?.query ?? null,
+                resolvedParams: callDetails[gi]?.resolved_params ?? null,
+              }));
+            }
+            if (ts.pipeline_steps && ts.pipeline_steps.length > 0) {
+              updated.pipelineSteps = ts.pipeline_steps.map((ps) => ({
+                detail: ps.detail,
+                label: ps.label,
+                node: ps.node,
+                pipelineType: classifyPipelineNode(ps.node),
+                queryIndex: ps.query_index,
+                startedAt: Date.now(),
+                status: 'completed' as const,
+              }));
+            }
+            return updated;
+          }),
+        );
+      } catch {
+        // Silently fail — details remain unloaded
+      }
+    },
+    [threadId, urlThreadId],
+  );
+
   return {
     clearChat,
     entitiesData,
     error,
+    fetchTurnDetail,
     isRestoredThread,
     isStreaming,
     messages,

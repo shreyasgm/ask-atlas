@@ -108,6 +108,13 @@ class ConversationSummary(BaseModel):
     updated_at: str
 
 
+class ConversationListResponse(BaseModel):
+    """Paginated response for GET /threads."""
+
+    conversations: list[ConversationSummary]
+    has_more: bool
+
+
 class MessageResponse(BaseModel):
     """A single message in the history response."""
 
@@ -139,12 +146,28 @@ class TurnSummaryResponse(BaseModel):
     sql_call_details: list[dict] = []
 
 
+class TurnMetadataResponse(BaseModel):
+    """Lightweight per-turn metadata — enough for stats/pills, no heavy data."""
+
+    has_queries: bool = False
+    query_count: int = 0
+    total_rows: int = 0
+    total_execution_time_ms: int = 0
+    total_graphql_time_ms: int = 0
+    has_atlas_links: bool = False
+    has_docs_consulted: bool = False
+    has_graphql_summaries: bool = False
+    has_pipeline_steps: bool = False
+    entities: dict | None = None
+
+
 class ThreadMessagesResponse(BaseModel):
     """Response for GET /threads/{id}/messages."""
 
     messages: list[MessageResponse]
     overrides: OverridesResponse
     turn_summaries: list[TurnSummaryResponse] = []
+    turn_metadata: list[TurnMetadataResponse] = []
 
 
 class FeedbackRequest(BaseModel):
@@ -226,7 +249,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     _state.atlas_sql = await AtlasTextToSQL.create_async()
     logger.info("AtlasTextToSQL ready — accepting requests  (pid=%d)", pid)
 
-    # Conversation store — share the Postgres pool if available, else in-memory
+    # Conversation & feedback stores — share the main connection pool.
     manager = getattr(_state.atlas_sql, "_async_checkpointer_manager", None)
     pool = manager.pool if manager else None
     if pool is not None:
@@ -236,7 +259,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         _state.conversation_store = InMemoryConversationStore()
         logger.info("Using InMemoryConversationStore")
 
-    # Feedback store — share the same Postgres pool, else in-memory
     if pool is not None:
         _state.feedback_store = PostgresFeedbackStore(pool)
         logger.info("Using PostgresFeedbackStore")
@@ -466,8 +488,10 @@ async def create_thread() -> dict:
 
 
 @router.get("/threads")
-async def list_threads(request: Request) -> list[ConversationSummary]:
-    """List conversations for a session (requires X-Session-Id header)."""
+async def list_threads(
+    request: Request, limit: int = 50, offset: int = 0,
+) -> ConversationListResponse:
+    """List conversations for a session with pagination."""
     session_id = request.headers.get("x-session-id")
     if not session_id:
         return JSONResponse(
@@ -476,22 +500,51 @@ async def list_threads(request: Request) -> list[ConversationSummary]:
         )
     store = _state.conversation_store
     if store is None:
-        return []
-    rows = await store.list_by_session(session_id)
-    return [
-        ConversationSummary(
-            thread_id=r.id,
-            title=r.title,
-            created_at=r.created_at.isoformat(),
-            updated_at=r.updated_at.isoformat(),
-        )
-        for r in rows
-    ]
+        return ConversationListResponse(conversations=[], has_more=False)
+    rows, has_more = await store.list_by_session(
+        session_id, limit=limit, offset=offset,
+    )
+    return ConversationListResponse(
+        conversations=[
+            ConversationSummary(
+                thread_id=r.id,
+                title=r.title,
+                created_at=r.created_at.isoformat(),
+                updated_at=r.updated_at.isoformat(),
+            )
+            for r in rows
+        ],
+        has_more=has_more,
+    )
+
+
+def _build_turn_metadata(ts: dict) -> TurnMetadataResponse:
+    """Extract lightweight metadata from a raw turn summary dict."""
+    queries = ts.get("queries", [])
+    return TurnMetadataResponse(
+        has_queries=len(queries) > 0,
+        query_count=len(queries),
+        total_rows=ts.get("total_rows", 0),
+        total_execution_time_ms=ts.get("total_execution_time_ms", 0),
+        total_graphql_time_ms=ts.get("total_graphql_time_ms", 0),
+        has_atlas_links=len(ts.get("atlas_links", [])) > 0,
+        has_docs_consulted=len(ts.get("docs_consulted", [])) > 0,
+        has_graphql_summaries=len(ts.get("graphql_summaries", [])) > 0,
+        has_pipeline_steps=len(ts.get("pipeline_steps", [])) > 0,
+        entities=ts.get("entities"),
+    )
 
 
 @router.get("/threads/{thread_id}/messages")
-async def get_thread_messages(thread_id: str) -> ThreadMessagesResponse:
-    """Retrieve message history and trade overrides for a thread from LangGraph state."""
+async def get_thread_messages(
+    thread_id: str, include_turns: bool = True,
+) -> ThreadMessagesResponse:
+    """Retrieve message history and trade overrides for a thread from LangGraph state.
+
+    Args:
+        include_turns: When True (default), return full turn_summaries.
+            When False, return only lightweight turn_metadata.
+    """
     atlas_sql = _get_atlas_sql()
     config = {"configurable": {"thread_id": thread_id}}
     state = await atlas_sql.agent.aget_state(config)
@@ -518,13 +571,41 @@ async def get_thread_messages(thread_id: str) -> ThreadMessagesResponse:
         override_mode=values.get("override_mode"),
     )
 
-    turn_summaries = [
-        TurnSummaryResponse(**ts) for ts in values.get("turn_summaries", [])
-    ]
+    raw_summaries = values.get("turn_summaries", [])
 
+    if include_turns:
+        turn_summaries = [TurnSummaryResponse(**ts) for ts in raw_summaries]
+        turn_metadata = [_build_turn_metadata(ts) for ts in raw_summaries]
+        return ThreadMessagesResponse(
+            messages=result,
+            overrides=overrides,
+            turn_summaries=turn_summaries,
+            turn_metadata=turn_metadata,
+        )
+
+    # Lightweight mode: metadata only, no heavy turn data
+    turn_metadata = [_build_turn_metadata(ts) for ts in raw_summaries]
     return ThreadMessagesResponse(
-        messages=result, overrides=overrides, turn_summaries=turn_summaries
+        messages=result,
+        overrides=overrides,
+        turn_metadata=turn_metadata,
     )
+
+
+@router.get("/threads/{thread_id}/turns/{turn_index}")
+async def get_turn_detail(thread_id: str, turn_index: int) -> TurnSummaryResponse:
+    """Retrieve a single turn summary by index (on-demand detail loading)."""
+    atlas_sql = _get_atlas_sql()
+    config = {"configurable": {"thread_id": thread_id}}
+    state = await atlas_sql.agent.aget_state(config)
+    values = state.values or {}
+    raw_summaries = values.get("turn_summaries", [])
+    if turn_index < 0 or turn_index >= len(raw_summaries):
+        return JSONResponse(
+            status_code=404,
+            content={"detail": f"Turn {turn_index} not found."},
+        )
+    return TurnSummaryResponse(**raw_summaries[turn_index])
 
 
 @router.delete("/threads/{thread_id}", status_code=204)

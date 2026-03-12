@@ -16,6 +16,7 @@ import LeftSidebar from './left-sidebar';
 interface ChatWorkspaceProps {
   activeThreadId: null | string;
   conversations: Array<ConversationSummary>;
+  conversationsHasMore?: boolean;
   conversationsLoading: boolean;
   entitiesData: EntitiesData | null;
   error: null | string;
@@ -24,6 +25,7 @@ interface ChatWorkspaceProps {
   messages: Array<ChatMessage>;
   onClear: () => void;
   onDeleteConversation: (threadId: string) => void;
+  onLoadMoreConversations?: () => void;
   onModeChange: (v: TradeMode | null) => void;
   onSchemaChange: (v: ClassificationSchema | null) => void;
   onSend: (text: string) => void;
@@ -58,6 +60,7 @@ function useIsDesktop() {
 export default function ChatWorkspace({
   activeThreadId,
   conversations,
+  conversationsHasMore,
   conversationsLoading,
   entitiesData,
   error,
@@ -66,6 +69,7 @@ export default function ChatWorkspace({
   messages,
   onClear,
   onDeleteConversation,
+  onLoadMoreConversations,
   onModeChange,
   onSchemaChange,
   onSend,
@@ -126,8 +130,10 @@ export default function ChatWorkspace({
           activeThreadId={activeThreadId}
           conversations={conversations}
           expanded={sidebarExpanded}
+          hasMore={conversationsHasMore}
           isLoading={conversationsLoading}
           onDeleteConversation={onDeleteConversation}
+          onLoadMore={onLoadMoreConversations}
           onNewChat={handleNewChat}
           onSelectConversation={handleSelectConversation}
           onToggle={toggleSidebar}
