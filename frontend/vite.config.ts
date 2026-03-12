@@ -24,10 +24,9 @@ export default defineConfig({
         changeOrigin: true,
         target: 'http://localhost:8000',
       },
-      '/ingest': {
+      '/ph': {
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/ingest/, ''),
-        target: 'https://us.i.posthog.com',
+        target: 'http://localhost:8000',
       },
     },
   },

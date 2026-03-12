@@ -1358,3 +1358,8 @@ async def root_health() -> dict:
 
 
 app.include_router(router, prefix="/api")
+
+# PostHog analytics reverse proxy (bypasses ad blockers)
+from src.posthog_proxy import router as posthog_router  # noqa: E402
+
+app.include_router(posthog_router)
