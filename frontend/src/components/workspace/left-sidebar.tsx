@@ -2,7 +2,6 @@ import { ChevronLeft, Globe, Menu, MessageSquare, Plus, Search, Trash2 } from 'l
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import type { ConversationSummary } from '@/types/chat';
-import ThemeToggle from '@/components/ui/theme-toggle';
 import { cn } from '@/lib/utils';
 
 interface LeftSidebarProps {
@@ -10,12 +9,15 @@ interface LeftSidebarProps {
   conversations: Array<ConversationSummary>;
   expanded: boolean;
   hasMore?: boolean;
+  isDragging?: boolean;
   isLoading: boolean;
   onDeleteConversation: (threadId: string) => void;
+  onDragHandlePointerDown?: (e: React.PointerEvent) => void;
   onLoadMore?: () => void;
   onNewChat: () => void;
   onSelectConversation: (threadId: string) => void;
   onToggle: () => void;
+  width?: number;
 }
 
 function formatRelativeTime(isoDate: string): string {
@@ -50,12 +52,15 @@ export default function LeftSidebar({
   conversations,
   expanded,
   hasMore,
+  isDragging,
   isLoading,
   onDeleteConversation,
+  onDragHandlePointerDown,
   onLoadMore,
   onNewChat,
   onSelectConversation,
   onToggle,
+  width,
 }: LeftSidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -88,15 +93,27 @@ export default function LeftSidebar({
         >
           <Plus className="h-4 w-4" />
         </button>
-        <div className="mt-auto mb-3">
-          <ThemeToggle compact />
-        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full w-[220px] shrink-0 flex-col border-r border-border bg-background">
+    <div
+      className="relative flex h-full shrink-0 flex-col border-r border-border bg-background"
+      style={width ? { width: `${width}px` } : { width: '220px' }}
+    >
+      {/* Drag handle for resizing */}
+      {onDragHandlePointerDown && (
+        <div
+          aria-label="Resize sidebar"
+          className={cn(
+            'absolute top-0 right-0 z-10 h-full w-1.5 cursor-col-resize transition-colors',
+            isDragging ? 'bg-primary/40' : 'hover:bg-primary/20',
+          )}
+          onPointerDown={onDragHandlePointerDown}
+          role="separator"
+        />
+      )}
       {/* Header: Logo + collapse */}
       <div className="flex items-center justify-between px-4 py-3">
         <Link className="flex items-center gap-2" to="/">
@@ -186,11 +203,6 @@ export default function LeftSidebar({
           </div>
         )}
       </div>
-
-      {/* Footer: theme toggle */}
-      <div className="border-t border-border px-3 py-2">
-        <ThemeToggle />
-      </div>
     </div>
   );
 }
@@ -228,7 +240,7 @@ function ConversationItem({
           )}
         />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-medium text-foreground">
+          <p className="text-xs leading-snug font-medium text-foreground">
             {conversation.title ?? 'Untitled conversation'}
           </p>
           <p className="text-[10px] text-muted-foreground">

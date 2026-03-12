@@ -10,6 +10,7 @@ import type {
   TradeMode,
   TradeOverrides,
 } from '@/types/chat';
+import { useSidebarResize } from '@/hooks/use-sidebar-resize';
 import CenterPanel from './center-panel';
 import LeftSidebar from './left-sidebar';
 
@@ -81,6 +82,11 @@ export default function ChatWorkspace({
 }: ChatWorkspaceProps) {
   const isDesktop = useIsDesktop();
   const [sidebarExpanded, setSidebarExpanded] = useState(isDesktop);
+  const {
+    isDragging,
+    onDragHandlePointerDown,
+    width: sidebarWidth,
+  } = useSidebarResize(isDesktop && sidebarExpanded);
 
   const handleSelectConversation = useCallback(
     (_threadId: string) => {
@@ -131,12 +137,15 @@ export default function ChatWorkspace({
           conversations={conversations}
           expanded={sidebarExpanded}
           hasMore={conversationsHasMore}
+          isDragging={isDragging}
           isLoading={conversationsLoading}
           onDeleteConversation={onDeleteConversation}
+          onDragHandlePointerDown={onDragHandlePointerDown}
           onLoadMore={onLoadMoreConversations}
           onNewChat={handleNewChat}
           onSelectConversation={handleSelectConversation}
           onToggle={toggleSidebar}
+          width={isDesktop ? sidebarWidth : undefined}
         />
       </div>
 
