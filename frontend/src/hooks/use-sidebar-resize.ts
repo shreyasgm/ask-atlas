@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 const STORAGE_KEY = 'ask-atlas-sidebar-width';
 const MIN_WIDTH = 180;
 const MAX_WIDTH = 480;
-const DEFAULT_WIDTH = 220;
+const DEFAULT_WIDTH = 260;
 
 function clampWidth(width: number): number {
   return Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, width));

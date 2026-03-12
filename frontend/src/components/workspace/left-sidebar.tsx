@@ -100,7 +100,7 @@ export default function LeftSidebar({
   return (
     <div
       className="relative flex h-full shrink-0 flex-col border-r border-border bg-background"
-      style={width ? { width: `${width}px` } : { width: '220px' }}
+      style={width ? { width: `${width}px` } : { width: '260px' }}
     >
       {/* Drag handle for resizing */}
       {onDragHandlePointerDown && (
