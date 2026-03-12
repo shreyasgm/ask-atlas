@@ -19,10 +19,11 @@ interface UseChatStreamOptions {
   onConversationChange?: () => void;
   onOptimisticConversation?: (threadId: string, questionText?: string) => void;
   onOverridesLoaded?: (o: TradeOverrides) => void;
+  onUpdateTitle?: (threadId: string, questionText: string) => void;
 }
 
 interface UseChatStreamReturn {
-  clearChat: () => void;
+  clearChat: (newThreadId?: string) => void;
   entitiesData: EntitiesData | null;
   error: null | string;
   fetchTurnDetail: (messageId: string, turnIndex: number) => Promise<void>;
@@ -149,6 +150,8 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
   onOptimisticConversationRef.current = options?.onOptimisticConversation;
   const onOverridesLoadedRef = useRef(options?.onOverridesLoaded);
   onOverridesLoadedRef.current = options?.onOverridesLoaded;
+  const onUpdateTitleRef = useRef(options?.onUpdateTitle);
+  onUpdateTitleRef.current = options?.onUpdateTitle;
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -189,6 +192,9 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
       const body: Record<string, string> = { question: trimmed };
       if (threadId) {
         body.thread_id = threadId;
+        // Update sidebar title when first message is sent on a pre-created
+        // "new chat" placeholder (which starts with a null/untitled title).
+        onUpdateTitleRef.current?.(threadId, trimmed);
       } else {
         // New conversation — generate thread ID client-side so we can
         // optimistically insert into the sidebar before the fetch starts.
@@ -681,21 +687,30 @@ export function useChatStream(options?: UseChatStreamOptions): UseChatStreamRetu
     [navigate, threadId],
   );
 
-  const clearChat = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    setEntitiesData(null);
-    setError(null);
-    setIsRestoredThread(false);
-    streamingRef.current = false;
-    setIsStreaming(false);
-    setMessages([]);
-    setPipelineSteps([]);
-    setQueryStats(null);
-    setThreadId(null);
-    navigate('/chat', { replace: true });
-  }, [navigate]);
+  const clearChat = useCallback(
+    (newThreadId?: string) => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      setEntitiesData(null);
+      setError(null);
+      setIsRestoredThread(false);
+      streamingRef.current = false;
+      setIsStreaming(false);
+      setMessages([]);
+      setPipelineSteps([]);
+      setQueryStats(null);
+      if (newThreadId) {
+        setThreadId(newThreadId);
+        historyLoaded.current = newThreadId;
+        navigate(`/chat/${newThreadId}`, { replace: true });
+      } else {
+        setThreadId(null);
+        navigate('/chat', { replace: true });
+      }
+    },
+    [navigate],
+  );
 
   const stopStreaming = useCallback(() => {
     if (abortControllerRef.current) {

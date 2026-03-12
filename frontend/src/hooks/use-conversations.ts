@@ -50,6 +50,7 @@ export interface UseConversationsReturn {
   isLoading: boolean;
   loadMore: () => void;
   refresh: () => void;
+  updateOptimisticTitle: (threadId: string, questionText: string) => void;
 }
 
 const DEBOUNCE_MS = 500;
@@ -179,6 +180,18 @@ export function useConversations(): UseConversationsReturn {
     });
   }, []);
 
+  // Update the title of an existing optimistic conversation (e.g. when the
+  // first message is sent on a previously-untitled "new chat" placeholder).
+  const updateOptimisticTitle = useCallback((threadId: string, questionText: string) => {
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.threadId === threadId
+          ? { ...c, title: deriveTitle(questionText), updatedAt: new Date().toISOString() }
+          : c,
+      ),
+    );
+  }, []);
+
   return {
     addOptimisticConversation,
     conversations,
@@ -187,5 +200,6 @@ export function useConversations(): UseConversationsReturn {
     isLoading,
     loadMore,
     refresh,
+    updateOptimisticTitle,
   };
 }

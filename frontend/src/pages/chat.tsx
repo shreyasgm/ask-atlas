@@ -13,6 +13,7 @@ export default function ChatPage() {
     isLoading: conversationsLoading,
     loadMore,
     refresh,
+    updateOptimisticTitle,
   } = useConversations();
 
   const { overrides, resetAll, setMode, setOverrides, setSchema, setSystemMode } =
@@ -34,6 +35,7 @@ export default function ChatPage() {
     onConversationChange: refresh,
     onOptimisticConversation: addOptimisticConversation,
     onOverridesLoaded: setOverrides,
+    onUpdateTitle: updateOptimisticTitle,
   });
 
   const handleSend = useCallback(
@@ -44,9 +46,11 @@ export default function ChatPage() {
   );
 
   const handleClear = useCallback(() => {
-    clearChatStream();
+    const newThreadId = crypto.randomUUID();
+    addOptimisticConversation(newThreadId);
+    clearChatStream(newThreadId);
     resetAll();
-  }, [clearChatStream, resetAll]);
+  }, [addOptimisticConversation, clearChatStream, resetAll]);
 
   return (
     <main className="h-screen bg-background text-foreground" id="main-content">

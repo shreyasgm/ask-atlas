@@ -70,10 +70,12 @@ vi.mock('@/hooks/use-trade-toggles', () => ({
 
 vi.mock('@/hooks/use-conversations', () => ({
   useConversations: () => ({
+    addOptimisticConversation: vi.fn(),
     conversations: [],
     deleteConversation: mockDeleteConversation,
     isLoading: false,
     refresh: mockRefresh,
+    updateOptimisticTitle: vi.fn(),
   }),
 }));
 

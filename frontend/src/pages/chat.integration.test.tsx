@@ -22,10 +22,12 @@ import {
 // Mock useConversations so integration tests focus on useChatStream behavior
 vi.mock('@/hooks/use-conversations', () => ({
   useConversations: () => ({
+    addOptimisticConversation: vi.fn(),
     conversations: [],
     deleteConversation: vi.fn(),
     isLoading: false,
     refresh: vi.fn(),
+    updateOptimisticTitle: vi.fn(),
   }),
 }));
 
