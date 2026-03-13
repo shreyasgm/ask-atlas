@@ -98,8 +98,11 @@ export default function ChatWorkspace({
   );
 
   const handleNewChat = useCallback(() => {
+    if (!isDesktop) {
+      setSidebarExpanded(false);
+    }
     onClear();
-  }, [onClear]);
+  }, [isDesktop, onClear]);
 
   const toggleSidebar = useCallback(() => {
     setSidebarExpanded((prev) => !prev);

@@ -1,4 +1,4 @@
-import { Globe, Menu } from 'lucide-react';
+import { Globe, Menu, Plus } from 'lucide-react';
 import ThemeToggle from '@/components/ui/theme-toggle';
 
 interface ChatTopBarProps {
@@ -23,9 +23,17 @@ export default function ChatTopBar({ onClear, onToggleSidebar, title }: ChatTopB
         <Globe className="h-5 w-5 text-primary" />
         <span className="text-sm font-bold text-foreground">Ask Atlas</span>
       </div>
-      {/* Theme toggle on mobile (sidebar not visible) */}
-      <div className="lg:hidden">
+      {/* Theme toggle + new chat on mobile */}
+      <div className="flex items-center gap-1 lg:hidden">
         <ThemeToggle />
+        <button
+          aria-label="New chat"
+          className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
+          onClick={onClear}
+          type="button"
+        >
+          <Plus className="h-5 w-5" />
+        </button>
       </div>
 
       {/* Desktop: title + actions */}
