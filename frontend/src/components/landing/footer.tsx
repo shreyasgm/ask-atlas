@@ -19,7 +19,7 @@ export default function Footer() {
         >
           Atlas of Economic Complexity
         </a>
-        <span className="font-mono text-muted-foreground/50">Apache 2.0</span>
+        <span className="font-mono text-muted-foreground/50">AGPL-3.0</span>
       </div>
     </footer>
   );
