@@ -330,6 +330,183 @@ class TestAgentNodeGraphqlOnly:
 
 
 # ---------------------------------------------------------------------------
+# Tests: auto-injected docs in user message
+# ---------------------------------------------------------------------------
+
+
+class TestDocsAutoInjection:
+    """Verify that docs_auto_chunks are injected into the user message sent to the LLM."""
+
+    async def test_auto_chunks_injected_into_last_human_message(self):
+        """When docs_auto_chunks is populated, the last HumanMessage sent to
+        the LLM should contain the documentation_context XML and framing text."""
+        captured_messages = []
+        mock_bound = MagicMock()
+
+        async def _capture(messages):
+            captured_messages.extend(messages)
+            return AIMessage(content="ECI measures complexity")
+
+        mock_bound.ainvoke = _capture
+        mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value = mock_bound
+
+        node = make_agent_node(
+            llm=mock_llm,
+            agent_mode=AgentMode.SQL_ONLY,
+            max_uses=3,
+            top_k_per_query=15,
+        )
+
+        chunks = [
+            {
+                "chunk_id": "abc123",
+                "doc_filename": "eci.md",
+                "doc_title": "ECI Methodology",
+                "section_title": "Overview",
+                "body": "The ECI measures productive knowledge.",
+            },
+            {
+                "chunk_id": "def456",
+                "doc_filename": "rca.md",
+                "doc_title": "RCA Definition",
+                "section_title": "Formula",
+                "body": "RCA is calculated as...",
+            },
+        ]
+        state = _base_state(
+            messages=[HumanMessage(content="What is ECI?")],
+            docs_auto_chunks=chunks,
+        )
+        await node(state)
+
+        # Find the HumanMessage sent to the LLM
+        human_msgs = [m for m in captured_messages if isinstance(m, HumanMessage)]
+        assert human_msgs, "No HumanMessage found in LLM call"
+        content = human_msgs[-1].content
+
+        # Question should come first (primacy)
+        assert content.startswith("What is ECI?")
+        # Framing text should be present
+        assert "Auto-retrieved documentation" in content
+        assert "Call docs_tool only if you need" in content
+        # Documentation XML should be present
+        assert "<documentation_context>" in content
+        assert 'source="eci.md"' in content
+        assert 'source="rca.md"' in content
+        assert "The ECI measures productive knowledge." in content
+
+    async def test_no_injection_when_auto_chunks_empty(self):
+        """When docs_auto_chunks is empty, the user message should be unmodified."""
+        captured_messages = []
+        mock_bound = MagicMock()
+
+        async def _capture(messages):
+            captured_messages.extend(messages)
+            return AIMessage(content="answer")
+
+        mock_bound.ainvoke = _capture
+        mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value = mock_bound
+
+        node = make_agent_node(
+            llm=mock_llm,
+            agent_mode=AgentMode.SQL_ONLY,
+            max_uses=3,
+            top_k_per_query=15,
+        )
+
+        state = _base_state(
+            messages=[HumanMessage(content="What did Brazil export?")],
+            docs_auto_chunks=[],
+        )
+        await node(state)
+
+        human_msgs = [m for m in captured_messages if isinstance(m, HumanMessage)]
+        assert human_msgs
+        content = human_msgs[-1].content
+        assert content == "What did Brazil export?"
+        assert "<documentation_context>" not in content
+
+    async def test_no_injection_when_auto_chunks_missing(self):
+        """When docs_auto_chunks is not in state at all, no injection occurs."""
+        captured_messages = []
+        mock_bound = MagicMock()
+
+        async def _capture(messages):
+            captured_messages.extend(messages)
+            return AIMessage(content="answer")
+
+        mock_bound.ainvoke = _capture
+        mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value = mock_bound
+
+        node = make_agent_node(
+            llm=mock_llm,
+            agent_mode=AgentMode.SQL_ONLY,
+            max_uses=3,
+            top_k_per_query=15,
+        )
+
+        # No docs_auto_chunks key at all
+        state = _base_state(
+            messages=[HumanMessage(content="What did Brazil export?")],
+        )
+        await node(state)
+
+        human_msgs = [m for m in captured_messages if isinstance(m, HumanMessage)]
+        content = human_msgs[-1].content
+        assert content == "What did Brazil export?"
+
+    async def test_injection_targets_last_human_message_in_multi_turn(self):
+        """In multi-turn conversations, only the last HumanMessage gets docs injected."""
+        captured_messages = []
+        mock_bound = MagicMock()
+
+        async def _capture(messages):
+            captured_messages.extend(messages)
+            return AIMessage(content="answer")
+
+        mock_bound.ainvoke = _capture
+        mock_llm = MagicMock()
+        mock_llm.bind_tools.return_value = mock_bound
+
+        node = make_agent_node(
+            llm=mock_llm,
+            agent_mode=AgentMode.SQL_ONLY,
+            max_uses=3,
+            top_k_per_query=15,
+        )
+
+        chunks = [
+            {
+                "chunk_id": "abc",
+                "doc_filename": "eci.md",
+                "doc_title": "ECI",
+                "section_title": "Intro",
+                "body": "ECI content",
+            }
+        ]
+        state = _base_state(
+            messages=[
+                HumanMessage(content="First question"),
+                AIMessage(content="First answer"),
+                HumanMessage(content="Follow-up question"),
+            ],
+            docs_auto_chunks=chunks,
+        )
+        await node(state)
+
+        human_msgs = [m for m in captured_messages if isinstance(m, HumanMessage)]
+        assert len(human_msgs) == 2
+        # First message should be unmodified
+        assert human_msgs[0].content == "First question"
+        # Last message should have docs injected
+        assert "<documentation_context>" in human_msgs[1].content
+        assert human_msgs[1].content.startswith("Follow-up question")
+
+
+# ---------------------------------------------------------------------------
 # Tests: orphan tool call repair
 # ---------------------------------------------------------------------------
 

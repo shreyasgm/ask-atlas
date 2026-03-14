@@ -96,101 +96,107 @@ class TestDocsPipelineE2E:
     """
 
     async def test_routing_and_final_answer(self, atlas_agent):
-        """Methodology question routes to docs_tool and answer references docs.
+        """Methodology question uses docs (auto-injected or docs_tool) and answer references ECI.
 
-        Combines assertions from:
-        - test_eci_methodology_routes_to_docs_pipeline (routing)
-        - test_final_answer_references_documentation (answer quality)
+        Verifies:
+        - No SQL/GraphQL tools were called (methodology = docs only)
+        - Final answer references ECI
+        - Docs were used (either via auto-injection or docs_tool)
         """
         events, answer, _tool_out = await _collect_stream_events(
             atlas_agent,
             "What is the Economic Complexity Index (ECI)? How is it calculated?",
         )
 
-        # --- Verify docs_tool was called (from test 1) ---
+        # --- Verify no SQL/GraphQL tools were called ---
         tool_calls = [e for e in events if e.message_type == "tool_call"]
-        docs_tool_calls = [e for e in tool_calls if e.tool_call == "docs_tool"]
-        assert docs_tool_calls, (
-            f"Expected docs_tool to be called, but got tool_calls: "
-            f"{[e.tool_call for e in tool_calls]}"
-        )
-
-        # --- Verify no SQL/GraphQL tools were called (from test 1) ---
         sql_or_gql_calls = [
             e for e in tool_calls if e.tool_call in ("query_tool", "atlas_graphql")
         ]
         assert not sql_or_gql_calls, (
-            f"Expected only docs_tool, but also got: "
+            f"Expected only docs path, but got data tool calls: "
             f"{[e.tool_call for e in sql_or_gql_calls]}"
         )
 
-        # --- Verify final answer references ECI docs (from test 4) ---
+        # --- Verify docs were used (auto-injection or docs_tool) ---
+        docs_tool_calls = [e for e in tool_calls if e.tool_call == "docs_tool"]
+        auto_inject_states = [
+            e
+            for e in events
+            if e.message_type == "pipeline_state"
+            and e.payload
+            and e.payload.get("stage") == "retrieve_docs_context"
+            and e.payload.get("chunk_count", 0) > 0
+        ]
+        assert docs_tool_calls or auto_inject_states, (
+            "Expected docs to be used via auto-injection or docs_tool, "
+            f"but got neither. tool_calls: {[e.tool_call for e in tool_calls]}"
+        )
+
+        # --- Verify final answer references ECI ---
         assert answer, "Agent returned an empty answer"
         answer_lower = answer.lower()
         assert "eci" in answer_lower or "economic complexity" in answer_lower, (
             f"Answer does not mention ECI: {answer[:300]}"
         )
 
-    async def test_pipeline_events_and_tool_output(self, atlas_agent):
-        """Pipeline nodes fire in order, state events carry correct data, tool output is substantive.
+    async def test_auto_injection_and_answer_quality(self, atlas_agent):
+        """Auto-injection fires, answer is substantive, and if docs_tool is
+        called its pipeline nodes fire in order.
 
-        Combines assertions from:
-        - test_docs_pipeline_nodes_fire_in_order (node sequence)
-        - test_pipeline_state_events_carry_correct_data (state payloads)
-        - test_tool_output_contains_synthesis (tool output length)
+        With working auto-injection, the agent may answer simple methodology
+        questions without calling docs_tool at all. This test verifies:
+        - retrieve_docs_context always fires (auto-injection)
+        - The final answer references PCI
+        - If docs_tool was called, pipeline nodes fire in correct order
         """
-        events, _answer, tool_output = await _collect_stream_events(
+        events, answer, tool_output = await _collect_stream_events(
             atlas_agent,
             "What is the Product Complexity Index (PCI)?",
         )
 
-        # --- Verify node_start sequence (from test 2) ---
-        node_starts = [
+        # --- Verify retrieve_docs_context fired (auto-injection) ---
+        auto_inject_starts = [
+            e
+            for e in events
+            if e.message_type == "node_start"
+            and e.payload
+            and e.payload.get("node") == "retrieve_docs_context"
+        ]
+        assert auto_inject_starts, (
+            "Expected retrieve_docs_context to fire for auto-injection"
+        )
+
+        # --- Verify auto-injection pipeline_state has chunk_count ---
+        auto_states = [
+            e.payload
+            for e in events
+            if e.message_type == "pipeline_state"
+            and e.payload
+            and e.payload.get("stage") == "retrieve_docs_context"
+        ]
+        assert auto_states, "Missing pipeline_state for retrieve_docs_context"
+        assert auto_states[0].get("chunk_count", 0) > 0, (
+            f"Auto-injection should retrieve chunks, got: {auto_states[0]}"
+        )
+
+        # --- Verify answer references PCI ---
+        assert answer, "Agent returned an empty answer"
+        answer_lower = answer.lower()
+        assert "pci" in answer_lower or "product complexity" in answer_lower, (
+            f"Answer does not mention PCI: {answer[:300]}"
+        )
+
+        # --- If docs_tool was called, verify pipeline node order ---
+        docs_pipeline_starts = [
             e.payload["node"]
             for e in events
             if e.message_type == "node_start"
             and e.payload
             and e.payload.get("node") in set(DOCS_PIPELINE_SEQUENCE)
         ]
-
-        assert node_starts == list(DOCS_PIPELINE_SEQUENCE), (
-            f"Expected docs pipeline sequence {DOCS_PIPELINE_SEQUENCE}, "
-            f"got node_starts: {node_starts}"
-        )
-
-        # --- Verify pipeline_state events (from test 3) ---
-        pipeline_states = {
-            e.payload["stage"]: e.payload
-            for e in events
-            if e.message_type == "pipeline_state"
-            and e.payload
-            and e.payload.get("stage") in set(DOCS_PIPELINE_SEQUENCE)
-        }
-
-        # extract_docs_question should report the question
-        assert "extract_docs_question" in pipeline_states, (
-            f"Missing pipeline_state for extract_docs_question. "
-            f"Got stages: {list(pipeline_states.keys())}"
-        )
-        extract_state = pipeline_states["extract_docs_question"]
-        assert (
-            "pci" in extract_state.get("question", "").lower()
-            or "product complexity" in extract_state.get("question", "").lower()
-        ), f"Expected PCI-related question, got: {extract_state.get('question')}"
-
-        # retrieve_docs should report chunk count
-        assert "retrieve_docs" in pipeline_states, (
-            f"Missing pipeline_state for retrieve_docs. "
-            f"Got stages: {list(pipeline_states.keys())}"
-        )
-        retrieve_state = pipeline_states["retrieve_docs"]
-        chunk_count = retrieve_state.get("chunk_count", 0)
-        assert chunk_count > 0, (
-            f"Expected retrieved chunks, got chunk_count={chunk_count}"
-        )
-
-        # --- Verify tool_output is substantive (from test 5) ---
-        assert tool_output, "No tool_output content found"
-        assert len(tool_output) > 50, (
-            f"Tool output seems too short to be a real synthesis: {tool_output[:200]}"
-        )
+        if docs_pipeline_starts:
+            assert docs_pipeline_starts == list(DOCS_PIPELINE_SEQUENCE), (
+                f"Expected docs pipeline sequence {DOCS_PIPELINE_SEQUENCE}, "
+                f"got: {docs_pipeline_starts}"
+            )
