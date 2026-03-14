@@ -1,11 +1,10 @@
-"""Integration tests for the docs pipeline with a real LLM.
+"""Integration tests for the docs pipeline with a real docs index.
 
-Verifies that the docs pipeline correctly selects documentation,
-synthesizes responses, and handles edge cases using a real LLM
-(no mocks). Uses the actual src/docs/ directory.
+Verifies that the docs retrieval pipeline correctly retrieves relevant
+documentation chunks and handles edge cases using the hybrid search index.
 
-Requires: LLM API keys configured in .env.
-Does NOT require a database.
+Requires: A built docs index at src/docs_index.db (run scripts/build_docs_index.py first).
+Does NOT require a database or LLM API keys — retrieval is purely local.
 
 Run::
 
@@ -18,13 +17,9 @@ from pathlib import Path
 
 import pytest
 
-from src.config import create_llm, get_settings
 from src.docs_pipeline import (
     _DOCS_STATE_DEFAULTS,
-    DocEntry,
-    load_docs_manifest,
-    select_docs,
-    synthesize_docs,
+    retrieve_docs,
 )
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
@@ -33,35 +28,20 @@ pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 # Fixtures
 # ---------------------------------------------------------------------------
 
-TECHNICAL_DOCS_DIR = Path(__file__).resolve().parents[1] / "docs"
+DOCS_INDEX_PATH = Path(__file__).resolve().parents[1] / "docs_index.db"
 
 
 @pytest.fixture(scope="module")
-def lightweight_llm():
-    """Create a real lightweight LLM for integration tests."""
-    settings = get_settings()
-    if (
-        not settings.openai_api_key
-        and not settings.anthropic_api_key
-        and not settings.google_api_key
-    ):
-        pytest.skip("No LLM API keys configured — skipping integration tests")
-    return create_llm(
-        settings.lightweight_model,
-        settings.lightweight_model_provider,
-        temperature=0,
-    )
+def docs_index():
+    """Load the real docs index for integration tests."""
+    if not DOCS_INDEX_PATH.exists():
+        pytest.skip("docs_index.db not found — run scripts/build_docs_index.py first")
 
+    from src.docs_retrieval import DocsIndex
 
-@pytest.fixture(scope="module")
-def docs_manifest() -> list[DocEntry]:
-    """Load the real technical documentation manifest."""
-    if not TECHNICAL_DOCS_DIR.is_dir():
-        pytest.skip("src/docs/ directory not found — skipping docs integration tests")
-    manifest = load_docs_manifest(TECHNICAL_DOCS_DIR)
-    if not manifest:
-        pytest.skip("No documentation files found in src/docs/")
-    return manifest
+    index = DocsIndex(DOCS_INDEX_PATH)
+    yield index
+    index.close()
 
 
 def _base_docs_state(**overrides) -> dict:
@@ -71,22 +51,11 @@ def _base_docs_state(**overrides) -> dict:
         "queries_executed": 0,
         "last_error": "",
         "retry_count": 0,
+        "docs_auto_chunks": [],
         **_DOCS_STATE_DEFAULTS,
     }
     state.update(overrides)
     return state
-
-
-async def _run_docs_pipeline(state: dict, lightweight_model, manifest) -> dict:
-    """Run select_docs + synthesize_docs in sequence, simulating graph execution."""
-    select_result = await select_docs(
-        state, lightweight_model=lightweight_model, manifest=manifest
-    )
-    updated_state = {**state, **select_result}
-    synth_result = await synthesize_docs(
-        updated_state, lightweight_model=lightweight_model, manifest=manifest
-    )
-    return {**select_result, **synth_result}
 
 
 # ---------------------------------------------------------------------------
@@ -95,31 +64,23 @@ async def _run_docs_pipeline(state: dict, lightweight_model, manifest) -> dict:
 
 
 class TestDocsEciMethodology:
-    async def test_eci_definition_produces_relevant_synthesis(
-        self, lightweight_llm, docs_manifest
-    ):
-        """The docs pipeline should produce a relevant response about ECI methodology."""
+    async def test_eci_definition_retrieves_relevant_chunks(self, docs_index):
+        """The docs pipeline should retrieve relevant chunks about ECI methodology."""
         state = _base_docs_state(
             docs_question="What is the Economic Complexity Index (ECI)? How is it calculated?",
             docs_context="User wants to understand complexity metrics.",
         )
 
-        result = await _run_docs_pipeline(
-            state, lightweight_model=lightweight_llm, manifest=docs_manifest
-        )
+        result = await retrieve_docs(state, docs_index=docs_index, top_k=6)
 
-        # Should have selected at least one doc
-        assert result["docs_selected_files"], "No documentation files were selected"
+        synthesis = result["docs_synthesis"]
+        assert synthesis, "No synthesis produced"
+        assert synthesis != "Documentation index not available."
 
-        # metrics_glossary.md is the primary ECI reference — it should be selected
-        assert "metrics_glossary.md" in result["docs_selected_files"], (
-            f"Expected metrics_glossary.md in selected files, got: {result['docs_selected_files']}"
-        )
-
-        # Synthesis should mention ECI-related concepts
-        synthesis = result["docs_synthesis"].lower()
-        assert "eci" in synthesis or "economic complexity" in synthesis, (
-            f"Synthesis does not mention ECI: {result['docs_synthesis'][:200]}"
+        # Should contain ECI-related content
+        synthesis_lower = synthesis.lower()
+        assert "eci" in synthesis_lower or "economic complexity" in synthesis_lower, (
+            f"Synthesis does not mention ECI: {synthesis[:200]}"
         )
 
 
@@ -129,50 +90,36 @@ class TestDocsEciMethodology:
 
 
 class TestDocsClassificationSystems:
-    async def test_hs92_vs_hs12_question(self, lightweight_llm, docs_manifest):
-        """A question about classification systems should be answered from docs."""
+    async def test_hs_classification_retrieves_relevant_chunks(self, docs_index):
+        """A question about classification systems should retrieve relevant docs."""
         state = _base_docs_state(
-            docs_question="What is the difference between HS92 and HS12 classification systems? What years does each cover?",
+            docs_question="What is the difference between HS92 and HS12 classification systems?",
         )
 
-        result = await _run_docs_pipeline(
-            state, lightweight_model=lightweight_llm, manifest=docs_manifest
-        )
+        result = await retrieve_docs(state, docs_index=docs_index, top_k=6)
 
-        assert result["docs_selected_files"], "No documentation files were selected"
-
-        synthesis = result["docs_synthesis"].lower()
-        # Should mention at least one of the classification systems
+        synthesis = result["docs_synthesis"]
+        assert synthesis, "No synthesis produced"
+        synthesis_lower = synthesis.lower()
         assert (
-            "hs92" in synthesis
-            or "hs12" in synthesis
-            or "harmonized system" in synthesis
-        ), (
-            f"Synthesis does not mention classification systems: {result['docs_synthesis'][:200]}"
-        )
+            "hs92" in synthesis_lower
+            or "hs12" in synthesis_lower
+            or "harmonized system" in synthesis_lower
+        ), f"Synthesis does not mention classification systems: {synthesis[:200]}"
 
 
 # ---------------------------------------------------------------------------
-# Tests: Out-of-scope handling
+# Tests: No index fallback
 # ---------------------------------------------------------------------------
 
 
-class TestDocsOutOfScope:
-    async def test_unrelated_question_still_produces_output(
-        self, lightweight_llm, docs_manifest
-    ):
-        """An unrelated question should still produce a response (even if noting irrelevance)."""
+class TestDocsNoIndex:
+    async def test_no_index_returns_fallback_message(self):
+        """Without a docs index, retrieve_docs should return a fallback message."""
         state = _base_docs_state(
-            docs_question="What is the weather in Boston today?",
+            docs_question="What is ECI?",
         )
 
-        result = await _run_docs_pipeline(
-            state, lightweight_model=lightweight_llm, manifest=docs_manifest
-        )
+        result = await retrieve_docs(state, docs_index=None, top_k=6)
 
-        # The pipeline should not crash — it should produce some output
-        assert result["docs_synthesis"], (
-            "Pipeline returned empty synthesis for out-of-scope question"
-        )
-        # It may note that it can't answer, or may try to answer from whatever it has
-        # Either way, it should not crash
+        assert result["docs_synthesis"] == "Documentation index not available."

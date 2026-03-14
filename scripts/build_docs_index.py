@@ -18,6 +18,7 @@ and copied into the Docker image.
 from __future__ import annotations
 
 import argparse
+import asyncio
 import hashlib
 import logging
 import sqlite3
@@ -36,6 +37,9 @@ from src.docs_retrieval import (  # noqa: E402
 )
 
 logger = logging.getLogger(__name__)
+
+# Max concurrent LLM calls (avoid rate limits while still being fast)
+LLM_CONCURRENCY = 20
 
 # ---------------------------------------------------------------------------
 # SQLite schema
@@ -135,16 +139,19 @@ def embed_texts(
 
 
 # ---------------------------------------------------------------------------
-# LLM calls for contextual retrieval + HyPE
+# Async LLM calls for contextual retrieval + HyPE
 # ---------------------------------------------------------------------------
 
 
-def generate_contextual_summary(chunk_body: str, doc_title: str) -> str:
+async def generate_contextual_summary(
+    chunk_body: str, doc_title: str, sem: asyncio.Semaphore
+) -> str:
     """Generate a contextual summary for a chunk using a lightweight LLM.
 
     Args:
         chunk_body: The chunk text.
         doc_title: The parent document title.
+        sem: Concurrency-limiting semaphore.
 
     Returns:
         A brief contextual summary string.
@@ -152,32 +159,32 @@ def generate_contextual_summary(chunk_body: str, doc_title: str) -> str:
     try:
         import litellm
 
-        response = litellm.completion(
-            model="openai/gpt-5-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a technical writer. Given a documentation chunk from "
-                        f"the document '{doc_title}' about the Atlas of Economic Complexity, "
-                        "write a 1-2 sentence contextual summary that situates this chunk "
-                        "within the broader document. Focus on what this chunk covers and "
-                        "why someone might search for it."
-                    ),
-                },
-                {"role": "user", "content": chunk_body[:3000]},
-            ],
-            max_tokens=150,
-            temperature=0,
-        )
+        async with sem:
+            response = await litellm.acompletion(
+                model="openai/gpt-5-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a technical writer. Given a documentation chunk from "
+                            f"the document '{doc_title}' about the Atlas of Economic Complexity, "
+                            "write a 1-2 sentence contextual summary that situates this chunk "
+                            "within the broader document. Focus on what this chunk covers and "
+                            "why someone might search for it."
+                        ),
+                    },
+                    {"role": "user", "content": chunk_body[:3000]},
+                ],
+                max_tokens=150,
+            )
         return response.choices[0].message.content.strip()
     except Exception:
         logger.warning("Contextual summary generation failed", exc_info=True)
         return ""
 
 
-def generate_hype_questions(
-    chunk_body: str, doc_title: str, section_title: str
+async def generate_hype_questions(
+    chunk_body: str, doc_title: str, section_title: str, sem: asyncio.Semaphore
 ) -> list[str]:
     """Generate hypothetical questions that this chunk would answer.
 
@@ -185,6 +192,7 @@ def generate_hype_questions(
         chunk_body: The chunk text.
         doc_title: The parent document title.
         section_title: The section title.
+        sem: Concurrency-limiting semaphore.
 
     Returns:
         List of 5 hypothetical questions.
@@ -192,23 +200,23 @@ def generate_hype_questions(
     try:
         import litellm
 
-        response = litellm.completion(
-            model="openai/gpt-5-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You generate search queries. Given a documentation chunk from "
-                        f"'{doc_title}' (section: '{section_title}'), generate exactly 5 "
-                        "diverse questions that a user might ask that this chunk would answer. "
-                        "Output one question per line, no numbering or bullets."
-                    ),
-                },
-                {"role": "user", "content": chunk_body[:3000]},
-            ],
-            max_tokens=300,
-            temperature=0.3,
-        )
+        async with sem:
+            response = await litellm.acompletion(
+                model="openai/gpt-5-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You generate search queries. Given a documentation chunk from "
+                            f"'{doc_title}' (section: '{section_title}'), generate exactly 5 "
+                            "diverse questions that a user might ask that this chunk would answer. "
+                            "Output one question per line, no numbering or bullets."
+                        ),
+                    },
+                    {"role": "user", "content": chunk_body[:3000]},
+                ],
+                max_tokens=300,
+            )
         questions = [
             q.strip()
             for q in response.choices[0].message.content.strip().split("\n")
@@ -230,10 +238,11 @@ def compute_file_checksum(filepath: Path) -> str:
     return hashlib.sha256(filepath.read_bytes()).hexdigest()
 
 
-def build_index(
+async def build_index(
     docs_dir: Path,
     output_path: Path,
     force: bool = False,
+    concurrency: int = LLM_CONCURRENCY,
 ) -> None:
     """Build or incrementally update the documentation search index.
 
@@ -241,6 +250,7 @@ def build_index(
         docs_dir: Path to the documentation directory.
         output_path: Path for the output SQLite database.
         force: If True, rebuild all files regardless of checksums.
+        concurrency: Max concurrent LLM calls.
     """
     conn = sqlite3.connect(str(output_path))
     conn.execute("PRAGMA journal_mode=WAL")
@@ -267,6 +277,18 @@ def build_index(
             logger.info("Will process: %s (changed or new)", entry.filename)
         else:
             logger.info("Skipping unchanged: %s", entry.filename)
+
+    # Remove checksums for files that no longer exist (before early exit)
+    current_filenames = {e.filename for e in manifest}
+    stored_filenames = {
+        row[0] for row in conn.execute("SELECT filename FROM file_checksums").fetchall()
+    }
+    removed = stored_filenames - current_filenames
+    for fn in removed:
+        conn.execute("DELETE FROM file_checksums WHERE filename = ?", (fn,))
+        logger.info("Removed stale checksum for: %s", fn)
+    if removed:
+        conn.commit()
 
     if not files_to_process:
         logger.info("All files up to date, nothing to do.")
@@ -311,20 +333,41 @@ def build_index(
         logger.info("  %s: %d chunks", entry.filename, len(chunks))
         all_chunks.extend(chunks)
 
-    # Generate contextual summaries
-    logger.info("Generating contextual summaries for %d chunks...", len(all_chunks))
-    for chunk in all_chunks:
-        chunk["contextual_summary"] = generate_contextual_summary(
-            chunk["body"], chunk["doc_title"]
-        )
+    # --- Async LLM calls (summaries + HyPE questions in parallel) ---
+    sem = asyncio.Semaphore(concurrency)
 
-    # Generate HyPE questions
-    logger.info("Generating HyPE questions for %d chunks...", len(all_chunks))
-    all_hype: list[dict] = []
-    for chunk in all_chunks:
-        questions = generate_hype_questions(
-            chunk["body"], chunk["doc_title"], chunk["section_title"]
+    # Generate contextual summaries concurrently
+    logger.info(
+        "Generating contextual summaries for %d chunks (concurrency=%d)...",
+        len(all_chunks),
+        concurrency,
+    )
+    summary_tasks = [
+        generate_contextual_summary(chunk["body"], chunk["doc_title"], sem)
+        for chunk in all_chunks
+    ]
+    summaries = await asyncio.gather(*summary_tasks)
+    for chunk, summary in zip(all_chunks, summaries):
+        chunk["contextual_summary"] = summary
+    logger.info("Contextual summaries complete.")
+
+    # Generate HyPE questions concurrently
+    logger.info(
+        "Generating HyPE questions for %d chunks (concurrency=%d)...",
+        len(all_chunks),
+        concurrency,
+    )
+    hype_tasks = [
+        generate_hype_questions(
+            chunk["body"], chunk["doc_title"], chunk["section_title"], sem
         )
+        for chunk in all_chunks
+    ]
+    hype_results = await asyncio.gather(*hype_tasks)
+    logger.info("HyPE question generation complete.")
+
+    all_hype: list[dict] = []
+    for chunk, questions in zip(all_chunks, hype_results):
         for q in questions:
             q_id = hashlib.sha256(f"{chunk['chunk_id']}::{q}".encode()).hexdigest()[:16]
             all_hype.append(
@@ -387,16 +430,6 @@ def build_index(
             "INSERT OR REPLACE INTO file_checksums (filename, checksum) VALUES (?, ?)",
             (entry.filename, checksum),
         )
-
-    # Remove checksums for files that no longer exist
-    current_filenames = {e.filename for e in manifest}
-    stored_filenames = {
-        row[0] for row in conn.execute("SELECT filename FROM file_checksums").fetchall()
-    }
-    removed = stored_filenames - current_filenames
-    for fn in removed:
-        conn.execute("DELETE FROM file_checksums WHERE filename = ?", (fn,))
-        logger.info("Removed stale checksum for: %s", fn)
 
     conn.commit()
 
@@ -474,6 +507,12 @@ def main() -> None:
         action="store_true",
         help="Rebuild all files regardless of checksums",
     )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=LLM_CONCURRENCY,
+        help=f"Max concurrent LLM calls (default: {LLM_CONCURRENCY})",
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -481,7 +520,7 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
-    build_index(args.docs_dir, args.output, args.force)
+    asyncio.run(build_index(args.docs_dir, args.output, args.force, args.concurrency))
 
 
 if __name__ == "__main__":
