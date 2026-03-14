@@ -126,9 +126,10 @@ def embed_texts(
     from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
 
     model = TextEmbeddingModel.from_pretrained("text-embedding-005")
-    # Vertex AI allows up to 250 texts per batch
+    # Vertex AI text-embedding-005 has a 20,000 token per-request limit.
+    # With doc chunks averaging ~400 tokens, batch size of 20 stays safely under.
     all_embeddings: list[list[float]] = []
-    batch_size = 100
+    batch_size = 20
     for i in range(0, len(texts), batch_size):
         batch = texts[i : i + batch_size]
         inputs = [TextEmbeddingInput(t, task_type=task_type) for t in batch]
@@ -148,6 +149,8 @@ async def generate_contextual_summary(
 ) -> str:
     """Generate a contextual summary for a chunk using a lightweight LLM.
 
+    Retries once on failure before falling back to an empty string.
+
     Args:
         chunk_body: The chunk text.
         doc_title: The parent document title.
@@ -156,37 +159,48 @@ async def generate_contextual_summary(
     Returns:
         A brief contextual summary string.
     """
-    try:
-        import litellm
+    import litellm
 
-        async with sem:
-            response = await litellm.acompletion(
-                model="openai/gpt-5-mini",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a technical writer. Given a documentation chunk from "
-                            f"the document '{doc_title}' about the Atlas of Economic Complexity, "
-                            "write a 1-2 sentence contextual summary that situates this chunk "
-                            "within the broader document. Focus on what this chunk covers and "
-                            "why someone might search for it."
-                        ),
-                    },
-                    {"role": "user", "content": chunk_body[:3000]},
-                ],
-                max_tokens=1000,
-            )
-        return response.choices[0].message.content.strip()
-    except Exception:
-        logger.warning("Contextual summary generation failed", exc_info=True)
-        return ""
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are a technical writer. Given a documentation chunk from "
+                f"the document '{doc_title}' about the Atlas of Economic Complexity, "
+                "write a 1-2 sentence contextual summary that situates this chunk "
+                "within the broader document. Focus on what this chunk covers and "
+                "why someone might search for it."
+            ),
+        },
+        {"role": "user", "content": chunk_body[:3000]},
+    ]
+
+    for attempt in range(2):
+        try:
+            async with sem:
+                response = await litellm.acompletion(
+                    model="openai/gpt-5-mini",
+                    messages=messages,
+                    max_tokens=1000,
+                )
+            return response.choices[0].message.content.strip()
+        except Exception:
+            if attempt == 0:
+                logger.warning("Contextual summary generation failed, retrying...")
+                await asyncio.sleep(1)
+            else:
+                logger.warning(
+                    "Contextual summary generation failed after retry", exc_info=True
+                )
+    return ""
 
 
 async def generate_hype_questions(
     chunk_body: str, doc_title: str, section_title: str, sem: asyncio.Semaphore
 ) -> list[str]:
     """Generate hypothetical questions that this chunk would answer.
+
+    Retries once on failure before falling back to an empty list.
 
     Args:
         chunk_body: The chunk text.
@@ -197,35 +211,44 @@ async def generate_hype_questions(
     Returns:
         List of 5 hypothetical questions.
     """
-    try:
-        import litellm
+    import litellm
 
-        async with sem:
-            response = await litellm.acompletion(
-                model="openai/gpt-5-mini",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You generate search queries. Given a documentation chunk from "
-                            f"'{doc_title}' (section: '{section_title}'), generate exactly 5 "
-                            "diverse questions that a user might ask that this chunk would answer. "
-                            "Output one question per line, no numbering or bullets."
-                        ),
-                    },
-                    {"role": "user", "content": chunk_body[:3000]},
-                ],
-                max_tokens=2000,
-            )
-        questions = [
-            q.strip()
-            for q in response.choices[0].message.content.strip().split("\n")
-            if q.strip()
-        ]
-        return questions[:5]
-    except Exception:
-        logger.warning("HyPE question generation failed", exc_info=True)
-        return []
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You generate search queries. Given a documentation chunk from "
+                f"'{doc_title}' (section: '{section_title}'), generate exactly 5 "
+                "diverse questions that a user might ask that this chunk would answer. "
+                "Output one question per line, no numbering or bullets."
+            ),
+        },
+        {"role": "user", "content": chunk_body[:3000]},
+    ]
+
+    for attempt in range(2):
+        try:
+            async with sem:
+                response = await litellm.acompletion(
+                    model="openai/gpt-5-mini",
+                    messages=messages,
+                    max_tokens=2000,
+                )
+            questions = [
+                q.strip()
+                for q in response.choices[0].message.content.strip().split("\n")
+                if q.strip()
+            ]
+            return questions[:5]
+        except Exception:
+            if attempt == 0:
+                logger.warning("HyPE question generation failed, retrying...")
+                await asyncio.sleep(1)
+            else:
+                logger.warning(
+                    "HyPE question generation failed after retry", exc_info=True
+                )
+    return []
 
 
 # ---------------------------------------------------------------------------
@@ -305,142 +328,225 @@ async def build_index(
         conn.close()
         return
 
-    # Process changed files
-    all_chunks: list[dict] = []
+    # -----------------------------------------------------------------------
+    # Phase 1: Chunking — insert chunks into DB immediately (empty summary)
+    # -----------------------------------------------------------------------
+    all_chunk_ids: list[str] = []
     for entry in files_to_process:
-        # Remove old data for this file
-        old_chunk_ids = [
+        # Chunk the document in memory first
+        chunks = chunk_markdown_by_headers(
+            entry.content, entry.filename, entry.title, entry.keywords
+        )
+        new_chunk_ids = {c["chunk_id"] for c in chunks}
+
+        # Check what already exists in the DB for this file
+        old_chunk_ids = {
             row[0]
             for row in conn.execute(
                 "SELECT chunk_id FROM chunks WHERE doc_filename = ?",
                 (entry.filename,),
             ).fetchall()
-        ]
+        }
+
+        if new_chunk_ids == old_chunk_ids:
+            # Content unchanged (resume case) — keep existing data, skip cleanup
+            logger.info(
+                "  %s: %d chunks already in DB (resuming)", entry.filename, len(chunks)
+            )
+            all_chunk_ids.extend(new_chunk_ids)
+            continue
+
+        # Content changed — remove old data and insert new chunks
         if old_chunk_ids:
-            placeholders = ",".join("?" * len(old_chunk_ids))
+            old_list = list(old_chunk_ids)
+            placeholders = ",".join("?" * len(old_list))
             conn.execute(
                 f"DELETE FROM hype_embeddings WHERE question_id IN "
                 f"(SELECT question_id FROM hype_questions WHERE chunk_id IN ({placeholders}))",
-                old_chunk_ids,
+                old_list,
             )
             conn.execute(
                 f"DELETE FROM hype_questions WHERE chunk_id IN ({placeholders})",
-                old_chunk_ids,
+                old_list,
             )
             conn.execute(
                 f"DELETE FROM chunk_embeddings WHERE chunk_id IN ({placeholders})",
-                old_chunk_ids,
+                old_list,
             )
             conn.execute(
                 f"DELETE FROM chunks WHERE chunk_id IN ({placeholders})",
-                old_chunk_ids,
+                old_list,
             )
 
-        # Chunk the document
-        chunks = chunk_markdown_by_headers(
-            entry.content, entry.filename, entry.title, entry.keywords
-        )
         logger.info("  %s: %d chunks", entry.filename, len(chunks))
-        all_chunks.extend(chunks)
+        for chunk in chunks:
+            conn.execute(
+                "INSERT OR REPLACE INTO chunks "
+                "(chunk_id, doc_filename, doc_title, section_title, body, contextual_summary) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    chunk["chunk_id"],
+                    chunk["doc_filename"],
+                    chunk["doc_title"],
+                    chunk["section_title"],
+                    chunk["body"],
+                    "",
+                ),
+            )
+            all_chunk_ids.append(chunk["chunk_id"])
 
-    # --- Async LLM calls (summaries + HyPE questions in parallel) ---
+    conn.commit()
+    logger.info("Phase 1 complete: %d chunks to process.", len(all_chunk_ids))
+
+    # -----------------------------------------------------------------------
+    # Phase 2: Contextual summaries — only for chunks with empty summary
+    # -----------------------------------------------------------------------
     sem = asyncio.Semaphore(concurrency)
 
-    # Generate contextual summaries concurrently
-    logger.info(
-        "Generating contextual summaries for %d chunks (concurrency=%d)...",
-        len(all_chunks),
-        concurrency,
-    )
-    summary_tasks = [
-        generate_contextual_summary(chunk["body"], chunk["doc_title"], sem)
-        for chunk in all_chunks
-    ]
-    summaries = await asyncio.gather(*summary_tasks)
-    for chunk, summary in zip(all_chunks, summaries):
-        chunk["contextual_summary"] = summary
-    logger.info("Contextual summaries complete.")
+    chunks_needing_summary = conn.execute(
+        "SELECT chunk_id, body, doc_title FROM chunks "
+        "WHERE contextual_summary = '' AND chunk_id IN ({})".format(
+            ",".join("?" * len(all_chunk_ids))
+        ),
+        all_chunk_ids,
+    ).fetchall()
 
-    # Generate HyPE questions concurrently
-    logger.info(
-        "Generating HyPE questions for %d chunks (concurrency=%d)...",
-        len(all_chunks),
-        concurrency,
-    )
-    hype_tasks = [
-        generate_hype_questions(
-            chunk["body"], chunk["doc_title"], chunk["section_title"], sem
+    if chunks_needing_summary:
+        logger.info(
+            "Phase 2: Generating contextual summaries for %d chunks (concurrency=%d)...",
+            len(chunks_needing_summary),
+            concurrency,
         )
-        for chunk in all_chunks
-    ]
-    hype_results = await asyncio.gather(*hype_tasks)
-    non_empty = sum(1 for r in hype_results if r)
-    total_qs = sum(len(r) for r in hype_results)
-    logger.info(
-        "HyPE question generation complete: %d/%d chunks produced questions (%d total)",
-        non_empty,
-        len(hype_results),
-        total_qs,
-    )
+        summary_tasks = [
+            generate_contextual_summary(row[1], row[2], sem)
+            for row in chunks_needing_summary
+        ]
+        summaries = await asyncio.gather(*summary_tasks)
+        for row, summary in zip(chunks_needing_summary, summaries):
+            if summary:
+                conn.execute(
+                    "UPDATE chunks SET contextual_summary = ? WHERE chunk_id = ?",
+                    (summary, row[0]),
+                )
+        conn.commit()
+        logger.info("Phase 2 complete: contextual summaries generated.")
+    else:
+        logger.info("Phase 2: All chunks already have summaries, skipping.")
 
-    all_hype: list[dict] = []
-    for chunk, questions in zip(all_chunks, hype_results):
-        for q in questions:
-            q_id = hashlib.sha256(f"{chunk['chunk_id']}::{q}".encode()).hexdigest()[:16]
-            all_hype.append(
-                {
-                    "question_id": q_id,
-                    "chunk_id": chunk["chunk_id"],
-                    "question": q,
-                }
+    # -----------------------------------------------------------------------
+    # Phase 3: HyPE questions — only for chunks without questions
+    # -----------------------------------------------------------------------
+    existing_hype_chunk_ids = {
+        row[0]
+        for row in conn.execute(
+            "SELECT DISTINCT chunk_id FROM hype_questions"
+        ).fetchall()
+    }
+    chunks_needing_hype = conn.execute(
+        "SELECT chunk_id, body, doc_title, section_title FROM chunks "
+        "WHERE chunk_id IN ({})".format(",".join("?" * len(all_chunk_ids))),
+        all_chunk_ids,
+    ).fetchall()
+    chunks_needing_hype = [
+        row for row in chunks_needing_hype if row[0] not in existing_hype_chunk_ids
+    ]
+
+    if chunks_needing_hype:
+        logger.info(
+            "Phase 3: Generating HyPE questions for %d chunks (concurrency=%d)...",
+            len(chunks_needing_hype),
+            concurrency,
+        )
+        hype_tasks = [
+            generate_hype_questions(row[1], row[2], row[3], sem)
+            for row in chunks_needing_hype
+        ]
+        hype_results = await asyncio.gather(*hype_tasks)
+        non_empty = sum(1 for r in hype_results if r)
+        total_qs = sum(len(r) for r in hype_results)
+        logger.info(
+            "HyPE generation: %d/%d chunks produced questions (%d total)",
+            non_empty,
+            len(hype_results),
+            total_qs,
+        )
+
+        for row, questions in zip(chunks_needing_hype, hype_results):
+            for q in questions:
+                q_id = hashlib.sha256(f"{row[0]}::{q}".encode()).hexdigest()[:16]
+                conn.execute(
+                    "INSERT OR REPLACE INTO hype_questions "
+                    "(question_id, chunk_id, question) VALUES (?, ?, ?)",
+                    (q_id, row[0], q),
+                )
+        conn.commit()
+        logger.info("Phase 3 complete: HyPE questions inserted.")
+    else:
+        logger.info("Phase 3: All chunks already have HyPE questions, skipping.")
+
+    # -----------------------------------------------------------------------
+    # Phase 4: Chunk embeddings — only for chunks without embeddings
+    # -----------------------------------------------------------------------
+    existing_chunk_emb_ids = {
+        row[0]
+        for row in conn.execute("SELECT chunk_id FROM chunk_embeddings").fetchall()
+    }
+    chunks_needing_emb = conn.execute(
+        "SELECT chunk_id, body, contextual_summary FROM chunks "
+        "WHERE chunk_id IN ({})".format(",".join("?" * len(all_chunk_ids))),
+        all_chunk_ids,
+    ).fetchall()
+    chunks_needing_emb = [
+        row for row in chunks_needing_emb if row[0] not in existing_chunk_emb_ids
+    ]
+
+    if chunks_needing_emb:
+        logger.info("Phase 4: Embedding %d chunks...", len(chunks_needing_emb))
+        chunk_texts = [f"{row[2]} {row[1]}" for row in chunks_needing_emb]
+        chunk_embeddings = embed_texts(chunk_texts, task_type="RETRIEVAL_DOCUMENT")
+        for row, emb in zip(chunks_needing_emb, chunk_embeddings):
+            conn.execute(
+                "INSERT OR REPLACE INTO chunk_embeddings (chunk_id, embedding) VALUES (?, ?)",
+                (row[0], _serialize_embedding(emb)),
             )
+        conn.commit()
+        logger.info("Phase 4 complete: chunk embeddings stored.")
+    else:
+        logger.info("Phase 4: All chunks already have embeddings, skipping.")
 
-    # Insert chunks
-    logger.info("Inserting %d chunks...", len(all_chunks))
-    for chunk in all_chunks:
-        conn.execute(
-            "INSERT OR REPLACE INTO chunks (chunk_id, doc_filename, doc_title, section_title, body, contextual_summary) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (
-                chunk["chunk_id"],
-                chunk["doc_filename"],
-                chunk["doc_title"],
-                chunk["section_title"],
-                chunk["body"],
-                chunk.get("contextual_summary", ""),
-            ),
+    # -----------------------------------------------------------------------
+    # Phase 5: HyPE embeddings — only for questions without embeddings
+    # -----------------------------------------------------------------------
+    existing_hype_emb_ids = {
+        row[0]
+        for row in conn.execute("SELECT question_id FROM hype_embeddings").fetchall()
+    }
+    questions_needing_emb = conn.execute(
+        "SELECT question_id, question FROM hype_questions "
+        "WHERE chunk_id IN ({})".format(",".join("?" * len(all_chunk_ids))),
+        all_chunk_ids,
+    ).fetchall()
+    questions_needing_emb = [
+        row for row in questions_needing_emb if row[0] not in existing_hype_emb_ids
+    ]
+
+    if questions_needing_emb:
+        logger.info(
+            "Phase 5: Embedding %d HyPE questions...", len(questions_needing_emb)
         )
-
-    # Insert HyPE questions
-    logger.info("Inserting %d HyPE questions...", len(all_hype))
-    for hq in all_hype:
-        conn.execute(
-            "INSERT OR REPLACE INTO hype_questions (question_id, chunk_id, question) VALUES (?, ?, ?)",
-            (hq["question_id"], hq["chunk_id"], hq["question"]),
-        )
-
-    # Embed chunks (body + contextual summary)
-    logger.info("Embedding %d chunks...", len(all_chunks))
-    chunk_texts = [f"{c.get('contextual_summary', '')} {c['body']}" for c in all_chunks]
-    chunk_embeddings = embed_texts(chunk_texts, task_type="RETRIEVAL_DOCUMENT")
-    for chunk, emb in zip(all_chunks, chunk_embeddings):
-        conn.execute(
-            "INSERT OR REPLACE INTO chunk_embeddings (chunk_id, embedding) VALUES (?, ?)",
-            (chunk["chunk_id"], _serialize_embedding(emb)),
-        )
-
-    # Embed HyPE questions
-    if all_hype:
-        logger.info("Embedding %d HyPE questions...", len(all_hype))
-        hype_texts = [hq["question"] for hq in all_hype]
+        hype_texts = [row[1] for row in questions_needing_emb]
         hype_embeddings = embed_texts(hype_texts, task_type="RETRIEVAL_QUERY")
-        for hq, emb in zip(all_hype, hype_embeddings):
+        for row, emb in zip(questions_needing_emb, hype_embeddings):
             conn.execute(
                 "INSERT OR REPLACE INTO hype_embeddings (question_id, embedding) VALUES (?, ?)",
-                (hq["question_id"], _serialize_embedding(emb)),
+                (row[0], _serialize_embedding(emb)),
             )
+        conn.commit()
+        logger.info("Phase 5 complete: HyPE embeddings stored.")
+    else:
+        logger.info("Phase 5: All HyPE questions already have embeddings, skipping.")
 
-    # Update file checksums
+    # Update file checksums (only after all phases complete)
     for entry in files_to_process:
         checksum = compute_file_checksum(entry.full_path)
         conn.execute(
@@ -497,6 +603,173 @@ async def build_index(
     logger.info("Index built successfully at %s", output_path)
 
 
+async def fill_gaps(
+    output_path: Path,
+    concurrency: int = LLM_CONCURRENCY,
+) -> None:
+    """Fill gaps in an existing index: missing summaries, questions, or embeddings.
+
+    Scans all chunks in the DB and runs only the phases needed to complete them.
+    Does not re-chunk or modify file checksums.
+
+    Args:
+        output_path: Path to the existing SQLite database.
+        concurrency: Max concurrent LLM calls.
+    """
+    if not output_path.exists():
+        logger.error("No index found at %s — run a full build first.", output_path)
+        return
+
+    conn = sqlite3.connect(str(output_path))
+    all_chunk_ids = [
+        row[0] for row in conn.execute("SELECT chunk_id FROM chunks").fetchall()
+    ]
+    if not all_chunk_ids:
+        logger.info("No chunks in index, nothing to fill.")
+        conn.close()
+        return
+
+    logger.info(
+        "fill-gaps: scanning %d chunks for incomplete data...", len(all_chunk_ids)
+    )
+    sem = asyncio.Semaphore(concurrency)
+
+    # Phase 2: summaries
+    chunks_needing_summary = conn.execute(
+        "SELECT chunk_id, body, doc_title FROM chunks WHERE contextual_summary = ''"
+    ).fetchall()
+    if chunks_needing_summary:
+        logger.info(
+            "Generating summaries for %d chunks...", len(chunks_needing_summary)
+        )
+        tasks = [
+            generate_contextual_summary(row[1], row[2], sem)
+            for row in chunks_needing_summary
+        ]
+        summaries = await asyncio.gather(*tasks)
+        for row, summary in zip(chunks_needing_summary, summaries):
+            if summary:
+                conn.execute(
+                    "UPDATE chunks SET contextual_summary = ? WHERE chunk_id = ?",
+                    (summary, row[0]),
+                )
+        conn.commit()
+        filled = sum(1 for s in summaries if s)
+        logger.info(
+            "Summaries: filled %d/%d gaps.", filled, len(chunks_needing_summary)
+        )
+    else:
+        logger.info("All chunks have summaries.")
+
+    # Phase 3: HyPE questions
+    existing_hype_chunk_ids = {
+        row[0]
+        for row in conn.execute(
+            "SELECT DISTINCT chunk_id FROM hype_questions"
+        ).fetchall()
+    }
+    chunks_needing_hype = [
+        cid for cid in all_chunk_ids if cid not in existing_hype_chunk_ids
+    ]
+    if chunks_needing_hype:
+        placeholders = ",".join("?" * len(chunks_needing_hype))
+        rows = conn.execute(
+            f"SELECT chunk_id, body, doc_title, section_title FROM chunks "
+            f"WHERE chunk_id IN ({placeholders})",
+            chunks_needing_hype,
+        ).fetchall()
+        logger.info("Generating HyPE questions for %d chunks...", len(rows))
+        tasks = [generate_hype_questions(row[1], row[2], row[3], sem) for row in rows]
+        results = await asyncio.gather(*tasks)
+        for row, questions in zip(rows, results):
+            for q in questions:
+                q_id = hashlib.sha256(f"{row[0]}::{q}".encode()).hexdigest()[:16]
+                conn.execute(
+                    "INSERT OR REPLACE INTO hype_questions "
+                    "(question_id, chunk_id, question) VALUES (?, ?, ?)",
+                    (q_id, row[0], q),
+                )
+        conn.commit()
+        logger.info("HyPE questions: filled gaps for %d chunks.", len(rows))
+    else:
+        logger.info("All chunks have HyPE questions.")
+
+    # Phase 4: chunk embeddings
+    existing_emb_ids = {
+        row[0]
+        for row in conn.execute("SELECT chunk_id FROM chunk_embeddings").fetchall()
+    }
+    chunks_needing_emb = [cid for cid in all_chunk_ids if cid not in existing_emb_ids]
+    if chunks_needing_emb:
+        placeholders = ",".join("?" * len(chunks_needing_emb))
+        rows = conn.execute(
+            f"SELECT chunk_id, body, contextual_summary FROM chunks "
+            f"WHERE chunk_id IN ({placeholders})",
+            chunks_needing_emb,
+        ).fetchall()
+        logger.info("Embedding %d chunks...", len(rows))
+        texts = [f"{row[2]} {row[1]}" for row in rows]
+        embeddings = embed_texts(texts, task_type="RETRIEVAL_DOCUMENT")
+        for row, emb in zip(rows, embeddings):
+            conn.execute(
+                "INSERT OR REPLACE INTO chunk_embeddings (chunk_id, embedding) VALUES (?, ?)",
+                (row[0], _serialize_embedding(emb)),
+            )
+        conn.commit()
+        logger.info("Chunk embeddings: filled %d gaps.", len(rows))
+    else:
+        logger.info("All chunks have embeddings.")
+
+    # Phase 5: HyPE embeddings
+    existing_hype_emb_ids = {
+        row[0]
+        for row in conn.execute("SELECT question_id FROM hype_embeddings").fetchall()
+    }
+    all_questions = conn.execute(
+        "SELECT question_id, question FROM hype_questions"
+    ).fetchall()
+    questions_needing_emb = [
+        row for row in all_questions if row[0] not in existing_hype_emb_ids
+    ]
+    if questions_needing_emb:
+        logger.info("Embedding %d HyPE questions...", len(questions_needing_emb))
+        texts = [row[1] for row in questions_needing_emb]
+        embeddings = embed_texts(texts, task_type="RETRIEVAL_QUERY")
+        for row, emb in zip(questions_needing_emb, embeddings):
+            conn.execute(
+                "INSERT OR REPLACE INTO hype_embeddings (question_id, embedding) VALUES (?, ?)",
+                (row[0], _serialize_embedding(emb)),
+            )
+        conn.commit()
+        logger.info("HyPE embeddings: filled %d gaps.", len(questions_needing_emb))
+    else:
+        logger.info("All HyPE questions have embeddings.")
+
+    # Rebuild sqlite-vec indexes
+    try:
+        import sqlite_vec
+
+        conn.enable_load_extension(True)
+        sqlite_vec.load(conn)
+        conn.execute("DELETE FROM chunk_vec")
+        conn.execute(
+            "INSERT INTO chunk_vec (chunk_id, embedding) "
+            "SELECT chunk_id, embedding FROM chunk_embeddings"
+        )
+        conn.execute("DELETE FROM hype_vec")
+        conn.execute(
+            "INSERT INTO hype_vec (question_id, embedding) "
+            "SELECT question_id, embedding FROM hype_embeddings"
+        )
+        conn.commit()
+        logger.info("sqlite-vec indexes repopulated.")
+    except Exception:
+        logger.warning("sqlite-vec not available", exc_info=True)
+
+    conn.close()
+    logger.info("fill-gaps complete.")
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -525,6 +798,11 @@ def main() -> None:
         help="Rebuild all files regardless of checksums",
     )
     parser.add_argument(
+        "--fill-gaps",
+        action="store_true",
+        help="Fill missing summaries, questions, and embeddings in an existing index",
+    )
+    parser.add_argument(
         "--concurrency",
         type=int,
         default=LLM_CONCURRENCY,
@@ -537,7 +815,12 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
-    asyncio.run(build_index(args.docs_dir, args.output, args.force, args.concurrency))
+    if args.fill_gaps:
+        asyncio.run(fill_gaps(args.output, args.concurrency))
+    else:
+        asyncio.run(
+            build_index(args.docs_dir, args.output, args.force, args.concurrency)
+        )
 
 
 if __name__ == "__main__":

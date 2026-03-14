@@ -154,7 +154,26 @@ class TestGenerateContextualSummary:
             )
         assert result == "This chunk covers the Alpha metric."
 
-    async def test_returns_empty_on_failure(self):
+    async def test_retries_once_on_failure_then_succeeds(self):
+        import asyncio
+
+        sem = asyncio.Semaphore(5)
+        call_count = 0
+
+        async def fail_then_succeed(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise RuntimeError("Transient error")
+            return _mock_litellm_response("Recovered summary.")
+
+        with patch("litellm.acompletion", side_effect=fail_then_succeed):
+            result = await generate_contextual_summary("content", "Doc", sem)
+
+        assert result == "Recovered summary."
+        assert call_count == 2
+
+    async def test_returns_empty_after_two_failures(self):
         import asyncio
 
         sem = asyncio.Semaphore(5)
@@ -162,9 +181,10 @@ class TestGenerateContextualSummary:
             "litellm.acompletion",
             new_callable=AsyncMock,
             side_effect=RuntimeError("API down"),
-        ):
+        ) as mock_llm:
             result = await generate_contextual_summary("content", "Doc", sem)
         assert result == ""
+        assert mock_llm.call_count == 2  # tried twice
 
     async def test_respects_semaphore(self):
         """Verify the semaphore actually limits concurrency."""
@@ -244,7 +264,26 @@ class TestGenerateHypeQuestions:
         assert len(result) == 3
         assert "" not in result
 
-    async def test_returns_empty_on_failure(self):
+    async def test_retries_once_on_failure_then_succeeds(self):
+        import asyncio
+
+        sem = asyncio.Semaphore(5)
+        call_count = 0
+
+        async def fail_then_succeed(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise RuntimeError("Transient error")
+            return _mock_litellm_response("Q1?\nQ2?\nQ3?")
+
+        with patch("litellm.acompletion", side_effect=fail_then_succeed):
+            result = await generate_hype_questions("content", "Doc", "Section", sem)
+
+        assert len(result) == 3
+        assert call_count == 2
+
+    async def test_returns_empty_after_two_failures(self):
         import asyncio
 
         sem = asyncio.Semaphore(5)
@@ -252,9 +291,10 @@ class TestGenerateHypeQuestions:
             "litellm.acompletion",
             new_callable=AsyncMock,
             side_effect=RuntimeError("fail"),
-        ):
+        ) as mock_llm:
             result = await generate_hype_questions("content", "Doc", "Section", sem)
         assert result == []
+        assert mock_llm.call_count == 2  # tried twice
 
 
 # ---------------------------------------------------------------------------
@@ -653,3 +693,246 @@ class TestBuildIndex:
         assert output_db.stat().st_ino != original_inode, (
             "DB file was not replaced — force should delete and recreate"
         )
+
+
+# ---------------------------------------------------------------------------
+# Tests: Resume/checkpoint behavior
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+class TestBuildIndexResume:
+    """Verify that the build pipeline resumes from the last completed phase."""
+
+    async def test_resume_skips_completed_summaries(
+        self, docs_dir: Path, output_db: Path
+    ):
+        """If summaries are already in the DB, re-running should not regenerate them."""
+        # First, do a full build
+        p1, p2 = _patch_llm_and_embeddings()
+        with p1, p2:
+            await build_index(docs_dir, output_db, force=True)
+
+        # Verify summaries are populated
+        conn = sqlite3.connect(str(output_db))
+        summaries = conn.execute("SELECT contextual_summary FROM chunks").fetchall()
+        assert all(s[0] != "" for s in summaries)
+
+        # Delete checksums so the file looks "changed" and will be reprocessed,
+        # but leave chunk data intact to simulate resume after chunking+summaries
+        conn.execute("DELETE FROM file_checksums")
+        # Also clear embeddings so we need to redo those phases
+        conn.execute("DELETE FROM chunk_embeddings")
+        conn.execute("DELETE FROM hype_embeddings")
+        conn.commit()
+        conn.close()
+
+        # Re-run — summaries should NOT be regenerated (they're already in DB)
+        # but embeddings should be (they were deleted)
+        summary_call_count = 0
+
+        async def tracking_acompletion(*args, **kwargs):
+            nonlocal summary_call_count
+            max_tokens = kwargs.get("max_tokens", 2000)
+            if max_tokens <= 1000:
+                summary_call_count += 1
+            return _mock_litellm_response(
+                "A contextual summary."
+                if max_tokens <= 1000
+                else "Q1?\nQ2?\nQ3?\nQ4?\nQ5?"
+            )
+
+        with patch("litellm.acompletion", side_effect=tracking_acompletion):
+            with patch(
+                "scripts.build_docs_index.embed_texts", side_effect=_mock_embed_texts
+            ):
+                await build_index(docs_dir, output_db, force=False)
+
+        # Summaries already existed, so no summary LLM calls should have been made
+        assert summary_call_count == 0, (
+            f"Expected 0 summary calls on resume, got {summary_call_count}"
+        )
+
+    async def test_resume_skips_completed_hype_questions(
+        self, docs_dir: Path, output_db: Path
+    ):
+        """If HyPE questions already exist, re-running should not regenerate them."""
+        p1, p2 = _patch_llm_and_embeddings()
+        with p1, p2:
+            await build_index(docs_dir, output_db, force=True)
+
+        conn = sqlite3.connect(str(output_db))
+        q_count = conn.execute("SELECT COUNT(*) FROM hype_questions").fetchone()[0]
+        assert q_count == 10  # 2 chunks × 5 questions
+
+        # Clear checksums + embeddings, but keep chunks/summaries/questions
+        conn.execute("DELETE FROM file_checksums")
+        conn.execute("DELETE FROM chunk_embeddings")
+        conn.execute("DELETE FROM hype_embeddings")
+        conn.commit()
+        conn.close()
+
+        hype_call_count = 0
+
+        async def tracking_acompletion(*args, **kwargs):
+            nonlocal hype_call_count
+            max_tokens = kwargs.get("max_tokens", 2000)
+            if max_tokens > 1000:
+                hype_call_count += 1
+            return _mock_litellm_response(
+                "A contextual summary."
+                if max_tokens <= 1000
+                else "Q1?\nQ2?\nQ3?\nQ4?\nQ5?"
+            )
+
+        with patch("litellm.acompletion", side_effect=tracking_acompletion):
+            with patch(
+                "scripts.build_docs_index.embed_texts", side_effect=_mock_embed_texts
+            ):
+                await build_index(docs_dir, output_db, force=False)
+
+        assert hype_call_count == 0, (
+            f"Expected 0 HyPE calls on resume, got {hype_call_count}"
+        )
+
+    async def test_resume_skips_completed_chunk_embeddings(
+        self, docs_dir: Path, output_db: Path
+    ):
+        """If chunk embeddings exist, re-running should not re-embed them."""
+        p1, p2 = _patch_llm_and_embeddings()
+        with p1, p2:
+            await build_index(docs_dir, output_db, force=True)
+
+        conn = sqlite3.connect(str(output_db))
+        emb_count = conn.execute("SELECT COUNT(*) FROM chunk_embeddings").fetchone()[0]
+        assert emb_count == 2
+
+        # Clear checksums + HyPE embeddings only — chunk embeddings stay
+        conn.execute("DELETE FROM file_checksums")
+        conn.execute("DELETE FROM hype_embeddings")
+        conn.commit()
+        conn.close()
+
+        embed_calls: list[tuple[list[str], str]] = []
+        original_mock = _mock_embed_texts
+
+        def tracking_embed(texts, task_type="RETRIEVAL_DOCUMENT"):
+            embed_calls.append((texts, task_type))
+            return original_mock(texts, task_type)
+
+        with patch("litellm.acompletion", new_callable=AsyncMock) as mock_llm:
+            mock_llm.return_value = _mock_litellm_response("dummy")
+            with patch(
+                "scripts.build_docs_index.embed_texts", side_effect=tracking_embed
+            ):
+                await build_index(docs_dir, output_db, force=False)
+
+        # Only RETRIEVAL_QUERY calls should happen (HyPE embeddings were cleared)
+        doc_embed_calls = [c for c in embed_calls if c[1] == "RETRIEVAL_DOCUMENT"]
+        assert len(doc_embed_calls) == 0, (
+            f"Expected 0 RETRIEVAL_DOCUMENT embed calls, got {len(doc_embed_calls)}"
+        )
+
+    async def test_resume_after_embedding_failure(
+        self, docs_dir: Path, output_db: Path
+    ):
+        """Simulate a crash during embedding — resume should only embed what's missing."""
+        # Build but make chunk embedding fail partway
+        call_count = 0
+
+        def failing_embed(texts, task_type="RETRIEVAL_DOCUMENT"):
+            nonlocal call_count
+            call_count += 1
+            if task_type == "RETRIEVAL_DOCUMENT":
+                raise RuntimeError("Vertex AI quota exceeded")
+            return _mock_embed_texts(texts, task_type)
+
+        p1, _ = _patch_llm_and_embeddings()
+        with p1:
+            with patch(
+                "scripts.build_docs_index.embed_texts", side_effect=failing_embed
+            ):
+                with pytest.raises(RuntimeError, match="Vertex AI quota exceeded"):
+                    await build_index(docs_dir, output_db, force=True)
+
+        # Verify chunks and summaries were persisted despite embedding failure
+        conn = sqlite3.connect(str(output_db))
+        chunk_count = conn.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
+        summaries = conn.execute("SELECT contextual_summary FROM chunks").fetchall()
+        q_count = conn.execute("SELECT COUNT(*) FROM hype_questions").fetchone()[0]
+        emb_count = conn.execute("SELECT COUNT(*) FROM chunk_embeddings").fetchone()[0]
+        conn.close()
+
+        assert chunk_count == 2, "Chunks should have been persisted"
+        assert all(s[0] != "" for s in summaries), (
+            "Summaries should have been persisted"
+        )
+        assert q_count == 10, "HyPE questions should have been persisted"
+        assert emb_count == 0, "No chunk embeddings should exist (embedding failed)"
+
+        # Now resume — should skip summaries+questions, only do embeddings
+        summary_calls = 0
+        hype_calls = 0
+
+        async def tracking_acompletion(*args, **kwargs):
+            nonlocal summary_calls, hype_calls
+            max_tokens = kwargs.get("max_tokens", 2000)
+            if max_tokens <= 1000:
+                summary_calls += 1
+            else:
+                hype_calls += 1
+            return _mock_litellm_response(
+                "A contextual summary."
+                if max_tokens <= 1000
+                else "Q1?\nQ2?\nQ3?\nQ4?\nQ5?"
+            )
+
+        # Clear the file checksum so it re-runs (simulating incomplete build)
+        conn = sqlite3.connect(str(output_db))
+        conn.execute("DELETE FROM file_checksums")
+        conn.commit()
+        conn.close()
+
+        with patch("litellm.acompletion", side_effect=tracking_acompletion):
+            with patch(
+                "scripts.build_docs_index.embed_texts", side_effect=_mock_embed_texts
+            ):
+                await build_index(docs_dir, output_db, force=False)
+
+        assert summary_calls == 0, "Summaries should not be regenerated on resume"
+        assert hype_calls == 0, "HyPE questions should not be regenerated on resume"
+
+        # Verify everything is now complete
+        conn = sqlite3.connect(str(output_db))
+        final_emb = conn.execute("SELECT COUNT(*) FROM chunk_embeddings").fetchone()[0]
+        final_hype_emb = conn.execute(
+            "SELECT COUNT(*) FROM hype_embeddings"
+        ).fetchone()[0]
+        conn.close()
+
+        assert final_emb == 2, "Chunk embeddings should now exist"
+        assert final_hype_emb == 10, "HyPE embeddings should now exist"
+
+    async def test_chunks_persisted_before_llm_phase(
+        self, docs_dir: Path, output_db: Path
+    ):
+        """Chunks should be in the DB even if the summary LLM phase crashes."""
+
+        async def crashing_acompletion(*args, **kwargs):
+            raise RuntimeError("LLM service down")
+
+        with patch("litellm.acompletion", side_effect=crashing_acompletion):
+            with patch(
+                "scripts.build_docs_index.embed_texts", side_effect=_mock_embed_texts
+            ):
+                await build_index(docs_dir, output_db, force=True)
+
+        # Chunks should still be in the DB (inserted before LLM phase)
+        conn = sqlite3.connect(str(output_db))
+        chunk_count = conn.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
+        summaries = conn.execute("SELECT contextual_summary FROM chunks").fetchall()
+        conn.close()
+
+        assert chunk_count == 2, "Chunks should be persisted before LLM phase"
+        # Summaries should be empty since LLM failed
+        assert all(s[0] == "" for s in summaries)
