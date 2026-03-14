@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import re
 import sqlite3
 import struct
 from dataclasses import dataclass
@@ -384,47 +385,201 @@ class DocsIndex:
             self._fetch_chunks, [(cid, score) for cid, score in filtered]
         )
 
+    # Regex to strip FTS5 special/syntax characters from user input.
+    # Inside double quotes only `"` is special, but we strip all operator
+    # characters so every token is safe to embed in `"..."` literals.
+    _FTS5_SPECIAL = re.compile(r'["*():^+\-?!,.]')
+
+    # NLTK's canonical English stop words list — stripped at query time so
+    # the AND tier doesn't require every function word to appear in target
+    # documents.  Source: https://gist.github.com/sebleier/554280
+    _STOP_WORDS = frozenset(
+        {
+            "a",
+            "about",
+            "above",
+            "after",
+            "again",
+            "against",
+            "all",
+            "am",
+            "an",
+            "and",
+            "any",
+            "are",
+            "as",
+            "at",
+            "be",
+            "because",
+            "been",
+            "before",
+            "being",
+            "below",
+            "between",
+            "both",
+            "but",
+            "by",
+            "can",
+            "did",
+            "do",
+            "does",
+            "doing",
+            "don",
+            "down",
+            "during",
+            "each",
+            "few",
+            "for",
+            "from",
+            "further",
+            "had",
+            "has",
+            "have",
+            "having",
+            "he",
+            "her",
+            "here",
+            "hers",
+            "herself",
+            "him",
+            "himself",
+            "his",
+            "how",
+            "i",
+            "if",
+            "in",
+            "into",
+            "is",
+            "it",
+            "its",
+            "itself",
+            "just",
+            "me",
+            "more",
+            "most",
+            "my",
+            "myself",
+            "no",
+            "nor",
+            "not",
+            "now",
+            "of",
+            "off",
+            "on",
+            "once",
+            "only",
+            "or",
+            "other",
+            "our",
+            "ours",
+            "ourselves",
+            "out",
+            "over",
+            "own",
+            "s",
+            "same",
+            "she",
+            "should",
+            "so",
+            "some",
+            "such",
+            "t",
+            "than",
+            "that",
+            "the",
+            "their",
+            "theirs",
+            "them",
+            "themselves",
+            "then",
+            "there",
+            "these",
+            "they",
+            "this",
+            "those",
+            "through",
+            "to",
+            "too",
+            "under",
+            "until",
+            "up",
+            "very",
+            "was",
+            "we",
+            "were",
+            "what",
+            "when",
+            "where",
+            "which",
+            "while",
+            "who",
+            "whom",
+            "why",
+            "will",
+            "with",
+            "you",
+            "your",
+            "yours",
+            "yourself",
+            "yourselves",
+        }
+    )
+
     @staticmethod
     def _build_fts_query(query: str) -> str:
-        """Build an FTS5 MATCH expression with phrase + AND fallback.
+        """Build an FTS5 MATCH expression from natural-language input.
 
-        Strategy: try phrase match first (highest precision), then AND of
-        all terms (moderate recall), then AND with prefix on last term
-        (highest recall).  BM25 naturally ranks phrase matches highest.
+        Three-tier strategy (connected by OR so BM25 ranks the best match):
+          1. **Phrase** — all content terms as an exact phrase (highest precision).
+          2. **AND** — all content terms must appear somewhere (moderate recall).
+          3. **OR** — any content term matches (maximum recall, safety net).
 
-        FTS5 column order is (body, section_title, doc_title), so column
-        weights in bm25() should follow this order.
+        Stop words are stripped before building the AND/phrase tiers so that
+        queries like *"What is ECI?"* don't require documents to contain
+        *"what"* and *"is"*.  If stripping removes everything, all terms are
+        kept as a fallback.
+
+        FTS5 special characters (``" * ( ) : ^ + - ? !``) are removed via
+        regex, and each token is double-quoted so the remaining characters
+        (including dots, slashes, hyphens that survive) are treated as
+        literals by FTS5.
 
         Args:
-            query: Raw user query string.
+            query: Raw user query string (may contain special chars).
 
         Returns:
             FTS5 MATCH expression string, or empty string if no terms.
         """
+        # 1. Strip FTS5 special characters
+        cleaned = DocsIndex._FTS5_SPECIAL.sub(" ", query)
 
-        def _safe(term: str) -> str:
-            """Quote a single term, stripping double-quote chars."""
-            return f'"{term.replace(chr(34), "")}"'
-
-        terms = [t for t in query.split() if t.strip()]
-        if not terms:
+        # 2. Tokenize
+        all_terms = [t for t in cleaned.split() if t]
+        if not all_terms:
             return ""
 
+        # 3. Remove stop words (case-insensitive); fall back to all if empty
+        content_terms = [t for t in all_terms if t.lower() not in DocsIndex._STOP_WORDS]
+        if not content_terms:
+            content_terms = all_terms
+
+        # Helper: quote a term for FTS5
+        def _q(term: str) -> str:
+            return f'"{term}"'
+
         parts: list[str] = []
+        quoted = [_q(t) for t in content_terms]
 
-        # 1. Exact phrase match (if multi-word)
-        if len(terms) > 1:
-            phrase = " ".join(t.replace(chr(34), "") for t in terms)
-            parts.append(f'"{phrase}"')
+        # Tier 1: exact phrase (if multi-word)
+        if len(content_terms) > 1:
+            parts.append(_q(" ".join(content_terms)))
 
-        # 2. AND of all terms (for when phrase doesn't match exactly)
-        safe_terms = [_safe(t) for t in terms]
-        parts.append(f"({' AND '.join(safe_terms)})")
+        # Tier 2: AND of all content terms
+        parts.append(f"({' AND '.join(quoted)})")
 
-        # 3. AND with prefix on last term (for partial-word recall)
-        if len(terms) > 1:
-            prefix_terms = safe_terms[:-1] + [f"{terms[-1].replace(chr(34), '')}*"]
-            parts.append(f"({' AND '.join(prefix_terms)})")
+        # Tier 3: OR of all content terms (maximum recall fallback)
+        if len(content_terms) > 1:
+            parts.append(f"({' OR '.join(quoted)})")
 
         return " OR ".join(parts)
 

@@ -278,6 +278,15 @@ class TestDocsIndex:
         assert "chunk4" in results
         index.close()
 
+    def test_bm25_search_handles_special_characters(self, docs_index_db: Path):
+        """Query with FTS5 special chars (parens, question marks) should not crash."""
+        index = DocsIndex(docs_index_db)
+        results = index._bm25_search("What is ECI (Economic Complexity Index)?", 5)
+        assert isinstance(results, list)
+        assert len(results) > 0
+        assert "chunk1" in results  # ECI chunk should still be found
+        index.close()
+
     def test_bm25_search_handles_empty_query(self, docs_index_db: Path):
         index = DocsIndex(docs_index_db)
         results = index._bm25_search("", 5)
@@ -346,34 +355,65 @@ class TestDocsIndex:
 class TestBuildFtsQuery:
     """Tests for DocsIndex._build_fts_query() — FTS5 query construction."""
 
-    def test_single_term_produces_and_only(self):
+    def test_single_content_term(self):
         q = DocsIndex._build_fts_query("ECI")
-        # Single term: just AND clause (no phrase, no prefix)
+        # Single term: just AND clause wrapping one quoted term
         assert '"ECI"' in q
+        # No phrase tier (needs 2+ terms), no OR tier
         assert "OR" not in q
 
-    def test_multi_term_includes_phrase_and_and(self):
+    def test_multi_term_includes_phrase_and_and_and_or(self):
         q = DocsIndex._build_fts_query("Economic Complexity Index")
-        # Should have phrase match
+        # Tier 1: phrase match
         assert '"Economic Complexity Index"' in q
-        # Should have AND fallback
+        # Tier 2: AND fallback
         assert "AND" in q
-        # Connected by OR
+        # Tier 3: OR fallback
+        # All tiers connected by OR
         assert "OR" in q
+
+    def test_stop_words_stripped_from_content_terms(self):
+        """Stop words like 'what', 'is', 'the' are removed before building tiers."""
+        q = DocsIndex._build_fts_query("What is the ECI metric")
+        # Stop words removed — only content terms remain
+        assert '"What"' not in q and '"what"' not in q
+        assert '"is"' not in q
+        assert '"the"' not in q
+        # Content terms preserved
+        assert "ECI" in q
+        assert "metric" in q
+
+    def test_all_stop_words_falls_back_to_all_terms(self):
+        """If every term is a stop word, keep them all to avoid empty query."""
+        q = DocsIndex._build_fts_query("is it the")
+        assert q  # non-empty
+        assert '"is"' in q or '"it"' in q or '"the"' in q
 
     def test_handles_quotes_in_input(self):
         q = DocsIndex._build_fts_query('the "ECI" metric')
-        # Should not crash; quotes are stripped from terms
-        assert q  # non-empty
+        # Quotes stripped; should not crash, should contain content terms
+        assert q
+        assert "ECI" in q
 
     def test_empty_query_returns_empty(self):
         assert DocsIndex._build_fts_query("") == ""
         assert DocsIndex._build_fts_query("   ") == ""
 
-    def test_prefix_matching_on_last_term(self):
-        q = DocsIndex._build_fts_query("trade data cov")
-        # Last part should have prefix wildcard
-        assert "cov*" in q
+    def test_strips_fts5_special_characters(self):
+        """Parentheses, question marks, and other FTS5 syntax chars are stripped."""
+        q = DocsIndex._build_fts_query("What is ECI (Economic Complexity)?")
+        # No raw special chars in the output (parens only from tier grouping)
+        assert "?" not in q
+        # Stop words removed, content terms present
+        assert "ECI" in q
+        assert "Economic" in q
+        assert "Complexity" in q
+
+    def test_or_fallback_tier_present(self):
+        """Multi-term queries include an OR-of-all-terms tier for max recall."""
+        q = DocsIndex._build_fts_query("trade data coverage")
+        # Should contain an OR tier with individual terms
+        assert '"trade" OR "data" OR "coverage"' in q
 
 
 class TestNormalizeEmbedding:
