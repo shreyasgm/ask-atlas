@@ -212,31 +212,39 @@ class TestGraphQLPipelineStateExtraction:
         assert "api_target" in result
         assert "success" in result
 
-    def test_select_docs_surfaces_selected_files(self):
-        """select_docs node: result has selected_files list."""
+    def test_retrieve_docs_surfaces_chunk_count(self):
+        """retrieve_docs node: counts <doc_chunk tags in synthesis."""
         result = _extract_pipeline_state(
-            "select_docs",
-            {"docs_selected_files": ["metrics.md", "trade_data.md"]},
+            "retrieve_docs",
+            {"docs_synthesis": "<doc_chunk>a</doc_chunk><doc_chunk>b</doc_chunk>"},
         )
-        assert result["stage"] == "select_docs"
-        assert result["selected_files"] == ["metrics.md", "trade_data.md"]
+        assert result["stage"] == "retrieve_docs"
+        assert result["chunk_count"] == 2
 
-    def test_synthesize_docs_surfaces_synthesis_status(self):
-        """synthesize_docs node: result has has_synthesis flag."""
+    def test_retrieve_docs_no_synthesis(self):
+        """retrieve_docs node: chunk_count is 0 when no synthesis."""
         result = _extract_pipeline_state(
-            "synthesize_docs",
-            {"docs_synthesis": "ECI measures economic complexity."},
-        )
-        assert result["stage"] == "synthesize_docs"
-        assert result["has_synthesis"] is True
-
-    def test_synthesize_docs_no_synthesis(self):
-        """synthesize_docs node: has_synthesis is False when empty."""
-        result = _extract_pipeline_state(
-            "synthesize_docs",
+            "retrieve_docs",
             {"docs_synthesis": ""},
         )
-        assert result["has_synthesis"] is False
+        assert result["chunk_count"] == 0
+
+    def test_retrieve_docs_context_surfaces_chunk_count(self):
+        """retrieve_docs_context node: counts auto chunks."""
+        result = _extract_pipeline_state(
+            "retrieve_docs_context",
+            {"docs_auto_chunks": ["chunk1", "chunk2", "chunk3"]},
+        )
+        assert result["stage"] == "retrieve_docs_context"
+        assert result["chunk_count"] == 3
+
+    def test_retrieve_docs_context_no_chunks(self):
+        """retrieve_docs_context node: chunk_count is 0 when empty."""
+        result = _extract_pipeline_state(
+            "retrieve_docs_context",
+            {"docs_auto_chunks": []},
+        )
+        assert result["chunk_count"] == 0
 
 
 # ---------------------------------------------------------------------------

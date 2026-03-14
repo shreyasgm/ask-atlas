@@ -76,8 +76,7 @@ GRAPHQL_PIPELINE_SEQUENCE = [
 
 DOCS_PIPELINE_SEQUENCE = [
     "extract_docs_question",
-    "select_docs",
-    "synthesize_docs",
+    "retrieve_docs",
     "format_docs_results",
 ]
 
@@ -99,9 +98,9 @@ NODE_LABELS = {
     "graphql_correction_agent": "Correcting query",
     # Docs pipeline
     "extract_docs_question": "Extracting question",
-    "select_docs": "Selecting documents",
-    "synthesize_docs": "Synthesizing response",
+    "retrieve_docs": "Retrieving documentation",
     "format_docs_results": "Preparing response",
+    "retrieve_docs_context": "Loading documentation context",
 }
 
 
@@ -275,11 +274,13 @@ def _extract_pipeline_state(node_name: str, state_snapshot: dict) -> dict:
     elif node_name == "extract_docs_question":
         base["question"] = state_snapshot.get("docs_question", "")
 
-    elif node_name == "select_docs":
-        base["selected_files"] = state_snapshot.get("docs_selected_files", [])
+    elif node_name == "retrieve_docs":
+        synthesis = state_snapshot.get("docs_synthesis", "")
+        base["chunk_count"] = synthesis.count("<doc_chunk") if synthesis else 0
 
-    elif node_name == "synthesize_docs":
-        base["has_synthesis"] = bool(state_snapshot.get("docs_synthesis"))
+    elif node_name == "retrieve_docs_context":
+        auto_chunks = state_snapshot.get("docs_auto_chunks", [])
+        base["chunk_count"] = len(auto_chunks)
 
     elif node_name == "format_docs_results":
         pass  # no additional data needed
@@ -631,6 +632,33 @@ class AtlasTextToSQL:
             return_exceptions=True,
         )
 
+        # Initialize docs index for hybrid retrieval (optional — graceful fallback)
+        import logging as _logging
+
+        _docs_logger = _logging.getLogger(__name__)
+        _docs_index = None
+        try:
+            from src.docs_retrieval import DocsIndex
+
+            _docs_index_path = Path(
+                _settings.docs_index_path
+                if _settings.docs_index_path
+                else BASE_DIR / "src" / "docs_index.db"
+            )
+            if _docs_index_path.exists():
+                _docs_index = DocsIndex(_docs_index_path)
+                _docs_logger.info("Docs index loaded from %s", _docs_index_path)
+            else:
+                _docs_logger.info(
+                    "Docs index not found at %s; using manifest fallback",
+                    _docs_index_path,
+                )
+        except Exception:
+            _docs_logger.warning(
+                "Failed to load docs index; docs auto-injection disabled",
+                exc_info=True,
+            )
+
         instance.agent = build_atlas_graph(
             llm=instance.query_llm,
             lightweight_llm=instance.metadata_llm,
@@ -657,6 +685,7 @@ class AtlasTextToSQL:
             budget_tracker=budget_tracker,
             docs_dir=BASE_DIR / "src" / "docs",
             max_docs_per_selection=_settings.max_docs_per_selection,
+            docs_index=_docs_index,
         )
 
         return instance
