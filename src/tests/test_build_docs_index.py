@@ -682,15 +682,27 @@ class TestBuildIndex:
             await build_index(docs_dir, output_db, force=False)
 
         assert output_db.exists()
-        original_inode = output_db.stat().st_ino
 
-        # Force rebuild — should create a new file (different inode)
+        # Plant a marker table that only exists in this DB instance
+        conn = sqlite3.connect(str(output_db))
+        conn.execute("CREATE TABLE _test_marker (id INTEGER)")
+        conn.close()
+
+        # Force rebuild — should create a fresh DB without the marker
         p1, p2 = _patch_llm_and_embeddings()
         with p1, p2:
             await build_index(docs_dir, output_db, force=True)
 
         assert output_db.exists()
-        assert output_db.stat().st_ino != original_inode, (
+        conn = sqlite3.connect(str(output_db))
+        tables = {
+            r[0]
+            for r in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+        conn.close()
+        assert "_test_marker" not in tables, (
             "DB file was not replaced — force should delete and recreate"
         )
 
