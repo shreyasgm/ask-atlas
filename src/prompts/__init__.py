@@ -43,7 +43,7 @@ from .prompt_agent import (
     build_sql_only_system_prompt,
 )
 
-# -- Documentation prompts --
+# -- Documentation prompts (kept for reference / potential future use) --
 from .prompt_docs import DOCUMENT_SELECTION_PROMPT, DOCUMENTATION_SYNTHESIS_PROMPT
 
 # -- GraphQL prompts + builders --

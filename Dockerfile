@@ -6,7 +6,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
-# App code + data files
+# App code + data files (includes src/docs_index.db if present, for hybrid doc retrieval)
 COPY src/ ./src/
 COPY LICENSE README.md ./
 

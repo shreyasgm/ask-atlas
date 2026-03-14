@@ -187,6 +187,12 @@ class Settings(BaseSettings):
     )
 
     # Docs pipeline
+    docs_index_path: str = Field(
+        "",
+        validation_alias=AliasChoices("DOCS_INDEX_PATH", "docs_index_path"),
+        description="Path to pre-built docs SQLite index for hybrid retrieval. "
+        "Empty string = auto-detect src/docs_index.db",
+    )
     max_docs_per_selection: int = Field(
         _MODEL_DEFAULTS["max_docs_per_selection"],
         validation_alias=AliasChoices(

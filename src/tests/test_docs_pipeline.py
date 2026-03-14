@@ -1,6 +1,7 @@
 """Unit tests for the docs pipeline.
 
-Tests cover manifest loading, all three pipeline nodes, and error fallbacks.
+Tests cover manifest loading, pipeline nodes (extract, retrieve, format),
+auto-injection, and error fallbacks.
 All tests are unit tests — no database or external LLM required.
 """
 
@@ -8,22 +9,18 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from src.docs_pipeline import (
     _DOCS_STATE_DEFAULTS,
-    DEFAULT_MAX_DOCS,
     DocEntry,
-    DocsSelection,
     _extract_body,
-    _format_manifest_for_prompt,
-    _make_docs_selection_model,
     _parse_yaml_frontmatter,
     extract_docs_question,
     format_docs_results,
     load_docs_manifest,
-    select_docs,
-    synthesize_docs,
+    retrieve_docs,
+    retrieve_docs_context,
 )
 
 # ---------------------------------------------------------------------------
@@ -97,6 +94,7 @@ def _base_docs_state(**overrides) -> dict:
         "queries_executed": 0,
         "last_error": "",
         "retry_count": 0,
+        "docs_auto_chunks": [],
         **_DOCS_STATE_DEFAULTS,
     }
     state.update(overrides)
@@ -222,44 +220,6 @@ class TestLoadDocsManifest:
 
 
 # ---------------------------------------------------------------------------
-# Tests: Manifest formatting
-# ---------------------------------------------------------------------------
-
-
-class TestFormatManifest:
-    def test_format_includes_all_entries(self, sample_manifest: list[DocEntry]):
-        text = _format_manifest_for_prompt(sample_manifest)
-        assert "[0]" in text
-        assert "[1]" in text
-        assert "Test Metric Guide" in text
-        assert "Trade Data Guide" in text
-
-    def test_format_includes_keywords(self, sample_manifest: list[DocEntry]):
-        text = _format_manifest_for_prompt(sample_manifest)
-        assert "Keywords:" in text
-        assert "ECI" in text
-        assert "trade" in text
-
-    def test_format_includes_negative_signals(self, sample_manifest: list[DocEntry]):
-        text = _format_manifest_for_prompt(sample_manifest)
-        assert "When NOT to load:" in text
-        assert "trade data" in text.lower()
-
-    def test_format_omits_empty_optional_fields(self):
-        """Entries without keywords or when_not_to_load don't show those lines."""
-        entry = DocEntry(
-            filename="bare.md",
-            title="Bare Doc",
-            purpose="A bare doc.",
-            when_to_load="Load always.",
-            full_path=Path("/tmp/bare.md"),
-        )
-        text = _format_manifest_for_prompt([entry])
-        assert "Keywords:" not in text
-        assert "When NOT to load:" not in text
-
-
-# ---------------------------------------------------------------------------
 # Tests: extract_docs_question
 # ---------------------------------------------------------------------------
 
@@ -327,208 +287,129 @@ class TestExtractDocsQuestion:
 
 
 # ---------------------------------------------------------------------------
-# Tests: select_docs
+# Tests: retrieve_docs
 # ---------------------------------------------------------------------------
 
 
-class TestSelectDocs:
-    async def test_happy_path(self, sample_manifest: list[DocEntry]):
-        """LLM selects correct docs; no synthesis is performed."""
-        selection = DocsSelection(
-            reasoning="Metrics doc is relevant",
-            selected_indices=[0],
-        )
-        mock_llm = MagicMock()
-        mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
-            return_value=selection
-        )
+class TestRetrieveDocs:
+    async def test_no_index_returns_fallback(self):
+        """When no docs_index is provided, returns a fallback message."""
+        state = _base_docs_state(docs_question="What is ECI?")
+        result = await retrieve_docs(state, docs_index=None)
+        assert "not available" in result["docs_synthesis"].lower()
 
-        state = _base_docs_state(docs_question="What is ECI?", docs_context="")
-
-        result = await select_docs(
-            state, lightweight_model=mock_llm, manifest=sample_manifest
-        )
-
-        assert result["docs_selected_files"] == ["metrics.md"]
-        # select_docs must NOT produce docs_synthesis
-        assert "docs_synthesis" not in result
-        mock_llm.with_structured_output.assert_called_once()
-
-    async def test_selects_multiple_docs(self, sample_manifest: list[DocEntry]):
-        """LLM can select multiple documents."""
-        selection = DocsSelection(
-            reasoning="Both docs relevant",
-            selected_indices=[0, 1],
-        )
-        mock_llm = MagicMock()
-        mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
-            return_value=selection
-        )
-
-        state = _base_docs_state(docs_question="Overview?")
-
-        result = await select_docs(
-            state, lightweight_model=mock_llm, manifest=sample_manifest
-        )
-
-        assert result["docs_selected_files"] == ["metrics.md", "trade_data.md"]
-
-    async def test_fallback_on_llm_error(self, sample_manifest: list[DocEntry]):
-        """Selection LLM fails → falls back to all docs."""
-        mock_llm = MagicMock()
-        mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
-            side_effect=Exception("LLM timeout")
-        )
-
-        state = _base_docs_state(docs_question="Anything?")
-
-        result = await select_docs(
-            state, lightweight_model=mock_llm, manifest=sample_manifest
-        )
-
-        assert len(result["docs_selected_files"]) == len(sample_manifest)
-
-    async def test_handles_invalid_indices(self, sample_manifest: list[DocEntry]):
-        """LLM returns out-of-range indices → falls back to all docs."""
-        selection = DocsSelection(
-            reasoning="Invalid indices",
-            selected_indices=[99, -5],
-        )
-        mock_llm = MagicMock()
-        mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
-            return_value=selection
-        )
-
-        state = _base_docs_state(docs_question="Something?")
-
-        result = await select_docs(
-            state, lightweight_model=mock_llm, manifest=sample_manifest
-        )
-
-        assert len(result["docs_selected_files"]) == len(sample_manifest)
-
-    async def test_max_docs_passed_to_prompt(self, sample_manifest: list[DocEntry]):
-        """max_docs value is included in the selection prompt."""
-        selection = DocsSelection(reasoning="Relevant", selected_indices=[0])
-        mock_llm = MagicMock()
-        mock_llm.with_structured_output.return_value.ainvoke = AsyncMock(
-            return_value=selection
-        )
+    async def test_calls_index_search(self):
+        """Calls docs_index.search() with the question."""
+        mock_index = MagicMock()
+        mock_chunk = MagicMock()
+        mock_chunk.chunk_id = "c1"
+        mock_chunk.doc_filename = "metrics.md"
+        mock_chunk.doc_title = "Metrics"
+        mock_chunk.section_title = "ECI"
+        mock_chunk.body = "ECI measures complexity."
+        mock_index.search = AsyncMock(return_value=[mock_chunk])
 
         state = _base_docs_state(docs_question="What is ECI?")
+        result = await retrieve_docs(state, docs_index=mock_index)
 
-        await select_docs(
-            state, lightweight_model=mock_llm, manifest=sample_manifest, max_docs=5
-        )
+        mock_index.search.assert_called_once()
+        assert "ECI" in result["docs_synthesis"]
 
-        selection_call_args = (
-            mock_llm.with_structured_output.return_value.ainvoke.call_args[0][0]
-        )
-        assert "1-5" in selection_call_args
-        assert "more than 5" in selection_call_args
-
-
-# ---------------------------------------------------------------------------
-# Tests: synthesize_docs
-# ---------------------------------------------------------------------------
-
-
-class TestSynthesizeDocs:
-    async def test_happy_path(self, sample_manifest: list[DocEntry]):
-        """Given selected files in state, produces synthesis."""
-        synthesis_response = MagicMock()
-        synthesis_response.content = "ECI measures economic complexity."
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(return_value=synthesis_response)
+    async def test_excludes_auto_injected_chunks(self):
+        """Already auto-injected chunks are excluded from retrieval."""
+        mock_index = MagicMock()
+        mock_index.search = AsyncMock(return_value=[])
 
         state = _base_docs_state(
             docs_question="What is ECI?",
-            docs_selected_files=["metrics.md"],
+            docs_auto_chunks=[{"chunk_id": "already-injected"}],
         )
+        await retrieve_docs(state, docs_index=mock_index)
 
-        result = await synthesize_docs(
-            state, lightweight_model=mock_llm, manifest=sample_manifest
-        )
+        call_kwargs = mock_index.search.call_args
+        exclude_ids = call_kwargs.kwargs.get("exclude_chunk_ids", set())
+        assert "already-injected" in exclude_ids
 
-        assert result["docs_synthesis"] == "ECI measures economic complexity."
-        # Verify synthesis LLM was called with pre-loaded doc content
-        synthesis_call_args = mock_llm.ainvoke.call_args[0][0]
-        assert "Some content here about test metrics" in synthesis_call_args
+    async def test_empty_results_returns_no_docs(self):
+        """When search returns no results, returns appropriate message."""
+        mock_index = MagicMock()
+        mock_index.search = AsyncMock(return_value=[])
 
-    async def test_fallback_on_llm_error(self, sample_manifest: list[DocEntry]):
-        """Synthesis LLM fails → returns raw concatenated docs."""
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(side_effect=Exception("Synthesis failed"))
+        state = _base_docs_state(docs_question="obscure topic")
+        result = await retrieve_docs(state, docs_index=mock_index)
+
+        assert "no relevant" in result["docs_synthesis"].lower()
+
+    async def test_search_error_returns_error_message(self):
+        """When search raises an exception, returns error message."""
+        mock_index = MagicMock()
+        mock_index.search = AsyncMock(side_effect=Exception("DB error"))
+
+        state = _base_docs_state(docs_question="What is ECI?")
+        result = await retrieve_docs(state, docs_index=mock_index)
+
+        assert "error" in result["docs_synthesis"].lower()
+
+    async def test_context_appended_to_query(self):
+        """Context is appended to the question for search."""
+        mock_index = MagicMock()
+        mock_index.search = AsyncMock(return_value=[])
 
         state = _base_docs_state(
-            docs_question="Metrics?",
-            docs_selected_files=["metrics.md"],
+            docs_question="What is ECI?",
+            docs_context="User wants to build a dashboard.",
         )
+        await retrieve_docs(state, docs_index=mock_index)
 
-        result = await synthesize_docs(
-            state, lightweight_model=mock_llm, manifest=sample_manifest
-        )
-
-        assert "Test Metric Guide" in result["docs_synthesis"]
-        assert "Some content here" in result["docs_synthesis"]
-
-    async def test_no_matching_files(self, sample_manifest: list[DocEntry]):
-        """If selected files don't match manifest entries, returns error message."""
-        mock_llm = MagicMock()
-
-        state = _base_docs_state(
-            docs_question="Test?",
-            docs_selected_files=["nonexistent.md"],
-        )
-
-        result = await synthesize_docs(
-            state, lightweight_model=mock_llm, manifest=sample_manifest
-        )
-
-        assert result["docs_synthesis"] == "No documentation files could be loaded."
-
-    async def test_passes_context_to_prompt(self, sample_manifest: list[DocEntry]):
-        """Context string is included in the synthesis LLM prompt."""
-        synthesis_response = MagicMock()
-        synthesis_response.content = "Answer with context."
-        mock_llm = MagicMock()
-        mock_llm.ainvoke = AsyncMock(return_value=synthesis_response)
-
-        state = _base_docs_state(
-            docs_question="What is PCI?",
-            docs_context="User is building a dashboard showing PCI trends.",
-            docs_selected_files=["metrics.md"],
-        )
-
-        await synthesize_docs(
-            state, lightweight_model=mock_llm, manifest=sample_manifest
-        )
-
-        synthesis_call = mock_llm.ainvoke.call_args[0][0]
-        assert "dashboard" in synthesis_call
+        call_args = mock_index.search.call_args[0]
+        assert "dashboard" in call_args[0]
 
 
 # ---------------------------------------------------------------------------
-# Tests: _make_docs_selection_model
+# Tests: retrieve_docs_context
 # ---------------------------------------------------------------------------
 
 
-class TestMakeDocsSelectionModel:
-    def test_default_max_docs_is_2(self):
-        assert DEFAULT_MAX_DOCS == 2
+class TestRetrieveDocsContext:
+    async def test_no_index_returns_empty(self):
+        """When no docs_index is provided, returns empty chunks."""
+        state = _base_docs_state(messages=[HumanMessage(content="What is ECI?")])
+        result = await retrieve_docs_context(state, docs_index=None)
+        assert result["docs_auto_chunks"] == []
 
-    def test_creates_model_accepts_indices(self):
-        model_cls = _make_docs_selection_model(3)
-        instance = model_cls(
-            reasoning="test",
-            selected_indices=[0, 1, 2],
-        )
-        assert len(instance.selected_indices) == 3
+    async def test_extracts_user_message_for_search(self):
+        """Uses the latest human message as search query."""
+        mock_index = MagicMock()
+        mock_chunk = MagicMock()
+        mock_chunk.chunk_id = "c1"
+        mock_chunk.doc_filename = "metrics.md"
+        mock_chunk.doc_title = "Metrics"
+        mock_chunk.section_title = "ECI"
+        mock_chunk.body = "ECI content."
+        mock_index.search = AsyncMock(return_value=[mock_chunk])
 
-    def test_description_includes_max_docs(self):
-        model_cls = _make_docs_selection_model(4)
-        field_info = model_cls.model_fields["selected_indices"]
-        assert "4" in field_info.description
+        state = _base_docs_state(messages=[HumanMessage(content="Tell me about ECI")])
+        result = await retrieve_docs_context(state, docs_index=mock_index)
+
+        mock_index.search.assert_called_once()
+        assert len(result["docs_auto_chunks"]) == 1
+        assert result["docs_auto_chunks"][0]["chunk_id"] == "c1"
+
+    async def test_no_messages_returns_empty(self):
+        """When there are no messages, returns empty chunks."""
+        mock_index = MagicMock()
+        state = _base_docs_state(messages=[])
+        result = await retrieve_docs_context(state, docs_index=mock_index)
+        assert result["docs_auto_chunks"] == []
+
+    async def test_search_error_returns_empty(self):
+        """When search fails, returns empty chunks gracefully."""
+        mock_index = MagicMock()
+        mock_index.search = AsyncMock(side_effect=Exception("search failed"))
+
+        state = _base_docs_state(messages=[HumanMessage(content="What is ECI?")])
+        result = await retrieve_docs_context(state, docs_index=mock_index)
+        assert result["docs_auto_chunks"] == []
 
 
 # ---------------------------------------------------------------------------

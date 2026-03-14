@@ -97,29 +97,32 @@ _METRICS_REFERENCE_BLOCK = """\
 For formulas, column names, and methodology details, call docs_tool."""
 
 _DOCS_TOOL_BLOCK = """\
-**Documentation Tool (docs_tool):**
-Use `docs_tool` for in-depth technical documentation about economic complexity methodology, \
-metric definitions, data sources, and Atlas visualization reproduction.
+**Documentation (auto-injected + docs_tool):**
+Relevant documentation chunks are automatically injected into this prompt based on the \
+user's question. Check the ``documentation_context`` section at the end of this prompt \
+(if present) before calling any tools — it may already contain the methodology details \
+you need.
 
-Call docs_tool FIRST when:
-- The question requires deeper metric understanding than this prompt covers \
-(e.g. formulas, normalized ECI variants, distance formula details, PCI vs COG tradeoffs)
-- You need technical knowledge before calling a data tool (e.g. What are India's top \
-opportunities for export diversification? — you need to know what "opportunities" means \
-from a complexity lens)
-- The user asks about data methodology (mirror statistics, CIF/FOB adjustments, Atlas vs raw COMTRADE)
-- You need to know which specific DB columns or tables store a metric variant
-- The question involves data coverage limits or classification system availability
+If you need **additional** documentation beyond what was auto-injected, call `docs_tool` \
+with a focused question. It retrieves more chunks from the same knowledge base, excluding \
+what was already injected.
+
+Call docs_tool when:
+- The auto-injected docs don't cover the specific detail you need \
+(e.g. formulas, normalized ECI variants, distance formula details)
+- You need technical knowledge before calling a data tool and the auto-injected context \
+is insufficient
+- The user explicitly asks about methodology not covered in the injected docs
 
 Do NOT use docs_tool when:
-- The user asks a simple factual query ("What did Kenya export in 2024?") — go to data tools.
-- The user asks what the Atlas shows for a specific country (growth opportunities, \
-diversification grade) — this is a data query, use data tools.
-- You already have enough context from prior docs_tool calls in this conversation.
+- The auto-injected documentation context already answers your question
+- The user asks a simple factual query ("What did Kenya export in 2024?") — go to data tools
+- You already have enough context from auto-injected docs or prior docs_tool calls
 
 **Context-passing workflow:**
-1. Call docs_tool with your question and any relevant context
-2. Pass relevant information / excerpts as `context` to your data tool call
+1. Check auto-injected docs first
+2. If more detail needed, call docs_tool
+3. Pass relevant information / excerpts as `context` to your data tool call
 
 docs_tool does NOT count against your query budget of {max_uses} data queries."""
 

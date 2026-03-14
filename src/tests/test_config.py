@@ -199,8 +199,8 @@ class TestPromptModelAssignments:
         assert "graphql_classification" in pma
         assert "graphql_entity_extraction" in pma
         assert "id_resolution_selection" in pma
-        assert "document_selection" in pma
-        assert "documentation_synthesis" in pma
+        # document_selection and documentation_synthesis removed
+        # (replaced by hybrid retrieval with no LLM at query time)
 
     def test_assignments_are_valid_tiers(self):
         """Every assignment value must be 'frontier' or 'lightweight'."""

@@ -26,9 +26,8 @@ from src.config import AgentMode
 from src.docs_pipeline import (
     extract_docs_question,
     format_docs_results,
-    load_docs_manifest,
-    select_docs,
-    synthesize_docs,
+    retrieve_docs,
+    retrieve_docs_context,
 )
 from src.graphql_client import GraphQLBudgetTracker
 from src.graphql_pipeline import (
@@ -87,6 +86,7 @@ def build_atlas_graph(
     budget_tracker: GraphQLBudgetTracker | None = None,
     docs_dir: Path | None = None,
     max_docs_per_selection: int = 2,
+    docs_index=None,
 ) -> CompiledStateGraph:
     """Build the full Atlas agent graph with SQL, optional GraphQL, and docs pipelines.
 
@@ -330,33 +330,26 @@ def build_atlas_graph(
     # Anti-hallucination nudge node
     builder.add_node("tool_call_nudge", tool_call_nudge)
 
-    # Docs pipeline nodes
-    _docs_dir = docs_dir or Path(__file__).resolve().parent / "docs"
-    _docs_manifest = load_docs_manifest(_docs_dir)
+    # Docs pipeline nodes (retrieval-based, no LLM at query time)
     builder.add_node("extract_docs_question", extract_docs_question)
     builder.add_node(
-        "select_docs",
-        partial(
-            select_docs,
-            lightweight_model=lightweight_llm,
-            manifest=_docs_manifest,
-            max_docs=max_docs_per_selection,
-        ),
-        retry_policy=_llm_retry,
-    )
-    builder.add_node(
-        "synthesize_docs",
-        partial(
-            synthesize_docs,
-            lightweight_model=lightweight_llm,
-            manifest=_docs_manifest,
-        ),
-        retry_policy=_llm_retry,
+        "retrieve_docs",
+        partial(retrieve_docs, docs_index=docs_index, top_k=6),
     )
     builder.add_node("format_docs_results", format_docs_results)
 
+    # Auto-injection node: retrieves docs context before each agent turn
+    builder.add_node(
+        "retrieve_docs_context",
+        partial(retrieve_docs_context, docs_index=docs_index, top_k=6),
+    )
+
     # --- Edges ---
-    builder.add_edge(START, "agent")
+    if docs_index is not None:
+        builder.add_edge(START, "retrieve_docs_context")
+        builder.add_edge("retrieve_docs_context", "agent")
+    else:
+        builder.add_edge(START, "agent")
     builder.add_conditional_edges(
         "agent",
         route_after_agent,
@@ -405,10 +398,9 @@ def build_atlas_graph(
     builder.add_edge("graphql_correction_agent", "format_graphql_results")
     builder.add_edge("format_graphql_results", "agent")
 
-    # Docs pipeline
-    builder.add_edge("extract_docs_question", "select_docs")
-    builder.add_edge("select_docs", "synthesize_docs")
-    builder.add_edge("synthesize_docs", "format_docs_results")
+    # Docs pipeline (retrieval-based: 3 nodes, no LLM)
+    builder.add_edge("extract_docs_question", "retrieve_docs")
+    builder.add_edge("retrieve_docs", "format_docs_results")
     builder.add_edge("format_docs_results", "agent")
 
     memory = checkpointer if checkpointer is not None else MemorySaver()
