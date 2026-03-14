@@ -7,7 +7,7 @@ repos:
       - id: check-yaml
       - id: check-toml
       - id: check-added-large-files
-        args: ['--maxkb=1200']  # uv.lock is ~1.1 MB
+        args: ['--maxkb=12000']  # uv.lock ~1.1 MB, docs_index.db ~11 MB
       - id: detect-private-key
 
   # Linting + formatting — version must match what `uv run ruff --version` reports
