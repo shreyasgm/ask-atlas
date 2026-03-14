@@ -168,12 +168,12 @@ export function getStepDetail(
     }
 
     // --- Docs pipeline ---
-    case 'select_docs': {
-      const files = detail.selected_files;
-      if (!Array.isArray(files) || files.length === 0) {
-        return null;
-      }
-      return `\u2192 ${truncate(files.join(', '))}`;
+    case 'retrieve_docs':
+    case 'retrieve_docs_context': {
+      const count = detail.chunk_count;
+      return typeof count === 'number' && count > 0
+        ? `→ ${count} chunk${count === 1 ? '' : 's'}`
+        : null;
     }
 
     default:

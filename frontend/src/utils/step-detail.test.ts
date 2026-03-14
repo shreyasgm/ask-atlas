@@ -133,15 +133,21 @@ describe('getStepDetail', () => {
     );
   });
 
-  it('select_docs — shows selected files', () => {
-    const result = getStepDetail('select_docs', {
-      selected_files: ['methodology.md', 'data-sources.md'],
-    });
-    expect(result).toBe('\u2192 methodology.md, data-sources.md');
+  it('retrieve_docs — shows chunk count', () => {
+    const result = getStepDetail('retrieve_docs', { chunk_count: 5 });
+    expect(result).toBe('→ 5 chunks');
   });
 
-  it('select_docs — returns null for empty array', () => {
-    expect(getStepDetail('select_docs', { selected_files: [] })).toBeNull();
+  it('retrieve_docs — singular chunk', () => {
+    expect(getStepDetail('retrieve_docs', { chunk_count: 1 })).toBe('→ 1 chunk');
+  });
+
+  it('retrieve_docs — returns null for zero chunks', () => {
+    expect(getStepDetail('retrieve_docs', { chunk_count: 0 })).toBeNull();
+  });
+
+  it('retrieve_docs_context — shows chunk count', () => {
+    expect(getStepDetail('retrieve_docs_context', { chunk_count: 3 })).toBe('→ 3 chunks');
   });
 
   // --- Truncation (safety ceiling — CSS line-clamp handles visual clamping) ---
