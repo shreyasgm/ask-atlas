@@ -306,14 +306,18 @@ async def retrieve_docs(
             )
             if not chunks:
                 synthesis = "No relevant documentation found."
+                doc_titles: list[str] = []
             else:
                 synthesis = format_chunks_for_prompt(chunks)
+                doc_titles = sorted({c.doc_title for c in chunks})
         except Exception:
             logger.exception("Documentation retrieval failed")
             synthesis = "Documentation retrieval encountered an error."
+            doc_titles = []
 
     return {
         "docs_synthesis": synthesis,
+        "docs_retrieved_titles": doc_titles,
         "step_timing": [_t.record],
     }
 

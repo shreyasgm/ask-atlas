@@ -213,7 +213,7 @@ class TestGraphQLPipelineStateExtraction:
         assert "success" in result
 
     def test_retrieve_docs_surfaces_chunk_count_and_titles(self):
-        """retrieve_docs node: counts doc_chunk tags and extracts source filenames."""
+        """retrieve_docs node: counts doc_chunk tags and reads titles from state."""
         synthesis = (
             '<doc_chunk source="eci.md" section="Overview">a</doc_chunk>'
             '<doc_chunk source="pci.md" section="Intro">b</doc_chunk>'
@@ -221,11 +221,14 @@ class TestGraphQLPipelineStateExtraction:
         )
         result = _extract_pipeline_state(
             "retrieve_docs",
-            {"docs_synthesis": synthesis},
+            {
+                "docs_synthesis": synthesis,
+                "docs_retrieved_titles": ["ECI Methodology", "PCI Methodology"],
+            },
         )
         assert result["stage"] == "retrieve_docs"
         assert result["chunk_count"] == 3
-        assert result["doc_titles"] == ["eci.md", "pci.md"]
+        assert result["doc_titles"] == ["ECI Methodology", "PCI Methodology"]
 
     def test_retrieve_docs_no_synthesis(self):
         """retrieve_docs node: chunk_count is 0 when no synthesis."""

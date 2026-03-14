@@ -276,3 +276,4 @@ class AtlasAgentState(TypedDict):
     docs_context: str
     docs_selected_files: list[str]
     docs_synthesis: str
+    docs_retrieved_titles: list[str]

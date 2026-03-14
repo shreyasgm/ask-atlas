@@ -17,6 +17,7 @@ from src.docs_retrieval import (
     DocChunk,
     DocsIndex,
     _make_chunk_id,
+    _normalize_embedding,
     _split_by_header,
     chunk_markdown_by_headers,
     format_chunks_for_prompt,
@@ -226,7 +227,8 @@ def docs_index_db(tmp_path: Path) -> Path:
 
         CREATE VIRTUAL TABLE chunks_fts USING fts5(
             body, section_title, doc_title,
-            content='chunks', content_rowid='rowid'
+            content='chunks', content_rowid='rowid',
+            tokenize='porter unicode61'
         );
 
         CREATE TRIGGER chunks_ai AFTER INSERT ON chunks BEGIN
@@ -256,6 +258,16 @@ class TestDocsIndex:
         results = index._bm25_search("economic complexity index ECI", 5)
         assert len(results) > 0
         assert "chunk1" in results
+        index.close()
+
+    def test_bm25_phrase_match_ranks_eci_first(self, docs_index_db: Path):
+        """Phrase matching + title weight should rank the ECI chunk first."""
+        index = DocsIndex(docs_index_db)
+        results = index._bm25_search("Economic Complexity Index", 5)
+        assert len(results) > 0
+        # The ECI definition chunk should be ranked first due to phrase match
+        # and section_title containing "ECI Definition"
+        assert results[0] == "chunk1"
         index.close()
 
     def test_bm25_search_ranks_relevant_higher(self, docs_index_db: Path):
@@ -329,6 +341,64 @@ class TestDocsIndex:
 # ---------------------------------------------------------------------------
 # Tests: _make_chunk_id
 # ---------------------------------------------------------------------------
+
+
+class TestBuildFtsQuery:
+    """Tests for DocsIndex._build_fts_query() — FTS5 query construction."""
+
+    def test_single_term_produces_and_only(self):
+        q = DocsIndex._build_fts_query("ECI")
+        # Single term: just AND clause (no phrase, no prefix)
+        assert '"ECI"' in q
+        assert "OR" not in q
+
+    def test_multi_term_includes_phrase_and_and(self):
+        q = DocsIndex._build_fts_query("Economic Complexity Index")
+        # Should have phrase match
+        assert '"Economic Complexity Index"' in q
+        # Should have AND fallback
+        assert "AND" in q
+        # Connected by OR
+        assert "OR" in q
+
+    def test_handles_quotes_in_input(self):
+        q = DocsIndex._build_fts_query('the "ECI" metric')
+        # Should not crash; quotes are stripped from terms
+        assert q  # non-empty
+
+    def test_empty_query_returns_empty(self):
+        assert DocsIndex._build_fts_query("") == ""
+        assert DocsIndex._build_fts_query("   ") == ""
+
+    def test_prefix_matching_on_last_term(self):
+        q = DocsIndex._build_fts_query("trade data cov")
+        # Last part should have prefix wildcard
+        assert "cov*" in q
+
+
+class TestNormalizeEmbedding:
+    """Tests for _normalize_embedding() — L2 normalization."""
+
+    def test_unit_length_after_normalization(self):
+        import math
+
+        vec = [3.0, 4.0]  # 3-4-5 triangle
+        normed = _normalize_embedding(vec)
+        length = math.sqrt(sum(x * x for x in normed))
+        assert abs(length - 1.0) < 1e-6
+
+    def test_zero_vector_unchanged(self):
+        vec = [0.0, 0.0, 0.0]
+        normed = _normalize_embedding(vec)
+        assert normed == [0.0, 0.0, 0.0]
+
+    def test_already_normalized_unchanged(self):
+        import math
+
+        vec = [1.0 / math.sqrt(3), 1.0 / math.sqrt(3), 1.0 / math.sqrt(3)]
+        normed = _normalize_embedding(vec)
+        for a, b in zip(vec, normed):
+            assert abs(a - b) < 1e-6
 
 
 class TestMakeChunkId:

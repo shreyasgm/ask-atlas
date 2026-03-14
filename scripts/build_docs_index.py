@@ -60,7 +60,8 @@ CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
     section_title,
     doc_title,
     content='chunks',
-    content_rowid='rowid'
+    content_rowid='rowid',
+    tokenize='porter unicode61'
 );
 
 -- Triggers to keep FTS5 in sync with chunks table
@@ -114,34 +115,43 @@ CREATE TABLE IF NOT EXISTS file_checksums (
 def embed_texts(
     texts: list[str], task_type: str = "RETRIEVAL_DOCUMENT"
 ) -> list[list[float]]:
-    """Embed a batch of texts via Vertex AI text-embedding-005.
+    """Embed a batch of texts via the Gemini embedding model.
 
-    Uses the google-genai SDK (replaces deprecated vertexai SDK).
+    Uses MRL truncation to EMBEDDING_DIM and normalizes the output.
 
     Args:
         texts: List of text strings to embed.
-        task_type: Vertex AI task type (RETRIEVAL_DOCUMENT or RETRIEVAL_QUERY).
+        task_type: Task type (RETRIEVAL_DOCUMENT or RETRIEVAL_QUERY).
 
     Returns:
-        List of embedding vectors.
+        List of normalized embedding vectors.
     """
-    from google import genai
     from google.genai import types
 
-    client = genai.Client(vertexai=True)
-    config = types.EmbedContentConfig(task_type=task_type)
-    # Vertex AI text-embedding-005 has a 20,000 token per-request limit.
-    # With doc chunks averaging ~400 tokens, batch size of 20 stays safely under.
+    from src.docs_retrieval import (
+        EMBEDDING_DIM,
+        EMBEDDING_MODEL,
+        _create_genai_client,
+        _normalize_embedding,
+    )
+
+    client = _create_genai_client()
+    config = types.EmbedContentConfig(
+        task_type=task_type,
+        output_dimensionality=EMBEDDING_DIM,
+    )
     all_embeddings: list[list[float]] = []
     batch_size = 20
     for i in range(0, len(texts), batch_size):
         batch = texts[i : i + batch_size]
         response = client.models.embed_content(
-            model="text-embedding-005",
+            model=EMBEDDING_MODEL,
             contents=batch,
             config=config,
         )
-        all_embeddings.extend([e.values for e in response.embeddings])
+        all_embeddings.extend(
+            [_normalize_embedding(e.values) for e in response.embeddings]
+        )
         logger.info("Embedded batch %d-%d of %d", i, i + len(batch), len(texts))
     return all_embeddings
 

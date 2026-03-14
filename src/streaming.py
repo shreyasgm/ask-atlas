@@ -277,12 +277,7 @@ def _extract_pipeline_state(node_name: str, state_snapshot: dict) -> dict:
     elif node_name == "retrieve_docs":
         synthesis = state_snapshot.get("docs_synthesis", "")
         base["chunk_count"] = synthesis.count("<doc_chunk") if synthesis else 0
-        # Extract unique source filenames from the synthesis XML
-        if synthesis:
-            import re
-
-            filenames = re.findall(r'source="([^"]*)"', synthesis)
-            base["doc_titles"] = sorted(set(filenames))
+        base["doc_titles"] = state_snapshot.get("docs_retrieved_titles", [])
 
     elif node_name == "retrieve_docs_context":
         auto_chunks = state_snapshot.get("docs_auto_chunks", [])

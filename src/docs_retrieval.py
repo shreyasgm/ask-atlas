@@ -31,7 +31,10 @@ logger = logging.getLogger(__name__)
 # Data structures
 # ---------------------------------------------------------------------------
 
-EMBEDDING_DIM = 768  # Vertex AI text-embedding-005 output dimension
+EMBEDDING_MODEL = "gemini-embedding-2-preview"
+# MRL truncation: 768 dims is the sweet spot — near-peak quality at 1/4 storage.
+# See https://ai.google.dev/gemini-api/docs/models/gemini-embedding-2-preview
+EMBEDDING_DIM = 768
 
 
 @dataclass(frozen=True)
@@ -183,29 +186,65 @@ def _deserialize_embedding(data: bytes) -> list[float]:
     return list(struct.unpack(f"<{n}f", data))
 
 
-async def _embed_query(text: str) -> list[float] | None:
-    """Embed a single query string via Vertex AI text-embedding-005.
+def _create_genai_client() -> genai.Client:  # noqa: F821
+    """Create a google-genai Client using Gemini Developer API credentials.
 
-    Uses the google-genai SDK (replaces deprecated vertexai SDK).
-    Returns None on failure (caller should fall back to BM25-only).
+    Uses GOOGLE_API_KEY or GEMINI_API_KEY from the environment.
+    If neither is set, creates a client that will attempt auto-detection.
+
+    Returns:
+        A configured genai.Client instance.
+    """
+    import os
+
+    from google import genai
+
+    api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+    if api_key:
+        return genai.Client(api_key=api_key)
+
+    return genai.Client()
+
+
+def _normalize_embedding(vec: list[float]) -> list[float]:
+    """L2-normalize an embedding vector.
+
+    MRL-truncated embeddings from gemini-embedding-2 require manual
+    normalization (only the full 3072-dim output is pre-normalized).
+    """
+    import math
+
+    norm = math.sqrt(sum(x * x for x in vec))
+    if norm == 0:
+        return vec
+    return [x / norm for x in vec]
+
+
+async def _embed_query(text: str) -> list[float] | None:
+    """Embed a single query string via the Gemini embedding model.
+
+    Uses MRL truncation to EMBEDDING_DIM dimensions and normalizes
+    the result. Returns None on failure (caller falls back to BM25-only).
 
     Args:
         text: The query text to embed.
 
     Returns:
-        Embedding vector as a list of floats, or None on error.
+        Normalized embedding vector as a list of floats, or None on error.
     """
     try:
-        from google import genai
         from google.genai import types
 
-        client = genai.Client(vertexai=True)
+        client = _create_genai_client()
         response = await client.aio.models.embed_content(
-            model="text-embedding-005",
+            model=EMBEDDING_MODEL,
             contents=text,
-            config=types.EmbedContentConfig(task_type="RETRIEVAL_QUERY"),
+            config=types.EmbedContentConfig(
+                task_type="RETRIEVAL_QUERY",
+                output_dimensionality=EMBEDDING_DIM,
+            ),
         )
-        return response.embeddings[0].values
+        return _normalize_embedding(response.embeddings[0].values)
     except Exception:
         logger.warning("Embedding API failed; falling back to BM25-only", exc_info=True)
         return None
@@ -345,8 +384,56 @@ class DocsIndex:
             self._fetch_chunks, [(cid, score) for cid, score in filtered]
         )
 
+    @staticmethod
+    def _build_fts_query(query: str) -> str:
+        """Build an FTS5 MATCH expression with phrase + AND fallback.
+
+        Strategy: try phrase match first (highest precision), then AND of
+        all terms (moderate recall), then AND with prefix on last term
+        (highest recall).  BM25 naturally ranks phrase matches highest.
+
+        FTS5 column order is (body, section_title, doc_title), so column
+        weights in bm25() should follow this order.
+
+        Args:
+            query: Raw user query string.
+
+        Returns:
+            FTS5 MATCH expression string, or empty string if no terms.
+        """
+
+        def _safe(term: str) -> str:
+            """Quote a single term, stripping double-quote chars."""
+            return f'"{term.replace(chr(34), "")}"'
+
+        terms = [t for t in query.split() if t.strip()]
+        if not terms:
+            return ""
+
+        parts: list[str] = []
+
+        # 1. Exact phrase match (if multi-word)
+        if len(terms) > 1:
+            phrase = " ".join(t.replace(chr(34), "") for t in terms)
+            parts.append(f'"{phrase}"')
+
+        # 2. AND of all terms (for when phrase doesn't match exactly)
+        safe_terms = [_safe(t) for t in terms]
+        parts.append(f"({' AND '.join(safe_terms)})")
+
+        # 3. AND with prefix on last term (for partial-word recall)
+        if len(terms) > 1:
+            prefix_terms = safe_terms[:-1] + [f"{terms[-1].replace(chr(34), '')}*"]
+            parts.append(f"({' AND '.join(prefix_terms)})")
+
+        return " OR ".join(parts)
+
     def _bm25_search(self, query: str, limit: int) -> list[str]:
-        """BM25 keyword search via FTS5.
+        """BM25 keyword search via FTS5 with phrase matching and column weights.
+
+        Uses phrase + AND + prefix query construction for balanced
+        precision/recall.  Weights doc_title 10x and section_title 5x
+        over body to prioritize title matches.
 
         Args:
             query: The search query.
@@ -356,23 +443,19 @@ class DocsIndex:
             List of chunk_ids ordered by BM25 relevance.
         """
         try:
-            # FTS5 query: split into individual terms joined by OR for broad matching.
-            # Escape special FTS5 characters.
-            terms = query.split()
-            if not terms:
+            fts_query = self._build_fts_query(query)
+            if not fts_query:
                 return []
-            # Quote each term individually and join with OR
-            safe_terms = [f'"{t.replace(chr(34), "")}"' for t in terms if t.strip()]
-            if not safe_terms:
-                return []
-            fts_query = " OR ".join(safe_terms)
+
+            # Column order: body, section_title, doc_title
+            # Weights:      1.0,  5.0,           10.0
             rows = self._conn.execute(
                 """
                 SELECT c.chunk_id
                 FROM chunks_fts fts
                 JOIN chunks c ON c.rowid = fts.rowid
                 WHERE chunks_fts MATCH ?
-                ORDER BY bm25(chunks_fts)
+                ORDER BY bm25(chunks_fts, 1.0, 5.0, 10.0)
                 LIMIT ?
                 """,
                 (fts_query, limit),
