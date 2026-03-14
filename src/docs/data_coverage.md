@@ -52,7 +52,7 @@ related_docs:
 
 **Critical note on 6-digit products:** 6-digit product granularity is supported in the Explore API (`productLevel: 6`) but complexity metrics (ECI, PCI, RCA, COG, distance) are not available at the 6-digit level in either API or SQL. The SQL test seed skips 6-digit tables entirely because they are extremely large.
 
-## Product Granularity Levels
+### Product Granularity Levels
 
 | Level | Approximate Count (HS92) | Complexity Metrics Available? | Available in SQL? | Available via Explore API? |
 |---|---|---|---|---|
@@ -145,23 +145,9 @@ Table naming convention: `{schema}.{facet}_{digit_level}` — e.g., `hs92.countr
 | Group/regional aggregates | No | Yes | Partial |
 | Product space edges (proximity) | Yes (`product_hs92_ps_edges`) | Yes (`productProduct`) | No |
 
-## Data Update Cycle
+## Data Sources, Updates, and Complexity Constraints
 
-- **Annual update:** ~95% of data updated once per year, typically April–June.
-- **Lag:** Country reporting to UN Comtrade requires 12–18 months. For example, most 2024 trade data becomes available in the Atlas between April–June 2026.
-- **Current latest year:** 2024 (for HS92, HS12, HS22, and SITC in the Explore API).
-- **Historical revisions:** Annual releases may incorporate corrections to prior years.
-- **Interim updates:** Ongoing throughout the year for newly submitted country data.
-
-## Complexity Data Availability Constraints
-
-- Complexity metrics (ECI, PCI, RCA, COG, distance, product_status) are **included** for unilateral and product trade datasets at 1–4 digit levels.
-- Complexity metrics are **not available** for:
-  - 6-digit granularity
-  - Bilateral trade data
-  - Services trade
-
-## Data Sources
+### Data Sources
 
 | Data Type | Raw Source |
 |---|---|
@@ -171,6 +157,22 @@ Table naming convention: `{schema}.{facet}_{digit_level}` — e.g., `hs92.countr
 | Inflation deflators | Federal Reserve Economic Data (FRED), Producer Price Index for Industrial Commodities |
 
 All trade values are in **current USD** (nominal). Constant-dollar values use the `public.year` table deflators, with the base year set to the most recent Atlas data year (currently 2024).
+
+### Data Update Cycle
+
+- **Annual update:** ~95% of data updated once per year, typically April–June.
+- **Lag:** Country reporting to UN Comtrade requires 12–18 months. For example, most 2024 trade data becomes available in the Atlas between April–June 2026.
+- **Current latest year:** 2024 (for HS92, HS12, HS22, and SITC in the Explore API).
+- **Historical revisions:** Annual releases may incorporate corrections to prior years.
+- **Interim updates:** Ongoing throughout the year for newly submitted country data.
+
+### Complexity Data Availability Constraints
+
+- Complexity metrics (ECI, PCI, RCA, COG, distance, product_status) are **included** for unilateral and product trade datasets at 1–4 digit levels.
+- Complexity metrics are **not available** for:
+  - 6-digit granularity
+  - Bilateral trade data
+  - Services trade
 
 ## Common Data Boundary Questions
 

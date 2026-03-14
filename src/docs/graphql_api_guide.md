@@ -569,19 +569,30 @@ Any query that returns "all products" (~1,200 items) produces 40–350 KB respon
 
 ## Important Operational Notes
 
+### Rate Limits, Response Sizing, and Caching
+
 - **Rate limit:** 120 requests per minute — shared across both APIs from the same IP. Budget queries carefully; batch fields within a single query rather than making multiple requests.
 - **Request only needed fields** to reduce response size. GraphQL allows selecting exactly the fields required. Field selection controls response size linearly: bytes ≈ field_count × item_count × ~60 bytes/field.
 - **No server-side sort or limit:** For "top N" queries, the server returns all matching items — the client must sort and truncate. The pipeline does this automatically via `post_process_response` for Tier 4 query types.
 - **Cache responses** when possible. API data changes only when Atlas ingests new data (annually).
 - **For bulk downloads:** Use [atlas.hks.harvard.edu/data-downloads](https://atlas.hks.harvard.edu/data-downloads) instead of the API for large pre-generated tables.
+- **Usage warning:** The Atlas API is "best used to access data for stand-alone economic analysis, not to support other software applications" (official docs). The Growth Lab reserves the right to restrict access for abusive usage.
+
+### ID Formats, Product Codes, and Services
+
 - **Explore API product IDs** are internal (not HS codes). Use `productHs92` catalog to resolve `productId` → human-readable name and HS code.
 - **Goods and services are mixed** in responses. Filter by non-numeric product codes if you need goods-only results.
-- **Usage warning:** The Atlas API is "best used to access data for stand-alone economic analysis, not to support other software applications" (official docs). The Growth Lab reserves the right to restrict access for abusive usage.
-- **Rankings eligibility criteria:** Population ≥ 1,000,000 AND average 3-year exports ≥ $1,000,000,000, plus complexity and IMF data coverage. Check via `dataFlags` query.
-- **Country Pages API**: Not officially documented. Schema may change without warning. Verify with introspection if behavior is unexpected.
-- **HS22 caveat**: Only 2022–2024 data. Not available in the Country Pages API.
 - **Services exportValue caveat:** `countryYear.exportValue` returns the same total (goods + services combined) regardless of whether `productClass` or `servicesClass` is specified. The classification parameter has no effect on aggregate export values. Do NOT sum `countryYear(productClass: HS92).exportValue + countryYear(servicesClass: unilateral).exportValue` — this will double-count. To compute services share: use `countryProductYear` to get per-product export values, then identify services products by their non-numeric product codes (services categories like "Business", "Transport", "Travel & tourism"). Sum services product values and divide by the total.
+
+### ECI, Growth Projections, and Rankings Caveats
+
 - **ECI classification caveat:** ECI values differ by product classification. The **entire Country Profiles frontend uses SITC ECI as its default** (`defaultECIProductClass = ProductClass.SITC` in the source code), not just the growth dynamics chart. The `countryProfile.latestEci` field returns HS12 ECI. Use `countryYear(eciProductClass: SITC)` on the Country Pages API to get the Country Profiles-displayed value. On the Explore API, pass `productClass: SITC` to `countryYear` for SITC ECI, or `productClass: HS92` for HS92 ECI. The Explore API defaults to HS92 when `productClass` is omitted.
 - **ECI computation method:** ECI/PCI are computed using the **eigenvalue method** via the `py-ecomplexity` package (branch `continuous_eci`). They are computed over a **reliable set of ~123 countries** (with hardcoded overrides), then extended to all ~207 countries using a continuous MCP sigmoid: `mcp = rca / (rca + 1)`. ECI for non-reliable countries: `ECI_c = Σ(mcp × PCI) / Σ(mcp) / √(λ₂)`, then z-score standardized.
 - **Growth projection model:** The 10-year GDP growth projection is NOT "IMF WEO-based" — it's a custom OLS regression using 5 features (log GDP per capita, natural resource export change, ECI, COI, ECI×COI interaction) plus decade dummies. Ten cohort regressions are averaged, with outlier removal at 2.5× RMSE.
+- **Rankings eligibility criteria:** Population ≥ 1,000,000 AND average 3-year exports ≥ $1,000,000,000, plus complexity and IMF data coverage. Check via `dataFlags` query.
+
+### API Schema Stability and Data Gaps
+
+- **Country Pages API**: Not officially documented. Schema may change without warning. Verify with introspection if behavior is unexpected.
+- **HS22 caveat**: Only 2022–2024 data. Not available in the Country Pages API.
 - **RCA>1 count caveat:** The Product Space visualization on Country Pages displays a filtered count of "Export Products (RCA>1)" that is approximately 25-30% lower than the count returned by both the Explore API (`countryProductYear` with `exportRca >= 1`) and the Country Pages API (`countryProfile.diversity`). Both API sources return the full count of products meeting the RCA>=1 threshold. The browser applies additional visualization-level filtering. Counting products with `exportRca >= 1` from the API is a perfectly legitimate approach. The browser count reflects a visualization choice, not the true analytical count.

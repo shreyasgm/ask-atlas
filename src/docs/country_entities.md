@@ -93,11 +93,11 @@ Countries that no longer exist appear in the data with `former_country = true` i
 
 For pre-1995 queries about these entities, use the `sitc` schema. Exact year ranges available in the DB may differ; query `sitc.country_year WHERE country_id = (SELECT country_id FROM classification.location_country WHERE iso3_code = 'SUN')` to verify.
 
-## Small and Micro States
+## Small States and Country-Specific Data Notes
 
 Some countries (e.g., Tuvalu, Liechtenstein, San Marino) exist in the data but have very sparse trade records. They typically have `in_rankings = false` and may return few or no rows for many trade queries. The agent should warn about data limitations when querying these countries.
 
-## Country-Specific Data Availability Notes
+Country-specific notes:
 
 - **South Sudan (SSD)**: Independence 2011; data from ~2012 onward
 - **Timor-Leste (TLS)**: Independence 2002; data from ~2002 onward
@@ -265,6 +265,10 @@ WHERE country_id = (
 );
 ```
 
+### Self-trade entries in bilateral tables
+
+In bilateral trade tables (`country_country_year`, `country_country_product_year_*`), rows where `country_id = partner_id` represent self-trade entries. These should be zero in practice and can be excluded with `WHERE country_id != partner_id` when aggregating bilateral totals.
+
 ## GraphQL: Country ID Usage
 
 ### Explore API (`/api/graphql`) — integer IDs
@@ -305,7 +309,3 @@ To retrieve all country IDs and codes via GraphQL:
   }
 }
 ```
-
-## Self-Trade Entries
-
-In bilateral trade tables (`country_country_year`, `country_country_product_year_*`), rows where `country_id = partner_id` represent self-trade entries. These should be zero in practice and can be excluded with `WHERE country_id != partner_id` when aggregating bilateral totals.

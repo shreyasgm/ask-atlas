@@ -557,7 +557,9 @@ LIMIT 10;
 
 ---
 
-## 12. GraphQL Queries Summary
+## 12. Quick Reference: GraphQL Queries and Metric Relationships
+
+### GraphQL Queries Summary
 
 | Query | Required Args | Returns | Use for |
 |---|---|---|---|
@@ -567,9 +569,7 @@ LIMIT 10;
 | `productYear` | `productLevel: 4` | `[ProductYear]` | Global export value and PCI per product-year |
 | `productHs92` | — | `[Product]` | Product catalog with `clusterId`, `productSpaceX/Y`, `naturalResource`, `greenProduct` |
 
----
-
-## 13. Metric Relationships: Quick Reference
+### Metric Relationships
 
 ```
 Proximity φ(i,j)  — product-to-product; symmetric; globally fixed

@@ -328,7 +328,9 @@ The field `eciNatResourcesGdpControlled` (available in both `countryProfile` and
 
 ---
 
-## Frontier Countries: Growth Opportunity Pages Unavailable
+## Frontier Countries, Subpage Data Sources, and Peer Comparisons
+
+### Frontier Countries: Growth Opportunity Pages Unavailable
 
 For highest-complexity countries (those assigned `TechFrontier`), the Atlas does not show growth opportunity pages:
 
@@ -339,9 +341,7 @@ For highest-complexity countries (those assigned `TechFrontier`), the Atlas does
 
 **Workaround:** The Explore API feasibility page (`/explore/feasibility?year={year}&exporter=country-{id}`) is available for all countries including frontier countries. It shows the same underlying distance × COG data in a different visualization context.
 
----
-
-## Strategic Approach Subpage: Data Sources
+### Strategic Approach Subpage: Data Sources
 
 URL: `/countries/{id}/strategic-approach`
 
@@ -355,9 +355,7 @@ The page title asks two questions that map directly to the two axes:
 1. "Is the {country} complex enough for its income to grow?" → x-axis (`eciNatResourcesGdpControlled`)
 2. "Is the {country} well-connected to many new opportunities (COI)?" → y-axis (`latestCoi`)
 
----
-
-## Peer Country Comparisons (New Products Page)
+### Peer Country Comparisons (New Products Page)
 
 On `/countries/{id}/new-products`, the Atlas compares the selected country with 3 peer countries in a table showing new product count, total value, and per-capita value.
 
@@ -378,7 +376,9 @@ Example output for Kenya (M49: 404): Uganda (28 products/$211M), Kenya (24/$260M
 
 ---
 
-## Quick Reference: All Enum Values
+## Quick Reference: Enums and API Routing
+
+### All Enum Values
 
 | Enum | Values |
 |---|---|
@@ -389,9 +389,7 @@ Example output for Kenya (M49: 404): Uganda (28 products/$211M), Kenya (24/$260M
 | `GrowthProjectionRelativeToIncome` | `More`, `ModeratelyMore`, `Same`, `ModeratelyLess`, `Less` |
 | `GrowthProjectionPercentileClassification` | `TopDecile`, `TopQuartile`, `TopHalf`, `BottomHalf` |
 
----
-
-## API Routing Summary
+### API Routing Summary
 
 | User question | Query type | API |
 |---|---|---|

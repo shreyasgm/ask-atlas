@@ -108,13 +108,15 @@ Properties:
 
 The continuous M formula is confirmed in the Atlas glossary (2026 update to the RCA definition) and `atlas_docs/economic_complexity_metrics.md` Section 3.
 
-### Pre-2026: Binary M (historical reference only)
+### Pre-2026: Binary M and Normalized RCA Columns
+
+**Binary M (historical reference only):**
 
 ```
 M_cp = 1 if RCA_cp >= 1 else 0
 ```
 
-### Normalized RCA columns (`*_rcalt1` suffix)
+**Normalized RCA columns (`*_rcalt1` suffix):**
 
 The `country_product_year` tables carry two sets of normalized metrics: one computed over all products (the standard columns), and `*_rcalt1` variants normalized over only the subset of products where `export_rca < 1`. The `_rcalt1` columns are useful for feasibility analysis — they rank products among those the country does not yet export competitively. See the Normalized Variants section.
 
@@ -209,13 +211,15 @@ The first eigenvector (lambda = 1) is trivial — it assigns equal value to all 
 
 **Correct use:** Compare within-year ECI rankings. For trend analysis, compare ECI rank trajectories (not level differences). The Atlas rankings page shows rank evolution over time, which is the methodologically valid way to track complexity trends.
 
-### DB columns (in `{schema}.country_year`)
+### DB columns, GraphQL fields, and ECI rank
+
+**ECI column in `{schema}.country_year`:**
 
 | Column | Type | Notes |
 |--------|------|-------|
 | `eci` | float8 | ECI value for that year |
 
-### Additional country-year columns of interest
+**Additional country-year columns of interest:**
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -231,9 +235,7 @@ The first eigenvector (lambda = 1) is trivial — it assigns equal value to all 
 | `export_value` | int8 | Total export value |
 | `import_value` | int8 | Total import value |
 
-### ECI rank
-
-ECI rank is available via the GraphQL API but not stored as a separate DB column. It is derived from ordering countries by `eci` within a year.
+**ECI rank:** Available via the GraphQL API but not stored as a separate DB column. It is derived from ordering countries by `eci` within a year.
 
 **GraphQL fields on `CountryYear`:** `eci`, `coi`, `eciRank`
 
@@ -259,11 +261,9 @@ ECI_c = (1 / k_{c,0}) * sum_p M_cp * PCI_p
 
 A country's ECI equals the average PCI of the products where it has comparative advantage.
 
-### Categorical variant: `complexity_enum`
+### DB columns, categorical variant, and cross-year warning
 
 The DB stores a categorical version of PCI: `complexity_enum ENUM(low, moderate, high)`. This is a derived bin assignment, not a direct quotient.
-
-### DB columns
 
 **In `{schema}.product_year_{level}` tables:**
 
@@ -281,9 +281,7 @@ The DB stores a categorical version of PCI: `complexity_enum ENUM(low, moderate,
 
 **GraphQL fields on `ProductYear`:** `pci`, `exportValue`, `complexityEnum`
 
-### Cross-year comparability warning
-
-Same as ECI: PCI is standardized relative to each year's product distribution. Do not compare PCI levels across years. Use PCI rank comparisons within a year.
+**Cross-year comparability warning:** Same as ECI: PCI is standardized relative to each year's product distribution. Do not compare PCI levels across years. Use PCI rank comparisons within a year.
 
 ### Natural resource products
 
@@ -639,7 +637,9 @@ Note: These 8 product space clusters differ from the 11 treemap sectors used in 
 
 ## 18. SQL Query Examples
 
-### ECI for a country over time
+### Country-level: ECI over time and product complexity ranking
+
+**ECI for a country over time:**
 
 ```sql
 SELECT year, eci, coi, diversity, growth_proj
@@ -649,7 +649,7 @@ WHERE iso3_code = 'KEN'
 ORDER BY year;
 ```
 
-### Top products by PCI for a given year (product complexity ranking)
+**Top products by PCI for a given year (product complexity ranking):**
 
 ```sql
 SELECT p.name_en, py.pci, py.complexity_enum, py.export_value
@@ -661,7 +661,9 @@ ORDER BY py.pci DESC
 LIMIT 20;
 ```
 
-### Growth opportunity products for a country (composite scoring, RCA < 1)
+### Growth opportunities and new products
+
+**Growth opportunity products for a country (composite scoring, RCA < 1):**
 
 ```sql
 -- Uses StrategicBets weights (0.50/0.15/0.35) — see prompt_sql.py for full
@@ -681,7 +683,7 @@ ORDER BY composite_score DESC
 LIMIT 20;
 ```
 
-### New products (gained RCA in last N years)
+**New products (gained RCA in last N years):**
 
 ```sql
 SELECT p.name_en, cpy.export_rca, cpy.export_value

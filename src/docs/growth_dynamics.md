@@ -66,15 +66,14 @@ Note: 15-year lookback (`FifteenYears`) is available in the `countryLookback` AP
 | Bottom-right (negative CAGR, high PCI) | Complex products shrinking — possible deindustrialization risk |
 | Bottom-left (negative CAGR, low PCI) | Shrinking simple products — least favorable growth pattern |
 
-### Tooltip Data (on hover)
+### Tooltip and Narrative Data
 
+**Tooltip (on hover):**
 - Product name and HS92 code (e.g., "27 HS92")
 - Gross Country Export value (absolute USD)
 - Export Growth percentage (CAGR for selected period)
 
-### Narrative Text Fields
-
-The text section beneath the chart is powered by:
+**Narrative text fields** beneath the chart are powered by:
 - `countryProfile.exportValueGrowthClassification` — overall growth pattern enum
 - `countryLookback.largestContributingExportProduct` — products/sectors driving growth
 
@@ -145,18 +144,12 @@ gdpGrowthConstant: Float                    # GDP growth in constant dollars
 
 ## 4. Non-Oil Export Growth Rate
 
-### Definition
-
 `exportValueGrowthNonOilConstCagr` is the CAGR of a country's exports **after excluding oil and petroleum products**. Oil products are HS92 section 27 ("Mineral fuels, mineral oils and products of their distillation").
-
-### Why It Matters
 
 For resource-rich economies, total export CAGR can be dominated by commodity price swings rather than genuine productive transformation. The non-oil growth rate isolates capability-driven growth from resource windfall effects. For example:
 
 - A country whose total exports grew 8% but non-oil exports grew only 1% is primarily riding an oil price cycle.
 - A country where non-oil growth exceeds total export growth may be actively diversifying away from resource dependence.
-
-### How to Use It
 
 The non-oil export growth rate appears on the Export Basket page text narrative alongside `exportValueConstGrowthCagr`. Present both figures when a country has significant natural resource exports (`countryProfile.exportValueNatResources` or `netExportValueNatResources` can indicate this).
 

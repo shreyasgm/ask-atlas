@@ -183,7 +183,7 @@ This query has **no optional arguments** — all fields are always returned. The
 
 ---
 
-## 6. GraphQL API: `newProductsComparisonCountries` Query
+## 6. GraphQL API: `newProductsComparisonCountries` Query and Peer Selection
 
 > **HS92-only.** Same as `newProductsCountry`.
 
@@ -212,9 +212,7 @@ query {
 
 Returns a list of `NewProductsComparisonCountries` objects — one per peer country plus the queried country itself (typically 4 rows total: the country + 3 peers).
 
----
-
-## 7. Peer Country Selection
+### Peer Country Selection
 
 The peer countries shown in the comparison table are selected automatically by the Country Pages API. The selection criterion is geographic and economic similarity — Atlas uses `countryProfile.comparisonLocations` (a list of `Location` objects) to determine peers. Peer selection is not configurable by the caller; it is pre-computed server-side based on the country's income level, region, and export structure.
 
@@ -238,7 +236,7 @@ The same peers returned here appear in the `newProductsComparisonCountries` resp
 
 ---
 
-## 8. `countryProfile` Fields Relevant to New Products
+## 7. `countryProfile` Fields Relevant to New Products
 
 > **GraphQL only (HS92).**
 
@@ -259,7 +257,9 @@ The `countryLookback(yearRange: FifteenYears)` query returns `diversityRankChang
 
 ---
 
-## 9. Diversification Grade Thresholds
+## 8. Diversification Grade and Per-Capita Income Contribution
+
+### Diversification Grade Thresholds
 
 The `diversificationGrade` is assigned by ranking all countries by their new product count and applying fixed cut-offs:
 
@@ -272,9 +272,7 @@ The `diversificationGrade` is assigned by ranking all countries by their new pro
 | `D` | ≥ 3 new products |
 | `DMinus` | < 3 new products |
 
----
-
-## 10. Per-Capita Income Contribution
+### Per-Capita Income Contribution
 
 **What it measures**: The total export value of new products divided by the country's population. It answers "how much additional income per person comes from the products the country has newly started exporting."
 
@@ -287,7 +285,7 @@ The `newProductsIncomeGrowthComments` enum (`LargeEnough` / `TooSmall`) classifi
 
 ---
 
-## 11. New-Products Page: Complete Data Point Map
+## 9. New-Products Page: Complete Data Point Map
 
 > **GraphQL / Country Pages only (HS92).**
 
@@ -306,7 +304,7 @@ The `newProductsIncomeGrowthComments` enum (`LargeEnough` / `TooSmall`) classifi
 
 ---
 
-## 12. Known Limitations and Data Gaps
+## 10. Known Limitations and Data Gaps
 
 - **GraphQL new products are HS92-only.** The `newProductsCountry` query has no `productClass` parameter. For HS12 or SITC new products, use SQL.
 - **`is_new` and `product_status` are ALL NULL** in the current database. Compute new products from raw `export_value` using the 3-year averaging method.
