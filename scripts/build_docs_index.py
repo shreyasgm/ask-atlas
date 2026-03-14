@@ -252,6 +252,16 @@ async def build_index(
         force: If True, rebuild all files regardless of checksums.
         concurrency: Max concurrent LLM calls.
     """
+    # With --force, remove the existing DB for a clean rebuild
+    if force and output_path.exists():
+        logger.info("Force mode: removing existing index at %s", output_path)
+        output_path.unlink()
+        # Also remove WAL/SHM files if present
+        for suffix in ("-wal", "-shm"):
+            wal_path = output_path.parent / (output_path.name + suffix)
+            if wal_path.exists():
+                wal_path.unlink()
+
     conn = sqlite3.connect(str(output_path))
     conn.execute("PRAGMA journal_mode=WAL")
     conn.executescript(SCHEMA_SQL)

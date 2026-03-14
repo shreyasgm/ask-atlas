@@ -634,3 +634,22 @@ class TestBuildIndex:
             await build_index(docs_dir, output_db, force=True)
             # Should have been called for summaries + questions (2 chunks × 2 = 4 calls)
             assert mock_llm.call_count == 4
+
+    async def test_force_removes_existing_db(self, docs_dir: Path, output_db: Path):
+        """With --force, the existing DB file is deleted before rebuilding."""
+        p1, p2 = _patch_llm_and_embeddings()
+        with p1, p2:
+            await build_index(docs_dir, output_db, force=False)
+
+        assert output_db.exists()
+        original_inode = output_db.stat().st_ino
+
+        # Force rebuild — should create a new file (different inode)
+        p1, p2 = _patch_llm_and_embeddings()
+        with p1, p2:
+            await build_index(docs_dir, output_db, force=True)
+
+        assert output_db.exists()
+        assert output_db.stat().st_ino != original_inode, (
+            "DB file was not replaced — force should delete and recreate"
+        )
