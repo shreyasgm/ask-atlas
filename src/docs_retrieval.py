@@ -186,6 +186,7 @@ def _deserialize_embedding(data: bytes) -> list[float]:
 async def _embed_query(text: str) -> list[float] | None:
     """Embed a single query string via Vertex AI text-embedding-005.
 
+    Uses the google-genai SDK (replaces deprecated vertexai SDK).
     Returns None on failure (caller should fall back to BM25-only).
 
     Args:
@@ -195,15 +196,16 @@ async def _embed_query(text: str) -> list[float] | None:
         Embedding vector as a list of floats, or None on error.
     """
     try:
-        from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
+        from google import genai
+        from google.genai import types
 
-        model = TextEmbeddingModel.from_pretrained("text-embedding-005")
-        inputs = [TextEmbeddingInput(text, task_type="RETRIEVAL_QUERY")]
-        # Run synchronously (Vertex AI SDK is sync); wrap in thread for async
-        import asyncio
-
-        embeddings = await asyncio.to_thread(model.get_embeddings, inputs)
-        return embeddings[0].values
+        client = genai.Client(vertexai=True)
+        response = await client.aio.models.embed_content(
+            model="text-embedding-005",
+            contents=text,
+            config=types.EmbedContentConfig(task_type="RETRIEVAL_QUERY"),
+        )
+        return response.embeddings[0].values
     except Exception:
         logger.warning("Embedding API failed; falling back to BM25-only", exc_info=True)
         return None
@@ -395,15 +397,16 @@ class DocsIndex:
         chunk_ids: list[str] = []
         hype_ids: list[str] = []
 
+        # vec0 KNN queries require `AND k = ?` and don't support JOINs
+        # inside the query. Use CTEs to join back to source tables.
+
         try:
             rows = self._conn.execute(
                 """
-                SELECT c.chunk_id
-                FROM chunk_embeddings ce
-                JOIN chunks c ON c.chunk_id = ce.chunk_id
-                WHERE ce.embedding MATCH ?
-                ORDER BY distance
-                LIMIT ?
+                SELECT chunk_id, distance
+                FROM chunk_vec
+                WHERE embedding MATCH ?
+                  AND k = ?
                 """,
                 (emb_bytes, limit),
             ).fetchall()
@@ -412,19 +415,27 @@ class DocsIndex:
             logger.warning("Chunk vector search failed", exc_info=True)
 
         try:
+            # Fetch nearest HyPE question vectors, then resolve to chunk IDs.
+            # We fetch limit*5 questions to ensure enough distinct chunks after
+            # deduplication (each chunk has ~5 questions, so many may match).
+            hype_limit = limit * 5
             rows = self._conn.execute(
                 """
-                SELECT DISTINCT c.chunk_id
-                FROM hype_embeddings he
-                JOIN hype_questions hq ON hq.question_id = he.question_id
-                JOIN chunks c ON c.chunk_id = hq.chunk_id
-                WHERE he.embedding MATCH ?
-                ORDER BY distance
-                LIMIT ?
+                WITH knn AS (
+                    SELECT question_id, distance
+                    FROM hype_vec
+                    WHERE embedding MATCH ?
+                      AND k = ?
+                )
+                SELECT hq.chunk_id, MIN(knn.distance) AS best_distance
+                FROM knn
+                JOIN hype_questions hq ON hq.question_id = knn.question_id
+                GROUP BY hq.chunk_id
+                ORDER BY best_distance
                 """,
-                (emb_bytes, limit),
+                (emb_bytes, hype_limit),
             ).fetchall()
-            hype_ids = [row["chunk_id"] for row in rows]
+            hype_ids = [row["chunk_id"] for row in rows][:limit]
         except Exception:
             logger.warning("HyPE vector search failed", exc_info=True)
 

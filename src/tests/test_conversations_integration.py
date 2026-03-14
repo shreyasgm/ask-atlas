@@ -88,8 +88,9 @@ class TestPostgresConversationStore:
         await store.create("t2", "s1", "Second")
         await store.create("t3", "s2", "Other")
 
-        rows = await store.list_by_session("s1")
+        rows, has_more = await store.list_by_session("s1")
         assert len(rows) == 2
+        assert not has_more
         ids = {r.id for r in rows}
         assert ids == {"t1", "t2"}
 
@@ -102,7 +103,7 @@ class TestPostgresConversationStore:
         # Touch t1 so its updated_at is more recent
         await store.update_timestamp("t1")
 
-        rows = await store.list_by_session("s1")
+        rows, _ = await store.list_by_session("s1")
         assert rows[0].id == "t1"
         assert rows[1].id == "t2"
 

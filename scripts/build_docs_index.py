@@ -116,6 +116,8 @@ def embed_texts(
 ) -> list[list[float]]:
     """Embed a batch of texts via Vertex AI text-embedding-005.
 
+    Uses the google-genai SDK (replaces deprecated vertexai SDK).
+
     Args:
         texts: List of text strings to embed.
         task_type: Vertex AI task type (RETRIEVAL_DOCUMENT or RETRIEVAL_QUERY).
@@ -123,18 +125,23 @@ def embed_texts(
     Returns:
         List of embedding vectors.
     """
-    from vertexai.language_models import TextEmbeddingInput, TextEmbeddingModel
+    from google import genai
+    from google.genai import types
 
-    model = TextEmbeddingModel.from_pretrained("text-embedding-005")
+    client = genai.Client(vertexai=True)
+    config = types.EmbedContentConfig(task_type=task_type)
     # Vertex AI text-embedding-005 has a 20,000 token per-request limit.
     # With doc chunks averaging ~400 tokens, batch size of 20 stays safely under.
     all_embeddings: list[list[float]] = []
     batch_size = 20
     for i in range(0, len(texts), batch_size):
         batch = texts[i : i + batch_size]
-        inputs = [TextEmbeddingInput(t, task_type=task_type) for t in batch]
-        results = model.get_embeddings(inputs)
-        all_embeddings.extend([r.values for r in results])
+        response = client.models.embed_content(
+            model="text-embedding-005",
+            contents=batch,
+            config=config,
+        )
+        all_embeddings.extend([e.values for e in response.embeddings])
         logger.info("Embedded batch %d-%d of %d", i, i + len(batch), len(texts))
     return all_embeddings
 

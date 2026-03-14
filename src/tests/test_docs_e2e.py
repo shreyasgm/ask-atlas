@@ -178,20 +178,15 @@ class TestDocsPipelineE2E:
             or "product complexity" in extract_state.get("question", "").lower()
         ), f"Expected PCI-related question, got: {extract_state.get('question')}"
 
-        # select_docs should report selected files
-        assert "select_docs" in pipeline_states
-        select_state = pipeline_states["select_docs"]
-        assert select_state.get("selected_files"), "No docs were selected"
-
-        # synthesize_docs should report synthesis completed
-        assert "synthesize_docs" in pipeline_states
-        synth_state = pipeline_states["synthesize_docs"]
-        assert synth_state.get("has_synthesis") is True, "Synthesis not produced"
-
-        # At least metrics_glossary.md should be among selected files
-        selected = select_state["selected_files"]
-        assert "metrics_glossary.md" in selected, (
-            f"Expected metrics_glossary.md in selected files, got: {selected}"
+        # retrieve_docs should report chunk count
+        assert "retrieve_docs" in pipeline_states, (
+            f"Missing pipeline_state for retrieve_docs. "
+            f"Got stages: {list(pipeline_states.keys())}"
+        )
+        retrieve_state = pipeline_states["retrieve_docs"]
+        chunk_count = retrieve_state.get("chunk_count", 0)
+        assert chunk_count > 0, (
+            f"Expected retrieved chunks, got chunk_count={chunk_count}"
         )
 
         # --- Verify tool_output is substantive (from test 5) ---
