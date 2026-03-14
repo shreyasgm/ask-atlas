@@ -271,6 +271,7 @@ class AtlasAgentState(TypedDict):
     # Accumulated per-call GraphQL correction agent reasoning traces
     graphql_reasoning_trace: Annotated[list[list[dict]], add_graphql_reasoning_traces]
     # === Docs pipeline state (reset by extract_docs_question at cycle start) ===
+    docs_auto_chunks: list[dict]
     docs_question: str
     docs_context: str
     docs_selected_files: list[str]

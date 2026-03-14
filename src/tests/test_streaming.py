@@ -212,14 +212,20 @@ class TestGraphQLPipelineStateExtraction:
         assert "api_target" in result
         assert "success" in result
 
-    def test_retrieve_docs_surfaces_chunk_count(self):
-        """retrieve_docs node: counts <doc_chunk tags in synthesis."""
+    def test_retrieve_docs_surfaces_chunk_count_and_titles(self):
+        """retrieve_docs node: counts doc_chunk tags and extracts source filenames."""
+        synthesis = (
+            '<doc_chunk source="eci.md" section="Overview">a</doc_chunk>'
+            '<doc_chunk source="pci.md" section="Intro">b</doc_chunk>'
+            '<doc_chunk source="eci.md" section="Formula">c</doc_chunk>'
+        )
         result = _extract_pipeline_state(
             "retrieve_docs",
-            {"docs_synthesis": "<doc_chunk>a</doc_chunk><doc_chunk>b</doc_chunk>"},
+            {"docs_synthesis": synthesis},
         )
         assert result["stage"] == "retrieve_docs"
-        assert result["chunk_count"] == 2
+        assert result["chunk_count"] == 3
+        assert result["doc_titles"] == ["eci.md", "pci.md"]
 
     def test_retrieve_docs_no_synthesis(self):
         """retrieve_docs node: chunk_count is 0 when no synthesis."""
@@ -229,14 +235,21 @@ class TestGraphQLPipelineStateExtraction:
         )
         assert result["chunk_count"] == 0
 
-    def test_retrieve_docs_context_surfaces_chunk_count(self):
-        """retrieve_docs_context node: counts auto chunks."""
+    def test_retrieve_docs_context_surfaces_chunk_count_and_titles(self):
+        """retrieve_docs_context node: counts auto chunks and extracts titles."""
         result = _extract_pipeline_state(
             "retrieve_docs_context",
-            {"docs_auto_chunks": ["chunk1", "chunk2", "chunk3"]},
+            {
+                "docs_auto_chunks": [
+                    {"chunk_id": "c1", "doc_title": "ECI Methodology", "body": "..."},
+                    {"chunk_id": "c2", "doc_title": "ECI Methodology", "body": "..."},
+                    {"chunk_id": "c3", "doc_title": "PCI Overview", "body": "..."},
+                ]
+            },
         )
         assert result["stage"] == "retrieve_docs_context"
         assert result["chunk_count"] == 3
+        assert result["doc_titles"] == ["ECI Methodology", "PCI Overview"]
 
     def test_retrieve_docs_context_no_chunks(self):
         """retrieve_docs_context node: chunk_count is 0 when empty."""
@@ -245,6 +258,7 @@ class TestGraphQLPipelineStateExtraction:
             {"docs_auto_chunks": []},
         )
         assert result["chunk_count"] == 0
+        assert result["doc_titles"] == []
 
 
 # ---------------------------------------------------------------------------

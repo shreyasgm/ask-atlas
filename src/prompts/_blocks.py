@@ -98,10 +98,9 @@ For formulas, column names, and methodology details, call docs_tool."""
 
 _DOCS_TOOL_BLOCK = """\
 **Documentation (auto-injected + docs_tool):**
-Relevant documentation chunks are automatically injected into this prompt based on the \
-user's question. Check the ``documentation_context`` section at the end of this prompt \
-(if present) before calling any tools — it may already contain the methodology details \
-you need.
+Relevant documentation chunks are automatically retrieved and appended to the user's \
+message (after a ``---`` separator, inside ``documentation_context`` tags). Check this \
+section before calling any tools — it may already contain the methodology details you need.
 
 If you need **additional** documentation beyond what was auto-injected, call `docs_tool` \
 with a focused question. It retrieves more chunks from the same knowledge base, excluding \
@@ -115,12 +114,12 @@ is insufficient
 - The user explicitly asks about methodology not covered in the injected docs
 
 Do NOT use docs_tool when:
-- The auto-injected documentation context already answers your question
+- The auto-injected documentation already answers the question
 - The user asks a simple factual query ("What did Kenya export in 2024?") — go to data tools
 - You already have enough context from auto-injected docs or prior docs_tool calls
 
 **Context-passing workflow:**
-1. Check auto-injected docs first
+1. Check auto-injected docs in the user's message first
 2. If more detail needed, call docs_tool
 3. Pass relevant information / excerpts as `context` to your data tool call
 

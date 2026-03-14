@@ -171,9 +171,15 @@ export function getStepDetail(
     case 'retrieve_docs':
     case 'retrieve_docs_context': {
       const count = detail.chunk_count;
-      return typeof count === 'number' && count > 0
-        ? `→ ${count} chunk${count === 1 ? '' : 's'}`
-        : null;
+      const titles = detail.doc_titles;
+      const parts: Array<string> = [];
+      if (typeof count === 'number' && count > 0) {
+        parts.push(`${count} chunk${count === 1 ? '' : 's'}`);
+      }
+      if (Array.isArray(titles) && titles.length > 0) {
+        parts.push(`from ${(titles as Array<string>).join(', ')}`);
+      }
+      return parts.length > 0 ? `\u2192 ${parts.join(' ')}` : null;
     }
 
     default:

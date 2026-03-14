@@ -13,12 +13,13 @@ import time
 from collections.abc import Awaitable, Callable
 
 from langchain_core.language_models import BaseLanguageModel
-from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field
 
 from src.config import AgentMode
 from src.docs_pipeline import _docs_tool_schema
+from src.docs_retrieval import format_chunks_for_prompt
 from src.graphql_client import GraphQLBudgetTracker
 from src.prompts import (
     GRAPHQL_ONLY_OVERRIDE,
@@ -227,6 +228,31 @@ def make_agent_node(
                     overrides_parts
                 )
                 prompt_text += "\n\nThese overrides take precedence over what the question implies. If the question contradicts an override, briefly note the conflict but follow the override."
+
+            # Inject auto-retrieved doc chunks into the last human message
+            # so the agent can see them without needing to call docs_tool.
+            # The modified message is only used for the LLM call — the
+            # original HumanMessage in state/checkpoint is untouched.
+            auto_chunks = state.get("docs_auto_chunks") or []
+            if auto_chunks:
+                docs_xml = format_chunks_for_prompt(auto_chunks)
+                injection = (
+                    "\n\n---\n"
+                    "_Auto-retrieved documentation — use if relevant to the "
+                    "question above. Call docs_tool only if you need "
+                    "additional detail not covered here._\n\n"
+                    f"{docs_xml}"
+                )
+                for i in range(len(messages) - 1, -1, -1):
+                    if isinstance(messages[i], HumanMessage):
+                        original = (
+                            messages[i].content
+                            if isinstance(messages[i].content, str)
+                            else str(messages[i].content)
+                        )
+                        messages = list(messages)  # ensure mutable copy
+                        messages[i] = HumanMessage(content=f"{original}{injection}")
+                        break
 
             model_with_tools = llm.bind_tools(tools)
             llm_start = time.monotonic()
