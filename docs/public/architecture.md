@@ -49,7 +49,8 @@ ask-atlas/
 │   ├── graphql_pipeline.py         # GraphQL pipeline nodes (classify → extract → resolve → execute)
 │   ├── graphql_client.py           # Async GraphQL HTTP client, circuit breaker, budget tracker
 │   ├── graphql_subagent.py         # GraphQL correction sub-agent (ReAct loop with 5 tools)
-│   ├── docs_pipeline.py            # Docs pipeline nodes (select → synthesize)
+│   ├── docs_pipeline.py            # Docs pipeline nodes (auto-injection + hybrid retrieval)
+│   ├── docs_retrieval.py           # DocsIndex: hybrid BM25+vector search (SQLite FTS5 + sqlite-vec)
 │   ├── docs/                       # Markdown documentation files (YAML frontmatter, loaded at startup)
 │   ├── atlas_links.py              # Deterministic Atlas visualization URL builder
 │   ├── product_and_schema_lookup.py  # Product code resolution pipeline
@@ -94,6 +95,8 @@ ask-atlas/
 │   ├── report.py                   # JSON + Markdown report generation
 │   ├── questions/                  # Per-question directories
 │   └── results/                    # Ground truth query results
+├── scripts/
+│   └── build_docs_index.py         # Offline 5-phase docs index builder (BM25 + vector)
 ├── app.py                          # Legacy Streamlit entry point
 ├── Dockerfile                      # Multi-stage build
 ├── cloudbuild.yaml                 # Cloud Build config
@@ -279,18 +282,23 @@ GraphQL pipeline (7 nodes):
 | 6 | `graphql_correction_agent` | Correcting query (conditional) |
 | 7 | `format_graphql_results` | Formatting results |
 
-Docs pipeline (4 nodes):
+Docs pipeline — explicit (3 nodes):
 
 | Order | Node Name | UI Label |
 |-------|-----------|----------|
 | 1 | `extract_docs_question` | Extracting question |
-| 2 | `select_docs` | Selecting documents |
-| 3 | `synthesize_docs` | Synthesizing response |
-| 4 | `format_docs_results` | Formatting results |
+| 2 | `retrieve_docs` | Retrieving documentation |
+| 3 | `format_docs_results` | Preparing response |
+
+Docs pipeline — auto-injection (1 node, runs before every agent turn):
+
+| Order | Node Name | UI Label |
+|-------|-----------|----------|
+| 1 | `retrieve_docs_context` | Loading documentation context |
 
 ### LangGraph StateGraph (`src/graph.py`)
 
-`build_atlas_graph()` builds a compiled `StateGraph[AtlasAgentState]` with an outer agent loop and three inner deterministic pipelines (SQL, GraphQL, Docs).
+`build_atlas_graph()` builds a compiled `StateGraph[AtlasAgentState]` with a `retrieve_docs_context` pre-step (fires before the agent on each turn when a docs index is available), an outer agent loop, and three inner deterministic pipelines (SQL, GraphQL, Docs).
 
 **Agent tools**: The agent selects from up to four tools per turn:
 - **`query_tool`** — Routes to the SQL pipeline for custom database queries
@@ -310,7 +318,8 @@ Set via `model_config.py` (default: `"auto"`) and overridable per-request via `o
 
 ```mermaid
 graph TD
-    START([START]) --> agent
+    START([START]) --> rdc[retrieve_docs_context]
+    rdc --> agent
     agent -->|no tool_calls| END_NODE([END])
     agent -->|no tool_calls, first time| tcn[tool_call_nudge]
     tcn --> agent
@@ -338,14 +347,14 @@ graph TD
     gca --> fgr
     fgr --> agent
 
-    edq --> sd[select_docs]
-    sd --> syd[synthesize_docs]
-    syd --> fdr[format_docs_results]
+    edq --> rd[retrieve_docs]
+    rd --> fdr[format_docs_results]
     fdr --> agent
 
     mqe --> agent
 
     style agent fill:#4CAF50,color:#fff,stroke:#388E3C
+    style rdc fill:#f3e5f5,stroke:#7B1FA2
     style etq fill:#e3f2fd,stroke:#1976D2
     style ep fill:#e3f2fd,stroke:#1976D2
     style lc fill:#e3f2fd,stroke:#1976D2
@@ -360,8 +369,7 @@ graph TD
     style gca fill:#fff3e0,stroke:#F57C00
     style fgr fill:#e8f5e9,stroke:#388E3C
     style edq fill:#f3e5f5,stroke:#7B1FA2
-    style sd fill:#f3e5f5,stroke:#7B1FA2
-    style syd fill:#f3e5f5,stroke:#7B1FA2
+    style rd fill:#f3e5f5,stroke:#7B1FA2
     style fdr fill:#e8f5e9,stroke:#388E3C
     style tcn fill:#fff3e0,stroke:#E65100
     style ecl fill:#e8f5e9,stroke:#388E3C
@@ -431,15 +439,19 @@ graph TD
 
 7. **`format_graphql_results`** — Formats API response as readable text, attaches Atlas visualization links to state, returns a `ToolMessage` with answer text + links. On rejection or API failure, returns an informative error message. When `graphql_surface_to_agent` is true, prepends the assessment to the tool message.
 
-**Docs pipeline node details** (`src/docs_pipeline.py`):
+**Docs pipeline node details** (`src/docs_pipeline.py`, `src/docs_retrieval.py`):
+
+*Auto-injection (pre-agent):*
+
+- **`retrieve_docs_context`** — Runs before every agent turn (when a docs index is available). Embeds the user's latest message via Gemini embeddings and retrieves top-k chunks via hybrid BM25+vector search in `DocsIndex`. Stores results in `docs_auto_chunks` for injection into the agent's system prompt. ~100-200ms, zero LLM calls.
+
+*Explicit pipeline (triggered by `docs_tool` call):*
 
 1. **`extract_docs_question`** — Extracts question + context from tool args.
 
-2. **`select_docs`** — Lightweight LLM selects up to `max_docs_per_selection` relevant docs from a pre-loaded manifest (YAML frontmatter in `src/docs/*.md`).
+2. **`retrieve_docs`** — Hybrid BM25+vector search via `DocsIndex` (same engine as auto-injection). Excludes chunks already auto-injected to avoid duplication. Returns formatted chunks in `docs_synthesis`. Sub-200ms, zero LLM calls.
 
-3. **`synthesize_docs`** — Lightweight LLM synthesizes a response from the selected documents.
-
-4. **`format_docs_results`** — Returns the synthesized response as a `ToolMessage`.
+3. **`format_docs_results`** — Returns the retrieved chunks as a `ToolMessage`.
 
 **SQL sub-agent** (`src/sql_subagent.py`): A compiled ReAct graph with a frontier LLM and 4 tools. The system prompt (`SQL_SUBAGENT_PROMPT` from `src/prompts/prompt_sql.py`) injects table DDL, resolved product codes, direction/mode constraints, few-shot example queries, and domain rules. The sub-agent iterates autonomously — generating SQL, executing it, inspecting results, and retrying on errors — until it calls `report_results` with an explicit assessment. The reasoning trace (all AI messages, tool calls, and tool results) is captured and streamed to the frontend.
 
@@ -494,10 +506,12 @@ graph TD
 | `sql_call_history` | `Annotated[list[dict], add_sql_call_history]` | Per-call SQL pipeline snapshots (reducer: append) |
 | `graphql_call_history` | `Annotated[list[dict], add_graphql_call_history]` | Per-call GraphQL pipeline snapshots (reducer: append) |
 | **Docs pipeline** | | Reset by `extract_docs_question` at cycle start |
+| `docs_auto_chunks` | `list[dict]` | Pre-injected chunks from `retrieve_docs_context` |
 | `docs_question` | `str` | Extracted question from docs_tool call |
 | `docs_context` | `str` | Broader user context for the docs question |
-| `docs_selected_files` | `list[str]` | Filenames selected by the LLM |
-| `docs_synthesis` | `str` | Synthesized documentation response |
+| `docs_selected_files` | `list[str]` | Legacy field (unused since hybrid retrieval replaced LLM selection) |
+| `docs_synthesis` | `str` | Formatted retrieval chunks from `retrieve_docs` |
+| `docs_retrieved_titles` | `list[str]` | Doc titles of retrieved chunks |
 
 ### Configuration (`src/config.py`, `src/model_config.py`)
 
@@ -517,8 +531,8 @@ PROMPT_MODEL_ASSIGNMENTS = {         # Maps each prompt to "frontier" or "lightw
     "id_resolution_selection": "lightweight",
     "product_extraction": "lightweight",
     "product_code_selection": "lightweight",
-    "document_selection": "lightweight",
-    "documentation_synthesis": "lightweight",
+    "document_selection": "lightweight",       # Vestigial — no longer used at runtime (replaced by hybrid retrieval)
+    "documentation_synthesis": "lightweight",  # Vestigial — no longer used at runtime (replaced by hybrid retrieval)
 }
 
 # --- LiteLLM Router: multi-provider fallback chains ---
@@ -586,8 +600,8 @@ LLM prompts organized as a Python package with one module per pipeline. Zero imp
 | `id_resolution_selection` | Lightweight | Select best entity IDs from dual-source candidates (`src/prompts/prompt_graphql.py`) |
 | `product_extraction` | Lightweight | Identify products and classification schemas in user question (`src/product_and_schema_lookup.py`) |
 | `product_code_selection` | Lightweight | Select final product codes from LLM + DB candidates (`src/product_and_schema_lookup.py`) |
-| `document_selection` | Lightweight | Select relevant docs from manifest based on user question (`src/prompts/prompt_docs.py`) |
-| `documentation_synthesis` | Lightweight | Synthesize response from selected documentation files (`src/prompts/prompt_docs.py`) |
+| ~~`document_selection`~~ | ~~Lightweight~~ | ~~Select relevant docs from manifest~~ — **Replaced by hybrid retrieval** (`DocsIndex` in `src/docs_retrieval.py`); no LLM call at query time |
+| ~~`documentation_synthesis`~~ | ~~Lightweight~~ | ~~Synthesize response from selected docs~~ — **Replaced by hybrid retrieval**; chunks are returned directly, not synthesized by an LLM |
 
 ---
 
@@ -727,8 +741,8 @@ The `/api/chat/stream` endpoint returns `text/event-stream`. Events are sent in 
   - **`graphql_correction_agent`**: `{ "stage": "graphql_correction_agent", "reasoning_trace": [...] }`
   - **`format_graphql_results`**: `{ "stage": "format_graphql_results", "atlas_links": [...], "execution_time_ms": N }`
 - **Docs pipeline:**
-  - **`select_docs`**: `{ "stage": "select_docs", "selected_files": [...] }`
-  - **`synthesize_docs`**: `{ "stage": "synthesize_docs", "synthesis": "..." }`
+  - **`retrieve_docs`**: `{ "stage": "retrieve_docs", "chunk_count": N, "doc_titles": [...] }`
+  - **`retrieve_docs_context`**: `{ "stage": "retrieve_docs_context", "chunk_count": N, "doc_titles": [...] }`
 - Other stages: `{ "stage": "<node_name>", ... }` with stage-specific fields
 
 ### Conversation Tracking

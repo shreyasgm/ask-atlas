@@ -16,7 +16,7 @@ Ask Atlas is an AI-powered assistant that answers natural language questions abo
 - **Trade controls** — Toggle goods/services, classification schema (HS92, HS12, SITC), and export/import direction. Settings propagate through the entire pipeline.
 - **Conversation history** — Pick up where you left off; conversations persist across sessions.
 - **User feedback** — Rate answers with thumbs up/down to help improve the system over time.
-- **Built-in domain knowledge** — Ask about methodology (ECI, RCA, product space) and get sourced explanations drawn from Atlas documentation.
+- **Built-in domain knowledge** — Relevant methodology docs (ECI, RCA, product space) are automatically retrieved each turn via hybrid search; the agent can fetch additional documentation on demand.
 
 ## Architecture
 
@@ -83,11 +83,12 @@ graph TB
 
 ## Agent Pipeline
 
-A LangGraph StateGraph with an outer agent loop (the LLM decides which tool to call) wrapping three deterministic pipelines — SQL, GraphQL, and Docs:
+A LangGraph StateGraph with a doc-retrieval pre-step, an outer agent loop (the LLM decides which tool to call), and three deterministic pipelines — SQL, GraphQL, and Docs:
 
 ```mermaid
 graph TD
-    START([START]) --> agent
+    START([START]) --> rdc[retrieve_docs_context]
+    rdc --> agent
     agent -->|no tool_calls| END_NODE([END])
     agent -->|no tool_calls, first time| tcn[tool_call_nudge]
     tcn --> agent
@@ -115,9 +116,8 @@ graph TD
     gca --> fgr
     fgr --> agent
 
-    edq --> sd[select_docs]
-    sd --> syd[synthesize_docs]
-    syd --> fdr[format_docs_results]
+    edq --> rd[retrieve_docs]
+    rd --> fdr[format_docs_results]
     fdr --> agent
 
     mqe --> agent
@@ -136,9 +136,9 @@ graph TD
     style agr fill:#fff3e0,stroke:#F57C00
     style gca fill:#fff3e0,stroke:#F57C00
     style fgr fill:#e8f5e9,stroke:#388E3C
+    style rdc fill:#f3e5f5,stroke:#7B1FA2
     style edq fill:#f3e5f5,stroke:#7B1FA2
-    style sd fill:#f3e5f5,stroke:#7B1FA2
-    style syd fill:#f3e5f5,stroke:#7B1FA2
+    style rd fill:#f3e5f5,stroke:#7B1FA2
     style fdr fill:#e8f5e9,stroke:#388E3C
     style tcn fill:#fff3e0,stroke:#E65100
     style ecl fill:#e8f5e9,stroke:#388E3C
