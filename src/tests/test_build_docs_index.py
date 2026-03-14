@@ -300,8 +300,8 @@ def _patch_llm_and_embeddings():
 
     async def mock_acompletion(*args, **kwargs):
         # Distinguish summary vs questions by max_tokens
-        max_tokens = kwargs.get("max_tokens", 300)
-        if max_tokens <= 150:
+        max_tokens = kwargs.get("max_tokens", 2000)
+        if max_tokens <= 1000:
             return summary_response
         return questions_response
 

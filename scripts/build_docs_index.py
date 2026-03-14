@@ -175,7 +175,7 @@ async def generate_contextual_summary(
                     },
                     {"role": "user", "content": chunk_body[:3000]},
                 ],
-                max_tokens=150,
+                max_tokens=1000,
             )
         return response.choices[0].message.content.strip()
     except Exception:
@@ -215,7 +215,7 @@ async def generate_hype_questions(
                     },
                     {"role": "user", "content": chunk_body[:3000]},
                 ],
-                max_tokens=300,
+                max_tokens=2000,
             )
         questions = [
             q.strip()
@@ -364,7 +364,14 @@ async def build_index(
         for chunk in all_chunks
     ]
     hype_results = await asyncio.gather(*hype_tasks)
-    logger.info("HyPE question generation complete.")
+    non_empty = sum(1 for r in hype_results if r)
+    total_qs = sum(len(r) for r in hype_results)
+    logger.info(
+        "HyPE question generation complete: %d/%d chunks produced questions (%d total)",
+        non_empty,
+        len(hype_results),
+        total_qs,
+    )
 
     all_hype: list[dict] = []
     for chunk, questions in zip(all_chunks, hype_results):
