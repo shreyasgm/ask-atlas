@@ -203,13 +203,53 @@ The first eigenvector (lambda = 1) is trivial — it assigns equal value to all 
 - Positive ECI: more complex than average (exports diverse, rare, sophisticated products)
 - Negative ECI: less complex than average (exports concentrated in common products)
 - Strongly correlated with GDP per capita; **predicts future growth** better than most macroeconomic indicators
-- A 1 SD increase in ECI is associated with a 1.6% per year acceleration in long-run growth
+- A 1 SD increase in ECI is associated with approximately 1.6–1.9 percentage points per year faster long-run growth (see "Why ECI Predicts Future Growth" below for the precise regression specifications)
 
 ### CRITICAL: Cross-year comparability warning
 
 **ECI is NOT directly comparable across years as a level.** Each year's ECI is computed independently via eigenvalue decomposition of that year's M matrix and standardized relative to that year's country distribution. A country's ECI can rise or fall not because its productive capabilities changed, but because the reference set of countries changed.
 
 **Correct use:** Compare within-year ECI rankings. For trend analysis, compare ECI rank trajectories (not level differences). The Atlas rankings page shows rank evolution over time, which is the methodologically valid way to track complexity trends.
+
+### Why ECI Predicts Future Growth
+
+The strong empirical relationship between economic complexity and subsequent income growth is the most important finding from the Atlas research program. Understanding the mechanism is essential for interpreting research paper questions about complexity and growth.
+
+**The empirical pattern:** Countries whose ECI exceeds what their income level would predict tend to grow faster in subsequent decades, converging toward the income level their complexity "deserves." Conversely, countries whose income exceeds their complexity (often due to natural resource rents) tend to grow more slowly as their income converges down toward complexity-implied levels. As the Atlas states: "Economic complexity is not just a symptom or an expression of prosperity: it is a driver."
+
+**The mechanism — productive knowledge as combinatorial capabilities:** ECI captures the amount of productive knowledge embedded in an economy. The theoretical foundation (Hausmann & Hidalgo, 2011) models this as a combinatorial process: products require specific combinations of non-tradable capabilities (skilled labor, institutions, infrastructure, regulatory frameworks, supplier networks), and a country can produce a product only if it possesses *all* required capabilities. Calibration of this model suggests that the world has approximately 65-80 distinct capabilities, and countries hold 80-90% of them on average. The combinatorial nature creates convex returns: countries with many capabilities gain disproportionately from acquiring one more (since it can combine with the existing stock in many ways), while countries with few capabilities gain almost nothing from adding one more (since the complementary capabilities are still missing). This generates a "quiescence trap" — a self-reinforcing equilibrium of development stasis for countries with few capabilities.
+
+Recent theoretical work (McNerney, Li, Gomez-Lievano & Neffke, *Nature Communications* 2025) has shown that ECI metrics emerge naturally from a dynamical network model of structural change as summaries of long-term trajectories — providing formal mathematical justification for why the eigenvector method captures meaningful economic information. Separately, Schetter (2022) proved that the eigenvector computation underlying ECI is the correct estimator for a country's distance to the technological frontier under log-supermodularity — giving ECI a rigorous micro-foundation it originally lacked.
+
+**Quantitative evidence from the Atlas growth regressions** (Hausmann et al., *The Atlas of Economic Complexity*, 2011, Table 3.1.1):
+
+| Specification | Variables | Adj. R² |
+|---|---|---|
+| Initial income + natural resources only | log GDP/capita, NR change | 0.291 |
+| + ECI | + Economic Complexity Index | 0.472 |
+| + COI | + Complexity Outlook Index (without ECI) | 0.436 |
+| + ECI + COI | Full model | 0.498 |
+
+A 1-standard-deviation increase in ECI is associated with approximately **1.6-1.9 percentage points** faster annualized 10-year growth (coefficient = 0.019 when ECI is the only complexity variable; 0.014 when COI is also included). A 1-SD improvement in COI is associated with 1.2 percentage points faster growth.
+
+**ECI outperforms alternative predictors of growth.** The Atlas (Section 4) demonstrates that ECI captures substantially more growth-relevant information than other commonly used development indicators:
+
+| Comparison | ECI explains (% of growth variance) | Alternative explains |
+|---|---|---|
+| vs. World Governance Indicators (all 6 combined) | 18.3% | 3.0% |
+| vs. Education (years of schooling + cognitive ability) | 17% | 4% |
+| vs. Global Competitiveness Index | 15% | 1% |
+| vs. Financial depth indicators | 21.5% | ~0% (after controlling for ECI) |
+
+In each case, when ECI and the alternative are included in the same regression, ECI remains significant while the alternative loses significance. The reverse does not hold.
+
+**The complexity-income gap:** ECI explains approximately 78% of the variance in per capita income across countries where natural resource exports are below 10% of GDP. The difference between a country's actual income and its complexity-implied income captures "unrealized potential" — the single strongest predictor of future growth in the Atlas model. See `strategic_approaches.md` for the full model specification, including the role of `eciNatResourcesGdpControlled`.
+
+**Important caveats:**
+- The relationship is correlational at the aggregate level, though supported by micro-level evidence on capability accumulation. ECI is not a simple causal lever — you cannot "increase ECI" directly; it reflects deep structural characteristics of the economy.
+- **Natural-resource-rich countries** can have high income with low complexity. The adjusted metric `eciNatResourcesGdpControlled` (see `strategic_approaches.md`) accounts for this by partialing out the effect of natural resource rents and GDP per capita.
+- The complexity-growth relationship holds across decades but is not a short-term forecasting tool. Countries can deviate from complexity-implied trajectories for extended periods due to conflict, policy shocks, or commodity price cycles.
+- ECI is standardized relative to each year's country distribution, so the growth coefficients apply to cross-sectional variation, not to within-country ECI changes over time.
 
 ### DB columns, GraphQL fields, and ECI rank
 

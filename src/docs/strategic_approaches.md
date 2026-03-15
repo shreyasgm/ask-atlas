@@ -322,9 +322,27 @@ When the Atlas says a country is "more complex than expected for its income leve
 
 This is the fundamental tension the Atlas identifies: complexity should determine income, but resource rents allow some countries to have high income without complex exports. Those countries typically receive a `TechFrontier` classification *not* because of innovation capacity but because their income level puts them above what their ECI would suggest.
 
-### The scatter chart x-axis
+### Why Natural Resources Distort the Complexity-Income Picture
+
+Natural resource rents (oil, minerals, agricultural commodities) inflate national income without building the productive capabilities that ECI measures. A country can be wealthy from oil but have a narrow, low-complexity export basket. This creates a fundamental mismatch:
+
+- **High income + low ECI** = income is sustained by resource extraction, not by productive knowledge. This is inherently fragile — when resource revenues decline (depletion, price drops, energy transition), income falls toward the level that the country's actual capabilities can support.
+- **The growth projection model accounts for this** by including natural resource export changes (`nr_growth_10`) as a separate predictor. Resource-driven income growth is effectively discounted relative to complexity-driven growth.
+- **For strategic approach assignment**, raw ECI would misclassify resource-rich countries. A Gulf state with high GDP per capita but low ECI might appear to be "underperforming" on complexity when in fact its income is resource-driven, not complexity-driven. The adjusted metric corrects for this.
+
+### The `eciNatResourcesGdpControlled` Metric
 
 The field `eciNatResourcesGdpControlled` (available in both `countryProfile` and `allCountryProfiles`) represents the **natural-resource-and-GDP-controlled ECI** — the x-axis of the strategic approach scatter. It is the residual from a regression of ECI on GDP per capita and natural resource export share. A positive value means the country is more complex than its income and resource wealth would predict; a negative value means less complex.
+
+This adjusted metric isolates the "genuine" productive complexity of the economy — the capabilities that exist independent of resource wealth. It answers the question: "Given this country's income level and resource endowment, is it more or less complex than expected?"
+
+**Why the strategic approach algorithm uses this metric instead of raw ECI:** A resource-rich country with low raw ECI but high income would be classified as needing dramatic intervention. But its actual challenge is different — it needs to build productive capabilities to sustain income as resource revenues eventually decline. The adjusted metric correctly identifies this as a low-complexity position (negative `eciNatResourcesGdpControlled`), leading to appropriate policy guidance (typically Strategic Bets focused on building non-resource productive capabilities).
+
+**Implications for growth projections:** Resource-rich countries with low adjusted complexity face slower projected long-term growth. Their current income exceeds what their productive capabilities can sustain, so the growth projection model predicts convergence downward — income declining toward the complexity-implied level. This is the mirror image of the complexity-income convergence story: just as high-complexity/low-income countries grow faster, low-complexity/high-income countries grow slower.
+
+**The energy transition adds urgency:** The Growth Lab's Greenplexity Index (2024-2025) highlights that fossil-fuel-dependent countries face a compounding challenge. Their current export baskets are dominated by low-complexity peripheral products (oil, minerals), and many of the green products they would need to transition into (batteries, EVs, solar equipment, wind turbines) sit in the complex core of the product space. The periphery trap (see `product_space_and_relatedness.md`) makes these jumps structurally difficult. Countries that have not built non-resource productive capabilities face both declining resource revenues *and* large capability gaps to the emerging green economy.
+
+**Product space position of resource products:** In the product space, petroleum, minerals, and raw agricultural goods are located in the sparse periphery with low proximity to complex products (Hidalgo et al., 2007). This means resource-rich countries face particularly large structural transformation challenges — the distance from resource products to complex manufactures is large, and the intermediate products along the way offer limited capability spillover.
 
 ---
 

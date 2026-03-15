@@ -43,6 +43,12 @@ related_docs:
 
 The product space encodes the insight that **countries diversify by moving into products that require similar capabilities to what they already produce** — the "adjacent possible." Products that share underlying know-how, infrastructure, institutions, or factor endowments tend to be co-exported by the same countries. The product space network makes this latent capability structure visible.
 
+**Why the product space is persistent over time:** The capabilities underlying the product space — skilled labor pools, institutional quality, infrastructure networks, supplier ecosystems, tacit industrial knowledge — change slowly. A country's position in the product space reflects its accumulated capability stock built over decades. This is why diversification patterns are highly path-dependent: today's export basket is the strongest predictor of tomorrow's, and radical jumps across the product space are rare.
+
+**Why diversification follows the product space:** Moving into a new product requires assembling the right combination of capabilities — worker skills, supply chains, regulatory frameworks, quality standards, distribution networks. Products that are "nearby" in the product space share most of these requirements with products the country already makes successfully. The further the jump, the more new capabilities must be built simultaneously, and the probability of successful entry drops sharply. Hidalgo et al. (2007) showed that the probability of developing RCA in a new product is near-zero when the closest existing product is at proximity φ ≈ 0.1, but rises to approximately 15% when the closest product is at φ ≈ 0.8 (measured over 5-year windows). For 79% of products, countries that successfully transitioned into them had higher density ratios than countries that did not.
+
+Recent work provides a micro-foundation for this pattern: Diodato, Hausmann & Schetter (2022) show that industries share occupational inputs, and entry probability into the nearest industry (by occupational overlap) is approximately 4x higher than at maximum occupational distance. The original product space was purely phenomenological (inferred from co-export patterns); the occupational input structure explains *why* proximity predicts diversification.
+
 The pipeline: compute proximity (φ) → threshold → lay out in 2D → overlay per-country RCA to color nodes.
 
 ---
@@ -139,7 +145,38 @@ Product catalog tables carry fixed 2D coordinates for the product space visualiz
 | Dense core | Electronics, Machinery, Chemicals, Metals | High (positive) | Easy — many nearby products |
 | Sparse periphery | Agriculture, Raw materials, Petroleum, Simple textiles | Low (negative) | Hard — few stepping-stone products |
 
-Rich countries preferentially occupy the dense core. Poor countries tend to be concentrated at the periphery. The "periphery trap": countries whose exports sit at the periphery face long, capability-building leaps to reach the core.
+Rich countries preferentially occupy the dense core. Poor countries tend to be concentrated at the periphery.
+
+### The Periphery Trap
+
+Countries at the periphery of the product space face a structural disadvantage that compounds over time. This is one of the most important findings in the complexity literature, with both empirical and theoretical underpinnings.
+
+**Empirical evidence from simulations (Hidalgo et al., *Science* 2007):** The original product space paper tested what happens when countries can "move" to products within a proximity threshold over 20 iterations:
+
+- **At φ ≥ 0.55:** Most countries can diffuse through to the core of the product space, though countries starting in the core do so much faster.
+- **At φ ≥ 0.60:** Countries starting in the periphery (e.g., Chile) spread slowly; countries in the core (e.g., Korea) still populate it after just a few rounds.
+- **At φ ≥ 0.65:** Peripheral countries **cannot diffuse at all** — they lack any close-enough products to transition to. Core countries still make some progress but slowly. The world "maintains a degree of inequality similar to its current state."
+
+The system undergoes an **abrupt transition** around φ = 0.65: convergence is possible only if countries can jump to products located at proximity above this threshold. The sparsity of the product space makes this threshold binding for many countries — 65% of all proximity values are below 0.2, and 32% are below 0.1.
+
+**The compounding mechanism:**
+
+1. **Limited capability spillover per step.** Peripheral products (agriculture, raw materials, simple textiles) share few capabilities with the complex products at the core. When a peripheral country successfully enters a new product, that product is likely to be another peripheral product — the step provides limited "capability spillover" toward the complex core.
+
+2. **Each step is harder AND less valuable.** Not only are jumps from the periphery longer (higher distance), but the intermediate products encountered along the way tend to have low PCI and low COG. This means each diversification step is both more difficult to achieve and less strategically valuable compared to steps taken by countries already near the core.
+
+3. **The gap compounds.** Countries in the dense core can diversify rapidly through market-driven processes because many complex products are nearby. Each new product they gain opens connections to more complex products (high COG). Meanwhile, peripheral countries must fight for each incremental step. Over time, core countries pull further ahead.
+
+**Theoretical foundation — the quiescence trap (Hausmann & Hidalgo, 2011):** The capabilities model formalizes why the periphery trap is self-reinforcing. Products require specific *combinations* of capabilities, and a country can produce a product only if it holds *all* required capabilities. The returns to accumulating one more capability are *convex* — they increase as a power of the country's existing capability stock. In a calibrated model with 65-80 capabilities worldwide:
+
+- A country with only 5 capabilities gets essentially zero return from accumulating one or two more, because the probability of completing the exact capability set required by even the simplest product is negligible.
+- A country with 40+ capabilities gets large returns from any additional one, because it can combine the new capability with existing ones in many productive ways.
+
+This creates a "quiescence equilibrium" — countries with few capabilities have no economic incentive to invest in acquiring more, while countries with many capabilities have strong incentives to continue accumulating. The depth of this trap increases as products become more complex (require more capabilities) and as the total number of capabilities in the world grows.
+
+**Why this matters for policy:** The periphery trap explains why market forces alone are insufficient for many developing countries. Without deliberate, coordinated investment — what the Atlas calls "Strategic Bets" — peripheral countries cannot bridge the capability gap. Countries in the dense core can rely more on "Light Touch" market-driven diversification because the product space structure works in their favor. This structural insight underpins the Atlas's strategic approach framework (see `strategic_approaches.md`).
+
+**Modern extensions:** The genotypic product space (Schetter, Diodato, Protzer, Neffke & Hausmann, 2024) constructs product proximity directly from observed capability requirements (occupational employment patterns) rather than co-export correlations. This approach can identify *which specific capabilities* a country is missing, making the periphery trap actionable for policy — rather than just saying "this product is far away," it can say "you are missing capabilities X, Y, and Z." The genotypic proximity is also asymmetric (industry A may be a stepping stone to B but not vice versa), capturing directionality that the symmetric classic product space misses. The Atlas currently uses the classic (phenotypic) product space.
 
 ---
 
