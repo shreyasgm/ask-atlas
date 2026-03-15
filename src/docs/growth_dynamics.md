@@ -6,46 +6,39 @@ purpose: >
 keywords: [growth dynamics, CAGR, export growth, GDP growth, ECI, countryLookback, countryProductLookback, bubble chart, scatter, non-oil, structural transformation, growth projection, lookback]
 when_to_load: >
   Load when the user asks about a country's historical export growth rate or GDP
-  growth over a specific period, what the Growth Dynamics bubble chart shows (axes,
-  bubble sizing, ECI reference line), non-oil export CAGR, or how to use the
-  `countryLookback` or `countryProductLookback` API for historical growth data.
+  growth over a specific period, how to interpret growth dynamics (which products
+  are growing and at what complexity level), non-oil export CAGR, or how to use
+  the `countryLookback` or `countryProductLookback` API for historical growth data.
   Also load for `StructuralTransformationStep` or `ExportValueGrowthClassification`
   enum values.
 when_not_to_load: >
   Do NOT load for forward-looking income growth projections (see
-  `strategic_approaches.md`) or for complete country page reproduction recipes
-  (see `country_page_reproduction.md`).
-related_docs: [strategic_approaches.md, country_page_reproduction.md]
+  `strategic_approaches.md`).
+related_docs: [strategic_approaches.md]
 ---
 
-## 1. The Growth Dynamics Visualization
+## 1. Growth Dynamics Interpretation
 
 **Page URL:** `https://atlas.hks.harvard.edu/countries/{m49_id}/growth-dynamics`
 
-### Chart Type and Axes
+Growth dynamics analysis examines whether a country's export growth is concentrated in complex or simple products. Each product group (at the 2-digit HS level) has two key attributes:
+- **Product Complexity (PCI):** How sophisticated the product is — sourced from `allProductYear.pci`
+- **Export Growth (CAGR):** How fast the country's exports of that product are growing — sourced from `countryProductLookback.exportValueConstCagr`
 
-The Growth Dynamics page shows a **bubble/scatter chart** where each bubble represents one product group at the **2-digit HS level**.
+The country's current **ECI** value (`countryYear.eci`) serves as a benchmark. Products more complex than the country's average ECI represent structural upgrading when they grow; products less complex represent deepening of existing capabilities.
 
-| Axis | Meaning | Data Source |
-|------|---------|-------------|
-| **X-axis** | Product Complexity Index (PCI) — "Less Complex ← → More Complex" | `allProductYear.pci` |
-| **Y-axis** | Annual Export Growth (CAGR) over the selected lookback period | `countryProductLookback.exportValueConstCagr` |
+### Quadrant Interpretation
 
-### Bubble Properties
+| Growth + Complexity Combination | Meaning |
+|------|---------|
+| High growth, high PCI (above country ECI) | Growing and complex — positive structural transformation |
+| High growth, low PCI (below country ECI) | Growing but in simple products — may not support long-term income growth |
+| Negative growth, high PCI | Complex products shrinking — possible deindustrialization risk |
+| Negative growth, low PCI | Shrinking simple products — least favorable growth pattern |
 
-| Property | Encoding | Options |
-|----------|----------|---------|
-| **Size** | Trade volume (configurable) | Country Trade, World Trade, None |
-| **Color** | Sector (same color coding as other country pages) | By top-level HS sector |
-| **Label** | Visible on largest bubbles (e.g., "Mineral fuels, oils and waxes") | Product short name |
+The key diagnostic question: **Is the country growing into more complex products, or is growth concentrated in simple commodities?** Countries experiencing genuine structural transformation show strong growth in products above their ECI benchmark.
 
-### ECI Reference Line
-
-A **dashed vertical line** is drawn at the country's current ECI value (e.g., "ECI (2024): −0.13"). Products to the **right** of this line are more complex than the country's current average complexity. Products to the **left** are less complex than the country average.
-
-**Data source:** `countryYear.eci` (from the Country Pages GraphQL API)
-
-### Lookback Periods (CAGR Dropdown)
+### Lookback Periods
 
 The user can select a lookback window for the CAGR calculation:
 
@@ -81,7 +74,7 @@ Note: 15-year lookback (`FifteenYears`) is available in the `countryLookback` AP
 
 ## 2. GraphQL API: `countryProductLookback`
 
-This query provides **per-product** growth data powering the scatter chart.
+This query provides **per-product** export growth data for growth dynamics analysis.
 
 **Endpoint:** `/api/countries/graphql` (Country Pages API)
 
@@ -97,7 +90,7 @@ exportValueConstGrowth: Float   # Absolute change in constant-dollar exports ove
 exportValueConstCagr: Float     # CAGR of constant-dollar exports over the period (Y-axis value)
 ```
 
-**Note:** `exportValueConstCagr` is inflation-adjusted (constant dollars). This is the field used for the Y-axis of the Growth Dynamics scatter chart.
+**Note:** `exportValueConstCagr` is inflation-adjusted (constant dollars). This is the field used to measure export growth rate across products in growth dynamics analysis.
 
 ---
 
@@ -225,6 +218,8 @@ The `structuralTransformationSector` field names the specific sector being asses
 | `Mixed` | Growth in some sectors/complexity levels, decline in others |
 | `Static` | Little growth in any direction |
 | `Promising` | Positive growth, especially in higher-complexity products |
+
+**Derivation algorithm:** The API derives `ExportValueGrowthClassification` by identifying the two fastest-growing products (by CAGR), classifying each as high/medium/low complexity relative to the country's ECI benchmark, then mapping the pair: both high (or one high + one medium) = Promising; one low + one high = Mixed; both medium = Static; otherwise = Troubling.
 
 ---
 
@@ -384,31 +379,7 @@ WHERE cpy_end.country_id = :country_id
 
 ---
 
-## 9. Extractable Data Points: Growth Dynamics Page
-
-| # | Data Point | Displayed As | API Query | API Field |
-|---|-----------|-------------|-----------|-----------|
-| 31 | Product export growth (CAGR) | Tooltip Y-value | `countryProductLookback` | `exportValueConstCagr` |
-| 32 | Country's current ECI value | Reference line label | `countryYear` | `eci` |
-| 33 | Growth pattern description | Narrative text | `countryProfile` / `countryLookback` | `exportValueGrowthClassification` |
-| 34 | Products/sectors driving growth | Narrative text | `countryLookback` | `largestContributingExportProduct` |
-| 35 | Product gross export value | Tooltip absolute value | `countryProductLookback` | `exportValueConstGrowth` |
-
-### Related Data Points on Other Pages
-
-| # | Data Point | Page | API Query | API Field |
-|---|-----------|------|-----------|-----------|
-| 18 | Export growth rate (5yr annual avg) | Export Basket text | `countryLookback(FiveYears)` | `exportValueConstGrowthCagr` |
-| 19 | Non-oil export growth rate | Export Basket text | `countryLookback(FiveYears)` | `exportValueGrowthNonOilConstCagr` |
-| 6 | GDP per capita growth (5yr) | Main page text | `countryLookback` | `gdpPerCapitaChangeConstantCagr` |
-| 7 | GDP per capita vs regional avg | Main page text | `countryLookback` | `gdpPcConstantCagrRegionalDifference` |
-| 9 | ECI rank change (decade) | Main page text | `countryLookback(TenYears)` | `eciRankChange` |
-| 28 | ECI rank change (10 years) | Export Complexity top bar | `countryLookback(TenYears)` | `eciRankChange` |
-| 40 | Structural transformation status | Market Share text | `countryProfile` | `structuralTransformationStep` |
-
----
-
-## 10. Key Relationships and Caveats
+## 9. Key Relationships and Caveats
 
 - **`countryProductLookback` vs. `country_product_lookback` tables:** The GraphQL query (`countryProductLookback`) and the SQL tables (`hs92.country_product_lookback_{1,2,4}`) contain equivalent pre-calculated CAGR data. The SQL tables include a `lookback` column (integer: 3, 5, 10, 15) to filter by period. The SQL tables are HS92-only.
 
@@ -416,6 +387,6 @@ WHERE cpy_end.country_id = :country_id
 
 - **ECI cross-year comparability:** Raw ECI values (`eciChange`) are computed independently via eigendecomposition each year and are **not directly comparable across years**. Use `eciRankChange` for trend statements. Only within-year ECI rankings are methodologically sound for comparative claims.
 
-- **Growth Dynamics chart is HS92, 2-digit level:** The scatter chart uses `countryProductLookback` at the `twoDigit` product level, colored by the 11 top-level sectors from `classification.product_hs92`.
+- **Growth Dynamics data is HS92, 2-digit level:** Growth dynamics analysis uses `countryProductLookback` at the `twoDigit` product level, organized by the 11 top-level sectors from `classification.product_hs92`.
 
 - **`countryLookback` per-field year ranges:** Each field in `CountryLookback` has its own year range argument. Calling `countryLookback(id: $id, exportValueConstGrowthCagrYearRange: FiveYears, eciRankChangeYearRange: TenYears)` returns export CAGR over 5 years and ECI rank change over 10 years in a single API call.

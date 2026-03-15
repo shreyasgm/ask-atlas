@@ -391,6 +391,32 @@ Two passes are performed:
 
 ---
 
+## 7b. Global Market Share
+
+**Definition level:** Country × product × year (product-level) or Country × sector × year (sector-level)
+
+**Product-level formula:**
+
+```
+global_market_share = country_export_value_for_product / world_export_value_for_product
+```
+
+**DB column:** `global_market_share` (float8) — in `{schema}.country_product_year_{level}`
+
+**GraphQL field:** `globalMarketShare` on `CountryProductYear`
+
+**Sector-level formula (used on the Market Share page):**
+
+```
+market_share(sector, year) =
+  SUM(country_product_exports WHERE topParent = sector)
+  / SUM(world_product_exports WHERE topParent = sector)
+```
+
+This requires joining `countryProductYear` with `productYear` by product and year, grouping by sector (`topParent`), and dividing the country's sector total by the world's sector total. The result is displayed as a percentage on the Atlas Market Share page, with one line per sector over time.
+
+---
+
 ## 8. Proximity (phi)
 
 **Definition level:** Product pair (globally fixed)
@@ -464,7 +490,7 @@ d_cp = 1 - [ sum_{p'} M_{cp'} * phi_{p,p'} / sum_{p'} phi_{p,p'} ]
 
 **GraphQL field:** `distance` on `CountryProductYear`
 
-**Feasibility scatter axis:** X-axis, labeled "More Nearby ◄ → Less Nearby ►". Lower distance = left side = more feasible.
+**Feasibility role:** Distance is the primary measure of product feasibility. Lower distance (closer to 0) = more feasible, higher distance (closer to 1) = more difficult.
 
 ---
 
@@ -520,7 +546,7 @@ Both `unexported` terms ensure gains only come from/to products the country does
 
 **GraphQL field:** `cog` on `CountryProductYear`
 
-**Feasibility scatter axis:** Y-axis upper half, labeled "More Complex / More Strategic ▲"
+**Feasibility role:** COG measures the strategic value of gaining a product — higher COG means more future diversification pathways opened
 
 ---
 

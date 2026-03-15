@@ -38,21 +38,21 @@ related_docs:
 
 ## The Four Strategic Approaches
 
-Countries are assigned one of four strategic approaches based on their position on a scatter plot with two axes:
+Countries are assigned one of four strategic approaches based on two diagnostic dimensions:
 
-- **X-axis**: "Is the country complex enough for its income to grow?" — measured by `eciNatResourcesGdpControlled` (ECI adjusted for natural resources and GDP per capita). Countries to the right are more complex than their income level predicts.
-- **Y-axis**: "Is the country well-connected to many new opportunities?" — measured by COI (Complexity Outlook Index). Countries higher up have more nearby complex products.
+- **Complexity adequacy**: "Is the country complex enough for its income to grow?" — measured by `eciNatResourcesGdpControlled` (ECI adjusted for natural resources and GDP per capita). Positive values mean the country is more complex than its income level predicts.
+- **Opportunity connectedness**: "Is the country well-connected to many new opportunities?" — measured by COI (Complexity Outlook Index). Higher COI means more nearby complex products are within reach.
 
-The scatter plot appears at `/countries/{id}/strategic-approach`. All 145 countries are plotted. The selected country is highlighted in its quadrant.
+These two dimensions define four policy classifications, each mapped to a strategic approach. The classification is displayed at `/countries/{id}/strategic-approach`.
 
-### Quadrant Map
+### Classification Map
 
 ```
 High COI │ PARSIMONIOUS INDUSTRIAL │  LIGHT TOUCH
-(COI≥0)  │ POLICY (top-left)       │  (top-right)
+(COI≥0)  │ POLICY                  │
 ─────────┼─────────────────────────┼──────────────
 Low COI  │ STRATEGIC BETS          │  TECHNOLOGICAL
-(COI<0)  │ (bottom-left)           │  FRONTIER (bottom-right)
+(COI<0)  │                         │  FRONTIER (hardcoded list)
          └─────────────────────────────────────────
               ECI* < 0                ECI* ≥ 0
               (* = eciNatResourcesGdpControlled)
@@ -78,10 +78,10 @@ Where ECI* = `eciNatResourcesGdpControlled` (ECI adjusted for natural resource r
 
 | Approach | API Enum | Quadrant | Policy Logic |
 |---|---|---|---|
-| **Light Touch** | `LightTouch` | Top-right (44 countries) | Country is complex and well-connected to opportunities. Ample space to diversify by leveraging existing successes. Minimal government intervention needed — markets are functioning. |
-| **Parsimonious Industrial Policy** | `ParsimoniousIndustrial` | Top-left (22 countries) | Many opportunities nearby but current basket is simpler than income predicts. Targeted support for specific promising sectors. Easiest path to complexity growth. |
-| **Strategic Bets** | `StrategicBets` | Bottom-left (63 countries) | Few nearby opportunities and simple current basket. Must make deliberate, concentrated investments in specific sectors. Highest-risk approach — necessary for countries far from the complexity frontier. |
-| **Technological Frontier** | `TechFrontier` | Bottom-right (16 countries) | Already at the frontier. Few unexploited nearby opportunities because most have been captured. Growth comes from innovation, not product diversification. |
+| **Light Touch** | `LightTouch` | COI ≥ 0, ECI* ≥ 0 (44 countries) | Country is complex and well-connected to opportunities. Ample space to diversify by leveraging existing successes. Minimal government intervention needed — markets are functioning. |
+| **Parsimonious Industrial Policy** | `ParsimoniousIndustrial` | COI ≥ 0, ECI* < 0 (22 countries) | Many opportunities nearby but current basket is simpler than income predicts. Targeted support for specific promising sectors. Easiest path to complexity growth. |
+| **Strategic Bets** | `StrategicBets` | COI < 0 (63 countries) | Few nearby opportunities and simple current basket. Must make deliberate, concentrated investments in specific sectors. Highest-risk approach — necessary for countries far from the complexity frontier. |
+| **Technological Frontier** | `TechFrontier` | Hardcoded list (16 countries) | Already at the frontier. Few unexploited nearby opportunities because most have been captured. Growth comes from innovation, not product diversification. |
 
 **Country examples:** Kenya → `LightTouch`; USA → `TechFrontier`; Spain → `ParsimoniousIndustrial`; Nigeria → `StrategicBets`.
 

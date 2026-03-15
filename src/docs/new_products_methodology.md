@@ -285,26 +285,7 @@ The `newProductsIncomeGrowthComments` enum (`LargeEnough` / `TooSmall`) classifi
 
 ---
 
-## 9. New-Products Page: Complete Data Point Map
-
-> **GraphQL / Country Pages only (HS92).**
-
-| # | Visible Element | Source Query | API Field |
-|---|-----------------|-------------|-----------|
-| 43 | Economic Diversification Grade (top bar) | `countryProfile` | `diversificationGrade` |
-| 44 | Diversity Rank (top bar) | `countryProfile` | `diversityRank` |
-| 45 | Diversity rank change over 15 years (top bar) | `countryLookback(yearRange: FifteenYears)` | `diversityRankChange` |
-| 46 | New products count (text/treemap) | `newProductsCountry` | `newProductCount` |
-| 47 | Per-capita income contribution (text) | `newProductsCountry` | `newProductExportValuePerCapita` |
-| 48 | New products total value (table) | `newProductsCountry` | `newProductExportValue` |
-| 49 | New export proportion (mini-visual) | Derived | `newProductExportValue / exportValue` |
-| 50 | Peer comparison table | `newProductsComparisonCountries` | `location`, `newProductCount`, `newProductExportValue`, `newProductExportValuePerCapita` |
-
-**Verification link**: `https://atlas.hks.harvard.edu/countries/{m49_code}/new-products`
-
----
-
-## 10. Known Limitations and Data Gaps
+## 9. Known Limitations and Data Gaps
 
 - **GraphQL new products are HS92-only.** The `newProductsCountry` query has no `productClass` parameter. For HS12 or SITC new products, use SQL.
 - **`is_new` and `product_status` are ALL NULL** in the current database. Compute new products from raw `export_value` using the 3-year averaging method.

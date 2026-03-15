@@ -467,7 +467,7 @@ Use when asked about RCA, distance, complexity of specific products, or for cust
 - `growthProjection`, `growthProjectionRank`, `growthProjectionClassification`
 - `growthProjectionRelativeToIncome` (complexity-income relationship)
 - `exportValueGrowthClassification` (Troubling / Mixed / Static / Promising)
-- `eciNatResourcesGdpControlled` (ECI adjusted for natural resources and GDP — used for strategic approach quadrant)
+- `eciNatResourcesGdpControlled` (ECI adjusted for natural resources and GDP — used for strategic approach classification)
 - `newProductsComparisonCountries` (peer country comparison)
 - Pre-computed product space x/y coordinates via `productSpace`
 - `DecileClassification` fields on `allCountryProductYear`
@@ -567,6 +567,149 @@ Any query that returns "all products" (~1,200 items) produces 40–350 KB respon
 
 ---
 
+## Bilateral Query Selection Logic
+
+When both an exporter and importer are specified, the query type depends on entity types:
+
+| Exporter | Importer | Query |
+|----------|----------|-------|
+| Country | World (`group-1`) | `countryProductYear` (no partner filter) |
+| Country | Country | `countryCountryProductYear` |
+| Country | Group | `countryGroupProductYear(partnerGroupId: {id}!)` |
+| Group | Country | `groupCountryProductYear(groupId: {id}!)` |
+| Group | Group | `groupGroupProductYear` |
+
+---
+
+## Product ID Mapping
+
+URL parameter `product-HS92-726` refers to internal Atlas product ID 726, not HS code 726. The mapping must be resolved via `productHs92 { productId code }`. Known examples:
+
+| HS92 Code | Internal Product ID | Product |
+|-----------|--------------------|---------|
+| 0901 | 726 | Coffee |
+| 0902 | 727 | Tea |
+| 2601 | 1506 | Iron ores |
+| 2710 | 1584 | Petroleum oils, refined |
+| 3004 | 1748 | Medicaments |
+| 6109 | 2801 | T-shirts |
+| 8542 | 3595 | Electronic integrated circuits |
+| 8703 | 3667 | Cars |
+
+---
+
+## `CountryProductYear` Full Field Reference
+
+The richest query type in the Explore API — 22 fields returned per country × product × year row:
+
+```
+countryId            # M49 integer ID
+locationLevel        # "country" or "group"
+productId            # Internal Atlas product ID
+productLevel         # 2, 4, or 6
+year                 # Integer year
+exportValue          # Current USD
+importValue          # Current USD
+globalMarketShare    # Country's share of world exports for this product
+exportRca            # Revealed Comparative Advantage (Balassa index)
+exportRpop           # RCA relative to population
+isNew                # Boolean: gained RCA >= 1 vs lookback year
+productStatus        # "absent" | "lost" | "new" | "present"
+cog                  # Complexity Outlook Gain (strategic value)
+distance             # Distance from country's capability frontier (0=close, 1=far)
+normalizedPci        # Normalized Product Complexity Index (within-year)
+normalizedCog        # Normalized COG
+normalizedDistance   # Normalized distance
+normalizedExportRca  # Normalized RCA
+normalizedPciRcalt1          # normalizedPci computed only for RCA < 1 products
+normalizedCogRcalt1          # normalizedCog for RCA < 1 products
+normalizedDistanceRcalt1     # normalizedDistance for RCA < 1 products
+normalizedExportRcaRcalt1    # normalizedExportRca for RCA < 1 products
+```
+
+The `*Rcalt1` variants are computed only over the subset of products where `exportRca < 1`, providing within-feasibility-set normalization.
+
+---
+
+## TreeMap Facet Behavior (Country Pages API)
+
+The `treeMap` query returns different types depending on the facet:
+
+| Facet | Returns | Use Case |
+|-------|---------|----------|
+| `CPY_C` | `[TreeMapProduct]` — products with exportValue, rca, pci, distance, opportunityGain | Export basket, export complexity, market share |
+| `CPY_P` | `[TreeMapProduct]` — requires a specific `product` ID | Product-specific drilldown |
+| `CCY_C` | `[TreeMapLocation]` — trade partners with exportValue, importValue | Top-3 export destinations / import origins |
+
+The treemap includes **services** when the country reports services data (check `classification.location_country.reported_serv_recent`). The SQL `hs92.*` tables cover goods only — to match the website, also include data from `services_unilateral.country_product_year_4`.
+
+---
+
+## Explore URL Structure
+
+Explore page URLs follow a consistent pattern for constructing links to Atlas visualizations:
+
+```
+Base: https://atlas.hks.harvard.edu/explore/{vizType}
+  ?year={yearMax}
+  &exporter=country-{countryId}
+  [&importer=country-{partnerCountryId}]   # bilateral
+  [&product=product-HS92-{productId}]      # product-filtered
+  [&startYear={yearMin}&endYear={yearMax}] # time series pages
+  [&productLevel={productLevel}]           # feasibility/table
+  [&view=markets]                          # locations mode
+  [&tradeDirection=imports]                # import flow
+```
+
+### URL Parameter to GraphQL Argument Mapping
+
+| URL Parameter | GraphQL Argument | Transformation |
+|---------------|-----------------|----------------|
+| `exporter=country-404` | `countryId: 404` | Strip `country-` prefix, parse int |
+| `exporter=group-5` | `groupId: 5` | Strip `group-` prefix, parse int |
+| `importer=country-840` | `partnerCountryId: 840` | Strip `country-` prefix, parse int |
+| `importer=group-1` | *(omit partner filter)* | `group-1` = World = no partner constraint |
+| `year=2024` | `yearMin: 2024, yearMax: 2024` | Single year → min=max |
+| `startYear=1995` | `yearMin: 1995` | Direct mapping |
+| `endYear=2024` | `yearMax: 2024` | Direct mapping |
+| `product=product-HS92-726` | `productId: 726` | Strip `product-HS92-` prefix, parse int |
+| `productLevel=4` | `productLevel: 4` | Direct mapping |
+| `view=markets` | *(switch to `countryCountryYear`)* | Locations mode uses different query |
+| `tradeDirection=imports` | *(no arg change)* | Changes which field to read: `importValue` instead of `exportValue` |
+
+---
+
+## Goods vs. Goods+Services Totals
+
+The total export value varies by query type and mode. This is the most common source of confusion:
+
+| Context | Total Value Includes | Cause |
+|---------|---------------------|-------|
+| `countryProductYear` (Products mode) | Goods + services | Includes services products when `servicesClass: unilateral` |
+| `countryCountryYear` (Locations mode) | Goods only | Bilateral data excludes services |
+| Country Pages `treeMap(CPY_C)` | Goods + services (when reported) | Includes services alongside goods |
+| Country Pages `countryProfile.exportValue` | Goods + services (when reported) | Includes services |
+| SQL `hs92.country_year.export_value` | Goods only | HS92 schema covers goods only |
+
+For countries with significant service exports (e.g., tourism-heavy economies), the Products-mode total can be substantially higher than the Locations-mode total (e.g., Kenya 2024: ~$16B Products vs ~$8.2B Locations).
+
+---
+
+## Metrics Available Only via Country Pages API
+
+Some Country Pages metrics are derived server-side and cannot be reconstructed from raw SQL tables:
+
+| Metric | GraphQL field | Why not SQL-reproducible |
+|--------|--------------|--------------------------|
+| Strategic approach | `countryProfile.policyRecommendation` | Requires `eciNatResourcesGdpControlled` (partial correlation), not in DB |
+| Diversification grade | `countryProfile.diversificationGrade` | Threshold-based ranking across all countries |
+| Export growth classification | `countryLookback.exportValueGrowthClassification` | Derived from top-2 CAGR products and complexity benchmark |
+| Peer comparison countries | `newProductsComparisonCountries` | Selection uses income peer group + geographic proximity |
+| Product decile bins | `allCountryProductYear.*DecileClassification` | Computed from percentile breakpoints in `countryYearThresholds` |
+| Structural transformation step | `countryProfile.structuralTransformationStep` | Computed from rolling 3-year RPOP averages against sector thresholds |
+
+---
+
 ## Important Operational Notes
 
 ### Rate Limits, Response Sizing, and Caching
@@ -577,6 +720,10 @@ Any query that returns "all products" (~1,200 items) produces 40–350 KB respon
 - **Cache responses** when possible. API data changes only when Atlas ingests new data (annually).
 - **For bulk downloads:** Use [atlas.hks.harvard.edu/data-downloads](https://atlas.hks.harvard.edu/data-downloads) instead of the API for large pre-generated tables.
 - **Usage warning:** The Atlas API is "best used to access data for stand-alone economic analysis, not to support other software applications" (official docs). The Growth Lab reserves the right to restrict access for abusive usage.
+
+### SQL `location_level` Filter
+
+The `country_year`, `country_product_year_4`, and `country_country_year` tables contain both `country` and `group` rows. Always filter `WHERE location_level = 'country'` when querying individual countries, or group-level aggregate rows may be mixed into results.
 
 ### ID Formats, Product Codes, and Services
 

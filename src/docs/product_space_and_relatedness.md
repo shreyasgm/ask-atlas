@@ -30,13 +30,10 @@ when_to_load: >
   country-level diversification strategy context, also load
   strategic_approaches.md.
 when_not_to_load: >
-  Do not load for metric formula derivations alone (see metrics_glossary.md) or
-  for reproducing the product space visualization (see
-  explore_page_reproduction.md).
+  Do not load for metric formula derivations alone (see metrics_glossary.md).
 related_docs:
   - strategic_approaches.md
   - metrics_glossary.md
-  - explore_page_reproduction.md
 ---
 
 ## Conceptual Foundation
@@ -49,7 +46,7 @@ The product space encodes the insight that **countries diversify by moving into 
 
 Recent work provides a micro-foundation for this pattern: Diodato, Hausmann & Schetter (2022) show that industries share occupational inputs, and entry probability into the nearest industry (by occupational overlap) is approximately 4x higher than at maximum occupational distance. The original product space was purely phenomenological (inferred from co-export patterns); the occupational input structure explains *why* proximity predicts diversification.
 
-The pipeline: compute proximity (φ) → threshold → lay out in 2D → overlay per-country RCA to color nodes.
+The pipeline: compute proximity (φ) → prune edges → assign fixed 2D coordinates → overlay per-country RCA to determine which products are actively exported.
 
 ---
 
@@ -212,16 +209,14 @@ The Atlas groups products into **8 clusters** based on network community detecti
 
 ## 4. Country Position in the Product Space
 
-A country's position is determined by its current export basket overlaid on the fixed network:
+A country's position in the product space is defined by which products it exports with comparative advantage. Products with `export_rca ≥ 1` are part of the country's active capability set; products with `export_rca < 1` represent potential diversification targets. Each product belongs to one of the 8 clusters (see Section 3).
 
-| Visual element | Condition | Metric |
-|---|---|---|
-| Colored node | Country exports product with RCA ≥ 1 | `export_rca ≥ 1` in `country_product_year` |
-| Grey node | Country does not have comparative advantage | `export_rca < 1` |
-| Node size | Proportional to global trade value of that product | `product_year.export_value` |
-| Node color | Cluster membership | `cluster_id` |
+**Assessing a country's position:**
+- A country concentrated in one or two clusters (e.g., only Agricultural Goods and Minerals) has a narrow capability base and faces higher diversification risk
+- A country with RCA ≥ 1 products spread across multiple clusters has broader capabilities and more diversification pathways
+- The density of a country's active products in the network core vs. periphery determines how easily it can reach complex products (see the periphery trap in Section 2)
 
-**SQL for coloring:**
+**SQL query:**
 ```sql
 SELECT
   p.product_id,
@@ -236,7 +231,7 @@ WHERE cpy.country_id = 404   -- Kenya
   AND cpy.year = 2023;
 ```
 
-**Country Pages API:** The `/countries/{id}/paths` subpage (`productSpace(location: "location-{id}")`) returns RCA, x/y coordinates, and edge connections per product for that country.
+**Country Pages API:** `productSpace(location: "location-{id}")` returns RCA, x/y coordinates, and edge connections per product for that country.
 
 ---
 
@@ -263,7 +258,7 @@ where:
 | Close to 1 | Country lacks most related capabilities | Product is far from the current export basket |
 | 0.65–0.95 | Typical range on the Atlas feasibility scatter | Most opportunity products for most countries |
 
-**Key rule:** Lower distance = more feasible = lower risk. The X-axis of the feasibility scatter is labeled "More Nearby ◄ → Less Nearby ►" (left is closer = lower distance value).
+**Key rule:** Lower distance = more feasible = lower risk. Distance ranges from 0 (nearby — country has most related capabilities) to 1 (distant — country lacks most related capabilities).
 
 ### Database and API
 
@@ -444,32 +439,29 @@ query {
 
 ---
 
-## 10. The Feasibility Scatter Plot (Growth Opportunity)
+## 10. Feasibility Assessment (Growth Opportunity)
 
-### Axes and Data Mapping
+### Three Dimensions of Feasibility
 
-| Axis / Element | Metric | Source Field | Notes |
+Growth opportunity products (those with `exportRca < 1`) are assessed along three dimensions:
+
+| Dimension | Metric | Source Field | Principle |
 |---|---|---|---|
-| X-axis | Distance | `countryProductYear.distance` | Lower = more nearby = more feasible |
-| X-axis label | "More Nearby ◄ → Less Nearby ►" | — | Inverted: left = close |
-| Y-axis (top half) | Opportunity Gain | `countryProductYear.cog` | Higher = more strategic value |
-| Y-axis (bottom half) | Product Complexity (PCI) | `countryProductYear.normalizedPci` | Higher = more complex |
-| Y-axis label | "Less Complex ▼ → More Complex ▲" | — | |
-| Bubble size | Global trade value | `productYear.exportValue` | Size of global market for that product |
-| Bubble color | Product sector | `productHs92.topParent` | 11 treemap sectors (not 8 PS clusters) |
-| Reference line | Country's ECI | `countryYear.eci` | Dashed horizontal line |
-| Filter | Only opportunity products | `export_rca < 1` | Products country does NOT yet export |
+| **Proximity** | Distance | `countryProductYear.distance` | Products closer to existing capabilities are more feasible — lower distance means the country already has most related capabilities |
+| **Strategic value** | Opportunity Gain (COG) | `countryProductYear.cog` | Products that open bridges to many complex products the country doesn't yet make have higher strategic value |
+| **Complexity payoff** | Product Complexity (PCI) | `countryProductYear.normalizedPci` | More complex products contribute more to long-run income growth |
+| **Market size** | Global trade value | `productYear.exportValue` | Larger global markets offer more export revenue potential |
 
-### Strategic Quadrants
+### Strategic Evaluation Framework
 
-| Quadrant | Distance | PCI/COG | Strategic Label |
-|---|---|---|---|
-| Top-left (most attractive) | Low (nearby) | High | Low-Hanging Fruit — feasible AND complex/strategic |
-| Top-right | High (distant) | High | Long Jumps — complex but hard to reach |
-| Bottom-left | Low (nearby) | Low | Nearby but low-value |
-| Bottom-right (least attractive) | High (distant) | Low | Far AND low-value |
+| Distance | PCI/COG | Strategic Implication |
+|---|---|---|
+| Low (nearby) | High | **Low-Hanging Fruit** — feasible AND complex/strategic. Highest priority targets. |
+| High (distant) | High | **Long Jumps** — high payoff but require building many new capabilities. High risk. |
+| Low (nearby) | Low | Nearby but low-value — easy to enter but limited strategic benefit |
+| High (distant) | Low | Far AND low-value — least attractive targets |
 
-**The sweet spot is the top-left corner:** products that are nearby (low distance) AND have high complexity or high opportunity gain.
+**The key principle:** Products closer to a country's existing capabilities (low distance) that also have high complexity or high opportunity gain represent the most attractive diversification targets.
 
 ### Country Pages vs. Explore API Differences
 
