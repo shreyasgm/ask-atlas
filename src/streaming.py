@@ -663,6 +663,33 @@ class AtlasTextToSQL:
                 exc_info=True,
             )
 
+        # Initialize product search index (optional — only for merged extraction)
+        _product_search = None
+        if _settings.use_merged_extraction:
+            try:
+                from src.product_search import EmbeddingProductSearch
+
+                _product_index_path = BASE_DIR / "src" / "product_search.db"
+                if _product_index_path.exists():
+                    _product_search = EmbeddingProductSearch(_product_index_path)
+                    _docs_logger.info(
+                        "Product search index loaded from %s", _product_index_path
+                    )
+                else:
+                    _docs_logger.warning(
+                        "Product search index not found at %s; "
+                        "merged extraction disabled, falling back to legacy pipeline",
+                        _product_index_path,
+                    )
+            except Exception:
+                _docs_logger.warning(
+                    "Failed to load product search index; "
+                    "falling back to legacy pipeline",
+                    exc_info=True,
+                )
+
+        _use_merged = _settings.use_merged_extraction and _product_search is not None
+
         instance.agent = build_atlas_graph(
             llm=instance.query_llm,
             lightweight_llm=instance.metadata_llm,
@@ -690,6 +717,8 @@ class AtlasTextToSQL:
             docs_dir=BASE_DIR / "src" / "docs",
             max_docs_per_selection=_settings.max_docs_per_selection,
             docs_index=_docs_index,
+            product_search_backend=_product_search,
+            use_merged_extraction=_use_merged,
         )
 
         return instance
