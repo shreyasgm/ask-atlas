@@ -17,7 +17,7 @@ when_not_to_load: >
 related_docs: [growth_dynamics.md, trade_methodology.md]
 ---
 
-## 1. Current vs. Constant USD
+## 1. Current (Nominal) vs. Constant (Real) USD: When to Use Each
 
 All raw trade values in the Atlas database (`export_value`, `import_value`) are stored in **current (nominal) USD**. This is the default on Atlas Explore visualizations.
 
@@ -32,7 +32,7 @@ All raw trade values in the Atlas database (`export_value`, `import_value`) are 
 
 ---
 
-## 2. The FRED PPIACO Deflator
+## 2. The FRED PPIACO Deflator: Formula, Base Year, and How Atlas Applies It
 
 ### What it is
 
@@ -58,7 +58,7 @@ Deflators live in the `public.year` table — a small lookup table with one row 
 
 ---
 
-## 3. `public.year` Table
+## 3. `public.year` Table: Deflator Lookup, Schema, and SQL for Constant-Dollar Conversion
 
 ### Schema
 
@@ -122,7 +122,7 @@ ORDER BY cy.year;
 
 ---
 
-## 4. CIF vs. FOB Valuation
+## 4. CIF vs. FOB Valuation: Why Import and Export Values Differ for the Same Trade Flow
 
 ### Definitions
 
@@ -149,7 +149,7 @@ This is the primary reason Atlas values differ from raw UN COMTRADE data and WTO
 
 ---
 
-## 5. GDP Variants in `country_year` Tables
+## 5. GDP Variants: Current, Constant, PPP, Per Capita Columns in `country_year`
 
 The SQL `country_year` tables and the GraphQL `countryYear` type carry four GDP variants. The Atlas Country Pages use `gdppc_const` (constant USD per capita) for complexity-income comparisons and growth projections.
 
@@ -175,7 +175,7 @@ The SQL `country_year` tables and the GraphQL `countryYear` type carry four GDP 
 
 ---
 
-## 6. GraphQL API: Requesting Deflators and Constant Values
+## 6. GraphQL API: Fetching Deflators, Constant-Dollar Growth Fields, and CountryLookback CAGR
 
 ### Fetching deflators from the Explore API
 
@@ -217,7 +217,7 @@ These are the authoritative source for "real export growth rate" questions and d
 
 ---
 
-## 7. Quick Reference: Answering Common User Questions
+## 7. Quick Reference: Answering Common Inflation, Deflation, and Valuation Questions
 
 | User question | Correct approach |
 |---|---|

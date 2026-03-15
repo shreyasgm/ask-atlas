@@ -35,7 +35,7 @@ when_to_load: >
 related_docs: []
 ---
 
-## Computation Pipeline Overview
+## Computation Pipeline Overview: From Trade Data to ECI, PCI, Distance, and COI
 
 ```
 Trade Data (X_cp)
@@ -60,7 +60,7 @@ ECI / PCI (eigenvector of M-tilde)           Distance, Density, COG, COI
 
 ---
 
-## 1. Revealed Comparative Advantage (RCA)
+## 1. Revealed Comparative Advantage (RCA): Formula, Interpretation, and Balassa Index
 
 **Definition level:** Country × product × year
 
@@ -88,7 +88,7 @@ Where `X_cp` is exports of product `p` by country `c`. The numerator is product 
 
 ---
 
-## 2. The Presence Matrix (M)
+## 2. The Presence Matrix (M): Continuous vs. Binary M and the 2026 Update
 
 ### 2026 Atlas Standard: Continuous M
 
@@ -122,7 +122,7 @@ The `country_product_year` tables carry two sets of normalized metrics: one comp
 
 ---
 
-## 3. Diversity
+## 3. Diversity: Count of Products with Comparative Advantage
 
 **Definition level:** Country × year
 
@@ -143,7 +143,7 @@ With continuous M (2026+): weighted sum reflecting degrees of specialization.
 
 ---
 
-## 4. Ubiquity
+## 4. Ubiquity: Number of Countries Exporting a Product with RCA > 1
 
 **Definition level:** Product × year
 
@@ -161,7 +161,7 @@ Ubiquity = k_{p,0} = sum_c M_cp
 
 ---
 
-## 5. Economic Complexity Index (ECI)
+## 5. Economic Complexity Index (ECI): Eigenvector Method, Growth Prediction, and Cross-Year Warnings
 
 **Definition level:** Country × year
 
@@ -281,7 +281,7 @@ In each case, when ECI and the alternative are included in the same regression, 
 
 ---
 
-## 6. Product Complexity Index (PCI)
+## 6. Product Complexity Index (PCI): Formula, DB Columns, and Natural Resource Products
 
 **Definition level:** Product × year
 
@@ -336,7 +336,7 @@ rather than the raw database value.
 
 ---
 
-## 7. Normalized Variants
+## 7. Normalized Metric Variants: Z-Score Columns, RCA<1 Subsets, and Distance Inversion
 
 The `country_product_year` tables in the HS92, HS12, and SITC schemas carry a full set of normalized columns that re-express raw metrics as percentile ranks or normalized scores for display purposes (diamond ratings, scatter plot axes). There are two parallel families:
 
@@ -391,7 +391,7 @@ Two passes are performed:
 
 ---
 
-## 7b. Global Market Share
+## 7b. Global Market Share: Product-Level and Sector-Level Export Share Formulas
 
 **Definition level:** Country × product × year (product-level) or Country × sector × year (sector-level)
 
@@ -417,7 +417,7 @@ This requires joining `countryProductYear` with `productYear` by product and yea
 
 ---
 
-## 8. Proximity (phi)
+## 8. Proximity (phi): Product-to-Product Relatedness and Product Space Edges
 
 **Definition level:** Product pair (globally fixed)
 
@@ -461,7 +461,7 @@ Taking the minimum prevents inflated proximity when one product is much more ubi
 
 ---
 
-## 9. Distance
+## 9. Distance: Product Feasibility Metric Measuring Capability Gap
 
 **Definition level:** Country × product × year
 
@@ -494,7 +494,7 @@ d_cp = 1 - [ sum_{p'} M_{cp'} * phi_{p,p'} / sum_{p'} phi_{p,p'} ]
 
 ---
 
-## 10. Density
+## 10. Density: Complement of Distance, Measuring Proximity to Existing Capabilities
 
 **Definition level:** Country × product × year
 
@@ -512,7 +512,7 @@ density_cp = sum_{p'} M_{cp'} * phi_{p,p'} / sum_{p'} phi_{p,p'}
 
 ---
 
-## 11. Opportunity Gain / Complexity Outlook Gain (COG)
+## 11. Opportunity Gain / Complexity Outlook Gain (COG): Strategic Value of Acquiring a Product
 
 **Definition level:** Country × product × year
 
@@ -550,7 +550,7 @@ Both `unexported` terms ensure gains only come from/to products the country does
 
 ---
 
-## 12. Complexity Outlook Index (COI)
+## 12. Complexity Outlook Index (COI): Country-Level Diversification Potential
 
 **Definition level:** Country × year
 
@@ -579,7 +579,7 @@ Where `(1 - M_cp)` ensures only products the country does NOT currently export a
 
 ---
 
-## 13. Product Status and New Products
+## 13. Product Status and New Products: Present, New, Lost, Absent Classification
 
 **Definition level:** Country × product × year (relative to a lookback base year)
 
@@ -600,7 +600,7 @@ Where `(1 - M_cp)` ensures only products the country does NOT currently export a
 
 ---
 
-## 14. Growth Projections
+## 14. Growth Projections: 10-Year GDP Per Capita Forecast Model and OLS Specification
 
 **Definition level:** Country × year
 
@@ -631,7 +631,7 @@ Countries whose ECI is high relative to their income level are predicted to grow
 
 ---
 
-## 15. Product Space Coordinates and Cluster
+## 15. Product Space Coordinates, Clusters, and Layout Visualization Data
 
 **Definition level:** Product (globally fixed)
 
@@ -666,7 +666,7 @@ Note: These 8 product space clusters differ from the 11 treemap sectors used in 
 
 ---
 
-## 16. Thresholds Table
+## 16. Thresholds Table: Percentile Distributions for Metric Normalization
 
 `{schema}.country_year_thresholds` stores per-country, per-year distributional statistics for variables (used for percentile normalization of the `normalized_*` columns):
 
@@ -679,7 +679,7 @@ Note: These 8 product space clusters differ from the 11 treemap sectors used in 
 
 ---
 
-## 17. GraphQL Field Reference Summary
+## 17. GraphQL Field Reference Summary: Metric Names to API Fields Mapping
 
 | Metric | GraphQL Query | Field(s) |
 |--------|--------------|---------|
@@ -701,7 +701,7 @@ Note: These 8 product space clusters differ from the 11 treemap sectors used in 
 
 ---
 
-## 18. SQL Query Examples
+## 18. SQL Query Examples: ECI Time Series, Product Complexity Ranking, and Growth Opportunities
 
 ### Country-level: ECI over time and product complexity ranking
 
@@ -764,7 +764,7 @@ ORDER BY cpy.export_value DESC;
 
 ---
 
-## Advanced / Non-Standard Methods
+## Advanced / Non-Standard Methods: RPOP, HHI-Corrected M, and Alternative Proximity Measures
 
 > **IMPORTANT:** The methods in this section are **frontier research extensions NOT currently implemented in the Atlas of Economic Complexity**. They are documented here for completeness and to support advanced methodology questions. Do not present these as Atlas-standard metrics.
 

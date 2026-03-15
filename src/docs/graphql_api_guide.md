@@ -16,7 +16,7 @@ when_to_load: >
 related_docs: []
 ---
 
-## Two Separate APIs
+## Two Separate APIs: Explore API vs. Country Pages API Endpoints, ID Formats, and Schemas
 
 The Atlas exposes **two independent GraphQL APIs** with different schemas, different ID formats, and different data.
 
@@ -38,7 +38,7 @@ The Atlas exposes **two independent GraphQL APIs** with different schemas, diffe
 
 ---
 
-## When to Use Each Source
+## When to Use Each API: Country Pages vs. Explore vs. SQL Decision Guide
 
 ### Use Country Pages API when the question involves:
 - **Diversification grade** (`diversificationGrade`: A+, A, B, C, D, D-)
@@ -317,7 +317,7 @@ gdpGrowthConstant: Float
 
 ---
 
-## Country ID Mapping Reference
+## Country ID Mapping: M49 Codes, Explore Integer IDs, and Country Pages String IDs
 
 Both APIs use M49 codes. The Explore API takes bare integers; the Country Pages API takes prefixed strings.
 
@@ -336,7 +336,7 @@ Full mapping: `locationCountry { countryId iso3Code nameEn }` (Explore) or `allL
 
 ---
 
-## Example Queries
+## Example GraphQL Queries: Country Profile, Lookback, Trade Data, Bilateral, and New Products
 
 ### Example 1: Country analytical profile (Country Pages API)
 
@@ -458,7 +458,7 @@ Use when asked about RCA, distance, complexity of specific products, or for cust
 
 ---
 
-## Data Exclusive to Each Source
+## Data Exclusive to Each Source: Fields Only in Country Pages, Explore, or SQL
 
 ### Country Pages API only (not in SQL or Explore API)
 
@@ -497,7 +497,7 @@ Use when asked about RCA, distance, complexity of specific products, or for cust
 
 ---
 
-## Response Size Tiers
+## Response Size Tiers: Query Result Sizes and Truncation Requirements
 
 Any query that returns "all products" (~1,200 items) produces 40–350 KB responses that cannot be passed directly to the LLM. The pipeline automatically post-processes Tier 4 responses (sort, truncate to top-N, enrich with human-readable names).
 
@@ -567,7 +567,7 @@ Any query that returns "all products" (~1,200 items) produces 40–350 KB respon
 
 ---
 
-## Bilateral Query Selection Logic
+## Bilateral Query Selection: Which GraphQL Query for Exporter-Importer Combinations
 
 When both an exporter and importer are specified, the query type depends on entity types:
 
@@ -581,7 +581,7 @@ When both an exporter and importer are specified, the query type depends on enti
 
 ---
 
-## Product ID Mapping
+## Product ID Mapping: Internal Atlas Product IDs vs. HS Codes
 
 URL parameter `product-HS92-726` refers to internal Atlas product ID 726, not HS code 726. The mapping must be resolved via `productHs92 { productId code }`. Known examples:
 
@@ -598,7 +598,7 @@ URL parameter `product-HS92-726` refers to internal Atlas product ID 726, not HS
 
 ---
 
-## `CountryProductYear` Full Field Reference
+## `CountryProductYear` Full Field Reference: 22 Fields Including RCA, Distance, COG, and Normalized Variants
 
 The richest query type in the Explore API — 22 fields returned per country × product × year row:
 
@@ -631,7 +631,7 @@ The `*Rcalt1` variants are computed only over the subset of products where `expo
 
 ---
 
-## TreeMap Facet Behavior (Country Pages API)
+## TreeMap Query Facets and Services Data (Country Pages API)
 
 The `treeMap` query returns different types depending on the facet:
 
@@ -645,7 +645,7 @@ The treemap includes **services** when the country reports services data (check 
 
 ---
 
-## Explore URL Structure
+## Explore URL Structure: Constructing Atlas Visualization Links and URL-to-GraphQL Mapping
 
 Explore page URLs follow a consistent pattern for constructing links to Atlas visualizations:
 
@@ -679,7 +679,7 @@ Base: https://atlas.hks.harvard.edu/explore/{vizType}
 
 ---
 
-## Goods vs. Goods+Services Totals
+## Goods vs. Goods+Services Export Totals: Why Values Differ Across Queries
 
 The total export value varies by query type and mode. This is the most common source of confusion:
 
@@ -695,7 +695,7 @@ For countries with significant service exports (e.g., tourism-heavy economies), 
 
 ---
 
-## Metrics Available Only via Country Pages API
+## Metrics Available Only via Country Pages API: Derived Fields Not Reproducible from SQL
 
 Some Country Pages metrics are derived server-side and cannot be reconstructed from raw SQL tables:
 
@@ -710,7 +710,7 @@ Some Country Pages metrics are derived server-side and cannot be reconstructed f
 
 ---
 
-## Important Operational Notes
+## Important Operational Notes: Rate Limits, ID Formats, ECI Caveats, and Schema Stability
 
 ### Rate Limits, Response Sizing, and Caching
 

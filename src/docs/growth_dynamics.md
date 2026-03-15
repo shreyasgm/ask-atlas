@@ -17,7 +17,7 @@ when_not_to_load: >
 related_docs: [strategic_approaches.md]
 ---
 
-## 1. Growth Dynamics Interpretation
+## 1. Growth Dynamics: Export Growth vs. Product Complexity Interpretation
 
 **Page URL:** `https://atlas.hks.harvard.edu/countries/{m49_id}/growth-dynamics`
 
@@ -27,7 +27,7 @@ Growth dynamics analysis examines whether a country's export growth is concentra
 
 The country's current **ECI** value (`countryYear.eci`) serves as a benchmark. Products more complex than the country's average ECI represent structural upgrading when they grow; products less complex represent deepening of existing capabilities.
 
-### Quadrant Interpretation
+### Quadrant Interpretation: Growth vs. PCI Relative to Country ECI
 
 | Growth + Complexity Combination | Meaning |
 |------|---------|
@@ -38,7 +38,7 @@ The country's current **ECI** value (`countryYear.eci`) serves as a benchmark. P
 
 The key diagnostic question: **Is the country growing into more complex products, or is growth concentrated in simple commodities?** Countries experiencing genuine structural transformation show strong growth in products above their ECI benchmark.
 
-### Lookback Periods
+### Lookback Periods: 3, 5, and 10-Year CAGR Windows
 
 The user can select a lookback window for the CAGR calculation:
 
@@ -50,7 +50,7 @@ The user can select a lookback window for the CAGR calculation:
 
 Note: 15-year lookback (`FifteenYears`) is available in the `countryLookback` API (used on the New Products page) but is **not** offered as a dropdown option on the Growth Dynamics chart itself.
 
-### Chart Quadrant Interpretation
+### Chart Quadrant Layout: CAGR (Y-axis) vs. PCI (X-axis)
 
 | Quadrant | Meaning |
 |----------|---------|
@@ -72,7 +72,7 @@ Note: 15-year lookback (`FifteenYears`) is available in the `countryLookback` AP
 
 ---
 
-## 2. GraphQL API: `countryProductLookback`
+## 2. GraphQL API: `countryProductLookback` — Per-Product Export CAGR
 
 This query provides **per-product** export growth data for growth dynamics analysis.
 
@@ -94,7 +94,7 @@ exportValueConstCagr: Float     # CAGR of constant-dollar exports over the perio
 
 ---
 
-## 3. GraphQL API: `countryLookback`
+## 3. GraphQL API: `countryLookback` — Country-Level Export, GDP, and ECI Growth Metrics
 
 This query provides **country-level** aggregate growth metrics, used on the Export Basket page, Export Complexity page, and Summary page — as well as for answering direct user questions about growth rates.
 
@@ -135,7 +135,7 @@ gdpGrowthConstant: Float                    # GDP growth in constant dollars
 
 ---
 
-## 4. Non-Oil Export Growth Rate
+## 4. Non-Oil Export Growth Rate: Isolating Capability-Driven Growth from Resource Windfalls
 
 `exportValueGrowthNonOilConstCagr` is the CAGR of a country's exports **after excluding oil and petroleum products**. Oil products are HS92 section 27 ("Mineral fuels, mineral oils and products of their distillation").
 
@@ -148,7 +148,7 @@ The non-oil export growth rate appears on the Export Basket page text narrative 
 
 ---
 
-## 5. ECI Rank Changes Over Time
+## 5. ECI Rank Changes Over Time: Trends and Cross-Year Comparability Caveats
 
 ### ECI Rank Change (API)
 
@@ -176,7 +176,7 @@ Use HS12 schema (`hs12.country_year`) when the user specifies HS 2012. The HS12 
 
 ---
 
-## 6. Structural Transformation Assessment
+## 6. Structural Transformation Assessment: Manufacturing Shift Stages and Growth Pattern Classification
 
 Structural transformation refers to the shift in a country's export composition toward more complex, higher-value-added products. In Atlas terminology, it specifically tracks whether the country has gained market share in manufacturing sectors.
 
@@ -223,7 +223,7 @@ The `structuralTransformationSector` field names the specific sector being asses
 
 ---
 
-## 7. Growth Projections vs. Realized Growth
+## 7. Growth Projections vs. Realized Growth: Forward-Looking Forecast vs. Historical CAGR
 
 The Atlas provides **two distinct types** of growth information:
 
@@ -262,7 +262,7 @@ growthProjectionPercentileClassification: GrowthProjectionPercentileClassificati
 
 ---
 
-## 8. SQL Patterns for Growth Dynamics Data
+## 8. SQL Patterns for Growth Dynamics: Export CAGR, ECI Time Series, and Non-Oil Calculations
 
 ### Country-Level Growth Data
 
@@ -379,7 +379,7 @@ WHERE cpy_end.country_id = :country_id
 
 ---
 
-## 9. Key Relationships and Caveats
+## 9. Key Relationships and Caveats: Constant vs. Current Dollars, ECI Comparability, and Schema Availability
 
 - **`countryProductLookback` vs. `country_product_lookback` tables:** The GraphQL query (`countryProductLookback`) and the SQL tables (`hs92.country_product_lookback_{1,2,4}`) contain equivalent pre-calculated CAGR data. The SQL tables include a `lookback` column (integer: 3, 5, 10, 15) to filter by period. The SQL tables are HS92-only.
 

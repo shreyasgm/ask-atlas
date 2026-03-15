@@ -17,7 +17,7 @@ when_not_to_load: >
 related_docs: [strategic_approaches.md, product_space_and_relatedness.md]
 ---
 
-## 1. Definition of a "New Product"
+## 1. Definition of a "New Product": RCA Threshold Transition Over a 15-Year Window
 
 A product is classified as **new** for a country when it transitions from not meaningfully exported to firmly exported over an observation window. The determination is based on **3-year averaged export values** at each end of the window:
 
@@ -40,7 +40,7 @@ The GraphQL Country Pages API only returns new products in HS92. For HS12 or SIT
 
 ---
 
-## 2. SQL: Computing New Products
+## 2. SQL: Computing New Products from Raw export_value Using 3-Year Averaged RCA
 
 Since the `is_new` and `product_status` columns are **ALL NULL** in the current database (see Section 4), new products must be computed from raw export values in SQL. The method works identically across all goods schemas.
 
@@ -99,7 +99,7 @@ Stores pre-calculated export change metrics over configured lookback periods (3,
 
 ---
 
-## 3. Lookback Periods
+## 3. Lookback Periods: 3, 5, 10, and 15-Year Windows for New Product Detection
 
 Four lookback periods are available in the GraphQL API. They appear as interactive options on Country Pages sections (e.g., Growth Dynamics uses 3/5/10 years) and map to the `LookBackYearRange` GraphQL enum:
 
@@ -114,7 +114,7 @@ The new-products page always displays the 15-year window. In SQL, any window len
 
 ---
 
-## 4. `product_status` and `is_new` DB Columns (Schema Only — NOT POPULATED)
+## 4. WARNING: `product_status` and `is_new` DB Columns Are ALL NULL — Do Not Use
 
 > **WARNING:** These columns exist in the database schema but are **ALL NULL** in the current data. Do NOT use them in SQL queries. Compute new products from raw `export_value` as described in Section 2.
 
@@ -138,7 +138,7 @@ Both columns are defined at all product digit levels (1, 2, 4) in every `country
 
 ---
 
-## 5. GraphQL API: `newProductsCountry` Query
+## 5. GraphQL API: `newProductsCountry` Query (HS92 Only, Country Pages API)
 
 > **HS92-only.** The Country Pages API only supports HS92 for new products. For HS12 or SITC, use SQL.
 
@@ -183,7 +183,7 @@ This query has **no optional arguments** — all fields are always returned. The
 
 ---
 
-## 6. GraphQL API: `newProductsComparisonCountries` Query and Peer Selection
+## 6. GraphQL API: `newProductsComparisonCountries` Query and Peer Country Selection
 
 > **HS92-only.** Same as `newProductsCountry`.
 
@@ -236,7 +236,7 @@ The same peers returned here appear in the `newProductsComparisonCountries` resp
 
 ---
 
-## 7. `countryProfile` Fields Relevant to New Products
+## 7. `countryProfile` GraphQL Fields for New Products: diversificationGrade, diversityRank, newProductExportValue
 
 > **GraphQL only (HS92).**
 
@@ -257,7 +257,7 @@ The `countryLookback(yearRange: FifteenYears)` query returns `diversityRankChang
 
 ---
 
-## 8. Diversification Grade and Per-Capita Income Contribution
+## 8. Diversification Grade Thresholds (A+ through D-) and Per-Capita Income Contribution
 
 ### Diversification Grade Thresholds
 
@@ -285,7 +285,7 @@ The `newProductsIncomeGrowthComments` enum (`LargeEnough` / `TooSmall`) classifi
 
 ---
 
-## 9. Known Limitations and Data Gaps
+## 9. Known Limitations: is_new NULL, HS92-Only GraphQL, Lookback Constraints
 
 - **GraphQL new products are HS92-only.** The `newProductsCountry` query has no `productClass` parameter. For HS12 or SITC new products, use SQL.
 - **`is_new` and `product_status` are ALL NULL** in the current database. Compute new products from raw `export_value` using the 3-year averaging method.

@@ -16,13 +16,13 @@ when_to_load: >
 related_docs: []
 ---
 
-## Total Coverage
+## Total Country Coverage: ~250 in Explore, ~145 in Rankings and Country Profiles
 
 - **Atlas Explore** (the full database): data for all countries and territories covered by UN Comtrade (~250 countries and territories)
 - **Country Profiles and Rankings**: restricted to ~145 countries that meet minimum coverage and quality thresholds (see `in_rankings` flag below)
 - **Country selector on the Atlas website**: 145 countries shown in dropdown, each listed with name + ISO alpha-3 code (e.g., "Afghanistan (AFG)")
 
-## Rankings Eligibility: `in_rankings` Flag
+## Rankings Eligibility: `in_rankings` Flag, Population and Trade Thresholds, Override Columns
 
 **~145 countries** appear in ECI/PCI rankings and have Country Profile pages (vs. ~250 total in the database). A country is included when it meets all four criteria:
 
@@ -64,7 +64,7 @@ Overrides are set administratively for special cases (e.g., Growth Lab project c
 | `services_any_coverage` | bool | Has any services trade data |
 | `imf_any_coverage` | bool | Has any IMF data |
 
-## Country Naming Conventions
+## Country Naming Conventions: Taiwan as Chinese Taipei, Turkey as Turkiye, and Other UN Comtrade Names
 
 Country names in the Atlas follow official names as provided to **UN Comtrade**. This explains several non-obvious names:
 
@@ -81,7 +81,7 @@ Country names in the Atlas follow official names as provided to **UN Comtrade**.
 
 "Chinese Taipei" uses the UN Comtrade convention for Taiwan. Kosovo (XKX) has limited or no data in some schemas depending on UN reporting status. When a user asks about "Taiwan," the Atlas entity is "Chinese Taipei" with `iso3_code = 'TWN'`.
 
-## Historical Entities
+## Historical Entities: Soviet Union, Yugoslavia, Czechoslovakia (SITC Schema Only)
 
 Countries that no longer exist appear in the data with `former_country = true` in `classification.location_country`. Trade data for historical entities is only available in the **SITC** schema (which covers 1962–2024), not in HS92 (starts 1995):
 
@@ -93,7 +93,7 @@ Countries that no longer exist appear in the data with `former_country = true` i
 
 For pre-1995 queries about these entities, use the `sitc` schema. Exact year ranges available in the DB may differ; query `sitc.country_year WHERE country_id = (SELECT country_id FROM classification.location_country WHERE iso3_code = 'SUN')` to verify.
 
-## Small States and Country-Specific Data Notes
+## Small States, Sparse Data Countries, and Country-Specific Notes (South Sudan, Timor-Leste, Kosovo)
 
 Some countries (e.g., Tuvalu, Liechtenstein, San Marino) exist in the data but have very sparse trade records. They typically have `in_rankings = false` and may return few or no rows for many trade queries. The agent should warn about data limitations when querying these countries.
 
@@ -103,7 +103,7 @@ Country-specific notes:
 - **Timor-Leste (TLS)**: Independence 2002; data from ~2002 onward
 - **Kosovo (XKX)**: Coverage varies by schema; may have limited rows
 
-## DB Tables for Country Lookup
+## DB Tables for Country Lookup: location_country, location_group, location_group_member, data_flags
 
 ### `classification.location_country` — primary reference table
 
@@ -165,7 +165,7 @@ Country-specific notes:
 
 Key columns: `country_id`, `in_rankings`, `former_country`, `rankings_eligible`, `country_profiles_eligible`, `in_cp`, `in_mv`, `min_population` (bool), `population` (int8), `min_avg_export` (bool), `avg_export_3` (int8), `complexity_current_year_coverage`, `complexity_lookback_years_coverage`, `services_any_coverage`, `imf_any_coverage`.
 
-## Country Group Types
+## Country Group Types: Continent, Region, Trade Bloc, Income Level, and Other Groupings
 
 The `group_type` ENUM in `location_group` covers these grouping categories:
 
@@ -181,7 +181,7 @@ The `group_type` ENUM in `location_group` covers these grouping categories:
 | `world` | Entire world as one group | World (group_id typically 1) |
 | `rock_song` | Internal classification (ignore) | — |
 
-## Identifier Formats
+## Identifier Formats: M49 Numeric, ISO Alpha-3, and GraphQL ID Conventions
 
 Country IDs use M49 codes (UN standard), which coincide with ISO 3166-1 numeric codes for most countries.
 
@@ -210,7 +210,7 @@ Country IDs use M49 codes (UN standard), which coincide with ISO 3166-1 numeric 
 
 Full list: `SELECT country_id, iso3_code, name_short_en FROM classification.location_country ORDER BY name_en`
 
-## SQL Patterns
+## SQL Patterns for Country Lookup, Group Membership, and Historical Entities
 
 ### Look up a country by common name
 
@@ -269,7 +269,7 @@ WHERE country_id = (
 
 In bilateral trade tables (`country_country_year`, `country_country_product_year_*`), rows where `country_id = partner_id` represent self-trade entries. These should be zero in practice and can be excluded with `WHERE country_id != partner_id` when aggregating bilateral totals.
 
-## GraphQL: Country ID Usage
+## GraphQL Country ID Usage: Explore API (Integer) vs Country Pages API (String Prefix)
 
 ### Explore API (`/api/graphql`) — integer IDs
 

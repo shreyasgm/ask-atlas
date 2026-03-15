@@ -36,13 +36,19 @@ related_docs:
   - metrics_glossary.md
 ---
 
-## Conceptual Foundation
+## Conceptual Foundation: Why Countries Diversify Into Nearby Products
+
+### The Adjacent Possible and Capability-Based Diversification
 
 The product space encodes the insight that **countries diversify by moving into products that require similar capabilities to what they already produce** — the "adjacent possible." Products that share underlying know-how, infrastructure, institutions, or factor endowments tend to be co-exported by the same countries. The product space network makes this latent capability structure visible.
 
-**Why the product space is persistent over time:** The capabilities underlying the product space — skilled labor pools, institutional quality, infrastructure networks, supplier ecosystems, tacit industrial knowledge — change slowly. A country's position in the product space reflects its accumulated capability stock built over decades. This is why diversification patterns are highly path-dependent: today's export basket is the strongest predictor of tomorrow's, and radical jumps across the product space are rare.
+### Why the Product Space Is Persistent Over Time
 
-**Why diversification follows the product space:** Moving into a new product requires assembling the right combination of capabilities — worker skills, supply chains, regulatory frameworks, quality standards, distribution networks. Products that are "nearby" in the product space share most of these requirements with products the country already makes successfully. The further the jump, the more new capabilities must be built simultaneously, and the probability of successful entry drops sharply. Hidalgo et al. (2007) showed that the probability of developing RCA in a new product is near-zero when the closest existing product is at proximity φ ≈ 0.1, but rises to approximately 15% when the closest product is at φ ≈ 0.8 (measured over 5-year windows). For 79% of products, countries that successfully transitioned into them had higher density ratios than countries that did not.
+The capabilities underlying the product space — skilled labor pools, institutional quality, infrastructure networks, supplier ecosystems, tacit industrial knowledge — change slowly. A country's position in the product space reflects its accumulated capability stock built over decades. This is why diversification patterns are highly path-dependent: today's export basket is the strongest predictor of tomorrow's, and radical jumps across the product space are rare.
+
+### Why Diversification Follows the Product Space: Empirical Evidence
+
+Moving into a new product requires assembling the right combination of capabilities — worker skills, supply chains, regulatory frameworks, quality standards, distribution networks. Products that are "nearby" in the product space share most of these requirements with products the country already makes successfully. The further the jump, the more new capabilities must be built simultaneously, and the probability of successful entry drops sharply. Hidalgo et al. (2007) showed that the probability of developing RCA in a new product is near-zero when the closest existing product is at proximity φ ≈ 0.1, but rises to approximately 15% when the closest product is at φ ≈ 0.8 (measured over 5-year windows). For 79% of products, countries that successfully transitioned into them had higher density ratios than countries that did not.
 
 Recent work provides a micro-foundation for this pattern: Diodato, Hausmann & Schetter (2022) show that industries share occupational inputs, and entry probability into the nearest industry (by occupational overlap) is approximately 4x higher than at maximum occupational distance. The original product space was purely phenomenological (inferred from co-export patterns); the occupational input structure explains *why* proximity predicts diversification.
 
@@ -113,7 +119,7 @@ The field `strength` in the API corresponds to proximity φ in the formulas. No 
 
 ---
 
-## 2. The Product Space Network
+## 2. The Product Space Network: Construction, Layout, and Core vs. Periphery
 
 ### Construction
 
@@ -177,7 +183,7 @@ This creates a "quiescence equilibrium" — countries with few capabilities have
 
 ---
 
-## 3. The 8 Product Space Clusters
+## 3. The 8 Product Space Clusters: Sector Groupings and Database Fields
 
 The Atlas groups products into **8 clusters** based on network community detection. These differ from the 11 treemap sectors used in Trade Composition views.
 
@@ -207,7 +213,7 @@ The Atlas groups products into **8 clusters** based on network community detecti
 
 ---
 
-## 4. Country Position in the Product Space
+## 4. Country Position in the Product Space: RCA Overlay and Capability Assessment
 
 A country's position in the product space is defined by which products it exports with comparative advantage. Products with `export_rca ≥ 1` are part of the country's active capability set; products with `export_rca < 1` represent potential diversification targets. Each product belongs to one of the 8 clusters (see Section 3).
 
@@ -235,7 +241,7 @@ WHERE cpy.country_id = 404   -- Kenya
 
 ---
 
-## 5. Distance — How Far Is a Country from a Product?
+## 5. Distance (d_cp) — How Far a Country Is from a Product
 
 ### Formula (Atlas Glossary / Official Definition)
 
@@ -289,7 +295,7 @@ where:
 
 ---
 
-## 6. Density — The Complement of Distance
+## 6. Density (ρ_cp) — Proximity to Existing Capabilities (1 − Distance)
 
 ### Formula
 
@@ -312,7 +318,7 @@ Density is not stored as a separate column in the Atlas database; it can be deri
 
 ---
 
-## 7. Opportunity Gain (COG — Complexity Outlook Gain)
+## 7. Opportunity Gain (COG) — Strategic Value as a Diversification Stepping Stone
 
 ### Definition
 
@@ -349,7 +355,7 @@ where:
 
 ---
 
-## 8. Complexity Outlook Index (COI) — Country-Level Strategic Position
+## 8. Complexity Outlook Index (COI) — Country-Level Proximity to Complex Products
 
 ### Definition
 
@@ -399,7 +405,7 @@ COI is one of the five inputs to the Atlas growth projections (alongside ECI, lo
 
 ---
 
-## 9. Strategic Approaches and Technological Frontier Countries
+## 9. Strategic Approaches: COI/ECI Thresholds and Technological Frontier Countries
 
 COI and ECI together determine a country's recommended **strategic approach** to diversification. The Atlas assigns each country one of four approaches, displayed at `/countries/{id}/strategic-approach`:
 
@@ -439,7 +445,7 @@ query {
 
 ---
 
-## 10. Feasibility Assessment (Growth Opportunity)
+## 10. Feasibility Assessment: Growth Opportunity Scoring and Product Selection
 
 ### Three Dimensions of Feasibility
 
@@ -537,7 +543,7 @@ The table view (`/explore/feasibility/table`) presents the same data in sortable
 
 ---
 
-## 11. SQL Schema Reference
+## 11. SQL Schema Reference: Product Space Tables and Columns
 
 The product space data spans two schema layers:
 
@@ -586,7 +592,7 @@ LIMIT 10;
 
 ---
 
-## 12. Quick Reference: GraphQL Queries and Metric Relationships
+## 12. Quick Reference: Product Space GraphQL Queries and Metric Relationships
 
 ### GraphQL Queries Summary
 
@@ -624,7 +630,7 @@ COI(c)            — sum of ρ(c,p) × PCI_p over products c does not yet expor
 
 ---
 
-## Advanced / Non-Standard Methods
+## Advanced Methods Not Implemented in the Atlas: Statistical Proximity, RPOP, HHI Correction
 
 The following methods appear in the frontier research literature and are documented in `atlas_docs/economic_complexity_modern.md`. **They are NOT currently implemented in the Atlas of Economic Complexity** and are provided here as research extensions only.
 

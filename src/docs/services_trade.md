@@ -34,7 +34,7 @@ related_docs:
 
 **WARNING (Dec 2025 refresh):** The `services_bilateral` schema tables are currently empty (zero rows) in the SQL database. All services bilateral queries will return no data. Use `services_unilateral` for services trade queries, or the GraphQL API for bilateral services data.
 
-## Two Services Schemas
+## Two Services Schemas: `services_unilateral` vs `services_bilateral`
 
 The Atlas stores services trade data in two separate PostgreSQL schemas.
 
@@ -50,7 +50,7 @@ The Atlas stores services trade data in two separate PostgreSQL schemas.
 
 ---
 
-## Tables in Each Schema
+## Tables in Each Services Schema: Naming Convention and Full Listing
 
 Both schemas follow the same naming convention as goods schemas: `{schema}.{data_type}_{level}`.
 
@@ -102,7 +102,7 @@ Both schemas follow the same naming convention as goods schemas: `{schema}.{data
 
 ---
 
-## Key Columns in Services Trade Tables
+## Key Columns in Services Trade Tables: export_value, import_value, product_id, country_id
 
 The column structure mirrors goods trade tables. All tables use `country_id` and `product_id` as internal integer foreign keys; join to the classification tables to get names and codes.
 
@@ -123,7 +123,7 @@ The column structure mirrors goods trade tables. All tables use `country_id` and
 
 ---
 
-## Service Category Classification
+## Service Category Classification: EBOPS 2010 Categories and Lookup Tables
 
 Services trade does **not** use HS or SITC codes. It uses the **Extended Balance of Payments Services (EBOPS 2010)** standard, sourced from IMF Balance of Payments Manual 6 (BPM6) data.
 
@@ -166,7 +166,7 @@ Services trade does **not** use HS or SITC codes. It uses the **Extended Balance
 
 ---
 
-## Data Source and Year Coverage
+## Services Data Source, Year Range (1980–2024), and Country Coverage
 
 - **Source:** International Monetary Fund (IMF), Direction of Trade Statistics (DOTS) and Balance of Payments (BPM6)
 - **Year range:** 1980–2024 (coverage begins in 1980; many countries have data only from the 1990s or 2000s onward)
@@ -175,7 +175,7 @@ Services trade does **not** use HS or SITC codes. It uses the **Extended Balance
 
 ---
 
-## How Services Differ from Goods Data
+## How Services Differ from Goods Data: Coverage, Codes, Complexity Metrics
 
 | Dimension | Goods (HS92/SITC) | Services |
 |---|---|---|
@@ -192,7 +192,7 @@ Services trade does **not** use HS or SITC codes. It uses the **Extended Balance
 
 ---
 
-## Complexity Metrics and Services: Why They Are Absent
+## Why ECI, PCI, COG, and Product Space Metrics Are Absent for Services
 
 Economic complexity metrics (ECI, PCI, COG, distance, product space) require bilateral, product-level trade data to compute the bipartite network of countries and products. Services data does not provide the bilateral product-level granularity needed for this computation:
 
@@ -204,7 +204,7 @@ Economic complexity metrics (ECI, PCI, COG, distance, product space) require bil
 
 ---
 
-## Critical: Products vs. Locations Treemap Total Discrepancy
+## Why Products Mode and Locations Mode Show Different Export Totals (Treemap Discrepancy)
 
 This is a frequent source of user confusion. The Atlas Explore treemap shows **different export totals** depending on the view selected:
 
@@ -223,7 +223,7 @@ This is a frequent source of user confusion. The Atlas Explore treemap shows **d
 
 ---
 
-## SQL Query Patterns
+## SQL Query Patterns for Services Trade
 
 ### Total service exports for a country in a given year
 
@@ -326,7 +326,7 @@ ORDER BY product_level;
 
 ---
 
-## GraphQL API: Services Trade
+## GraphQL API for Services Trade: servicesClass Parameter and Catalog Queries
 
 In the Explore API (`https://atlas.hks.harvard.edu/api/graphql`), services data is accessed by passing `servicesClass: unilateral` to trade queries.
 
@@ -364,7 +364,7 @@ To fetch the services product catalog via GraphQL:
 
 ---
 
-## Common Pitfalls
+## Common Pitfalls When Querying Services Trade Data
 
 - **Joining across schema product IDs:** Never join `services_unilateral.country_product_year_4.product_id` directly to `classification.product_hs92`. Services product IDs only join to `classification.product_services_unilateral` (for unilateral) or `classification.product_services_bilateral` (for bilateral).
 - **Filtering by product name:** Use `name_en` or `name_short_en` from the classification table — never hardcode a numeric product code for services (they do not use numeric HS/SITC codes).

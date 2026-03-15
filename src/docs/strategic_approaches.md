@@ -36,7 +36,7 @@ related_docs:
   - growth_dynamics.md
 ---
 
-## The Four Strategic Approaches
+## The Four Strategic Approaches: Light Touch, Parsimonious Industrial Policy, Strategic Bets, and Technological Frontier
 
 Countries are assigned one of four strategic approaches based on two diagnostic dimensions:
 
@@ -98,7 +98,7 @@ The quadrant assignment can also be understood through two diagnostic questions:
 
 ---
 
-## GraphQL API: Strategic Approach Fields
+## GraphQL API: Strategic Approach, COI, and ECI Fields (countryProfile and countryYear)
 
 ### Primary query: `countryProfile` (Country Pages API)
 
@@ -183,11 +183,11 @@ ORDER BY cy.year;
 
 ---
 
-## Diversification Grades
+## Diversification Grades: New Product Counts, Letter Grades, and Performance Interpretation
 
 Displayed on the `/countries/{id}/new-products` page top bar as a letter grade (e.g., "B").
 
-### What diversification grades measure
+### How Diversification Grades Are Calculated: New Product Counting Methodology
 
 Diversification grades rank countries by the number of new products they have successfully added to their export basket over an approximately 15-year window (default 2009–2024 as of the latest data). A "new product" is determined by recomputing RCA from 3-year averaged export values at each end of the window:
 
@@ -250,7 +250,7 @@ query {
 }
 ```
 
-## Interpreting Diversification Performance
+### Interpreting Diversification Performance
 
 Beyond the letter grade, several qualitative factors help assess whether a country's diversification is meaningful:
 
@@ -264,9 +264,9 @@ Beyond the letter grade, several qualitative factors help assess whether a count
 
 ---
 
-## Growth Projections
+## Growth Projections: 10-Year GDP Per Capita Forecast Model
 
-### What they are
+### Overview: 10-Year GDP Per Capita Growth Forecast
 
 The Atlas provides a **10-year GDP per capita growth forecast** for each of the 145 countries. Displayed as an annualized rate (e.g., "Kenya is expected to grow 3.4% per year over the next 10 years"). The current forecast horizon ends approximately 10 years from the most recent data year.
 
@@ -310,9 +310,9 @@ Column: `growth_proj DOUBLE PRECISION` in `{schema}.country_year`.
 
 ---
 
-## Complexity-Income Relationship
+## Complexity-Income Relationship: Why ECI Predicts Growth and How Natural Resources Distort It
 
-### What it means
+### ECI vs. Income Level: More or Less Complex Than Expected
 
 When the Atlas says a country is "more complex than expected for its income level," it uses an OLS regression of ECI rank on GDP per capita rank across all 145 countries. The country's observed ECI rank is compared against the prediction interval:
 
@@ -346,7 +346,7 @@ This adjusted metric isolates the "genuine" productive complexity of the economy
 
 ---
 
-## Frontier Countries, Subpage Data Sources, and Peer Comparisons
+## Frontier Countries: Growth Opportunities Unavailable, Subpage Data Sources, and Peer Comparisons
 
 ### Frontier Countries: Growth Opportunity Pages Unavailable
 
@@ -394,7 +394,7 @@ Example output for Kenya (M49: 404): Uganda (28 products/$211M), Kenya (24/$260M
 
 ---
 
-## Quick Reference: Enums and API Routing
+## Quick Reference: Strategic Approach Enums, Diversification Enums, and API Routing
 
 ### All Enum Values
 

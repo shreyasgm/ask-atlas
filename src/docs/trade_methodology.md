@@ -34,7 +34,7 @@ related_docs:
   - inflation_and_valuation.md
 ---
 
-## Data Sources
+## Data Sources: UN Comtrade, IMF, FRED, CEPII, and WCO
 
 | Source | Role in Atlas |
 |---|---|
@@ -49,7 +49,7 @@ Atlas trade values are denominated in USD. Constant-dollar values use the FRED P
 
 ---
 
-## Why Atlas Values Differ from Raw Comtrade Downloads
+## Why Atlas Trade Values Differ from Raw UN Comtrade and WTO Data
 
 Raw Comtrade data has two structural problems that the Atlas corrects:
 
@@ -62,7 +62,7 @@ The Atlas applies a five-step mirroring procedure (described below) and a weight
 
 ---
 
-## The Reporting Problem: Scale and Causes
+## The Reporting Problem: Bilateral Discrepancies, CIF vs FOB, Re-Exports, and ANS
 
 For 2010 global trade data (a representative year):
 
@@ -82,7 +82,7 @@ For 2010 global trade data (a representative year):
 
 ---
 
-## Mirroring Pipeline: Five Steps
+## Mirroring Pipeline: Five-Step Reconciliation of Bilateral Trade Data
 
 The mirroring pipeline converts raw Comtrade bilateral data into a single reconciled estimate.
 
@@ -156,7 +156,7 @@ Country-pair reliability weights are applied to disaggregated 6-digit product da
 
 ---
 
-## The Product Concordance Problem
+## The Product Concordance Problem: HS Vintage Conversion and the Lukaszuk-Torun Method
 
 ### Why Classifications Diverge
 
@@ -207,7 +207,7 @@ subject to:  β_{k,s} ≥ 0  for all k, s
 
 ---
 
-## Classification Systems Available in the Atlas
+## Classification Systems Available in the Atlas: HS92, HS12, HS22, SITC, Services
 
 | System | Coverage in Atlas | Granularity | Notes |
 |---|---|---|---|
@@ -221,7 +221,7 @@ subject to:  β_{k,s} ≥ 0  for all k, s
 
 ---
 
-## Data Quality Indicators
+## Data Quality Indicators: data_flags, Country Inclusion Criteria, and ANS Filter
 
 ### `public.data_flags` Table
 
@@ -248,7 +248,9 @@ When a country reports more than 25% of its total trade against unidentified par
 
 ---
 
-## Data Update Cycle
+## Data Update Cycle and Validation Against IMF Balance of Payments
+
+### Update Cycle
 
 | Update type | Frequency | Timing |
 |---|---|---|
@@ -257,15 +259,13 @@ When a country reports more than 25% of its total trade against unidentified par
 
 Countries typically require 12–18 months to report to UN Comtrade. Most 2024 trade data appears in the Atlas between April and June 2026. Annual releases may incorporate small retroactive corrections to historical data as late or revised country reports are received.
 
----
-
-## Validation: IMF Balance of Payments Comparison
+### Validation Against IMF Balance of Payments
 
 The Atlas compares its recovered trade values against IMF Balance of Payments (BoP) data as an independent validation check. The two series are highly correlated (log-scale R² near 1.0 for both exports and imports). This includes trade values recovered entirely by mirroring — i.e., for countries that did not themselves report to Comtrade — which confirms that partner-based imputation accurately reconstructs actual trade flows.
 
 ---
 
-## Known Limitations
+## Known Limitations: Re-Exports, Missing Dyads, Services Granularity, Historical Gaps
 
 | Limitation | Detail |
 |---|---|
@@ -280,7 +280,7 @@ The Atlas compares its recovered trade values against IMF Balance of Payments (B
 
 ---
 
-## Key References
+## Key References: Papers, Datasets, and Code Repositories
 
 - **Peer-reviewed paper:** Bustos, S., Jackson, E., Torun, D., et al. (2026). "Tackling Discrepancies in Trade Data: The Harvard Growth Lab International Trade Datasets." *Scientific Data* 13, 170. https://doi.org/10.1038/s41597-025-06488-2
 - **Mirrored trade dataset:** https://doi.org/10.7910/DVN/5NGVOB

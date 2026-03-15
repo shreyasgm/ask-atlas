@@ -19,7 +19,7 @@ when_not_to_load: >
 related_docs: [data_coverage.md]
 ---
 
-## Goods Classifications Overview
+## Goods Classifications Overview: HS92, HS12, HS22, SITC Year Ranges and Defaults
 
 | Classification | Full Name | Year Range (Atlas) | ~Products at 4-digit | Default? |
 |---|---|---|---|---|
@@ -38,7 +38,7 @@ related_docs: [data_coverage.md]
 
 ---
 
-## Data Availability by Classification
+## Data Availability by Classification: SQL Schema, GraphQL Enum, and Country Pages API
 
 | Classification | SQL DB Schemas | Explore API enum | Country Pages API | Year Range |
 |---|---|---|---|---|
@@ -50,7 +50,7 @@ related_docs: [data_coverage.md]
 
 ---
 
-## Product Hierarchy Levels
+## Product Hierarchy Levels: HS Digit Levels (1, 2, 4, 6) and SITC Structure
 
 All HS classifications share the same hierarchy structure. SITC has an analogous but non-identical structure.
 
@@ -88,7 +88,7 @@ The `productLevel` integer argument in GraphQL corresponds directly to the digit
 
 ---
 
-## SQL Database Table Naming Convention
+## SQL Database Table Naming Convention: Schema, Table Names, and JOIN Patterns
 
 The Atlas SQL database uses PostgreSQL schemas to separate classifications. The schema name is the classification abbreviation; the table name encodes the data type and product level.
 
@@ -155,7 +155,7 @@ ORDER BY cpy.export_value DESC;
 
 ---
 
-## GraphQL API: Classification Enum Values
+## GraphQL API: ProductClass, ServicesClass, and ClassificationEnum Values
 
 **Endpoint:** `https://atlas.hks.harvard.edu/api/graphql` (Explore API)
 
@@ -214,7 +214,7 @@ The Country Pages API (`/api/countries/graphql`) uses a simplified `ProductClass
 
 ---
 
-## Services Classification
+## Services Classification: EBOPS 2010 Categories, Schemas, and Complexity Limitations
 
 Services trade uses a separate classification system not based on HS or SITC.
 
@@ -250,7 +250,7 @@ Services trade uses a separate classification system not based on HS or SITC.
 
 ---
 
-## Cross-Classification Conversion (GraphQL Only)
+## Cross-Classification Conversion: conversionPath, conversionSources, conversionWeights (GraphQL Only)
 
 The Growth Lab constructs the Atlas's long-run time series by converting trade values across classification vintages using data-driven conversion weights. Three GraphQL queries expose this conversion infrastructure:
 
@@ -323,7 +323,7 @@ The `conversionWeights` type includes 19 fields covering the chain: `sitc1962 â†
 
 ---
 
-## When to Use Each Classification
+## When to Use Each Classification: HS92 vs HS12 vs HS22 vs SITC Decision Guide
 
 | Use case | Recommended classification |
 |---|---|
@@ -340,7 +340,7 @@ The `conversionWeights` type includes 19 fields covering the chain: `sitc1962 â†
 
 ---
 
-## Data Availability Summary
+## Data Availability Summary: SQL, Explore API, and Country Pages API by Classification
 
 | Classification | SQL database | Explore API (GraphQL) | Country Pages API |
 |---|---|---|---|

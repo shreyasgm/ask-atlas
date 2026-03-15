@@ -49,7 +49,7 @@ related_docs:
   - scope_and_limitations.md
 ---
 
-## Diagnosing a Country's Economic Position
+## Diagnosing a Country's Economic Position: Strategic Approach Framework and Diversification
 
 The Atlas provides several complementary metrics that together tell a story about where a country stands and where it can go. No single metric is sufficient — the diagnostic power comes from reading them together.
 
@@ -81,7 +81,7 @@ The strategic approach tells you *where* a country stands; the diversification g
 
 ---
 
-## When to Be Skeptical of Metrics
+## When to Be Skeptical of Metrics: Re-Export Hubs, Small Islands, Conflict States, Transitions
 
 Certain country contexts make standard metrics less reliable or harder to interpret directly:
 
@@ -118,7 +118,7 @@ These economies have very high trade values that may not fully reflect domestic 
 
 ---
 
-## ECI Declining While Exports Grow
+## Why ECI Declines While Exports Grow: Commodity Dependence, Lost Complexity, and Compositional Shifts
 
 This is one of the most common "contradictions" users ask about. Several mechanisms can explain it:
 
@@ -162,7 +162,7 @@ When a user asks about this pattern for a specific country:
 
 ---
 
-## Goods vs. Services Composition Shifts
+## Goods vs. Services Composition Shifts: Structural Transformation and ECI Limitations
 
 The Atlas tracks both goods and services trade (services data from IMF/WTO BPM6). When interpreting shifts between goods and services:
 
@@ -180,7 +180,7 @@ The Atlas tracks both goods and services trade (services data from IMF/WTO BPM6)
 
 ---
 
-## How to Compare Peer Countries
+## How to Compare Peer Countries: Meaningful vs Misleading Comparisons
 
 Meaningful country comparisons require multiple dimensions:
 
@@ -214,7 +214,7 @@ Recent Growth Lab research (Hausmann, Stock & Yildirim, "Implied Comparative Adv
 
 ---
 
-## What Bilateral Trade Patterns Reveal
+## What Bilateral Trade Patterns Reveal: Partner Concentration, Distance, and Trade Shifts
 
 ### Trade Partner Concentration
 
@@ -235,7 +235,7 @@ Recent Growth Lab research (Hausmann, Stock & Yildirim, "Implied Comparative Adv
 
 ---
 
-## Beyond the Standard Metrics: Recent Research Extensions
+## Beyond Standard Metrics: Genotypic Product Space, Greenplexity, Immigration, and Extensive vs Intensive Growth
 
 The complexity framework has evolved significantly since the original Atlas of Economic Complexity (2011). Several recent advances provide additional interpretive context, even where the Atlas tool itself has not yet incorporated them:
 

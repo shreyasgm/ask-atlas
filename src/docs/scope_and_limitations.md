@@ -44,7 +44,7 @@ related_docs:
   - interpreting_trade_patterns.md
 ---
 
-## What the Atlas Measures
+## What the Atlas Measures: Trade Flows, RCA, ECI, PCI, Product Space, and Strategic Metrics
 
 The Atlas of Economic Complexity is built on **international goods and services trade data**. From this foundation it computes:
 
@@ -69,7 +69,7 @@ The Atlas relies on UN Comtrade bilateral trade data, which the Growth Lab proce
 
 These corrections improve data quality but do not eliminate all issues. Complexity metrics computed from trade data inherit whatever noise remains.
 
-## What the Atlas Does NOT Measure
+## What the Atlas Does NOT Measure: FDI, Employment, Immigration, R&D, Institutions, GDP Decomposition
 
 The following topics require data sources or analytical methods the Atlas does not have:
 
@@ -99,7 +99,7 @@ The following topics require data sources or analytical methods the Atlas does n
 | **Gravity model predictions** | Bilateral trade flows between country pairs | Estimate gravity model coefficients or predict trade volumes from distance, GDP, language, colonial ties — this requires running the econometric model with additional covariates not in the Atlas |
 | **Causal identification** | Correlations between complexity and growth outcomes | Identify causal mechanisms (e.g., "did complexity cause growth or did growth enable complexity?") — this requires instrumental variables, natural experiments, or structural models |
 
-## How to Handle Research Paper Questions
+## How to Handle Research Paper Questions: Causal Claims, External Data, and Partial Answers
 
 Many questions are inspired by academic research papers that use the Atlas's complexity metrics alongside external datasets and econometric methods. The right approach:
 
@@ -130,14 +130,14 @@ Many questions are inspired by academic research papers that use the Atlas's com
 2. Provide interpretive guidance from what the metrics reveal (e.g., export growth driven by low-complexity products doesn't increase ECI)
 3. Note factors that could contribute but are outside Atlas scope (e.g., regional instability, specific policy changes, FDI patterns)
 
-## General Principles
+## General Principles: Show Don't Speculate, Name the Gap, Partial Answers Are Valuable
 
 - **Show, don't speculate.** Present the data the Atlas has. Let the user draw conclusions about factors outside the system.
 - **Name the gap.** When a question requires data or methods the Atlas doesn't have, say so explicitly. "The Atlas does not contain immigration data" is more helpful than a vague hedging phrase.
 - **Partial answers are valuable.** A question may be 60% answerable with Atlas data. Provide that 60% clearly and flag the 40% that requires external sources.
 - **Don't invent mechanisms.** If the Atlas shows a correlation (e.g., ECI and growth move together), describe the pattern. Don't fabricate a causal story about WHY they moved together unless the mechanism is well-established in the complexity economics literature (e.g., the complexity-income convergence relationship documented in the growth projections methodology).
 
-## Methodological Limitations of the Complexity Framework
+## Methodological Limitations: ECI Gaps (Services, Quality, Re-Exports, RCA Sensitivity) and Research Frontier
 
 Beyond data gaps, there are inherent limitations in the complexity methodology itself:
 

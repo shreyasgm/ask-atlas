@@ -40,7 +40,7 @@ related_docs:
   - country_entities.md
 ---
 
-## Classification Systems and Year Coverage
+## Classification Systems and Year Coverage: HS92, HS12, HS22, SITC, Services Availability
 
 | Classification | Full Name | Year Range | ~# Products (4-digit) | Available via SQL DB? | Available via Explore API (GraphQL)? | Available via Country Pages API? |
 |---|---|---|---|---|---|---|
@@ -61,7 +61,7 @@ related_docs:
 | 4-digit | ~1,200 | Yes | Yes | Yes |
 | 6-digit | ~5,000 | **No** | Yes (tables exist but very large) | Yes (`productLevel: 6`) |
 
-## Services Trade
+## Services Trade Coverage: Country Availability, Year Range, and Products vs Locations Discrepancy
 
 - **Coverage:** Approximately 50–75% of Atlas countries report services data.
 - **Year range:** 1980–2024 (coverage varies by country; many countries start later).
@@ -71,7 +71,7 @@ related_docs:
 - **Important discrepancy:** The Atlas Explore treemap **Products mode** includes services in its total export value. The **Locations mode** (bilateral) is goods-only — services bilateral data is excluded. This is why Products mode and Locations mode totals differ for the same country and year.
 - **Country Pages:** Services are included in total export values shown in treemaps.
 
-## Country Inclusion Criteria
+## Country Inclusion Criteria: Explore vs Country Profiles vs ECI Rankings
 
 Not all countries with trade data appear in all Atlas features.
 
@@ -83,7 +83,7 @@ Not all countries with trade data appear in all Atlas features.
 
 Countries can exist in the SQL database and Explore API without appearing in Country Profiles or Rankings. The `data_flags` table and `classification.location_country` table both carry the `in_rankings` and `in_cp` boolean flags.
 
-## `data_flags` Table (SQL: `public.data_flags`)
+## `data_flags` Table (SQL: `public.data_flags`): Per-Country Quality and Eligibility Columns
 
 Per-country quality indicators used to determine rankings and profile eligibility.
 
@@ -110,7 +110,7 @@ Per-country quality indicators used to determine rankings and profile eligibilit
 
 `rankings_override` and `cp_override` columns allow manual inclusion/exclusion independent of computed eligibility.
 
-## SQL Database Schemas
+## SQL Database Schemas: public, classification, hs92, hs12, hs22, sitc, services
 
 The Atlas SQL database contains these top-level schemas:
 
@@ -127,7 +127,7 @@ The Atlas SQL database contains these top-level schemas:
 
 Table naming convention: `{schema}.{facet}_{digit_level}` — e.g., `hs92.country_product_year_4` = HS92, country × product × year, 4-digit level.
 
-## GraphQL API vs. SQL: Data Access Summary
+## GraphQL API vs. SQL: What Data Is Available Where (Explore, Country Pages, SQL)
 
 | Data | SQL DB | Explore API (`/api/graphql`) | Country Pages API (`/api/countries/graphql`) |
 |---|---|---|---|
@@ -145,7 +145,7 @@ Table naming convention: `{schema}.{facet}_{digit_level}` — e.g., `hs92.countr
 | Group/regional aggregates | No | Yes | Partial |
 | Product space edges (proximity) | Yes (`product_hs92_ps_edges`) | Yes (`productProduct`) | No |
 
-## Data Sources, Updates, and Complexity Constraints
+## Data Sources, Update Cycle, and Complexity Metric Availability Constraints
 
 ### Data Sources
 
@@ -174,7 +174,7 @@ All trade values are in **current USD** (nominal). Constant-dollar values use th
   - Bilateral trade data
   - Services trade
 
-## Common Data Boundary Questions
+## Common Data Boundary Questions: Missing Data, Year Ranges, and 6-Digit Limitations
 
 | User Question | Answer |
 |---|---|
