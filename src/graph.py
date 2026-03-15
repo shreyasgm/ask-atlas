@@ -49,6 +49,7 @@ from src.sql_pipeline import (
     get_table_info_node,
     lookup_codes_node,
     max_queries_exceeded_node,
+    plan_sql_entities_node,
 )
 from src.sql_subagent import build_sql_subagent, sql_query_agent_node
 from src.state import AtlasAgentState
@@ -87,6 +88,8 @@ def build_atlas_graph(
     docs_dir: Path | None = None,
     max_docs_per_selection: int = 2,
     docs_index=None,
+    product_search_backend=None,
+    use_merged_extraction: bool = False,
 ) -> CompiledStateGraph:
     """Build the full Atlas agent graph with SQL, optional GraphQL, and docs pipelines.
 
@@ -201,14 +204,29 @@ def build_atlas_graph(
 
     # SQL pipeline nodes
     builder.add_node("extract_tool_question", extract_tool_question)
-    builder.add_node(
-        "extract_products",
-        partial(extract_products_node, llm=lightweight_llm, engine=engine),
-    )
-    _lookup_kwargs = {"llm": lightweight_llm, "engine": engine}
-    if async_engine is not None:
-        _lookup_kwargs["async_engine"] = async_engine
-    builder.add_node("lookup_codes", partial(lookup_codes_node, **_lookup_kwargs))
+
+    if use_merged_extraction:
+        # Merged path: single LLM call for extraction + code selection
+        builder.add_node(
+            "plan_sql_entities",
+            partial(
+                plan_sql_entities_node,
+                llm=lightweight_llm,
+                product_search_backend=product_search_backend,
+                country_cache=country_cache,
+            ),
+        )
+    else:
+        # Legacy path: two sequential LLM calls
+        builder.add_node(
+            "extract_products",
+            partial(extract_products_node, llm=lightweight_llm, engine=engine),
+        )
+        _lookup_kwargs = {"llm": lightweight_llm, "engine": engine}
+        if async_engine is not None:
+            _lookup_kwargs["async_engine"] = async_engine
+        builder.add_node("lookup_codes", partial(lookup_codes_node, **_lookup_kwargs))
+
     builder.add_node(
         "get_table_info",
         partial(
@@ -366,11 +384,23 @@ def build_atlas_graph(
     builder.add_edge("tool_call_nudge", "agent")
     builder.add_edge("execute_catalog_lookup", "agent")
 
-    # SQL pipeline
-    builder.add_edge("extract_tool_question", "extract_products")
-    builder.add_edge("extract_products", "lookup_codes")
-    builder.add_edge("lookup_codes", "get_table_info")
-    builder.add_edge("get_table_info", "sql_query_agent")
+    # SQL pipeline edges — two paths depending on use_merged_extraction
+    if use_merged_extraction:
+        # Merged path: single node produces both products + codes, then
+        # fan-out to get_table_info; both feed into sql_query_agent.
+        builder.add_edge("extract_tool_question", "plan_sql_entities")
+        builder.add_edge("plan_sql_entities", "get_table_info")
+        builder.add_edge("get_table_info", "sql_query_agent")
+    else:
+        # Legacy path — fan-out: lookup_codes and get_table_info run in parallel
+        # after extract_products.  get_table_info depends only on classification_schemas
+        # (set by extract_products), NOT on lookup_codes output.  LangGraph natively
+        # waits for both incoming edges before running sql_query_agent (fan-in).
+        builder.add_edge("extract_tool_question", "extract_products")
+        builder.add_edge("extract_products", "lookup_codes")
+        builder.add_edge("extract_products", "get_table_info")
+        builder.add_edge("lookup_codes", "sql_query_agent")
+        builder.add_edge("get_table_info", "sql_query_agent")
     builder.add_edge("sql_query_agent", "format_results")
     builder.add_edge("format_results", "agent")
     builder.add_edge("max_queries_exceeded", "agent")

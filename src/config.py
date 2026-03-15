@@ -252,6 +252,13 @@ class Settings(BaseSettings):
     )
 
     # Feature Flags
+    use_merged_extraction: bool = Field(
+        False,
+        validation_alias=AliasChoices("USE_MERGED_EXTRACTION", "use_merged_extraction"),
+        description="Use merged entity extraction + code selection (single LLM call) "
+        "instead of the legacy two-call pipeline. Requires a product search index.",
+    )
+
     enable_langsmith: bool = Field(
         True,
         validation_alias=AliasChoices("LANGCHAIN_TRACING_V2", "enable_langsmith"),

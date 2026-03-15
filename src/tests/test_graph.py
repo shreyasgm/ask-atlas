@@ -105,6 +105,77 @@ class TestUnknownToolRouting:
 # ---------------------------------------------------------------------------
 
 
+class TestSQLPipelineFanOut:
+    """Verify the SQL pipeline fan-out: extract_products fans out to both
+    lookup_codes and get_table_info, which then fan-in to sql_query_agent."""
+
+    def _build_graph_for_edges(self):
+        mock_db = _make_mock_db()
+        mock_engine = _make_mock_engine()
+        fake_model = FakeToolCallingModel(responses=[AIMessage(content="done")])
+
+        with patch("src.sql_pipeline.ProductAndSchemaLookup"):
+            return build_atlas_graph(
+                llm=fake_model,
+                lightweight_llm=fake_model,
+                db=mock_db,
+                engine=mock_engine,
+                table_descriptions={},
+                example_queries=[],
+                top_k_per_query=15,
+                max_uses=3,
+                checkpointer=MemorySaver(),
+                agent_mode=AgentMode.SQL_ONLY,
+            )
+
+    def test_extract_products_fans_out_to_lookup_and_table_info(self):
+        """extract_products should have edges to both lookup_codes and get_table_info."""
+        graph = self._build_graph_for_edges()
+        builder_graph = graph.get_graph()
+        assert "extract_products" in builder_graph.nodes
+
+        outgoing_targets = {
+            edge.target
+            for edge in builder_graph.edges
+            if edge.source == "extract_products"
+        }
+        assert "lookup_codes" in outgoing_targets, (
+            f"extract_products should fan out to lookup_codes; got {outgoing_targets}"
+        )
+        assert "get_table_info" in outgoing_targets, (
+            f"extract_products should fan out to get_table_info; got {outgoing_targets}"
+        )
+
+    def test_lookup_and_table_info_fan_in_to_sql_query_agent(self):
+        """Both lookup_codes and get_table_info should feed into sql_query_agent."""
+        graph = self._build_graph_for_edges()
+        builder_graph = graph.get_graph()
+
+        incoming_to_sql_agent = {
+            edge.source
+            for edge in builder_graph.edges
+            if edge.target == "sql_query_agent"
+        }
+        assert "lookup_codes" in incoming_to_sql_agent, (
+            f"sql_query_agent should receive from lookup_codes; got {incoming_to_sql_agent}"
+        )
+        assert "get_table_info" in incoming_to_sql_agent, (
+            f"sql_query_agent should receive from get_table_info; got {incoming_to_sql_agent}"
+        )
+
+    def test_no_direct_edge_from_lookup_to_table_info(self):
+        """lookup_codes should NOT have an edge to get_table_info (they're parallel)."""
+        graph = self._build_graph_for_edges()
+        builder_graph = graph.get_graph()
+
+        lookup_targets = {
+            edge.target for edge in builder_graph.edges if edge.source == "lookup_codes"
+        }
+        assert "get_table_info" not in lookup_targets, (
+            "lookup_codes should not have an edge to get_table_info — they run in parallel"
+        )
+
+
 class TestRetryPolicyConfiguration:
     """Verify LangGraph RetryPolicy is attached to GraphQL nodes that make LLM calls."""
 

@@ -1,15 +1,17 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.config import create_llm, get_settings
 from src.product_and_schema_lookup import (
+    CountryDetails,
     ProductAndSchemaLookup,
     ProductCodesMapping,
     ProductDetails,
     ProductSearchResult,
     SchemasAndProductsFound,
     format_product_codes_for_prompt,
+    validate_countries,
 )
 
 # Load settings
@@ -318,6 +320,200 @@ def test_six_digit_product_code_pipeline():
         codes=["120720"], classification_schema="hs92"
     )
     mock_search.assert_called_once_with("cotton seeds", "hs92")
+
+
+@pytest.mark.asyncio
+async def test_aget_candidate_codes_parallel_multi_product():
+    """Verify aget_candidate_codes runs all product lookups in parallel.
+
+    Uses two products with mocked async DB methods. Both products' lookups
+    should complete via asyncio.gather (parallel), returning correct results
+    for each product independently.
+    """
+    mock_llm = MagicMock()
+    mock_engine = MagicMock()
+    mock_async_engine = AsyncMock()
+    lookup = ProductAndSchemaLookup(
+        llm=mock_llm, connection=mock_engine, async_engine=mock_async_engine
+    )
+
+    extraction_result = SchemasAndProductsFound(
+        classification_schemas=["hs92"],
+        products=[
+            ProductDetails(name="cotton", classification_schema="hs92", codes=["5201"]),
+            ProductDetails(name="wheat", classification_schema="hs92", codes=["1001"]),
+        ],
+        requires_product_lookup=True,
+    )
+
+    cotton_verified = [
+        {
+            "product_code": "5201",
+            "product_name": "Cotton",
+            "product_id": "1",
+            "product_level": "4",
+        },
+    ]
+    wheat_verified = [
+        {
+            "product_code": "1001",
+            "product_name": "Wheat",
+            "product_id": "2",
+            "product_level": "4",
+        },
+    ]
+    cotton_db = [
+        {
+            "product_code": "5201",
+            "product_name": "Cotton",
+            "product_id": "1",
+            "product_level": "4",
+        },
+    ]
+    wheat_db = [
+        {
+            "product_code": "1001",
+            "product_name": "Wheat",
+            "product_id": "2",
+            "product_level": "4",
+        },
+    ]
+
+    async def _mock_official(codes, classification_schema):
+        if "5201" in codes:
+            return cotton_verified
+        return wheat_verified
+
+    async def _mock_text_search(name, classification_schema):
+        if name == "cotton":
+            return cotton_db
+        return wheat_db
+
+    with (
+        patch.object(
+            lookup, "_aget_official_product_details", side_effect=_mock_official
+        ),
+        patch.object(lookup, "_adirect_text_search", side_effect=_mock_text_search),
+    ):
+        results = await lookup.aget_candidate_codes(extraction_result)
+
+    assert len(results) == 2
+    assert results[0].name == "cotton"
+    assert results[0].llm_suggestions == cotton_verified
+    assert results[0].db_suggestions == cotton_db
+    assert results[1].name == "wheat"
+    assert results[1].llm_suggestions == wheat_verified
+    assert results[1].db_suggestions == wheat_db
+
+
+@pytest.mark.asyncio
+async def test_aget_candidate_codes_empty_products():
+    """aget_candidate_codes returns empty list for no products."""
+    mock_llm = MagicMock()
+    mock_engine = MagicMock()
+    lookup = ProductAndSchemaLookup(llm=mock_llm, connection=mock_engine)
+
+    result = await lookup.aget_candidate_codes(
+        SchemasAndProductsFound(
+            classification_schemas=["hs92"],
+            products=[],
+            requires_product_lookup=False,
+        )
+    )
+    assert result == []
+
+
+@pytest.mark.asyncio
+async def test_validate_countries_valid_codes():
+    """Valid ISO3 codes pass through unchanged."""
+    from src.cache import CatalogCache
+
+    cache = CatalogCache("test_countries", ttl=3600)
+    cache.add_index(
+        "iso3",
+        key_fn=lambda e: (e.get("iso3Code") or "").upper() or None,
+        normalize_query=lambda q: q.strip().upper(),
+    )
+    cache.add_index(
+        "name",
+        key_fn=lambda e: (e.get("nameShortEn") or "").strip().lower() or None,
+        normalize_query=lambda q: q.strip().lower(),
+    )
+    cache.populate(
+        [
+            {"iso3Code": "BRA", "nameShortEn": "Brazil", "countryId": 1},
+            {"iso3Code": "USA", "nameShortEn": "United States", "countryId": 2},
+        ]
+    )
+
+    countries = [
+        CountryDetails(name="Brazil", iso3_code="BRA"),
+        CountryDetails(name="United States", iso3_code="USA"),
+    ]
+    result = await validate_countries(countries, cache)
+    assert len(result) == 2
+    assert result[0].iso3_code == "BRA"
+    assert result[1].iso3_code == "USA"
+
+
+@pytest.mark.asyncio
+async def test_validate_countries_corrects_bad_iso3():
+    """Wrong ISO3 code gets corrected via name-based lookup."""
+    from src.cache import CatalogCache
+
+    cache = CatalogCache("test_countries", ttl=3600)
+    cache.add_index(
+        "iso3",
+        key_fn=lambda e: (e.get("iso3Code") or "").upper() or None,
+        normalize_query=lambda q: q.strip().upper(),
+    )
+    cache.add_index(
+        "name",
+        key_fn=lambda e: (e.get("nameShortEn") or "").strip().lower() or None,
+        normalize_query=lambda q: q.strip().lower(),
+    )
+    cache.populate(
+        [
+            {"iso3Code": "BRA", "nameShortEn": "Brazil", "countryId": 1},
+        ]
+    )
+
+    countries = [CountryDetails(name="Brazil", iso3_code="BRZ")]  # Wrong code
+    result = await validate_countries(countries, cache)
+    assert len(result) == 1
+    assert result[0].iso3_code == "BRA"  # Corrected
+
+
+@pytest.mark.asyncio
+async def test_validate_countries_no_cache_returns_unchanged():
+    """When no cache is provided, return input unchanged."""
+    countries = [CountryDetails(name="Brazil", iso3_code="BRA")]
+    result = await validate_countries(countries, None)
+    assert result == countries
+
+
+@pytest.mark.asyncio
+async def test_validate_countries_unresolvable_kept():
+    """Countries that can't be validated are kept as-is."""
+    from src.cache import CatalogCache
+
+    cache = CatalogCache("test_countries", ttl=3600)
+    cache.add_index(
+        "iso3",
+        key_fn=lambda e: (e.get("iso3Code") or "").upper() or None,
+        normalize_query=lambda q: q.strip().upper(),
+    )
+    cache.add_index(
+        "name",
+        key_fn=lambda e: (e.get("nameShortEn") or "").strip().lower() or None,
+        normalize_query=lambda q: q.strip().lower(),
+    )
+    cache.populate([])  # Empty cache
+
+    countries = [CountryDetails(name="Atlantis", iso3_code="ATL")]
+    result = await validate_countries(countries, cache)
+    assert len(result) == 1
+    assert result[0].iso3_code == "ATL"  # Kept unchanged
 
 
 def test_format_product_codes_for_prompt():

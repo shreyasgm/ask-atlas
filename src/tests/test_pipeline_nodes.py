@@ -15,9 +15,13 @@ from src.product_and_schema_lookup import (
     ProductCodesMapping,
     ProductDetails,
     ProductSearchResult,
+    ResolvedProduct,
     SchemasAndProductsFound,
+    SQLEntityPlan,
 )
 from src.sql_pipeline import (
+    _format_search_candidates,
+    _gather_search_candidates,
     execute_sql_node,
     extract_products_node,
     extract_tool_question,
@@ -26,6 +30,7 @@ from src.sql_pipeline import (
     get_table_info_node,
     lookup_codes_node,
     max_queries_exceeded_node,
+    plan_sql_entities_node,
     validate_sql_node,
 )
 
@@ -1528,3 +1533,278 @@ class TestSqlFormatResultsTruncation:
         content = result["messages"][0].content
         assert len(content) <= 15_200  # allow some margin for notice
         assert "[Response truncated" in content
+
+
+# ---------------------------------------------------------------------------
+# plan_sql_entities_node (merged extraction + code selection)
+# ---------------------------------------------------------------------------
+
+
+class TestPlanSqlEntitiesNode:
+    """Tests for the merged plan_sql_entities_node."""
+
+    def _mock_llm_for_plan(self, plan: SQLEntityPlan):
+        """Create a mock LLM that returns the given plan via structured output.
+
+        The node does: chain = prompt | llm.with_structured_output(...)
+        then: await chain.ainvoke(...)
+
+        LangChain wraps the mock in a RunnableLambda that *calls* it as a
+        function, so we make the mock callable to return the plan.
+        """
+        mock_llm = MagicMock()
+        mock_structured = MagicMock(return_value=plan)
+        mock_structured.ainvoke = AsyncMock(return_value=plan)
+        mock_llm.with_structured_output.return_value = mock_structured
+        return mock_llm
+
+    async def test_returns_products_and_codes(self):
+        """Node produces pipeline_products and pipeline_codes from LLM plan."""
+        plan = SQLEntityPlan(
+            classification_schemas=["hs12"],
+            products=[
+                ResolvedProduct(
+                    name="cotton",
+                    classification_schema="hs12",
+                    selected_codes=["5201", "5202"],
+                    confidence="high",
+                )
+            ],
+            countries=[CountryDetails(name="India", iso3_code="IND")],
+            requires_group_tables=False,
+        )
+
+        mock_llm = self._mock_llm_for_plan(plan)
+
+        # Mock product search backend
+        mock_backend = AsyncMock()
+        mock_backend.search = AsyncMock(return_value=[])
+        mock_backend.verify_codes = AsyncMock(
+            return_value=[
+                {"product_code": "5201", "product_name": "Cotton, not carded"},
+                {"product_code": "5202", "product_name": "Cotton waste"},
+            ]
+        )
+
+        state = _base_state(
+            pipeline_question="What did India export of cotton?",
+        )
+
+        result = await plan_sql_entities_node(
+            state, llm=mock_llm, product_search_backend=mock_backend
+        )
+
+        assert result["pipeline_products"] is not None
+        products = result["pipeline_products"]
+        assert products.classification_schemas == ["hs12"]
+        assert len(products.products) == 1
+        assert products.products[0].name == "cotton"
+        assert "5201" in products.products[0].codes
+        assert products.countries[0].iso3_code == "IND"
+        assert "cotton" in result["pipeline_codes"]
+
+    async def test_schema_override_applied(self):
+        """override_schema forces classification_schemas and product schemas."""
+        plan = SQLEntityPlan(
+            classification_schemas=["hs12"],
+            products=[
+                ResolvedProduct(
+                    name="wheat",
+                    classification_schema="hs12",
+                    selected_codes=["1001"],
+                )
+            ],
+            countries=[],
+        )
+
+        mock_llm = self._mock_llm_for_plan(plan)
+
+        mock_backend = AsyncMock()
+        mock_backend.search = AsyncMock(return_value=[])
+        mock_backend.verify_codes = AsyncMock(
+            return_value=[{"product_code": "1001", "product_name": "Wheat"}]
+        )
+
+        state = _base_state(
+            pipeline_question="Wheat exports?",
+            override_schema="hs92",
+        )
+
+        result = await plan_sql_entities_node(
+            state, llm=mock_llm, product_search_backend=mock_backend
+        )
+
+        products = result["pipeline_products"]
+        assert products.classification_schemas == ["hs92"]
+        assert products.products[0].classification_schema == "hs92"
+
+    async def test_mode_override_filters_schemas(self):
+        """override_mode=goods filters out services schemas."""
+        plan = SQLEntityPlan(
+            classification_schemas=["hs12", "services_unilateral"],
+            products=[],
+            countries=[],
+        )
+
+        mock_llm = self._mock_llm_for_plan(plan)
+
+        state = _base_state(
+            pipeline_question="India's top exports?",
+            override_mode="goods",
+        )
+
+        result = await plan_sql_entities_node(state, llm=mock_llm)
+
+        products = result["pipeline_products"]
+        assert products.classification_schemas == ["hs12"]
+        assert "services_unilateral" not in products.classification_schemas
+
+    async def test_no_products_returns_empty_codes(self):
+        """When no products identified, pipeline_codes is empty."""
+        plan = SQLEntityPlan(
+            classification_schemas=["hs12"],
+            products=[],
+            countries=[CountryDetails(name="Brazil", iso3_code="BRA")],
+        )
+
+        mock_llm = self._mock_llm_for_plan(plan)
+
+        state = _base_state(pipeline_question="What is Brazil's ECI?")
+
+        result = await plan_sql_entities_node(state, llm=mock_llm)
+
+        assert result["pipeline_codes"] == ""
+        assert result["pipeline_products"].products == []
+
+    async def test_unverified_codes_filtered_out(self):
+        """Codes that don't exist in the search index are removed."""
+        plan = SQLEntityPlan(
+            classification_schemas=["hs12"],
+            products=[
+                ResolvedProduct(
+                    name="cotton",
+                    classification_schema="hs12",
+                    selected_codes=["5201", "9999"],  # 9999 doesn't exist
+                )
+            ],
+        )
+
+        mock_llm = self._mock_llm_for_plan(plan)
+
+        mock_backend = AsyncMock()
+        mock_backend.search = AsyncMock(return_value=[])
+        mock_backend.verify_codes = AsyncMock(
+            return_value=[
+                {"product_code": "5201", "product_name": "Cotton"},
+            ]
+        )
+
+        state = _base_state(pipeline_question="Cotton exports?")
+
+        result = await plan_sql_entities_node(
+            state, llm=mock_llm, product_search_backend=mock_backend
+        )
+
+        codes = result["pipeline_products"].products[0].codes
+        assert "5201" in codes
+        assert "9999" not in codes
+
+    async def test_llm_error_returns_error_state(self):
+        """If the LLM call fails, the node returns an error state."""
+        mock_llm = MagicMock()
+        mock_structured = MagicMock(side_effect=RuntimeError("LLM API down"))
+        mock_structured.ainvoke = AsyncMock(side_effect=RuntimeError("LLM API down"))
+        mock_llm.with_structured_output.return_value = mock_structured
+
+        state = _base_state(pipeline_question="Cotton exports?")
+
+        result = await plan_sql_entities_node(state, llm=mock_llm)
+
+        assert result["pipeline_products"] is None
+        assert result["pipeline_codes"] == ""
+        assert "Failed to plan SQL entities" in result["last_error"]
+
+    async def test_country_validation_called(self):
+        """Countries are validated against country_cache when provided."""
+        plan = SQLEntityPlan(
+            classification_schemas=["hs12"],
+            products=[],
+            countries=[CountryDetails(name="India", iso3_code="IND")],
+        )
+
+        mock_llm = self._mock_llm_for_plan(plan)
+
+        # Mock country_cache
+        mock_cache = AsyncMock()
+
+        with patch(
+            "src.sql_pipeline.validate_countries", new_callable=AsyncMock
+        ) as mock_validate:
+            mock_validate.return_value = [CountryDetails(name="India", iso3_code="IND")]
+
+            state = _base_state(pipeline_question="India's exports?")
+            result = await plan_sql_entities_node(
+                state, llm=mock_llm, country_cache=mock_cache
+            )
+
+            mock_validate.assert_called_once()
+            assert result["pipeline_products"].countries[0].iso3_code == "IND"
+
+
+# ---------------------------------------------------------------------------
+# _format_search_candidates / _gather_search_candidates helpers
+# ---------------------------------------------------------------------------
+
+
+class TestSearchCandidateHelpers:
+    """Tests for search candidate formatting and gathering helpers."""
+
+    def test_format_search_candidates(self):
+        candidates = {
+            "hs12": [
+                {
+                    "product_code": "5201",
+                    "product_name": "Cotton, not carded",
+                    "product_level": "4",
+                },
+                {
+                    "product_code": "5202",
+                    "product_name": "Cotton waste",
+                    "product_level": "4",
+                },
+            ]
+        }
+        result = _format_search_candidates(candidates)
+        assert "Schema: hs12" in result
+        assert "5201" in result
+        assert "Cotton, not carded" in result
+
+    def test_format_empty_candidates(self):
+        assert _format_search_candidates({}) == ""
+
+    async def test_gather_candidates_calls_search(self):
+        mock_backend = AsyncMock()
+        mock_backend.search = AsyncMock(
+            return_value=[
+                {
+                    "product_code": "5201",
+                    "product_name": "Cotton",
+                    "product_level": "4",
+                }
+            ]
+        )
+
+        result = await _gather_search_candidates(
+            "cotton exports", mock_backend, schemas=["hs12"]
+        )
+        assert "hs12" in result
+        assert len(result["hs12"]) == 1
+
+    async def test_gather_candidates_handles_search_error(self):
+        mock_backend = AsyncMock()
+        mock_backend.search = AsyncMock(side_effect=RuntimeError("Search failed"))
+
+        result = await _gather_search_candidates(
+            "cotton", mock_backend, schemas=["hs12"]
+        )
+        assert result == {}

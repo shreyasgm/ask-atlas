@@ -23,9 +23,12 @@ from src.error_handling import (
 from src.product_and_schema_lookup import (
     SCHEMA_TO_PRODUCTS_TABLE_MAP,
     ProductAndSchemaLookup,
+    ProductCodesMapping,
     ProductDetails,
     SchemasAndProductsFound,
+    SQLEntityPlan,
     format_product_codes_for_prompt,
+    validate_countries,
 )
 from src.prompts import SQL_RETRY_BLOCK, build_sql_generation_prefix
 from src.sql_multiple_schemas import SQLDatabaseWithSchemas
@@ -530,6 +533,211 @@ async def lookup_codes_node(
     }
 
 
+async def plan_sql_entities_node(
+    state: AtlasAgentState,
+    *,
+    llm: BaseLanguageModel,
+    product_search_backend=None,
+    country_cache=None,
+) -> dict:
+    """Merged entity extraction + code selection in a single LLM call.
+
+    Replaces the two-node sequence (extract_products → lookup_codes) with:
+    1. Run embedding-based product search for initial product guesses
+    2. Single LLM call that extracts entities AND selects codes from candidates
+    3. Validate country codes against country_cache
+    4. Verify selected product codes exist in the search index
+
+    Args:
+        state: Current graph state with pipeline_question and pipeline_context.
+        llm: Language model for the merged extraction+selection call.
+        product_search_backend: EmbeddingProductSearch instance (or any ProductSearchBackend).
+        country_cache: Optional CatalogCache for country validation.
+    """
+    from langchain_core.callbacks import UsageMetadataCallbackHandler
+    from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+
+    from src.prompts import SQL_ENTITY_PLAN_PROMPT
+
+    async with node_timer("plan_sql_entities", "query_tool") as t:
+        try:
+            question = state["pipeline_question"]
+            context = state.get("pipeline_context", "")
+            human_input = (
+                question if not context else f"{question}\n\nAgent guidance:\n{context}"
+            )
+
+            # --- Phase 1: Quick product search to gather candidates ---
+            # We do a preliminary extraction first to know what to search for.
+            # Use a lightweight regex/keyword approach to identify product-like terms,
+            # then search for them. The LLM will refine in the main call.
+            search_candidates_text = "No search candidates available."
+            if product_search_backend is not None:
+                # Run a preliminary search for terms in the question
+                candidates_by_product = await _gather_search_candidates(
+                    question, product_search_backend
+                )
+                if candidates_by_product:
+                    search_candidates_text = _format_search_candidates(
+                        candidates_by_product
+                    )
+
+            # --- Phase 2: Single LLM call for extraction + selection ---
+            prompt = ChatPromptTemplate.from_messages(
+                [
+                    ("system", SQL_ENTITY_PLAN_PROMPT),
+                    MessagesPlaceholder(variable_name="history", optional=True),
+                    ("human", "{question}"),
+                ]
+            )
+            prompt = prompt.partial(search_candidates=search_candidates_text)
+
+            structured_llm = llm.with_structured_output(
+                SQLEntityPlan, method="function_calling"
+            )
+            chain = prompt | structured_llm
+
+            usage_handler = UsageMetadataCallbackHandler()
+            llm_start = time.monotonic()
+            plan: SQLEntityPlan = await chain.ainvoke(
+                {"question": human_input},
+                config={"callbacks": [usage_handler]},
+            )
+            t.mark_llm(llm_start, time.monotonic())
+
+            # --- Phase 3: Apply overrides ---
+            override_schema = state.get("override_schema")
+            override_mode = state.get("override_mode")
+
+            if override_schema:
+                plan.classification_schemas = [override_schema]
+                for p in plan.products:
+                    p.classification_schema = override_schema
+            elif override_mode:
+                schemas = plan.classification_schemas
+                if override_mode == "goods":
+                    schemas = [s for s in schemas if not s.startswith("services_")]
+                    if not schemas:
+                        schemas = ["hs92"]
+                elif override_mode == "services":
+                    schemas = [s for s in schemas if s.startswith("services_")]
+                    if not schemas:
+                        schemas = ["services_unilateral"]
+                plan.classification_schemas = schemas
+
+            # --- Phase 4: Validate countries ---
+            if plan.countries and country_cache:
+                plan.countries = await validate_countries(plan.countries, country_cache)
+
+            # --- Phase 5: Verify selected codes exist ---
+            if product_search_backend is not None:
+                for product in plan.products:
+                    if product.selected_codes:
+                        io_start = time.monotonic()
+                        verified = await product_search_backend.verify_codes(
+                            product.selected_codes, product.classification_schema
+                        )
+                        t.mark_io(io_start, time.monotonic())
+                        verified_codes = {v["product_code"] for v in verified}
+                        product.selected_codes = [
+                            c for c in product.selected_codes if c in verified_codes
+                        ]
+
+            # --- Build outputs compatible with downstream nodes ---
+            # Convert to SchemasAndProductsFound for pipeline_products
+            products_found = SchemasAndProductsFound(
+                classification_schemas=plan.classification_schemas,
+                products=[
+                    ProductDetails(
+                        name=p.name,
+                        classification_schema=p.classification_schema,
+                        codes=p.selected_codes,
+                    )
+                    for p in plan.products
+                ],
+                requires_product_lookup=False,  # Already resolved
+                countries=plan.countries,
+                requires_group_tables=plan.requires_group_tables,
+            )
+
+            # Format codes string for the SQL generation prompt
+            codes_mapping = ProductCodesMapping(
+                mappings=[
+                    ProductDetails(
+                        name=p.name,
+                        classification_schema=p.classification_schema,
+                        codes=p.selected_codes,
+                    )
+                    for p in plan.products
+                    if p.selected_codes
+                ]
+            )
+            codes_str = format_product_codes_for_prompt(codes_mapping)
+
+        except Exception as e:
+            logger.error("plan_sql_entities_node failed: %s", e, exc_info=True)
+            return {
+                "pipeline_products": None,
+                "pipeline_codes": "",
+                "last_error": f"Failed to plan SQL entities: {e}",
+                "step_timing": [t.record],
+            }
+
+    usage_record = make_usage_record_from_callback(
+        "plan_sql_entities", "query_tool", usage_handler
+    )
+    return {
+        "pipeline_products": products_found,
+        "pipeline_codes": codes_str,
+        "token_usage": [usage_record],
+        "step_timing": [t.record],
+    }
+
+
+async def _gather_search_candidates(
+    question: str,
+    backend,
+    schemas: list[str] | None = None,
+) -> dict[str, list[dict]]:
+    """Run product search for likely product terms in the question.
+
+    Uses a simple heuristic: search the full question against each schema.
+    The LLM will refine which products are actually relevant.
+    """
+    if schemas is None:
+        schemas = ["hs12", "hs92", "sitc", "services_unilateral"]
+
+    candidates: dict[str, list[dict]] = {}
+    tasks = []
+    for schema in schemas:
+        tasks.append(backend.search(question, schema, top_k=10))
+
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    for schema, result in zip(schemas, results):
+        if isinstance(result, Exception):
+            logger.warning("Product search failed for schema %s: %s", schema, result)
+            continue
+        if result:
+            candidates[schema] = result
+
+    return candidates
+
+
+def _format_search_candidates(candidates: dict[str, list[dict]]) -> str:
+    """Format search candidates for inclusion in the LLM prompt."""
+    parts = []
+    for schema, products in candidates.items():
+        lines = [f"Schema: {schema}"]
+        for p in products:
+            lines.append(
+                f"  - {p['product_code']}: {p['product_name']} "
+                f"(level: {p.get('product_level', 'unknown')})"
+            )
+        parts.append("\n".join(lines))
+    return "\n\n".join(parts)
+
+
 async def get_table_info_node(
     state: AtlasAgentState,
     *,
@@ -903,6 +1111,7 @@ PIPELINE_NODES = frozenset(
         "extract_tool_question",
         "extract_products",
         "lookup_codes",
+        "plan_sql_entities",
         "get_table_info",
         "sql_query_agent",
         "format_results",

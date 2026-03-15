@@ -382,6 +382,84 @@ If no candidates are relevant to the product mentioned, return an empty mapping 
 """
 
 
+# --- SQL_ENTITY_PLAN_PROMPT ---
+# Merged prompt that combines product extraction + code selection into a single
+# LLM call.  Receives pre-fetched search candidates so the LLM selects from
+# verified codes rather than guessing.
+# Used with ChatPromptTemplate; double braces are for ChatPromptTemplate
+# variable escaping.
+# Pipeline: sql_pipeline (plan_sql_entities_node)
+# Placeholders: None (template variables: {question}, {search_candidates},
+#               {history} via ChatPromptTemplate)
+
+SQL_ENTITY_PLAN_PROMPT = """
+You are an assistant for a text-to-sql system that uses a database of international trade data.
+
+Your task is to analyze the user's question in two steps:
+1. Determine which database schemas are needed and identify products, countries, and groups.
+2. Select the correct product codes from the search candidates provided.
+
+## Step 1: Schema and Entity Identification
+
+Available schemas:
+- hs92: Goods, HS 1992 classification
+- hs12: Goods, HS 2012 classification
+- hs22: Goods, HS 2022 classification (2022-2024 only)
+- sitc: Goods, SITC classification
+- services_unilateral: Services, exporter-product-year data (single country)
+
+**Important:** HS22 has data from 2022-2024 only. For earlier periods, use hs12 or hs92. \
+services_bilateral tables exist but are currently empty — do not route queries there.
+
+**Schema selection decision tree:**
+0. Specifies a classification explicitly (e.g., "HS 2012", "HS 1992", "SITC")? → Use that \
+specific schema. This overrides all other rules.
+1. Does the question specify or imply a time range starting before 2012 (e.g., "last 15 years", \
+"since 2005")? → Use hs92. If before 1995, use sitc. If ambiguous but fits hs12 (e.g., "last \
+decade" from 2024 = 2014), keep hs12.
+2. Explicitly says "goods" or names a goods product? → Goods schema only (default: hs12).
+3. Explicitly says "services" or names a service category? → services_unilateral.
+4. Asks about "total exports/imports", "top products", "export basket", or aggregate trade? → \
+BOTH goods AND services.
+5. Otherwise → default to hs12 (or hs92 if step 1 applies).
+
+Never return more than two schemas unless explicitly required.
+
+**Country identification:**
+- Identify all countries with ISO 3166-1 alpha-3 codes.
+- If no countries mentioned, return an empty list.
+- Regions/continents are NOT countries.
+
+**Group/region detection:**
+- Set requires_group_tables=true when the question refers to a geographic or economic aggregate \
+(continents, trade blocs, income groups, sub-regions, world totals) or involves finding \
+similar/peer countries.
+
+## Step 2: Product Code Selection from Search Candidates
+
+For each product you identify, you will receive search candidates from a database search. \
+Select the most appropriate codes from these candidates.
+
+**Important: select codes at a single hierarchy level per product.** Mixing levels (e.g., \
+2-digit and 4-digit codes for the same product) causes double-counting because higher-level \
+codes are aggregates of lower-level codes. Prefer the most specific level that accurately \
+represents the product. Default to level 4 for goods, level 2 for services.
+
+If no candidates are relevant, return an empty code list for that product. If a product has \
+clear matches in the candidates, select those codes.
+
+If a product has no search candidates (because none were found), return your best-guess codes \
+and mark confidence as "low".
+
+## Search Candidates
+
+{search_candidates}
+
+If no search candidates are shown above, that means no products were identified in the question \
+or no search results were found.
+"""
+
+
 # --- SQL_GROUP_TABLES_BLOCK ---
 # Appended when the question involves a regional/economic group aggregate.
 # No placeholders — the group name list is hardcoded from classification data.

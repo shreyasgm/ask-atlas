@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import warnings
 from typing import Any
@@ -90,6 +91,42 @@ class SchemasAndProductsFound(BaseModel):
     requires_group_tables: bool = Field(
         default=False,
         description="Whether the question involves a regional or economic group aggregate (e.g. Sub-Saharan Africa, EU, OPEC) rather than a single country",
+    )
+
+
+class ResolvedProduct(BaseModel):
+    """A product with its final selected codes from search candidates."""
+
+    name: str = Field(description="The name of the product mentioned in the user query")
+    classification_schema: str = Field(
+        description="The database schema this product belongs to"
+    )
+    selected_codes: list[str] = Field(
+        description="Final product codes chosen from the search candidates"
+    )
+    confidence: str = Field(
+        default="high",
+        description="Confidence in the code selection: 'high', 'medium', or 'low'",
+    )
+
+
+class SQLEntityPlan(BaseModel):
+    """Combined extraction + code selection result from a single LLM call."""
+
+    classification_schemas: list[str] = Field(
+        description="List of relevant schema names from the db to use"
+    )
+    products: list[ResolvedProduct] = Field(
+        default_factory=list,
+        description="List of products with their selected codes",
+    )
+    countries: list[CountryDetails] = Field(
+        default_factory=list,
+        description="List of countries mentioned in the query",
+    )
+    requires_group_tables: bool = Field(
+        default=False,
+        description="Whether the question involves a regional or economic group aggregate",
     )
 
 
@@ -548,29 +585,93 @@ class ProductAndSchemaLookup:
     async def aget_candidate_codes(
         self, products_found: SchemasAndProductsFound
     ) -> list[ProductSearchResult]:
-        """Async version: get candidate codes for each product using async DB queries."""
+        """Async version: get candidate codes for each product using async DB queries.
+
+        All per-product lookups (code verification + text search) run in parallel
+        via asyncio.gather, and within each product the two DB calls also run
+        concurrently.  For N products this turns 2*N sequential awaits into a
+        single parallel batch.
+        """
         if not products_found.products:
             return []
 
-        search_results: list[ProductSearchResult] = []
-
-        for product in products_found.products:
-            verified_llm_suggestions = await self._aget_official_product_details(
-                codes=product.codes, classification_schema=product.classification_schema
-            )
-            db_suggestions = await self._adirect_text_search(
-                product.name, product.classification_schema
-            )
-            search_results.append(
-                ProductSearchResult(
-                    name=product.name,
+        async def _search_one(product: ProductDetails) -> ProductSearchResult:
+            verified, db_hits = await asyncio.gather(
+                self._aget_official_product_details(
+                    codes=product.codes,
                     classification_schema=product.classification_schema,
-                    llm_suggestions=verified_llm_suggestions,
-                    db_suggestions=db_suggestions,
-                )
+                ),
+                self._adirect_text_search(product.name, product.classification_schema),
+            )
+            return ProductSearchResult(
+                name=product.name,
+                classification_schema=product.classification_schema,
+                llm_suggestions=verified,
+                db_suggestions=db_hits,
             )
 
-        return search_results
+        return list(
+            await asyncio.gather(*[_search_one(p) for p in products_found.products])
+        )
+
+
+async def validate_countries(
+    countries: list[CountryDetails],
+    country_cache: Any | None,
+) -> list[CountryDetails]:
+    """Validate and correct LLM-guessed ISO3 codes against the country catalog.
+
+    For each country in the list, checks whether the ISO3 code exists in the
+    ``country_cache`` (a ``CatalogCache`` with an ``iso3`` index).  If the code
+    is invalid, attempts a name-based search and replaces the code with the
+    first match.  Countries that can't be resolved are returned as-is so the
+    downstream pipeline can still attempt to use them (the SQL query will
+    simply return no rows rather than silently dropping the country).
+
+    Args:
+        countries: List of ``CountryDetails`` from the extraction LLM.
+        country_cache: A ``CatalogCache`` instance (from ``src/cache.py``)
+            with ``iso3`` and ``name`` indexes.  If ``None``, returns the
+            input unchanged.
+
+    Returns:
+        List of ``CountryDetails`` with validated/corrected ISO3 codes.
+    """
+    if not country_cache or not countries:
+        return countries
+
+    validated: list[CountryDetails] = []
+    for country in countries:
+        hit = await country_cache.lookup("iso3", country.iso3_code)
+        if hit:
+            validated.append(country)
+            continue
+
+        # ISO3 code not found — try name-based search
+        name_hit = await country_cache.lookup("name", country.name)
+        if name_hit:
+            corrected_iso3 = (name_hit.get("iso3Code") or "").upper()
+            if corrected_iso3:
+                logger.info(
+                    "Corrected country ISO3: %s → %s (for '%s')",
+                    country.iso3_code,
+                    corrected_iso3,
+                    country.name,
+                )
+                validated.append(
+                    CountryDetails(name=country.name, iso3_code=corrected_iso3)
+                )
+                continue
+
+        # Could not validate — keep original so downstream can try
+        logger.warning(
+            "Could not validate country '%s' (iso3=%s) against catalog",
+            country.name,
+            country.iso3_code,
+        )
+        validated.append(country)
+
+    return validated
 
 
 def format_product_codes_for_prompt(analysis: ProductCodesMapping) -> str:
